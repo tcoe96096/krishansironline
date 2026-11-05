@@ -105,3 +105,79 @@ on conflict (user_id, role) do nothing;
 ## Implementation boundary
 
 This branch prepares the backend schema and implementation contract. The live authentication UI and data migration must be wired only after a Supabase project URL/key and SMS provider are configured. This prevents a half-working login screen or a misleading “result saved” message. No existing production test/question data is changed by this preparation.
+
+
+## Updated integration decisions (user confirmed 5 Nov 2026)
+
+- Google Sheets access: **both read and write**.
+- Admin sign-in: **Google Account OAuth**.
+- Student sign-in remains mobile OTP + password.
+- Device persistence remains Supabase Auth refreshable session.
+- Attempt limits remain admin-configured per test.
+
+## Google Account Admin authentication
+
+Use Supabase Auth Google OAuth as the admin identity provider:
+1. Enable Google provider in Supabase Auth and configure Google Cloud OAuth client ID/secret in Supabase dashboard (never in the Vite frontend).
+2. Admin signs in with Google from the site.
+3. Backend checks the authenticated user's UUID against `public.user_roles`; only a pre-approved Google identity is granted the `admin` role.
+4. Initial admin bootstrap must be performed out-of-band by the project owner in Supabase SQL Editor. Store the exact Google account email in the controlled deployment record, resolve its Supabase Auth UUID after first OAuth sign-in, and insert that UUID into `user_roles`. Never auto-promote users based only on a client-supplied email or email domain.
+5. Admin dashboard and every admin operation must verify role on the server / through RLS. Hiding a button is not authorization.
+6. Admin logout calls Supabase signOut and clears the local persisted session.
+
+## Google Sheets + Apps Script — bidirectional integration
+
+The user has selected both read and write. Google Sheets is an authorized reporting / administration integration, while PostgreSQL remains the canonical secure database.
+
+### Write path (student submissions)
+Browser -> Supabase Auth -> server-side submit RPC -> PostgreSQL result -> trusted server integration -> Apps Script Web App -> private Google Sheet.
+
+- Never call the Apps Script endpoint directly from student browser code.
+- Never expose an Apps Script shared secret, service-role key, Google OAuth client secret, or service-account private key in the frontend or repository.
+- Backend sends a shared integration secret to Apps Script; keep it in Supabase Edge Function secrets and Apps Script Script Properties.
+- Apps Script validates the secret, validates the action and required fields, deduplicates by submission/attempt ID, then appends or updates the matching row.
+- Treat the database commit as authoritative. If Sheets sync fails, mark it pending and retry; do not tell the student the result was lost or unverified.
+- Do not send answer keys or unnecessary student personal data to the sheet. Store only fields required for teacher assessment and reporting.
+
+### Read path (admin dashboard)
+Admin dashboard -> Supabase Auth session -> server-side admin role check -> trusted backend -> Apps Script -> Google Sheet -> validated response -> Admin UI.
+
+- Admin can view/search/filter records, fetch sheet-backed rows, and initiate authorized updates.
+- Only the backend may call the Apps Script endpoint.
+- The Apps Script integration endpoint must not be a public unauthenticated read API.
+- Admin updates to test configuration / attempt limits should update PostgreSQL first, then sync a sheet audit/report row. Do not make Google Sheets the authority for attempt enforcement.
+- Add an audit log for admin actions and sheet sync outcomes.
+- Sheet sharing stays restricted to the teacher/admin Google accounts; never publish a sheet containing student mobile numbers.
+
+### Apps Script contract
+
+The repository now includes a starter `google-apps-script/Code.gs` that supports authenticated POST actions:
+- `health`
+- `listResults` (bounded, paginated read)
+- `upsertResult` (deduplicated write)
+- `updateResultStatus` (admin-side status / note update)
+
+Deployment must be configured to execute as the script owner. Set `PORTAL_SHARED_SECRET` and `RESULTS_SHEET_ID` in Apps Script Script Properties. The script URL and secret must be configured only in the trusted backend, not in public Vite variables.
+
+## Required external configuration / owner actions
+
+1. Create or select the Supabase project; configure Phone Auth and an SMS provider.
+2. Configure Google OAuth consent screen and OAuth client; enable Google provider in Supabase.
+3. Set the allowed administrator identity through the out-of-band role bootstrap after first successful Google OAuth sign-in.
+4. Create/choose a private Google Sheet; copy its spreadsheet ID into Apps Script Script Properties.
+5. Paste `google-apps-script/Code.gs` into the Apps Script project; set Script Properties; deploy as Web App (execute as owner). Copy the /exec URL to backend secret configuration.
+6. Configure Supabase Edge Function secrets for Apps Script URL and shared secret.
+7. Run read/write integration tests with a non-production sheet before connecting production student data.
+
+## New planned/required implementation files
+
+- `google-apps-script/Code.gs`: trusted bidirectional Sheet adapter.
+- `supabase/functions/sheets-bridge/index.ts`: server-side bridge; validates Supabase JWT and admin role for reads/updates, and invokes Apps Script with secret. Student result writes are triggered only after trusted grading.
+- `supabase/functions/sheets-sync/index.ts`: retryable outbox worker for committed test results.
+- `src/components/AdminGoogleLogin.tsx`: Google OAuth sign-in UI.
+- `src/components/AdminDashboard.tsx`: admin-only test settings and Sheet-backed results view.
+- `src/services/sheetsService.ts`: browser calls only authenticated backend endpoints; never calls Apps Script directly.
+
+## Important deployment gates
+
+The repository does not contain a verified Sheet ID, Apps Script deployment URL/configuration, Supabase project credentials, Google OAuth client configuration, or an allowlisted admin account UUID. Therefore code preparation can be committed, but a live end-to-end connection cannot be activated or verified until the owner supplies/configures those resources. Do not claim that the live Sheet is connected until a test read and write are verified.
