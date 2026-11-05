@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 
 const seoPages = [
@@ -17,8 +17,10 @@ const seoPages = [
 
 const generateSeoPages = () => ({
   name: 'generate-seo-friendly-pages',
-  closeBundle() {
-    const template = readFileSync(path.resolve(__dirname, 'dist/index.html'), 'utf8');
+  writeBundle() {
+    const indexPath = path.resolve(__dirname, 'dist/index.html');
+    if (!existsSync(indexPath)) return;
+    const template = readFileSync(indexPath, 'utf8');
     for (const page of seoPages) {
       const canonical = `https://krishansir.online/${page.slug}/`;
       const html = template
