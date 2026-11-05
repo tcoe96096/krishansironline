@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { ONLINE_TESTS } from '../data/portalData';
 import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
@@ -102,11 +103,14 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
 
 interface OnlineTestEngineProps {
   initialClassFilter?: string;
+  onRequestLogin: () => void;
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
-  const [restoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
+  const { user, loading: authLoading } = useAuth();
+  // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
+  const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
   const elapsedWhileAway = restoredSession
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
@@ -122,9 +126,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   );
 
   // Restore student details only when an unfinished test session exists.
-  const [studentDetails, setStudentDetails] = useState<StudentLoginDetails | null>(
-    () => restoredSession?.student || null
-  );
+  const [studentDetails, setStudentDetails] = useState<StudentLoginDetails | null>(null);
 
   const [loginForm, setLoginForm] = useState<StudentLoginDetails>({
     mobile: '',
@@ -138,7 +140,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [loginError, setLoginError] = useState<string>('');
 
   // Test Execution State
-  const [isTestActive, setIsTestActive] = useState<boolean>(Boolean(restoredSession));
+  const [isTestActive, setIsTestActive] = useState<boolean>(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(() =>
     restoredSession
       ? Math.min(Math.max(0, restoredSession.currentQuestionIndex), Math.max(0, restoredTest.questions.length - 1))
@@ -336,60 +338,51 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const reviewCount = Object.values(markedForReview).filter(Boolean).length;
   const unattemptedCount = totalQuestions - attemptedCount;
 
-  // Handle Student Login Form Submission
-  const handleStudentLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    if (!loginForm.mobile || loginForm.mobile.trim().length !== 10 || !/^\d{10}$/.test(loginForm.mobile.trim())) {
-      setLoginError('कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें (Valid 10-digit mobile number required).');
+  // Derive the test identity only from the authenticated Supabase account metadata.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setStudentDetails(null);
+      setIsTestActive(false);
       return;
     }
-
-    if (!loginForm.studentName.trim()) {
-      setLoginError('कृपया अपना पूरा नाम दर्ज करें (Student name required).');
+    const metadata = user.user_metadata || {};
+    const studentName = typeof metadata.full_name === 'string' ? metadata.full_name.trim() : '';
+    const classValue = String(metadata.student_class || '');
+    const studentClass = classValue.endsWith('th') ? classValue : `${classValue}th`;
+    const rollNo = typeof metadata.roll_no === 'string' ? metadata.roll_no.trim() : '';
+    const school = typeof metadata.school_name === 'string' ? metadata.school_name.trim() : '';
+    if (!studentName || !rollNo || !school || !['9th', '10th'].includes(studentClass)) {
+      setStudentDetails(null);
+      setIsTestActive(false);
+      setLoginError('आपके खाते में विद्यार्थी विवरण अधूरे हैं। कृपया सही जानकारी के साथ पुनः पंजीकरण करें।');
       return;
     }
-
-    if (!loginForm.rollNo.trim()) {
-      setLoginError('कृपया रोल नंबर दर्ज करें (Roll number required).');
-      return;
-    }
-
-    if (loginForm.studentClass.replace(/th$/i, '') !== selectedTest.classLevel) {
-      setLoginError(`कृपया चुने गए टेस्ट के अनुसार कक्षा ${selectedTest.classLevel}th चुनें। (Select the matching class for this test.)`);
-      return;
-    }
-
-    if (loginForm.school === 'Other' && !loginForm.otherSchool?.trim()) {
-      setLoginError('कृपया अपने विद्यालय का नाम दर्ज करें (School name required).');
-      return;
-    }
-
     const details: StudentLoginDetails = {
-      mobile: loginForm.mobile.trim(),
-      studentName: loginForm.studentName.trim(),
-      studentClass: loginForm.studentClass,
-      rollNo: loginForm.rollNo.trim(),
-      school: loginForm.school === 'Other' ? (loginForm.otherSchool?.trim() || 'Other') : loginForm.school,
+      mobile: user.phone || '', studentName, studentClass, rollNo, school, otherSchool: '',
     };
-
     setStudentDetails(details);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('krishan_sir_active_student', JSON.stringify(details));
-    }
+    setLoginForm(details);
+    setLoginError('');
+  }, [user, authLoading]);
 
-    // Start the selected test
+  const handleStudentLogin = () => {
+    setLoginError('');
+    if (!user || !studentDetails) {
+      onRequestLogin();
+      return;
+    }
+    if (studentDetails.studentClass.replace(/th$/i, '') !== selectedTest.classLevel) {
+      setLoginError(`यह टेस्ट कक्षा ${selectedTest.classLevel} के लिए है। आपके खाते की कक्षा ${studentDetails.studentClass} है।`);
+      return;
+    }
     setSelectedAnswers({});
     setMarkedForReview({});
     setCurrentQuestionIndex(0);
     setTimeLeftSeconds(TOTAL_TEST_MINUTES * 60);
     setIsSubmitted(false);
     setIsTestActive(true);
-
-    setTimeout(() => {
-      document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' });
-    }, 60);
+    setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
   };
 
   const handleLogoutStudent = () => {
@@ -885,144 +878,19 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
         )}
 
-        {/* VIEW 1: STUDENT LOGIN PANEL (Shown before starting test) */}
+        {/* VIEW 1: AUTHENTICATED STUDENT GATE */}
         {!studentDetails && (
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-md mb-8">
-            <div className="max-w-xl mx-auto">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
-                  <UserCheck className="w-6 h-6" />
-                </div>
-                <h2 className="text-2xl font-extrabold text-slate-900 font-display">
-                  Student Login / विद्यार्थी लॉगिन
-                </h2>
-                <p className="mt-1 text-xs sm:text-sm text-slate-600">
-                  टेस्ट शुरू करने से पहले अपनी जानकारी भरें। {TOTAL_TEST_MINUTES} मिनट में {totalQuestions} वस्तुनिष्ठ प्रश्न होंगे।
-                </p>
+            <div className="max-w-xl mx-auto text-center">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
+                <UserCheck className="w-6 h-6" />
               </div>
-
-              {loginError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleStudentLogin} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Mobile Number */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Mobile Number / मोबाइल नंबर <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]{10}"
-                      maxLength={10}
-                      value={loginForm.mobile}
-                      onChange={(e) => setLoginForm({ ...loginForm, mobile: e.target.value.replace(/\D/g, '') })}
-                      placeholder="10 अंकों का मोबाइल नंबर"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-
-                  {/* Student Name */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Student Name / विद्यार्थी का नाम <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.studentName}
-                      onChange={(e) => setLoginForm({ ...loginForm, studentName: e.target.value })}
-                      placeholder="पूरा नाम लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-
-                  {/* Class */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Class / कक्षा <span className="text-red-600">*</span>
-                    </label>
-                    <select
-                      value={loginForm.studentClass}
-                      onChange={(e) => setLoginForm({ ...loginForm, studentClass: e.target.value })}
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    >
-                      <option value="8th">8th</option>
-                      <option value="9th">9th</option>
-                      <option value="10th">10th</option>
-                    </select>
-                  </div>
-
-                  {/* Roll Number */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Roll Number / रोल नंबर <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.rollNo}
-                      onChange={(e) => setLoginForm({ ...loginForm, rollNo: e.target.value })}
-                      placeholder="रोल नंबर लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* School Name */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                    School Name / विद्यालय का नाम <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={loginForm.school}
-                    onChange={(e) => setLoginForm({ ...loginForm, school: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                  >
-                    <option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                {/* Conditional Other School input */}
-                {loginForm.school === 'Other' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Other School Name / अन्य विद्यालय का नाम <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.otherSchool || ''}
-                      onChange={(e) => setLoginForm({ ...loginForm, otherSchool: e.target.value })}
-                      placeholder="विद्यालय का नाम लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-sky-900 hover:bg-sky-800 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    <span>Login &amp; Start {TOTAL_TEST_MINUTES} Minute Test / टेस्ट शुरू करें</span>
-                  </button>
-                </div>
-              </form>
-
-              <div className="mt-4 p-3 bg-sky-50 rounded-xl border border-sky-100 text-center text-xs text-slate-600">
-                ⏱️ परीक्षा अवधि: <b>{TOTAL_TEST_MINUTES} मिनट</b> | प्रश्न: <b>{totalQuestions}</b> | परिणाम सीधे Google Sheets में दर्ज होंगे।
-              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
+              <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
+              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{loginError}</p>}
+              <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
+                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
+              </button>
             </div>
           </div>
         )}
