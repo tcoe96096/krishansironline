@@ -23,7 +23,6 @@ const pages = {
   classes: { path: '/classes/', title: 'Classes 6–12 | Krishan Sir', description: 'Explore class-wise learning resources and study support for Classes 6 to 12, aligned with HBSE and CBSE learning needs.' },
   tests: { path: '/online-tests/', title: 'Online Tests & MCQ Practice | Krishan Sir', description: 'Attempt online tests and bilingual MCQ practice for school Social Science and related subjects.' },
   materials: { path: '/study-materials/', title: 'Study Materials & Notes | Krishan Sir', description: 'Find chapter-wise study materials, notes and learning resources for Classes 6–12.' },
-  questions: { path: '/question-bank/', title: 'Question Bank & MCQs | Krishan Sir', description: 'Practice objective questions, MCQs, short and long answer questions and map work.' },
   results: { path: '/results/', title: 'Student Results Portal | Krishan Sir', description: 'Visit the student examination results portal. Verified result information will be published when an authorized source is connected.' },
   polity: { path: '/constitution/', title: 'Indian Constitution Corner | Krishan Sir', description: 'Explore Indian Constitution concepts, Preamble terms, constitutional values and polity learning resources.' },
   affairs: { path: '/current-affairs/', title: 'Current Affairs & General Awareness | Krishan Sir', description: 'Read educational current affairs and general awareness updates for students and competitive exam learners.' },
@@ -59,6 +58,16 @@ const MainApp: React.FC = () => {
   }, [activePage]);
 
   const scrollToSection = (sectionId: string) => {
+    if (sectionId === 'questions') {
+      if (window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/');
+        setActivePage('home');
+        window.setTimeout(() => document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' }), 80);
+      } else {
+        document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
     const key = sectionId === 'home' ? 'home' : sectionId as PageKey;
     if (key in pages) {
       const page = pages[key as PageKey];
@@ -77,7 +86,6 @@ const MainApp: React.FC = () => {
       case 'classes': return <ClassSelector onSelectClassAction={handleClassAction} />;
       case 'tests': return <><OnlineTestEngine initialClassFilter={selectedClassForMaterials} /><LiveAdminContent section="tests" /></>;
       case 'materials': return <><StudyMaterialsView initialClass={selectedClassForMaterials} /><LiveAdminContent section="materials" /></>;
-      case 'questions': return <><QuestionBankView /><LiveAdminContent section="questions" /></>;
       case 'results': return <ResultsPortal />;
       case 'polity': return <ConstitutionCorner onStartQuiz={() => scrollToSection('tests')} />;
       case 'affairs': return <CurrentAffairsView />;
