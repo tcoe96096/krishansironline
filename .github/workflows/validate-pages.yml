@@ -1,0 +1,29 @@
+name: Validate website build
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --legacy-peer-deps
+      - run: npm run build
+      - name: Verify generated SEO pages
+        run: |
+          test -f dist/classes/index.html
+          test -f dist/online-tests/index.html
+          test -f dist/study-materials/index.html
+          test -f dist/results/index.html
+          test -f dist/constitution/index.html
+          test -f dist/current-affairs/index.html
+          test -f dist/about/index.html
+          test -f dist/contact/index.html
