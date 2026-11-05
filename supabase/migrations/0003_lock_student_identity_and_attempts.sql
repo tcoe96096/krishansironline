@@ -5,7 +5,7 @@ drop policy if exists "student inserts own profile" on public.student_profiles;
 drop policy if exists "student updates own profile" on public.student_profiles;
 
 revoke insert, update on public.student_profiles from anon, authenticated;
-grant select on public.student_profiles to authenticated;
+grant select, insert, update, delete on public.student_profiles to authenticated;
 
 -- Only admins may manage student profile records after registration.
 drop policy if exists "admins manage profiles" on public.student_profiles;
