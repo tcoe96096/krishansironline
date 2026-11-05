@@ -182,40 +182,34 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   });
 
   // Local development teacher tools. Production results are stored in the private Google Sheet.
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem('krishan_sir_admin_auth') === 'true') return true;
-      // Local development only; this is not a production authentication system.
-      return isAIStudioEnvironment();
-    }
-    return false;
-  });
+  // This legacy teacher panel is strictly development-only. Production admin access
+  // must use the database-backed Google OAuth role gate, never a browser flag or PIN.
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => isAIStudioEnvironment());
   const [showAdminAuthModal, setShowAdminAuthModal] = useState<boolean>(false);
   const [adminPinInput, setAdminPinInput] = useState<string>('');
   const [adminPinError, setAdminPinError] = useState<string>('');
 
   const handleVerifyAdminPin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!import.meta.env.DEV) {
+      setAdminPinError('यह legacy PIN सुविधा केवल local development में उपलब्ध है।');
+      return;
+    }
     const correctPin = '1234';
     if (adminPinInput.trim() === correctPin) {
       setIsAdmin(true);
       setShowTeacherPanel(true);
       setShowAdminAuthModal(false);
       setAdminPinError('');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('krishan_sir_admin_auth', 'true');
-      }
     } else {
-      setAdminPinError('गलत पिन! केवल कृषण सर (Admin) ही यह डेटा देख सकते हैं। (डिफ़ॉल्ट पिन: 1234)');
+      setAdminPinError('गलत PIN।');
     }
   };
 
   const handleAdminLogout = () => {
     setIsAdmin(false);
     setShowTeacherPanel(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('krishan_sir_admin_auth');
-    }
+    // No persistent browser-side admin authorization is retained.
   };
 
   // Load existing submissions & configured Google Sheet URL
