@@ -18,11 +18,24 @@ type StudentRegistration = {
   schoolName: string;
 };
 
+export type StudentProfile = {
+  user_id: string;
+  student_name: string;
+  class_level: string;
+  roll_no: string;
+  school_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type AuthContextValue = {
   user: User | null;
   session: Session | null;
+  profile: StudentProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   configured: boolean;
+  refreshProfile: () => Promise<void>;
   signInWithMobile: (mobile: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
   signOut: () => Promise<void>;
@@ -32,7 +45,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -60,6 +75,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription?.unsubscribe();
     };
   }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user) {
+      setProfile(null);
+      return;
+    }
+    setProfileLoading(true);
+    try {
+      const { data, error } = await requireSupabase()
+        .from('student_profiles')
+        .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (error) throw error;
+      setProfile(data as StudentProfile | null);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!session?.user) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    requireSupabase()
+      .from('student_profiles')
+      .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error('Unable to load student profile:', error.message);
+          setProfile(null);
+        } else {
+          setProfile(data as StudentProfile | null);
+        }
+      })
+      .finally(() => {
+        if (active) setProfileLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [session?.user?.id]);
 
   const signInWithMobile = useCallback(async (mobile: string, password: string) => {
     const phone = normalizeIndianMobile(mobile);
@@ -91,19 +155,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = useCallback(async () => {
     const { error } = await requireSupabase().auth.signOut();
     if (error) throw error;
+    setProfile(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
     user: session?.user ?? null,
     session,
+    profile,
     loading,
+    profileLoading,
     configured: (() => {
       try { requireSupabase(); return true; } catch { return false; }
     })(),
+    refreshProfile,
     signInWithMobile,
     registerStudent,
     signOut,
-  }), [session, loading, signInWithMobile, registerStudent, signOut]);
+  }), [session, profile, loading, profileLoading, refreshProfile, signInWithMobile, registerStudent, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
