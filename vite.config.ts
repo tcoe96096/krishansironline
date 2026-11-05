@@ -23,7 +23,7 @@ const generateSeoPages = () => ({
     for (const page of seoPages) {
       const canonical = `https://krishansir.online/${page.slug}/`;
       const html = template
-        .replace(/<title>.*?<\\/title>/, `<title>${page.title}</title>`)
+        .replace(/<title>.*?<\/title>/, `<title>${page.title}</title>`)
         .replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${page.description}" />`)
         .replace(/<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${canonical}" />`)
         .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${canonical}" />`)
