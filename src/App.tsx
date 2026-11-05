@@ -7,7 +7,6 @@ import { QuickAccessCards } from './components/QuickAccessCards';
 import { ClassSelector } from './components/ClassSelector';
 import { OnlineTestEngine } from './components/OnlineTestEngine';
 import { StudyMaterialsView } from './components/StudyMaterialsView';
-import { QuestionBankView } from './components/QuestionBankView';
 import { ConstitutionCorner } from './components/ConstitutionCorner';
 import { CurrentAffairsView } from './components/CurrentAffairsView';
 import { AboutTeacher } from './components/AboutTeacher';
@@ -21,7 +20,6 @@ import {
   BookOpen,
   Award,
   FileText,
-  CheckSquare,
   Landmark,
   GraduationCap,
   HelpCircle,
@@ -32,14 +30,13 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'questions' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
 
 const VALID_PAGES: PageId[] = [
   'home',
   'classes',
   'tests',
   'materials',
-  'questions',
   'polity',
   'affairs',
   'results',
@@ -64,7 +61,7 @@ const MainApp: React.FC = () => {
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', tests: '/online-tests/',
-    materials: '/study-materials/', questions: '/',
+    materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
     results: '/results/', about: '/about/', contact: '/contact/',
   };
@@ -106,14 +103,6 @@ const MainApp: React.FC = () => {
       return;
     }
 
-    // Question Bank remains available on the homepage, not as a separate route.
-    if (pageId === 'questions') {
-      setActivePage('home');
-      if (window.location.pathname !== '/') window.history.pushState(null, '', '/');
-      setTimeout(() => document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' }), 80);
-      return;
-    }
-
     const targetPage = VALID_PAGES.includes(pageId as PageId) ? (pageId as PageId) : 'home';
     setActivePage(targetPage);
     const targetPath = pageToPath[targetPage];
@@ -121,7 +110,7 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleClassAction = (classLevel: ClassLevel, action: 'materials' | 'tests' | 'questions') => {
+  const handleClassAction = (classLevel: ClassLevel, action: 'materials' | 'tests') => {
     navigateTo(action, classLevel);
   };
 
@@ -216,64 +205,26 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            {/* Home Feature Split: Constitution Spotlight & Meet Krishan Sir */}
+            {/* Special Learning Hubs */}
             <section className="py-12 bg-slate-100/70 border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Card 1: Constitution & Civics Spotlight */}
+                <div className="text-center max-w-3xl mx-auto mb-8">
+                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-800 mb-2"><Sparkles className="w-4 h-4" /><span>{language === 'en' ? 'Special Learning Hubs' : 'विशेष अध्ययन केंद्र'}</span></div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">{language === 'en' ? 'Focused Learning & Exam Preparation' : 'विशेष अध्ययन एवं परीक्षा तैयारी'}</h2>
+                  <p className="mt-2 text-sm text-slate-600">{language === 'en' ? 'Explore current knowledge and prepare systematically for competitive examinations.' : 'समसामयिक ज्ञान प्राप्त करें और प्रतियोगी परीक्षाओं की व्यवस्थित तैयारी करें।'}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
                   <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-800 text-xs font-bold border border-rose-200 mb-3">
-                        <Landmark className="w-3.5 h-3.5 text-rose-600" />
-                        <span>{language === 'en' ? 'Specialized Polity Corner' : 'संविधान एवं राजव्यवस्था केंद्र'}</span>
-                      </div>
-                      <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">
-                        {language === 'en' ? 'The Preamble & Fundamental Rights' : 'भारतीय संविधान की प्रस्तावना व मौलिक अधिकार'}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                        {language === 'en'
-                          ? 'Interactive terms explorer: Sovereign, Socialist, Secular, Democratic, Republic. Essential for Class 9–10 Board exams and competitive exams.'
-                          : 'प्रभुत्व-संपन्न, समाजवादी, पंथनिरपेक्ष, लोकतंत्रात्मक, गणराज्य जैसे मुख्य शब्दों की प्रामाणिक व्याख्या और संविधान प्रश्नोत्तरी।'}
-                      </p>
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <button
-                        onClick={() => navigateTo('polity')}
-                        className="inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"
-                      >
-                        <span>{language === 'en' ? 'Open Constitution Corner' : 'संविधान पृष्ठ खोलें'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <div><div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-800 text-xs font-bold border border-sky-200 mb-3"><Sparkles className="w-3.5 h-3.5" /><span>{language === 'en' ? 'Learning Hub 01' : 'अध्ययन केंद्र 01'}</span></div>
+                    <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">{language === 'en' ? 'Current Affairs & General Awareness' : 'करेंट अफेयर्स एवं सामान्य जागरूकता'}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">{language === 'en' ? 'National and international developments, Haryana updates, government schemes, reports, indices, and exam-relevant general knowledge.' : 'राष्ट्रीय एवं अंतरराष्ट्रीय घटनाक्रम, हरियाणा की खबरें, सरकारी योजनाएँ, रिपोर्ट, सूचकांक और परीक्षा उपयोगी सामान्य ज्ञान।'}</p></div>
+                    <button onClick={() => navigateTo('affairs')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Explore Current Affairs' : 'करेंट अफेयर्स देखें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
                   </div>
-
-                  {/* Card 2: Teacher Bio Spotlight */}
                   <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200 mb-3">
-                        <GraduationCap className="w-3.5 h-3.5 text-amber-700" />
-                        <span>{language === 'en' ? 'Educator Profile' : 'शिक्षक परिचय'}</span>
-                      </div>
-                      <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">
-                        {language === 'en' ? 'Guided by Krishan Kumar (TGT Social Science)' : 'श्री कृष्ण कुमार (टीजीटी सामाजिक विज्ञान)'}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                        {language === 'en'
-                          ? 'Teaching at GGHS Dhanger (Fatehabad, Haryana). UGC NET (Pol. Sci. 2x & Edu), M.Phil, M.Ed. Dedicated to empowering government school students with free digital education.'
-                          : 'राजकीय कन्या उच्च विद्यालय, ढांगर (फतेहाबाद, हरियाणा)। 2 बार यूजीसी नेट (राजनीति विज्ञान), एम.फिल., एम.एड.। ग्रामीण एवं सरकारी स्कूल विद्यार्थियों के उज्ज्वल भविष्य हेतु समर्पित।'}
-                      </p>
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <button
-                        onClick={() => navigateTo('about')}
-                        className="inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"
-                      >
-                        <span>{language === 'en' ? 'View Teacher Profile & Journey' : 'शिक्षक की पूरी जानकारी देखें'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <div><div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200 mb-3"><GraduationCap className="w-3.5 h-3.5" /><span>{language === 'en' ? 'Learning Hub 02' : 'अध्ययन केंद्र 02'}</span></div>
+                    <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">{language === 'en' ? 'Competitive Exam Preparation' : 'प्रतियोगी परीक्षा तैयारी'}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">{language === 'en' ? 'Focused preparation for UGC NET Political Science, UGC NET Education, HTET, CTET, and teacher recruitment examinations through study resources and practice tests.' : 'यूजीसी नेट राजनीति विज्ञान, यूजीसी नेट शिक्षा, एचटेट, सीटीईटी और शिक्षक भर्ती परीक्षाओं के लिए अध्ययन सामग्री एवं अभ्यास टेस्ट।'}</p></div>
+                    <button onClick={() => navigateTo('tests')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Start Exam Preparation' : 'परीक्षा तैयारी शुरू करें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -355,23 +306,6 @@ const MainApp: React.FC = () => {
               onBackHome={() => navigateTo('home')}
             />
             <StudyMaterialsView initialClass={selectedClassForMaterials} />
-          </div>
-        )}
-
-        {/* ==================== PAGE 5: QUESTION BANK (प्रश्न बैंक) ==================== */}
-        {activePage === 'questions' && (
-          <div>
-            <PageHeaderBanner
-              titleEn="Objective Question Bank & Model Answers"
-              titleHi="वस्तुनिष्ठ प्रश्न बैंक एवं मॉडल उत्तर"
-              subtitleEn="Chapter-wise multiple-choice questions with explanation reveals, 3-mark & 5-mark board model answers, and map work guides."
-              subtitleHi="अध्यायवार बहुविकल्पीय प्रश्न (MCQ) विस्तृत समाधान सहित, 3 व 5 अंक वाले मॉडल उत्तर और मानचित्र अभ्यास।"
-              badgeEn="Exam-Focused Question Bank"
-              badgeHi="परीक्षा प्रश्न बैंक व मानचित्र"
-              icon={CheckSquare}
-              onBackHome={() => navigateTo('home')}
-            />
-            <QuestionBankView />
           </div>
         )}
 
@@ -499,14 +433,6 @@ const MainApp: React.FC = () => {
                     }`}
                   >
                     {t('nav.materials')}
-                  </button>
-                  <button
-                    onClick={() => navigateTo('questions')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'questions' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
-                    }`}
-                  >
-                    {t('nav.questions')}
                   </button>
                   <button
                     onClick={() => navigateTo('polity')}
