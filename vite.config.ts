@@ -8,7 +8,6 @@ const seoPages = [
   { slug: 'classes', title: 'Classes 6–12 | Krishan Sir', description: 'Explore class-wise learning resources and study support for Classes 6 to 12, aligned with HBSE and CBSE learning needs.' },
   { slug: 'online-tests', title: 'Online Tests & MCQ Practice | Krishan Sir', description: 'Attempt online tests and bilingual MCQ practice for school Social Science and related subjects.' },
   { slug: 'study-materials', title: 'Study Materials & Notes | Krishan Sir', description: 'Find chapter-wise study materials, notes and learning resources for Classes 6–12.' },
-  { slug: 'question-bank', title: 'Question Bank & MCQs | Krishan Sir', description: 'Practice objective questions, MCQs, short and long answer questions and map work.' },
   { slug: 'results', title: 'Student Results Portal | Krishan Sir', description: 'Visit the student examination results portal. Verified result information will be published when an authorized source is connected.' },
   { slug: 'constitution', title: 'Indian Constitution Corner | Krishan Sir', description: 'Explore Indian Constitution concepts, Preamble terms, constitutional values and polity learning resources.' },
   { slug: 'current-affairs', title: 'Current Affairs & General Awareness | Krishan Sir', description: 'Read educational current affairs and general awareness updates for students and competitive exam learners.' },
