@@ -15,6 +15,7 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { SearchModal } from './components/SearchModal';
+import { LiveAdminContent } from './components/LiveAdminContent';
 import { ClassLevel } from './types';
 
 const MainApp: React.FC = () => {
@@ -57,6 +58,7 @@ const MainApp: React.FC = () => {
         {/* Latest Announcements & Notice Board (Editable by Owner) */}
         <div id="notices">
           <NoticeBoard onNavigate={scrollToSection} />
+          <LiveAdminContent section="announcements" />
         </div>
 
         {/* 8 Quick Access Cards */}
@@ -67,12 +69,15 @@ const MainApp: React.FC = () => {
 
         {/* Online Test Engine & Google Forms Assessment */}
         <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
+        <LiveAdminContent section="tests" />
 
         {/* Chapter-wise Study Materials & Notes */}
         <StudyMaterialsView initialClass={selectedClassForMaterials} />
+        <LiveAdminContent section="materials" />
 
         {/* Question Bank (MCQs, 3 & 5 Marks, Map Work) */}
         <QuestionBankView />
+        <LiveAdminContent section="questions" />
 
         {/* Results Portal & Marksheet Search */}
         <ResultsPortal />
