@@ -115,8 +115,8 @@ create policy "users read own role"
 
 drop policy if exists "published tests are readable" on public.tests;
 create policy "published tests are readable"
-  on public.tests for select to authenticated
-  using (is_published = true or public.is_admin());
+  on public.tests for select to anon, authenticated
+  using (is_published = true or (auth.uid() is not null and public.is_admin()));
 
 drop policy if exists "admins manage tests" on public.tests;
 create policy "admins manage tests"
@@ -166,18 +166,18 @@ begin
     raise exception 'This test is not assigned to your class';
   end if;
 
+  select * into v_attempt from public.test_attempts
+  where student_id = auth.uid() and test_id = p_test_id
+    and status = 'in_progress' and expires_at > now()
+  order by attempt_number desc limit 1;
+  if found then return v_attempt; end if;
+
   select count(*) into v_count from public.test_attempts
   where student_id = auth.uid() and test_id = p_test_id;
 
   if v_count >= v_test.attempt_limit then
     raise exception 'Attempt limit reached';
   end if;
-
-  select * into v_attempt from public.test_attempts
-  where student_id = auth.uid() and test_id = p_test_id
-    and status = 'in_progress' and expires_at > now()
-  order by attempt_number desc limit 1;
-  if found then return v_attempt; end if;
 
   insert into public.test_attempts (
     student_id, test_id, attempt_number, expires_at, total_marks
@@ -221,8 +221,9 @@ begin
   if not found then raise exception 'Attempt not found'; end if;
   if v_attempt.status <> 'in_progress' then raise exception 'Attempt already submitted'; end if;
   if now() > v_attempt.expires_at then
-    update public.test_attempts set status = 'expired' where id = p_attempt_id;
-    raise exception 'Test time has expired';
+    update public.test_attempts set status = 'expired'
+    where id = p_attempt_id returning * into v_attempt;
+    return v_attempt;
   end if;
 
   select * into v_test from public.tests where id = v_attempt.test_id;
@@ -268,7 +269,7 @@ grant execute on function public.submit_test_attempt(uuid, jsonb) to authenticat
 
 grant select, insert, update on public.student_profiles to authenticated;
 grant select on public.user_roles to authenticated;
-grant select on public.tests to authenticated;
+grant select on public.tests to anon, authenticated;
 grant select on public.test_attempts to authenticated;
 grant insert, update, delete on public.tests to authenticated;
 grant all on public.test_answer_keys to service_role;
