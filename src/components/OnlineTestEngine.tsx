@@ -108,7 +108,7 @@ interface OnlineTestEngineProps {
 
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
@@ -338,33 +338,39 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const reviewCount = Object.values(markedForReview).filter(Boolean).length;
   const unattemptedCount = totalQuestions - attemptedCount;
 
-  // Derive the test identity only from the authenticated Supabase account metadata.
+  // Derive test identity from the canonical database profile, not editable browser metadata.
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || profileLoading) return;
     if (!user) {
       setStudentDetails(null);
       setIsTestActive(false);
       return;
     }
-    const metadata = user.user_metadata || {};
-    const studentName = typeof metadata.full_name === 'string' ? metadata.full_name.trim() : '';
-    const classValue = String(metadata.student_class || '');
-    const studentClass = classValue.endsWith('th') ? classValue : `${classValue}th`;
-    const rollNo = typeof metadata.roll_no === 'string' ? metadata.roll_no.trim() : '';
-    const school = typeof metadata.school_name === 'string' ? metadata.school_name.trim() : '';
-    if (!studentName || !rollNo || !school || !['9th', '10th'].includes(studentClass)) {
+    if (!profile) {
       setStudentDetails(null);
       setIsTestActive(false);
-      setLoginError('आपके खाते में विद्यार्थी विवरण अधूरे हैं। कृपया सही जानकारी के साथ पुनः पंजीकरण करें।');
+      setLoginError('आपका विद्यार्थी प्रोफाइल database में उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
+      return;
+    }
+    const studentClass = `${profile.class_level}th`;
+    if (!profile.student_name.trim() || !profile.roll_no.trim() || !profile.school_name.trim() || !['9th', '10th'].includes(studentClass)) {
+      setStudentDetails(null);
+      setIsTestActive(false);
+      setLoginError('आपके विद्यार्थी प्रोफाइल का विवरण अधूरा है। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
     const details: StudentLoginDetails = {
-      mobile: user.phone || '', studentName, studentClass, rollNo, school, otherSchool: '',
+      mobile: user.phone || '',
+      studentName: profile.student_name,
+      studentClass,
+      rollNo: profile.roll_no,
+      school: profile.school_name,
+      otherSchool: '',
     };
     setStudentDetails(details);
     setLoginForm(details);
     setLoginError('');
-  }, [user, authLoading]);
+  }, [user, profile, authLoading, profileLoading]);
 
   const handleStudentLogin = () => {
     setLoginError('');
