@@ -2,7 +2,7 @@
 
 ## Approved product settings
 
-- Authentication: **both mobile OTP and password**.
+- Authentication: **mobile number + password only; no SMS OTP**.
 - Session persistence: **remember this device** using Supabase Auth's persisted, refreshable session. Logout must revoke the session; never store passwords or OTPs locally.
 - Attempts: **admin-controlled per test**. Each test has an explicit attempt limit configured by an administrator.
 
@@ -22,9 +22,8 @@
 2. A floating **Student Login / विद्यार्थी लॉगिन** control is visible in the header on desktop and mobile.
 3. Selecting a test while logged out saves the selected test ID as a pending action and opens the login/register dialog.
 4. Student can choose:
-   - **Mobile OTP**: verify the phone number with an SMS OTP.
-   - **Password**: sign in with the registered phone number and password.
-   - First-time registration verifies the phone by OTP, then collects name, class, roll number, school and a password.
+   - **Password login**: sign in with the registered mobile number and password.
+   - First-time registration collects name, class, roll number, school, mobile number and password. Phone confirmation must remain disabled in Supabase Auth so registration does not trigger SMS; explain that the mobile number is not verified at signup.
 5. On successful login, return to the pending test and show its eligibility/attempt count before starting.
 6. Supabase Auth persists a refreshable session on that device. The UI restores the session on reload; explicit logout clears it. Students can still sign in on another device.
 7. Student dashboard: profile, available tests, attempts remaining, in-progress attempt (if any), and personal result history.
@@ -70,7 +69,7 @@ Create a Supabase project and configure:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Configure Phone Auth + an SMS provider in Supabase. Use a verified sender/template and test OTP delivery. The anon key is intended for browser use only with RLS correctly enabled. **Never put the Supabase service-role key, database password, SMS provider secret, or admin credentials in Vite environment variables or Git.**
+Configure Supabase Phone Auth for password sign-in with phone confirmation disabled. No SMS provider is required for this selected login method. Enable appropriate password recovery and abuse protections. The anon key is intended for browser use only with RLS correctly enabled. **Never put the Supabase service-role key, database password, SMS provider secret, or admin credentials in Vite environment variables or Git.**
 
 After creating the first admin account, promote its UUID from the Supabase SQL editor:
 ```sql
@@ -90,7 +89,7 @@ on conflict (user_id, role) do nothing;
 
 ## Acceptance / QA checklist
 
-- OTP signup, OTP login, password login, invalid OTP, wrong password, resend cooldown and logout.
+- Password registration, password login, duplicate mobile number, wrong password, logout and password recovery. Verify no SMS is sent during signup or login.
 - Same-device refresh restores the session; private/incognito/another device requires a new login.
 - Logged-out student clicking a test is returned to that exact test after authentication.
 - Student cannot access another student's profile, attempts or results by changing IDs.
@@ -111,7 +110,7 @@ This branch prepares the backend schema and implementation contract. The live au
 
 - Google Sheets access: **both read and write**.
 - Admin sign-in: **Google Account OAuth**.
-- Student sign-in remains mobile OTP + password.
+- Student sign-in is mobile number + password only; SMS OTP is not used.
 - Device persistence remains Supabase Auth refreshable session.
 - Attempt limits remain admin-configured per test.
 
@@ -161,7 +160,7 @@ Deployment must be configured to execute as the script owner. Set `PORTAL_SHARED
 
 ## Required external configuration / owner actions
 
-1. Create or select the Supabase project; configure Phone Auth and an SMS provider.
+1. Create or select the Supabase project; enable Phone Auth with password sign-in and disable phone confirmation to avoid OTP SMS.
 2. Configure Google OAuth consent screen and OAuth client; enable Google provider in Supabase.
 3. Set the allowed administrator identity through the out-of-band role bootstrap after first successful Google OAuth sign-in.
 4. Create/choose a private Google Sheet; copy its spreadsheet ID into Apps Script Script Properties.
