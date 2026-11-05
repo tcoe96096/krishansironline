@@ -291,7 +291,7 @@ const MainApp: React.FC = () => {
               icon={Award}
               onBackHome={() => navigateTo('home')}
             />
-            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
+            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} onRequestLogin={() => setIsAuthOpen(true)} />
           </div>
         )}
 
