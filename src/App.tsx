@@ -153,8 +153,8 @@ const MainApp: React.FC = () => {
                     </h2>
                     <p className="mt-1 text-sm text-slate-600 max-w-2xl">
                       {language === 'en'
-                        ? 'Jump directly into your syllabus, chapter notes, question banks, or online tests.'
-                        : 'सीधे अपने पाठ्यक्रम, अध्यायवार नोट्स, प्रश्न बैंक या ऑनलाइन टेस्ट तक पहुंचें।'}
+                        ? 'Jump directly into your syllabus, chapter notes, and online tests.'
+                        : 'सीधे अपने पाठ्यक्रम, अध्यायवार नोट्स और ऑनलाइन टेस्ट तक पहुंचें।'}
                     </p>
                   </div>
 
