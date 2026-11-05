@@ -32,8 +32,8 @@ const pages = {
 } as const;
 type PageKey = keyof typeof pages;
 const getPageFromPath = (): PageKey => {
-  const path = window.location.pathname.replace(/\\/+$/, '') || '/';
-  return (Object.keys(pages) as PageKey[]).find((key) => pages[key].path.replace(/\\/+$/, '') === path) || 'home';
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  return (Object.keys(pages) as PageKey[]).find((key) => pages[key].path.replace(/\/+$/, '') === path) || 'home';
 };
 
 const MainApp: React.FC = () => {
