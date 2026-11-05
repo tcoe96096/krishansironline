@@ -3,7 +3,7 @@
 ## Approved product settings
 
 - Authentication: **mobile number + password only; no SMS OTP**.
-- Session persistence: **remember this device** using Supabase Auth's persisted, refreshable session. Logout must revoke the session; never store passwords or OTPs locally.
+- Session persistence: **remember this device** using Supabase Auth's persisted, refreshable session. Logout must revoke the session; never store passwords locally.
 - Attempts: **admin-controlled per test**. Each test has an explicit attempt limit configured by an administrator.
 
 ## Current repository findings (main branch reviewed 5 Nov 2026)
@@ -34,8 +34,7 @@
 
 - Frontend: existing React/Vite application.
 - Identity + database: Supabase Auth + PostgreSQL.
-- OTP: Supabase Phone Auth with an SMS provider configured in the Supabase project.
-- Password login: Supabase Phone + Password sign-in. Registration verifies phone OTP before setting password.
+- Login: Supabase Phone + Password sign-in only. Phone confirmation is disabled so the selected flow does not send OTP SMS; signup numbers are therefore unverified.
 - Session: Supabase JS client with `persistSession: true`, `autoRefreshToken: true`, and local device persistence. Do not use an indefinite custom auth flag.
 - Data security: Row Level Security (RLS) on every student-facing table; student rows are scoped to `auth.uid()`; admin role is checked server-side.
 - Scoring: private answer keys and a database RPC; never send correct answers to the browser.
@@ -45,8 +44,8 @@
 
 ### Frontend files to add
 - `src/lib/supabase.ts`: create the Supabase client from public Vite environment variables.
-- `src/context/AuthContext.tsx`: auth session, profile, OTP/password actions, logout and auth state listener.
-- `src/components/StudentAuthModal.tsx`: OTP/password tabs, registration profile form, validation and accessible errors.
+- `src/context/AuthContext.tsx`: auth session, profile, password sign-in/sign-up actions, logout and auth state listener.
+- `src/components/StudentAuthModal.tsx`: password login / registration form with student profile fields, validation and accessible errors.
 - `src/components/StudentDashboard.tsx`: profile, test history, results and attempts remaining.
 - `src/components/AdminDashboard.tsx`: protected test/attempt administration and result management.
 - `src/services/testService.ts`: fetch published tests, start attempts and submit answers through secure RPCs.
@@ -103,7 +102,7 @@ on conflict (user_id, role) do nothing;
 
 ## Implementation boundary
 
-This branch prepares the backend schema and implementation contract. The live authentication UI and data migration must be wired only after a Supabase project URL/key and SMS provider are configured. This prevents a half-working login screen or a misleading “result saved” message. No existing production test/question data is changed by this preparation.
+This branch prepares the backend schema and implementation contract. The live authentication UI and data migration must be wired only after a Supabase project URL/key are configured. This prevents a half-working login screen or a misleading “result saved” message. No existing production test/question data is changed by this preparation.
 
 
 ## Updated integration decisions (user confirmed 5 Nov 2026)
