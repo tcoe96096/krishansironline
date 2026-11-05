@@ -1,42 +1,25 @@
-# Supabase SMS OTP setup — Krishan Sir Online Learning Portal
+# Supabase phone + password setup — Krishan Sir Online Learning Portal
 
-This guide is for the existing Supabase project. Do not paste provider credentials into GitHub, Vite variables, chat, or the website.
+## Approved login choice
+- Students sign up and sign in using their 10-digit Indian mobile number and password.
+- SMS OTP is not part of registration or login; no SMS provider is required.
+- Supabase Phone Auth must be configured for password-based phone sign-in.
+- Disable phone confirmation in Supabase Auth before enabling registration, otherwise Supabase may send a confirmation OTP and incur SMS charges.
 
-## Current decision
-- Student login: mobile OTP + phone/password.
-- SMS provider: not selected/configured yet.
-- Country: India. Check current TRAI/DLT requirements with the chosen SMS provider before sending production OTPs.
+## Supabase configuration
+1. Open the existing Supabase project.
+2. Go to Authentication → Providers → Phone and enable Phone provider.
+3. Ensure phone confirmation is disabled for this password-only flow. Confirm the dashboard wording and behavior in a test account before production.
+4. Set strong password requirements and configure CAPTCHA / rate limits where available.
+5. Configure password recovery. Since phone numbers are not verified at signup, do not treat possession of the number as verified identity. For account recovery or changing a number, use a separately verified recovery process controlled by the project owner.
+6. Test signup, duplicate number, correct password, wrong password, logout, session refresh and recovery. Confirm that no SMS is sent.
 
-## Supported provider options
-Supabase hosted Phone Auth currently documents Twilio, MessageBird, and Vonage; Textlocal is listed as community-supported in the Phone Login guide. Provider availability, account onboarding and India delivery rules can change. Compare sender/route support and DLT onboarding before choosing.
+## Important security limitations
+- A mobile number entered during signup is not proof that the student owns that number when phone confirmation is disabled.
+- Mobile numbers can be recycled by carriers. Do not rely on an unverified phone number alone for sensitive account recovery.
+- Never store passwords in localStorage or send them to Google Sheets.
+- Use Supabase Auth persisted, refreshable sessions; never create a permanent client-side “logged in” flag.
+- Keep service-role keys and all provider secrets out of frontend code and GitHub.
 
-Official guide: https://supabase.com/docs/guides/auth/phone-login
-
-## Configure the existing Supabase project
-1. Open Supabase Dashboard and select the existing portal project.
-2. Go to Authentication → Providers (or Sign In / Providers, depending on dashboard layout) → Phone.
-3. Enable Phone provider, but do not announce OTP login as live until delivery is tested.
-4. Create an account with the selected SMS provider and complete its required sender-ID, template and India DLT registration steps.
-5. In Supabase Phone provider settings, choose that provider and enter its credentials directly in the dashboard. Never commit these credentials.
-6. In Authentication → Templates, set a concise OTP template containing the Supabase code variable, e.g. 'Your Krishan Sir Portal verification code is {{ .Code }}. Do not share it.'
-7. Set conservative OTP request limits, CAPTCHA/bot protection and expiry. Supabase documents a default 60-second resend interval; verify the live project's settings.
-8. Add a test phone number with a fixed test OTP only for controlled development. Remove test numbers/codes before production.
-9. Test delivery to at least two Indian mobile networks, then test wrong code, expired code, resend cooldown and repeated requests.
-
-## India-specific compliance checks
-- Confirm DLT entity/principal-entity registration, sender/header, content template and applicable route with the provider.
-- Confirm whether OTP traffic requires a specific transactional/service route and approved template.
-- Do not assume an international provider account alone guarantees India delivery or compliance.
-
-## Credentials checklist (keep values private)
-- [ ] Provider account created
-- [ ] India delivery supported and DLT onboarding confirmed
-- [ ] Sender/header and OTP template approved
-- [ ] Provider API credentials entered in Supabase dashboard
-- [ ] Phone provider enabled
-- [ ] CAPTCHA and OTP rate limits configured
-- [ ] Real-device OTP delivery tested
-- [ ] Test phone numbers/codes removed for production
-
-## Important account-safety note
-Phone numbers can be recycled by mobile carriers. For accounts that use phone + password, require fresh phone verification for recovery or phone-number changes and consider MFA before allowing sensitive account changes.
+## No-SMS cost model
+There is no per-login SMS charge because the chosen flow does not send OTP messages. Supabase project usage and any separately enabled paid features remain subject to the selected Supabase plan.
