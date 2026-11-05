@@ -20,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     { id: 'questions', label: t('nav.questions') },
     { id: 'results', label: t('nav.results') },
     { id: 'polity', label: t('nav.polity') },
+    { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स' },
     { id: 'about', label: t('nav.about') },
     { id: 'contact', label: t('nav.contact') },
   ];
