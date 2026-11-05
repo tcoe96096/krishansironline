@@ -8,7 +8,7 @@ declare
   target_user_id uuid;
   matches integer;
 begin
-  select count(*), min(id)
+  select count(*), (array_agg(id))[1]
     into matches, target_user_id
   from auth.users
   where lower(email) = lower('tcoe96096@gmail.com')
