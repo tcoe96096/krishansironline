@@ -58,7 +58,6 @@ const MainApp: React.FC = () => {
         {/* Latest Announcements & Notice Board (Editable by Owner) */}
         <div id="notices">
           <NoticeBoard onNavigate={scrollToSection} />
-          <LiveAdminContent section="announcements" />
         </div>
 
         {/* 8 Quick Access Cards */}
