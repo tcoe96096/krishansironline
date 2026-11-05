@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
+import { AuthModal } from './components/AuthModal';
 import { Hero } from './components/Hero';
 import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
@@ -77,6 +78,7 @@ const MainApp: React.FC = () => {
   );
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<ClassLevel>('9');
 
 
@@ -121,6 +123,7 @@ const MainApp: React.FC = () => {
         activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Main Dedicated Page Routing */}
@@ -486,6 +489,7 @@ const MainApp: React.FC = () => {
         onClose={() => setIsSearchOpen(false)}
         onNavigate={navigateTo}
       />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </div>
   );
 };
