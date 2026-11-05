@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { BookOpen, Search, Menu, X, Globe, Sparkles, Award, FileText, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Search, Menu, X, Globe, Award } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -31,137 +31,124 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-colors">
-      {/* Top Banner Notice */}
-      <div className="bg-slate-900 text-slate-100 text-xs py-1.5 px-4 hidden md:block">
+      {/* Top Banner Notice - Recovered */}
+      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
-            <span className="font-medium">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span className="font-medium tracking-wide">
               {language === 'en'
                 ? 'Free Online Learning Portal • Learn • Practice • Improve • Succeed'
                 : 'निःशुल्क ऑनलाइन लर्निंग पोर्टल • सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें'}
             </span>
           </div>
-          <div className="flex items-center gap-4 text-slate-300 text-xs">
+          <div className="hidden sm:flex items-center gap-3 text-slate-300 text-xs">
             <span>HBSE & CBSE Syllabus</span>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="text-slate-500">·</span>
             <span>Classes 6–12</span>
-            <span aria-hidden="true">·</span>
-            <span className="text-amber-300 font-medium">By Krishan Sir (TGT Social Science)</span>
+            <span aria-hidden="true" className="text-slate-500">·</span>
+            <span className="text-amber-300 font-semibold">By Krishan Sir (TGT Social Science)</span>
           </div>
         </div>
       </div>
 
       {/* Main Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          
-          {/* Zone 1: Brand Wordmark */}
+        <div className="flex min-h-[76px] sm:min-h-[88px] items-center justify-between gap-2 sm:gap-3 xl:gap-4">
+          {/* Mobile menu toggle — placed at the left edge */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+            aria-label="Toggle Navigation Menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {/* Brand Wordmark */}
           <button
             onClick={() => handleNavClick('home')}
-            className="flex items-center gap-3 text-left group focus:outline-hidden"
+            className="flex min-w-0 flex-1 lg:flex-none items-center gap-2 sm:gap-3 text-left group focus:outline-hidden py-1"
+            aria-label="Krishan Sir home"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-800 to-sky-600 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-              <BookOpen className="w-5 h-5 text-amber-300" />
-            </div>
-            <div>
-              <div className="text-lg font-bold tracking-tight text-slate-900 font-display flex items-center gap-1.5">
-                <span>Krishan Sir</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-200">
-                  Portal
-                </span>
+            <img
+              src={`${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`}
+              alt="Krishan Sir logo"
+              className="h-11 w-11 sm:h-[60px] sm:w-[60px] shrink-0 object-contain transition-transform group-hover:scale-105"
+            />
+            <div className="flex flex-col justify-center">
+              <div
+                className="whitespace-nowrap text-[23px] sm:text-[30px] leading-tight font-bold tracking-tight text-left select-none flex items-center text-[#1f4d89]"
+                style={{ fontFamily: 'Georgia, serif' }}
+              >
+                Krishan Sir
               </div>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block">
+              <p
+                style={{
+                  fontSize: 'clamp(10px, 2.5vw, 14px)',
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                  color: '#3168b5',
+                  backgroundColor: '#def0ef',
+                  fontWeight: 'bold',
+                  textAlign: 'left',
+                }}
+                className="px-2 py-0.5 rounded-sm inline-block mt-1 self-start"
+              >
                 Online Learning Portal
               </p>
             </div>
           </button>
 
-          {/* Zone 2: Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600">
-            {navLinks.slice(0, 7).map((item) => {
+          {/* Zone 2: Navigation Links (Recovered all pages in header) */}
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 text-xs xl:text-sm font-medium text-slate-700">
+            {navLinks.map((item) => {
               const isActive = activeSection === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
                     isActive
-                      ? 'text-sky-900 bg-sky-50 font-semibold'
+                      ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
                       : 'hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   {item.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-800 rounded-full" />
+                  )}
                 </button>
               );
             })}
-
-            <button
-              onClick={() => handleNavClick('about')}
-              className={`px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                activeSection === 'about'
-                  ? 'text-sky-900 bg-sky-50 font-semibold'
-                  : 'hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {t('nav.about')}
-            </button>
           </nav>
 
-          {/* Zone 3: Actions (Search, Language Switch, Primary CTA) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Quick Search */}
+          {/* Zone 3: Actions (Search, Language Switch, Primary CTA, Mobile menu) */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               onClick={onOpenSearch}
-              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium border border-slate-200"
+              className="p-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
               title="Search Portal (Ctrl+K)"
+              aria-label="Search"
             >
-              <Search className="w-4 h-4 text-slate-500" />
-              <span className="hidden md:inline text-slate-500">Search</span>
-              <kbd className="hidden md:inline px-1.5 py-0.5 text-[10px] bg-slate-100 rounded-sm text-slate-400 font-mono">
-                ⌘K
-              </kbd>
+              <Search className="w-4 h-4 text-slate-600" />
             </button>
 
-            {/* Language Switch Button */}
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               title={language === 'en' ? 'Switch to Hindi (हिंदी में पढ़ें)' : 'Switch to English'}
             >
-              <Globe className="w-3.5 h-3.5 text-sky-700" />
-              <span>{language === 'en' ? 'हिंदी' : 'English'}</span>
+              <Globe className="w-4 h-4 text-sky-700" />
+              <span className="hidden sm:inline">{language === 'en' ? 'हिंदी' : 'English'}</span>
             </button>
-
-            {/* Admin Dashboard Link */}
             <a
               href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              className="hidden md:inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               title="Open Admin Dashboard"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-sky-700" />
-              <span>Admin</span>
-            </a>
+            >Admin</a>
 
-            {/* Primary Action Button */}
-            <button
-              onClick={() => handleNavClick('tests')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-sky-900 hover:bg-sky-800 rounded-lg shadow-xs transition-colors whitespace-nowrap"
-            >
-              <Award className="w-3.5 h-3.5 text-amber-300" />
-              <span>{language === 'en' ? 'Take Online Test' : 'ऑनलाइन टेस्ट दें'}</span>
-            </button>
-
-            {/* Mobile Hamburger Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-              aria-label="Toggle Navigation Menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
         </div>
       </div>
@@ -190,19 +177,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-sky-900 bg-sky-50 border border-sky-200 rounded-lg"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Admin Dashboard</span>
-            </a>
-
-            <button
-              onClick={() => handleNavClick('tests')}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-white bg-sky-900 rounded-lg shadow-xs"
-            >
-              <Award className="w-4 h-4 text-amber-300" />
-              <span>{language === 'en' ? 'Start Online Test Now' : 'अभी ऑनलाइन टेस्ट शुरू करें'}</span>
-            </button>
+              className="w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-sky-900 bg-sky-50 border border-sky-200"
+            >Admin Dashboard</a>
             <div className="text-center text-xs text-slate-500 pt-1">
               {language === 'en'
                 ? 'Krishan Kumar · TGT Social Science'
