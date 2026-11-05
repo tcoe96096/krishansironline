@@ -108,7 +108,7 @@ interface OnlineTestEngineProps {
 
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
@@ -385,9 +385,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
   };
 
-  const handleLogoutStudent = () => {
-    if (confirm('क्या आप विद्यार्थी विवरण बदलना चाहते हैं? (Change student login?)')) {
-      setStudentDetails(null);
+  const handleLogoutStudent = async () => {
+    if (confirm('क्या आप लॉगआउट करना चाहते हैं? (Sign out?)')) {
       setIsTestActive(false);
       setIsSubmitted(false);
       setSelectedAnswers({});
@@ -397,6 +396,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         localStorage.removeItem('krishan_sir_active_student');
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       }
+      await signOut();
     }
   };
 
