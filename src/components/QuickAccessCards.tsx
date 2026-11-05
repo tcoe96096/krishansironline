@@ -34,9 +34,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       tag: 'NCERT & HBSE',
       color: 'indigo',
     },
-      tag: 'Exam Focused',
-      color: 'emerald',
-    },
     {
       id: 'results',
       icon: GraduationCap,
@@ -48,9 +45,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       },
       tag: 'GGHS Portal',
       color: 'amber',
-    },
-      tag: 'Interactive Tool',
-      color: 'rose',
     },
     {
       id: 'polity',
