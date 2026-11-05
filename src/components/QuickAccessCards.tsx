@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Award, FileText, CheckSquare, GraduationCap, Landmark, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Award, FileText, GraduationCap, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
 
 interface QuickAccessCardsProps {
   onNavigate: (section: string, filter?: string) => void;
@@ -34,15 +34,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       tag: 'NCERT & HBSE',
       color: 'indigo',
     },
-    {
-      id: 'questions',
-      icon: CheckSquare,
-      title: t('quick.questionBank'),
-      titleHi: 'वस्तुनिष्ठ प्रश्न बैंक',
-      desc: {
-        en: 'Comprehensive multiple-choice questions with answer reveal, 3-mark, and 5-mark board answers.',
-        hi: 'अध्यायवार बहुविकल्पीय प्रश्न (MCQ), 3 और 5 अंक वाले मॉडल उत्तर एवं मानचित्र अभ्यास।',
-      },
       tag: 'Exam Focused',
       color: 'emerald',
     },
@@ -58,15 +49,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       tag: 'GGHS Portal',
       color: 'amber',
     },
-    {
-      id: 'polity',
-      icon: Landmark,
-      title: t('quick.constitution'),
-      titleHi: 'भारतीय संविधान',
-      desc: {
-        en: 'Interactive Preamble explorer, Fundamental Rights, Articles, and constitutional provisions.',
-        hi: 'प्रस्तावना के मुख्य शब्दों की व्याख्या, मौलिक अधिकार और महत्वपूर्ण संवैधानिक अनुच्छेद।',
-      },
       tag: 'Interactive Tool',
       color: 'rose',
     },
@@ -119,12 +101,12 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
             {language === 'en'
-              ? 'Direct gateways to tests, question banks, study notes, and school results'
-              : 'ऑनलाइन टेस्ट, प्रश्न बैंक, अध्ययन सामग्री एवं परीक्षा परिणाम तक त्वरित पहुंच'}
+              ? 'Direct gateways to tests, study notes, announcements, and school results'
+              : 'ऑनलाइन टेस्ट, अध्ययन सामग्री, सूचनाएं एवं परीक्षा परिणाम तक त्वरित पहुंच'}
           </p>
         </div>
 
-        {/* 8 Cards Grid */}
+        {/* Quick Access Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {cards.map((card, idx) => {
             const Icon = card.icon;
