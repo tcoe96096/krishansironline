@@ -7,7 +7,7 @@ type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
-  const { user, configured, signInWithMobile, registerStudent, signOut } = useAuth();
+  const { user, configured, isAdmin, adminLoading, signInWithGoogle, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -57,6 +57,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {!configured && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{en ? 'Supabase environment variables are not configured for this deployment yet.' : 'इस deployment में Supabase environment variables अभी configure नहीं हैं।'}</p>}
         {user ? (
           <div className="space-y-4">
+            {adminLoading ? <p className="text-xs text-slate-500">Admin role जाँचा जा रहा है…</p> : isAdmin ? <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Admin access verified / एडमिन अनुमति सत्यापित</p> : null}
             <p className="text-sm text-slate-700">{en ? 'You are signed in.' : 'आप लॉगिन हैं।'} <span className="font-semibold">{user.phone}</span></p>
             <button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button>
           </div>
@@ -66,6 +67,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
               <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
             </div>
+            <button type="button" disabled={!configured || busy} onClick={async () => {
+              setBusy(true); setError('');
+              try { await signInWithGoogle(); }
+              catch (cause) { setError(cause instanceof Error ? cause.message : 'Google sign-in failed.'); }
+              finally { setBusy(false); }
+            }} className="mb-3 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
+              Continue with Google · Admin Login
+            </button>
+            <p className="mb-3 text-xs text-slate-500">केवल database में Admin role दिए गए Google account को Admin access मिलेगा।</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
                 <input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'} className={inputClass} />
