@@ -1,4 +1,6 @@
 import { StudyChapter, OnlineTest, StudentResult, Notice, CurrentAffairItem, ClassLevel } from '../types';
+import { UPLOADED_CLASS9_ONLINE_TEST } from './class9Test60Data';
+import { NMMS_CLASS8_HISTORY_CH1_TEST } from './nmmsClass8HistoryChapter1';
 
 export const TEACHER_INFO = {
   name: 'Krishan Kumar',
@@ -864,6 +866,9 @@ export const ONLINE_TESTS: OnlineTest[] = [
       },
     ],
   },
+  // Migrated question banks from the previous portal.
+  UPLOADED_CLASS9_ONLINE_TEST,
+  NMMS_CLASS8_HISTORY_CH1_TEST,
 ];
 
 export const STUDENT_RESULTS: StudentResult[] = [
