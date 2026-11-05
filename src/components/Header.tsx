@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { BookOpen, Search, Menu, X, Globe, Sparkles, Award, FileText, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Search, Menu, X, Globe, Sparkles, Award, FileText, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -133,6 +133,18 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <span>{language === 'en' ? 'हिंदी' : 'English'}</span>
             </button>
 
+            {/* Admin Dashboard Link */}
+            <a
+              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              title="Open Admin Dashboard"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-sky-700" />
+              <span>Admin</span>
+            </a>
+
             {/* Primary Action Button */}
             <button
               onClick={() => handleNavClick('tests')}
@@ -174,6 +186,16 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <a
+              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-sky-900 bg-sky-50 border border-sky-200 rounded-lg"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Admin Dashboard</span>
+            </a>
+
             <button
               onClick={() => handleNavClick('tests')}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-white bg-sky-900 rounded-lg shadow-xs"
