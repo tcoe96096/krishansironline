@@ -35,6 +35,9 @@ type AuthContextValue = {
   loading: boolean;
   profileLoading: boolean;
   configured: boolean;
+  isAdmin: boolean;
+  adminLoading: boolean;
+  signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   signInWithMobile: (mobile: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
@@ -48,6 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -125,6 +130,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { active = false; };
   }, [session?.user?.id]);
 
+  useEffect(() => {
+    let active = true;
+    if (!session?.user) {
+      setIsAdmin(false);
+      setAdminLoading(false);
+      return;
+    }
+    setAdminLoading(true);
+    requireSupabase()
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error('Unable to verify admin role:', error.message);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(Boolean(data));
+        }
+      })
+      .finally(() => { if (active) setAdminLoading(false); });
+    return () => { active = false; };
+  }, [session?.user?.id]);
+
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await requireSupabase().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) throw error;
+  }, []);
+
   const signInWithMobile = useCallback(async (mobile: string, password: string) => {
     const phone = normalizeIndianMobile(mobile);
     const { error } = await requireSupabase().auth.signInWithPassword({ phone, password });
@@ -164,6 +204,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     profileLoading,
+    isAdmin,
+    adminLoading,
+    signInWithGoogle,
     configured: (() => {
       try { requireSupabase(); return true; } catch { return false; }
     })(),
@@ -171,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithMobile,
     registerStudent,
     signOut,
-  }), [session, profile, loading, profileLoading, refreshProfile, signInWithMobile, registerStudent, signOut]);
+  }), [session, profile, loading, profileLoading, isAdmin, adminLoading, signInWithGoogle, refreshProfile, signInWithMobile, registerStudent, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
