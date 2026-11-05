@@ -5,7 +5,7 @@ import { ClassLevel } from '../types';
 import { BookOpen, Award, FileText, ArrowRight, Clock, CheckCircle, Sparkles } from 'lucide-react';
 
 interface ClassSelectorProps {
-  onSelectClassAction: (classLevel: ClassLevel, action: 'materials' | 'tests' | 'questions') => void;
+  onSelectClassAction: (classLevel: ClassLevel, action: 'materials' | 'tests') => void;
 }
 
 export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelectClassAction }) => {

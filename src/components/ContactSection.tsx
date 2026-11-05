@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { MapPin, Mail, Send, CheckCircle2, MessageSquare, School, HelpCircle } from 'lucide-react';
+import { Mail, Send, CheckCircle2, MessageSquare, School, HelpCircle } from 'lucide-react';
 
 export const ContactSection: React.FC = () => {
   const { language } = useLanguage();
@@ -70,13 +70,14 @@ export const ContactSection: React.FC = () => {
                   <div className="font-bold text-slate-900">Website Owner & Teacher:</div>
                   <div className="text-slate-700">Krishan Kumar (TGT Social Science)</div>
                   <div className="text-slate-500 text-xs">Department of School Education, Haryana</div>
+                  <a href="mailto:krishansir.online@gmail.com" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-sky-800 hover:text-sky-950"><Mail className="w-4 h-4" /> krishansir.online@gmail.com</a>
                 </div>
               </div>
 
               <div className="p-3 bg-sky-50 rounded-xl border border-sky-100 text-xs text-sky-950 flex items-start gap-2">
                 <HelpCircle className="w-4 h-4 text-sky-800 shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
-                  "For privacy and child safety standards, student queries are answered within classroom sessions and portal updates. No private contact details are published."
+                  "For privacy and child safety, student queries should be shared through the academic form or the official email address shown above."
                 </p>
               </div>
             </div>

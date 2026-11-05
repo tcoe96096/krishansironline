@@ -58,6 +58,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="text-[11px] text-slate-400 pt-1">
               UGC NET Pol Sci (2x) · M.Phil · M.Ed · CTET · HTET
             </div>
+            <a href="mailto:krishansir.online@gmail.com" className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 text-[11px] pt-1">krishansir.online@gmail.com</a>
           </div>
 
           {/* Col 3: Quick Navigation */}
@@ -82,14 +83,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   Chapter-Wise Study Notes
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('questions')}
-                  className="hover:text-amber-300 transition-colors"
-                >
-                  HBSE/CBSE Question Bank & Maps
-                </button>
-              </li>
+              <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">Current Affairs & General Awareness</button></li>
+              <li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">Competitive Exam Preparation</button></li>
               <li>
                 <button
                   onClick={() => onNavigate('results')}
