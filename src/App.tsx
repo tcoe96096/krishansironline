@@ -69,7 +69,7 @@ const MainApp: React.FC = () => {
     results: '/results/', about: '/about/', contact: '/contact/',
   };
   const readPageFromLocation = (): PageId => {
-    const path = window.location.pathname.replace(/\\/+$/, '') || '/';
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
     const fromPath = pathToPage[path];
     if (fromPath) return fromPath;
     const hash = window.location.hash.replace('#', '') as PageId;
