@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Public project configuration supplied by the owner. Environment variables override
+// these defaults for staging/production. Publishable keys are designed for browser use;
+// all database access must remain protected by Row Level Security.
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL || 'https://vsqwlkqqsxcehvdsdbna.supabase.co';
+const supabasePublishableKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_1x1F4HuNZoudMKydMr0XEQ_qB-sOijs';
 
 /**
  * Browser client: use only the Supabase publishable key.
