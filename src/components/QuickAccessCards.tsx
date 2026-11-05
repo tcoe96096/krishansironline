@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Award, FileText, GraduationCap, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Award, FileText, GraduationCap, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
 
 interface QuickAccessCardsProps {
   onNavigate: (section: string, filter?: string) => void;
