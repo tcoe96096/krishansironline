@@ -110,7 +110,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
-  const availableTests = [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
+  // Authenticated students must only see database-backed tests assigned to their canonical profile class.
+  // Static bundled tests are retained only for the signed-out catalogue/legacy preview.
+  const availableTests = user && profile
+    ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
+    : [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
