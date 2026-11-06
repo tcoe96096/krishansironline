@@ -111,6 +111,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
   const availableTests = [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
+  const isDatabaseTest = databaseTests.some((test) => test.id === selectedTest.id);
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
@@ -610,7 +611,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">कक्षा 8 और कक्षा 9 के टेस्ट यहाँ से चुन सकते हैं।</p>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">उपलब्ध प्रकाशित ऑनलाइन टेस्ट चुनें।</p>
+              {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
+              {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}. नीचे केवल उपलब्ध स्थानीय tests दिखाए जा रहे हैं।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
               {availableTests.length} Tests Available
@@ -1670,7 +1673,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
 
-            {/* Detailed Question Review with Green/Red highlights & Explanations */}
+            {/* Private answer keys are not available to the browser for Supabase tests. */}
+            {isDatabaseTest ? (
+              <div className="bg-sky-50 rounded-3xl border border-sky-200 p-6 sm:p-8 text-center">
+                <ShieldCheck className="w-8 h-8 text-sky-700 mx-auto mb-2" />
+                <h3 className="font-bold text-sky-950">आपका परिणाम सुरक्षित रूप से जाँचा गया है।</h3>
+                <p className="text-sm text-sky-800 mt-1">सही उत्तरों की सूची इस स्क्रीन पर नहीं दिखाई जाती।</p>
+              </div>
+            ) : (
+            /* Detailed Question Review with Green/Red highlights & Explanations */
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
               <h3 className="text-lg font-bold text-slate-900 mb-6 font-display flex items-center justify-between">
                 <span>Detailed Question Review &amp; Explanations (विस्तृत उत्तर एवं समाधान)</span>
@@ -1829,6 +1840,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 </div>
               </form>
             </div>
+            )}
           </div>
         )}
 
