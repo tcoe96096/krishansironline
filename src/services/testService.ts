@@ -10,6 +10,51 @@ export interface StudentProfile {
   updated_at: string;
 }
 
+
+export interface PublishedTestQuestion {
+  id: string;
+  chapter: string;
+  question: { en: string; hi: string };
+  options: { en: string[]; hi: string[] };
+  marks?: number;
+  type?: 'mcq' | 'short' | 'long' | 'map';
+}
+
+export interface PublishedTest {
+  id: string;
+  title: { en: string; hi: string };
+  class_level: string;
+  subject: string;
+  chapter: string;
+  duration_minutes: number;
+  total_marks: number;
+  attempt_limit: number;
+  questions: PublishedTestQuestion[];
+}
+
+/**
+ * Fetches only published test content from the RLS-protected public catalogue.
+ * The public payload intentionally has no correctAnswer, explanation, or answer key.
+ */
+export async function getPublishedTests(classLevel?: string): Promise<PublishedTest[]> {
+  let query = requireSupabase()
+    .from('tests')
+    .select('id, title, class_level, subject, chapter, duration_minutes, total_marks, attempt_limit, questions')
+    .eq('is_published', true)
+    .order('class_level', { ascending: true })
+    .order('title', { ascending: true });
+
+  if (classLevel) query = query.eq('class_level', classLevel);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    ...row,
+    questions: Array.isArray(row.questions) ? row.questions : [],
+  })) as PublishedTest[];
+}
+
 export interface TestAttempt {
   id: string;
   student_id: string;
