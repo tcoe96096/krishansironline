@@ -36,8 +36,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
         });
         setMessage(en
-          ? 'Registration submitted. If phone confirmation is enabled in Supabase, verify your number before logging in.'
-          : 'पंजीकरण अनुरोध भेज दिया गया है। यदि Supabase में Phone Confirmation चालू है, तो लॉगिन से पहले नंबर सत्यापित करें।');
+          ? 'Registration successful. You can now log in with your mobile number and password. Keep your password safe; mobile numbers are not verified.'
+          : 'पंजीकरण सफल रहा। अब मोबाइल नंबर और पासवर्ड से लॉगिन करें। पासवर्ड सुरक्षित रखें; मोबाइल नंबर सत्यापित नहीं है।');
         setMode('login');
       }
     } catch (cause) {
@@ -58,7 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {user ? (
           <div className="space-y-4">
             {adminLoading ? <p className="text-xs text-slate-500">Admin role जाँचा जा रहा है…</p> : isAdmin ? <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Admin access verified / एडमिन अनुमति सत्यापित</p> : null}
-            <p className="text-sm text-slate-700">{en ? 'You are signed in.' : 'आप लॉगिन हैं।'} <span className="font-semibold">{user.phone}</span></p>
+            <p className="text-sm text-slate-700">{en ? 'You are signed in.' : 'आप लॉगिन हैं।'} <span className="font-semibold">{user.phone || 'Student account'}</span></p>
             <button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button>
           </div>
         ) : (
