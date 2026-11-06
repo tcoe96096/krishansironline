@@ -19,11 +19,14 @@ In Supabase Dashboard → SQL Editor, run these files in numeric order:
 Do not mark the system production-ready until all migrations execute successfully.
 
 ## Student password login (no SMS OTP)
-In Authentication → Sign In / Providers → Phone:
-- Enable Phone provider.
-- Disable phone confirmation if the owner intentionally wants password-only access.
-- This means the phone number is not independently verified. Do not use it as identity proof.
-- Set appropriate password and rate limits. Never expose account enumeration details.
+The portal presents a mobile-number + password interface but maps each normalized Indian mobile number to a stable internal email identifier for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing.
+
+In Authentication → Sign In / Providers:
+- Keep Email provider enabled.
+- Disable Confirm email because the generated identifier is not a real mailbox.
+- Keep Phone provider disabled; no Twilio credentials are required.
+- Use a minimum password length of at least 8 characters and appropriate auth rate limits.
+- Mobile numbers are not verified and must not be treated as proof of identity. The generated identifier cannot receive email password-reset links; establish an administrator-assisted identity verification and recovery process before production.
 
 ## Google OAuth administrator login
 In Authentication → Providers → Google:
