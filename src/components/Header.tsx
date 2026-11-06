@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Globe, Award } from 'lucide-react';
+import { Search, Menu, X, Globe, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
   onNavigate: (section: string) => void;
   onOpenSearch: () => void;
+  onOpenAuth: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch }) => {
+export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth }) => {
   const { language, toggleLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -141,13 +142,12 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <Globe className="w-4 h-4 text-sky-700" />
               <span className="hidden sm:inline">{language === 'en' ? 'हिंदी' : 'English'}</span>
             </button>
-            <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-              title="Open Admin Dashboard"
-            >Admin</a>
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              title="Secure Admin Login"
+            ><ShieldCheck className="w-4 h-4 text-sky-700" />Admin Login</button>
 
           </div>
         </div>
@@ -173,12 +173,11 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-sky-900 bg-sky-50 border border-sky-200"
-            >Admin Dashboard</a>
+            <button
+              type="button"
+              onClick={() => { setMobileMenuOpen(false); onOpenAuth(); }}
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-sky-900 bg-sky-50 border border-sky-200"
+            ><ShieldCheck className="w-4 h-4" />Admin Login</button>
             <div className="text-center text-xs text-slate-500 pt-1">
               {language === 'en'
                 ? 'Krishan Kumar · TGT Social Science'

@@ -129,3 +129,29 @@ export interface CurrentAffairItem {
     hi: string;
   };
 }
+
+
+export interface StudentLoginDetails {
+  mobile: string;
+  studentName: string;
+  studentClass: string;
+  rollNo: string;
+  school: string;
+  otherSchool: string;
+}
+
+export interface StudentTestSubmission {
+  id: string;
+  timestamp: string;
+  student: StudentLoginDetails;
+  testId: string;
+  testTitle: string;
+  score: number;
+  totalMarks: number;
+  percentage: number;
+  attempted: number;
+  unattempted: number;
+  answers: Record<string, number | null>;
+  syncedToGoogleSheet?: boolean;
+  syncError?: string;
+}

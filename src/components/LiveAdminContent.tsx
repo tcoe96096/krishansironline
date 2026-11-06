@@ -14,11 +14,6 @@ const CONFIG: Record<Section, { title: string; subtitle: string; icon: React.Ele
   tests: { title: 'Published Online Tests', subtitle: 'ऑनलाइन टेस्ट', icon: FileText },
 };
 
-declare global {
-  interface Window {
-    [key: string]: any;
-  }
-}
 
 interface Props { section: Section; }
 
