@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ONLINE_TESTS } from '../data/portalData';
 import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
-import { startTestAttempt, submitTestAttempt, type TestAttempt } from '../services/testService';
+import { getPublishedTests, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -107,6 +107,14 @@ interface OnlineTestEngineProps {
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
+  const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const [catalogueError, setCatalogueError] = useState('');
+  // Authenticated students must only see database-backed tests assigned to their canonical profile class.
+  // Static bundled tests are retained only for the signed-out catalogue/legacy preview.
+  const availableTests = user && profile
+    ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
+    : [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
@@ -114,6 +122,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
     : 0;
   const [selectedTest, setSelectedTest] = useState<OnlineTest>(restoredTest);
+  const isDatabaseTest = databaseTests.some((test) => test.id === selectedTest.id);
 
   // Test duration follows the selected assessment. Time spent away is deducted on resume.
   const TOTAL_TEST_MINUTES = selectedTest.durationMinutes;
@@ -215,6 +224,49 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     // No persistent browser-side admin authorization is retained.
   };
 
+  // Load the published catalogue from Supabase. Static tests remain available as a compatibility fallback.
+  useEffect(() => {
+    let active = true;
+    const loadPublishedTests = async () => {
+      try {
+        setCatalogueLoading(true);
+        setCatalogueError('');
+        const rows = await getPublishedTests();
+        const mapped: OnlineTest[] = rows.map((test: PublishedTest) => ({
+          id: test.id,
+          title: test.title,
+          classLevel: test.class_level as OnlineTest['classLevel'],
+          subject: test.subject as OnlineTest['subject'],
+          chapter: test.chapter,
+          durationMinutes: test.duration_minutes,
+          totalMarks: Number(test.total_marks),
+          questions: test.questions.map((question) => ({
+            id: question.id,
+            question: question.question,
+            options: question.options,
+            // Database answer keys are private. Never send a correct option to the browser.
+            correctAnswer: -1,
+            explanation: { en: '', hi: '' },
+            chapter: question.chapter || test.chapter,
+            marks: question.marks ?? 1,
+            type: question.type ?? 'mcq',
+          })),
+          instructions: {
+            en: ['Read each question carefully.', 'Submit your answers before the timer ends.'],
+            hi: ['प्रत्येक प्रश्न ध्यानपूर्वक पढ़ें।', 'समय समाप्त होने से पहले अपने उत्तर जमा करें।'],
+          },
+        }));
+        if (active) setDatabaseTests(mapped);
+      } catch (error) {
+        if (active) setCatalogueError(error instanceof Error ? error.message : 'Published tests could not be loaded.');
+      } finally {
+        if (active) setCatalogueLoading(false);
+      }
+    };
+    void loadPublishedTests();
+    return () => { active = false; };
+  }, []);
+
   // Load existing submissions & configured Google Sheet URL
   useEffect(() => {
     setSubmissionsList(getLocalSubmissions());
@@ -251,12 +303,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   useEffect(() => {
     if (restoredSession) return;
     if (initialClassFilter) {
-      const match = ONLINE_TESTS.find((t) => t.classLevel === initialClassFilter);
+      const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
         setSelectedTest(match);
       }
     }
-  }, [initialClassFilter]);
+  }, [initialClassFilter, databaseTests]);
 
 
   // Auto-save every active attempt locally for refresh/tab-close recovery.
@@ -563,14 +615,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">कक्षा 8 और कक्षा 9 के टेस्ट यहाँ से चुन सकते हैं।</p>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">उपलब्ध प्रकाशित ऑनलाइन टेस्ट चुनें।</p>
+              {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
+              {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}. नीचे केवल उपलब्ध स्थानीय tests दिखाए जा रहे हैं।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
-              {ONLINE_TESTS.length} Tests Available
+              {availableTests.length} Tests Available
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {ONLINE_TESTS.map((test) => {
+            {availableTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
                 <button
@@ -1623,7 +1677,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
 
-            {/* Detailed Question Review with Green/Red highlights & Explanations */}
+            {/* Private answer keys are not available to the browser for Supabase tests. */}
+            {isDatabaseTest ? (
+              <div className="bg-sky-50 rounded-3xl border border-sky-200 p-6 sm:p-8 text-center">
+                <ShieldCheck className="w-8 h-8 text-sky-700 mx-auto mb-2" />
+                <h3 className="font-bold text-sky-950">आपका परिणाम सुरक्षित रूप से जाँचा गया है।</h3>
+                <p className="text-sm text-sky-800 mt-1">सही उत्तरों की सूची इस स्क्रीन पर नहीं दिखाई जाती।</p>
+              </div>
+            ) : (
+            /* Detailed Question Review with Green/Red highlights & Explanations */
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
               <h3 className="text-lg font-bold text-slate-900 mb-6 font-display flex items-center justify-between">
                 <span>Detailed Question Review &amp; Explanations (विस्तृत उत्तर एवं समाधान)</span>
@@ -1713,7 +1775,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 })}
               </div>
             </div>
-
+            )}
           </div>
         )}
 
