@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
 import { AuthModal } from './components/AuthModal';
+import { FloatingStudentLogin } from './components/FloatingStudentLogin';
 import { Hero } from './components/Hero';
 import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
@@ -490,6 +491,7 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />
     </div>
   );
 };
