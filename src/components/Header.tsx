@@ -38,8 +38,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
             <span className="font-medium tracking-wide">
               {language === 'en'
-                ? 'Free Online Learning Portal • Learn • Practice • Improve • Succeed'
-                : 'निःशुल्क ऑनलाइन लर्निंग पोर्टल • सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें'}
+                ? 'Free Online Learning • Learn • Practice • Improve • Succeed'
+                : 'निःशुल्क ऑनलाइन लर्निंग • सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें'}
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-3 text-slate-300 text-xs">
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
                 }}
                 className="px-2 py-0.5 rounded-sm inline-block mt-1 self-start"
               >
-                Online Learning Portal
+                Online Learning
               </p>
             </div>
           </button>
