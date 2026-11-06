@@ -7,10 +7,10 @@ import React, {
   useState,
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { normalizeIndianMobile, requireSupabase } from '../lib/supabase';
+import { requireSupabase } from '../lib/supabase';
 
 type StudentRegistration = {
-  mobile: string;
+  email: string;
   password: string;
   studentName: string;
   studentClass: '8' | '9' | '10';
@@ -39,24 +39,12 @@ type AuthContextValue = {
   adminLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  signInWithMobile: (mobile: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-/**
- * Map an Indian mobile number to a stable internal email identifier.
- * Students still enter only their mobile number in the UI. This requires
- * Supabase Email provider enabled and email confirmations disabled.
- * The generated address is not a mailbox and cannot receive password resets.
- */
-const mobileLoginEmail = (mobile: string): string => {
-  const phone = normalizeIndianMobile(mobile);
-  const digits = phone.replace(/\D/g, '');
-  return `student-${digits}@students.krishansir.online`;
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -181,17 +169,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   }, []);
 
-  const signInWithMobile = useCallback(async (mobile: string, password: string) => {
-    const email = mobileLoginEmail(mobile);
-    const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await requireSupabase().auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
-    const phone = normalizeIndianMobile(details.mobile);
-    const email = mobileLoginEmail(phone);
-    if (details.password.length < 8) {
-      throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए।');
+    const email = details.email.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('कृपया वैध ईमेल पता दर्ज करें।');
+    }
+    if (details.password.length < 8 || !/[A-Za-z]/.test(details.password) || !/\d/.test(details.password)) {
+      throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए और उसमें अक्षर तथा अंक दोनों होने चाहिए।');
     }
     const { error } = await requireSupabase().auth.signUp({
       email,
@@ -203,7 +196,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
           account_type: 'student',
-          mobile_number: phone,
         },
       },
     });
@@ -229,10 +221,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try { requireSupabase(); return true; } catch { return false; }
     })(),
     refreshProfile,
-    signInWithMobile,
+    signInWithEmail,
     registerStudent,
     signOut,
-  }), [session, profile, loading, profileLoading, isAdmin, adminLoading, signInWithGoogle, refreshProfile, signInWithMobile, registerStudent, signOut]);
+  }), [session, profile, loading, profileLoading, isAdmin, adminLoading, signInWithGoogle, refreshProfile, signInWithEmail, registerStudent, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
