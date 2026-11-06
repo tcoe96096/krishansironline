@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - "feature/student-auth-test-system"
+      - "fix/supabase-test-catalogue-integration"
   pull_request:
     branches:
-      - "main"
+      - "feature/student-auth-test-system"
 
 permissions:
   contents: read
