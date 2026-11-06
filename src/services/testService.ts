@@ -122,3 +122,15 @@ export async function getMyTestAttempts(): Promise<TestAttempt[]> {
   if (error) throw error;
   return (data ?? []) as TestAttempt[];
 }
+
+/** Admin-only result feed. The database RLS policy rejects non-admin users. */
+export async function getAdminTestAttempts(): Promise<TestAttempt[]> {
+  const { data, error } = await requireSupabase()
+    .from('test_attempts')
+    .select('id, student_id, test_id, attempt_number, status, started_at, expires_at, submitted_at, score, total_marks, percentage, correct_count, attempted_count')
+    .order('started_at', { ascending: false })
+    .limit(1000);
+
+  if (error) throw error;
+  return (data ?? []) as TestAttempt[];
+}
