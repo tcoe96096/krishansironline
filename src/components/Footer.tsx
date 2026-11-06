@@ -32,7 +32,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </span>
             </div>
             <div className="text-amber-300 font-semibold text-xs">
-              Online Learning Portal
+              Online Learning
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
               A dedicated digital education platform for school students, teachers, and competitive exam aspirants across Classes 6 to 12.
@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       <div className="border-t border-slate-800 bg-slate-950 py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
           <div>
-            © {new Date().getFullYear()} Krishan Sir – Online Learning Portal. Managed by Krishan Kumar (TGT Social Science, GGHS Dhanger, Haryana).
+            © {new Date().getFullYear()} Krishan Sir – Online Learning. Managed by Krishan Kumar (TGT Social Science, GGHS Dhanger, Haryana).
           </div>
           <div className="flex items-center gap-4">
             <span>Learn • Practice • Improve • Succeed</span>
