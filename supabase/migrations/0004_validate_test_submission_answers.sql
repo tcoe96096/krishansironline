@@ -65,7 +65,7 @@ begin
     raise exception 'Published test not found';
   end if;
 
-  if jsonb_typeof(v_test.questions) <> 'array' then
+  if jsonb_typeof(v_test.questions) is distinct from 'array' then
     raise exception 'Test question catalogue is invalid';
   end if;
 
@@ -73,7 +73,7 @@ begin
   from public.test_answer_keys
   where test_id = v_attempt.test_id;
 
-  if v_key is null or jsonb_typeof(v_key) <> 'array' then
+  if v_key is null or jsonb_typeof(v_key) is distinct from 'array' then
     raise exception 'Answer key is not configured correctly';
   end if;
 
@@ -90,10 +90,95 @@ begin
     v_question := v_test.questions -> v_question_index;
     v_key_item := v_key -> v_question_index;
 
-    if jsonb_typeof(v_key_item) <> 'number'
-       or jsonb_typeof(v_question -> 'options') <> 'object'
-       or jsonb_typeof(v_question -> 'options' -> 'en') <> 'array'
-       or jsonb_typeof(v_question -> 'options' -> 'hi') <> 'array' then
+    if jsonb_typeof(v_key_item) is distinct from 'number'
+       or jsonb_typeof(v_question -> 'options') is distinct from 'object'
+       or jsonb_typeof(v_question -> 'options' -> 'en') is distinct from 'array'
+       or jsonb_typeof(v_question -> 'options' -> 'hi') is distinct from 'array'
+       or (v_key_item #>> '{}') !~ '^(0|[1-9][0-9]*) then
+      raise exception 'Question or answer key format is invalid at index %', v_question_index;
+    end if;
+
+    v_option_count := jsonb_array_length(v_question -> 'options' -> 'en');
+
+    if v_option_count < 2
+       or jsonb_array_length(v_question -> 'options' -> 'hi') <> v_option_count then
+      raise exception 'Bilingual option count mismatch at question %', v_question_index;
+    end if;
+
+    v_answer_index := (v_key_item #>> '{}')::integer;
+
+    if v_answer_index < 0 or v_answer_index >= v_option_count then
+      raise exception 'Stored answer key index is invalid at question %', v_question_index;
+    end if;
+  end loop;
+
+  -- Reject unknown question indexes, non-integer values and out-of-range choices.
+  for v_answer in
+    select key, value from jsonb_each(p_answers)
+  loop
+    if v_answer.key !~ '^(0|[1-9][0-9]*)$' then
+      raise exception 'Invalid question index: %', v_answer.key;
+    end if;
+
+    v_question_index := v_answer.key::integer;
+
+    if v_question_index < 0 or v_question_index >= v_question_count then
+      raise exception 'Question index out of range: %', v_question_index;
+    end if;
+
+    if v_answer.value <> 'null'::jsonb then
+      if jsonb_typeof(v_answer.value) is distinct from 'number' then
+        raise exception 'Answer must be an integer option index';
+      end if;
+
+      if (v_answer.value #>> '{}') !~ '^(0|[1-9][0-9]*)$' then
+        raise exception 'Answer must be a non-negative integer option index';
+      end if;
+
+      v_answer_index := (v_answer.value #>> '{}')::integer;
+      v_option_count := jsonb_array_length(
+        v_test.questions -> v_question_index -> 'options' -> 'en'
+      );
+
+      if v_answer_index < 0 or v_answer_index >= v_option_count then
+        raise exception 'Option index out of range for question %', v_question_index;
+      end if;
+
+      v_attempted := v_attempted + 1;
+    end if;
+  end loop;
+
+  select count(*) into v_correct
+  from jsonb_each(p_answers) a
+  where a.value <> 'null'::jsonb
+    and (v_key -> (a.key::integer)) = a.value;
+
+  v_score := round(
+    (v_test.total_marks * v_correct::numeric) / v_question_count,
+    2
+  );
+
+  update public.test_attempts set
+    status = 'submitted',
+    submitted_at = now(),
+    answers = p_answers,
+    score = v_score,
+    total_marks = v_test.total_marks,
+    percentage = round((v_score / v_test.total_marks) * 100, 2),
+    correct_count = v_correct,
+    attempted_count = v_attempted
+  where id = p_attempt_id
+  returning * into v_attempt;
+
+  return v_attempt;
+end;
+$$;
+
+revoke all on function public.submit_test_attempt(uuid, jsonb) from public;
+grant execute on function public.submit_test_attempt(uuid, jsonb) to authenticated;
+
+commit;
+ then
       raise exception 'Question or answer key format is invalid at index %', v_question_index;
     end if;
 
