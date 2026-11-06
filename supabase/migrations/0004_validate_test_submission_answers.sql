@@ -94,7 +94,7 @@ begin
        or jsonb_typeof(v_question -> 'options') is distinct from 'object'
        or jsonb_typeof(v_question -> 'options' -> 'en') is distinct from 'array'
        or jsonb_typeof(v_question -> 'options' -> 'hi') is distinct from 'array'
-       or (v_key_item #>> '{}') !~ '^(0|[1-9][0-9]*)
+       or (v_key_item #>> '{}') !~ '^(0|[1-9][0-9]*)$' then
       raise exception 'Question or answer key format is invalid at index %', v_question_index;
     end if;
 
