@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Globe, UserRound, ShieldCheck } from 'lucide-react';
+import { Search, Menu, X, Globe, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -134,14 +134,6 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <Search className="w-4 h-4 text-slate-600" />
             </button>
 
-            <button
-              onClick={onOpenAuth}
-              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-sky-900 text-white text-xs font-semibold hover:bg-sky-800 transition-colors"
-              title="Student Login / Register"
-            >
-              <UserRound className="w-4 h-4" />
-              <span className="hidden sm:inline">Student Login</span>
-            </button>
             <button
               onClick={toggleLanguage}
               className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
