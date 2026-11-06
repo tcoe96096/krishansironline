@@ -159,6 +159,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
   const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
+  // Prevent timer and manual-submit events from sending duplicate RPC requests.
+  const submissionInFlight = useRef(false);
 
   const [submissionStatus, setSubmissionStatus] = useState<{
     loading: boolean;
@@ -448,6 +450,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
+    if (submissionInFlight.current) return;
     if (!studentDetails || !activeAttempt) {
       alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
@@ -459,6 +462,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       if (!confirmIncomplete) return;
     }
 
+    submissionInFlight.current = true;
     setSubmissionStatus({ loading: true, message: 'आपके उत्तर सुरक्षित रूप से जाँचे जा रहे हैं...' });
     try {
       const answers: Record<number, number | null> = {};
@@ -489,6 +493,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         message: error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।',
       });
       // Keep the attempt active so the student can retry submission without losing answers.
+    } finally {
+      submissionInFlight.current = false;
     }
   };
 
