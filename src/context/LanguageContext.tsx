@@ -21,7 +21,7 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.contact': { en: 'Contact', hi: 'संपर्क करें' },
 
   // Hero
-  'hero.title': { en: 'Welcome to Krishan Sir – Online Learning Portal', hi: 'कृष्ण सर – ऑनलाइन लर्निंग पोर्टल में आपका स्वागत है' },
+  'hero.title': { en: 'Welcome to Krishan Sir – Online Learning', hi: 'कृष्ण सर – ऑनलाइन लर्निंग में आपका स्वागत है' },
   'hero.subtitle': { en: 'Your Learning Partner for Classes 6–12, Social Science, Online Tests, and Examination Preparation.', hi: 'कक्षा 6–12, सामाजिक विज्ञान, ऑनलाइन टेस्ट और परीक्षा तैयारी का आपका विश्वस्त साथी।' },
   'hero.description': { en: 'Explore chapter-wise study materials, practice MCQs, attempt online tests, and improve your academic performance through regular practice.', hi: 'अध्यायवार अध्ययन सामग्री, बहुविकल्पीय प्रश्न (MCQ), ऑनलाइन टेस्ट का अभ्यास करें और अपनी शैक्षणिक सफलता सुनिश्चित करें।' },
   'hero.tagline': { en: 'Learn • Practice • Improve • Succeed', hi: 'सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें' },
