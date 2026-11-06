@@ -54,7 +54,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  */
 const mobileLoginEmail = (mobile: string): string => {
   const phone = normalizeIndianMobile(mobile);
-  const digits = phone.replace(/\\D/g, '');
+  const digits = phone.replace(/\D/g, '');
   return `student-${digits}@students.krishansir.online`;
 };
 
