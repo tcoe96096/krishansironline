@@ -15,8 +15,9 @@ In Supabase Dashboard → SQL Editor, run these files in numeric order:
 1. `supabase/migrations/0001_student_test_system.sql`
 2. `supabase/migrations/0002_student_profile_provisioning.sql`
 3. `supabase/migrations/0003_lock_student_identity_and_attempts.sql`
+4. `supabase/migrations/0004_validate_test_submission_answers.sql`
 
-Do not mark the system production-ready until all migrations execute successfully.
+Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Do not mark the system production-ready until all migrations execute successfully.
 
 ## Student password login (no SMS OTP)
 The portal presents a mobile-number + password interface but maps each normalized Indian mobile number to a stable internal email identifier for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing.
@@ -52,6 +53,6 @@ The script is intended to be called only by a trusted server-side Edge Function.
 ## Current implementation boundaries
 - Student Supabase Auth UI and database profile provisioning are present.
 - Google OAuth sign-in and database role lookup are present; actual provider setup and admin bootstrap are manual.
-- Database migrations/RPCs define protected attempts and server-side grading, but the existing OnlineTestEngine has not yet been fully switched to those RPCs. Do not use current client-side results as secure/high-stakes results.
+- OnlineTestEngine starts and submits attempts through protected Supabase RPCs; the browser does not calculate authoritative marks. Published test content is still sourced from bundled frontend data, so answer-key secrecy is not complete until the test catalogue is migrated to the database and served without correct answers.
 - The Apps Script bridge is present but has not been deployed or connected to a trusted Edge Function.
 - Do not merge/deploy until migrations, provider configuration, Edge Function, secure test engine, and end-to-end tests are complete.
