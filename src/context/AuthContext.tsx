@@ -46,6 +46,18 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Map an Indian mobile number to a stable internal email identifier.
+ * Students still enter only their mobile number in the UI. This requires
+ * Supabase Email provider enabled and email confirmations disabled.
+ * The generated address is not a mailbox and cannot receive password resets.
+ */
+const mobileLoginEmail = (mobile: string): string => {
+  const phone = normalizeIndianMobile(mobile);
+  const digits = phone.replace(/\\D/g, '');
+  return `student-${digits}@students.krishansir.online`;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -166,18 +178,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithMobile = useCallback(async (mobile: string, password: string) => {
-    const phone = normalizeIndianMobile(mobile);
-    const { error } = await requireSupabase().auth.signInWithPassword({ phone, password });
+    const email = mobileLoginEmail(mobile);
+    const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
     const phone = normalizeIndianMobile(details.mobile);
+    const email = mobileLoginEmail(phone);
     if (details.password.length < 8) {
       throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए।');
     }
     const { error } = await requireSupabase().auth.signUp({
-      phone,
+      email,
       password: details.password,
       options: {
         data: {
@@ -186,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
           account_type: 'student',
+          mobile_number: phone,
         },
       },
     });
