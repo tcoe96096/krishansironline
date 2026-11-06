@@ -350,7 +350,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       return;
     }
     const studentClass = `${profile.class_level}th`;
-    if (!profile.student_name.trim() || !profile.roll_no.trim() || !profile.school_name.trim() || !['9th', '10th'].includes(studentClass)) {
+    if (!profile.student_name.trim() || !profile.roll_no.trim() || !profile.school_name.trim() || !['8th', '9th', '10th'].includes(studentClass)) {
       setStudentDetails(null);
       setIsTestActive(false);
       setLoginError('आपके विद्यार्थी प्रोफाइल का विवरण अधूरा है। कृपया स्कूल प्रशासन से संपर्क करें।');
