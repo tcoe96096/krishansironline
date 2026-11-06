@@ -1771,7 +1771,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 })}
               </div>
             </div>
-
+            )}
           </div>
         )}
 
@@ -1840,7 +1840,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 </div>
               </form>
             </div>
-            )}
           </div>
         )}
 
