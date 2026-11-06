@@ -12,7 +12,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
-  const [studentClass, setStudentClass] = useState<'9' | '10'>('10');
+  const [studentClass, setStudentClass] = useState<'8' | '9' | '10'>('10');
   const [rollNo, setRollNo] = useState('');
   const [schoolName, setSchoolName] = useState('Govt Girls High School, Dhanger');
   const [otherSchool, setOtherSchool] = useState('');
@@ -79,7 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
                 <input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'} className={inputClass} />
-                <select value={studentClass} onChange={e=>setStudentClass(e.target.value as '9'|'10')} className={inputClass}><option value="9">{en ? 'Class 9' : 'कक्षा 9'}</option><option value="10">{en ? 'Class 10' : 'कक्षा 10'}</option></select>
+                <select value={studentClass} onChange={e=>setStudentClass(e.target.value as '8'|'9'|'10')} className={inputClass}><option value="8">{en ? 'Class 8' : 'कक्षा 8'}</option><option value="9">{en ? 'Class 9' : 'कक्षा 9'}</option><option value="10">{en ? 'Class 10' : 'कक्षा 10'}</option></select>
                 <input required value={rollNo} onChange={e=>setRollNo(e.target.value)} placeholder={en ? 'Roll number' : 'रोल नंबर'} className={inputClass} />
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
