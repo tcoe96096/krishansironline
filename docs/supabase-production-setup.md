@@ -53,10 +53,15 @@ The script is intended to be called only by a trusted server-side Edge Function.
 ## Current implementation boundaries
 - Student Supabase Auth UI and database profile provisioning are present.
 - Google OAuth sign-in and database role lookup are present; actual provider setup and admin bootstrap are manual.
-- OnlineTestEngine starts and submits attempts through protected Supabase RPCs; the browser does not calculate authoritative marks. Published test content is still sourced from bundled frontend data, so answer-key secrecy is not complete until the test catalogue is migrated to the database and served without correct answers.
-- The Apps Script bridge is present but has not been deployed or connected to a trusted Edge Function.
-- Do not merge/deploy until migrations, provider configuration, Edge Function, secure test engine, and end-to-end tests are complete.
+- OnlineTestEngine now loads published test content through `getPublishedTests()` from the Supabase `tests` table. The browser payload excludes answer keys and explanations; authoritative grading remains in the `submit_test_attempt` RPC.
+- The Apps Script bridge is present but has not been deployed or connected to a trusted Edge Function. Google Sheets reporting is therefore not production-ready and must remain disabled until the trusted server-side bridge is deployed.
+- Student email/password registration and login are implemented. Google OAuth admin login still requires provider setup and an approved admin-role bootstrap.
+- Do not merge/deploy until migrations, provider configuration, database permissions, account recovery controls, and student end-to-end tests are verified.
 
 
 ## Seed the Class 8 and Class 9 test catalogue
 After migrations `0001` through `0004` have been applied, run `supabase/migrations/0005_seed_secure_test_catalogue.sql` once in Supabase SQL Editor. This seed contains only three tests: Class 9 History (60 questions), Class 9 Constitution Quiz (4 questions), and Class 8 NMMS History (40 questions). Public question JSON excludes correct answers and explanations; answer indexes are stored separately in `test_answer_keys`. Re-running the migration updates these three test IDs only; it does not delete other tests or student attempt history.
+
+
+## Separately created Class 10 test
+The Class 10 Geography test `test-c10-resources-10` (Resources and Development) was inserted separately through Supabase SQL Editor. It is not part of migration `0005_seed_secure_test_catalogue.sql`, which continues to seed only the three Class 8 and Class 9 tests. Verify the Class 10 row is published and its private answer-key row exists before student testing.
