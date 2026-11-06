@@ -121,12 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setProfileLoading(true);
-    requireSupabase()
-      .from('student_profiles')
-      .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await requireSupabase()
+          .from('student_profiles')
+          .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
         if (!active) return;
         if (error) {
           console.error('Unable to load student profile:', error.message);
@@ -134,10 +135,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setProfile(data as StudentProfile | null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) setProfileLoading(false);
-      });
+      }
+    })();
 
     return () => { active = false; };
   }, [session?.user?.id]);
@@ -150,13 +151,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     setAdminLoading(true);
-    requireSupabase()
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', session.user.id)
-      .eq('role', 'admin')
-      .maybeSingle()
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await requireSupabase()
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
         if (!active) return;
         if (error) {
           console.error('Unable to verify admin role:', error.message);
@@ -164,8 +166,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setIsAdmin(Boolean(data));
         }
-      })
-      .finally(() => { if (active) setAdminLoading(false); });
+      } finally {
+        if (active) setAdminLoading(false);
+      }
+    })();
     return () => { active = false; };
   }, [session?.user?.id]);
 
