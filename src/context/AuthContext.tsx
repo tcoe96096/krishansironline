@@ -13,7 +13,7 @@ type StudentRegistration = {
   mobile: string;
   password: string;
   studentName: string;
-  studentClass: '9' | '10';
+  studentClass: '8' | '9' | '10';
   rollNo: string;
   schoolName: string;
 };
