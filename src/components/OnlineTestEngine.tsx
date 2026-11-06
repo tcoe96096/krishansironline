@@ -354,7 +354,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       return;
     }
     const details: StudentLoginDetails = {
-      mobile: user.phone || '',
+      mobile: user.phone || String(user.user_metadata?.mobile_number || ''),
       studentName: profile.student_name,
       studentClass,
       rollNo: profile.roll_no,
