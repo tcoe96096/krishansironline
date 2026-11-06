@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ONLINE_TESTS } from '../data/portalData';
 import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
+import { startTestAttempt, submitTestAttempt, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -36,14 +37,11 @@ import {
 } from 'lucide-react';
 import {
   getLocalSubmissions,
-  saveLocalSubmission,
-  sendSubmissionToGoogleSheet,
   getGoogleSheetUrl,
   saveGoogleSheetUrl,
   exportSubmissionsToCSV,
   deleteLocalSubmission,
   GOOGLE_APPS_SCRIPT_CODE,
-  DEFAULT_SHEET_URL,
 } from '../utils/googleSheetsSync';
 
 
@@ -158,6 +156,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
   const selectedTestEffectInitialized = useRef(false);
+
+  const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
+  const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
 
   const [submissionStatus, setSubmissionStatus] = useState<{
     loading: boolean;
@@ -366,7 +367,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setLoginError('');
   }, [user, profile, authLoading, profileLoading]);
 
-  const handleStudentLogin = () => {
+  const handleStudentLogin = async () => {
     setLoginError('');
     if (!user || !studentDetails) {
       onRequestLogin();
@@ -376,13 +377,24 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setLoginError(`यह टेस्ट कक्षा ${selectedTest.classLevel} के लिए है। आपके खाते की कक्षा ${studentDetails.studentClass} है।`);
       return;
     }
-    setSelectedAnswers({});
-    setMarkedForReview({});
-    setCurrentQuestionIndex(0);
-    setTimeLeftSeconds(TOTAL_TEST_MINUTES * 60);
-    setIsSubmitted(false);
-    setIsTestActive(true);
-    setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
+    try {
+      setSubmissionStatus({ loading: true, message: 'Database से परीक्षा अनुमति जाँची जा रही है...' });
+      const attempt = await startTestAttempt(selectedTest.id);
+      setActiveAttempt(attempt);
+      setServerResult(null);
+      setSelectedAnswers({});
+      setMarkedForReview({});
+      setCurrentQuestionIndex(0);
+      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      setTimeLeftSeconds(remaining);
+      setIsSubmitted(false);
+      setIsTestActive(remaining > 0);
+      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
+      setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
+    } catch (error) {
+      setSubmissionStatus({ loading: false, success: false, message: '' });
+      setLoginError(error instanceof Error ? error.message : 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।');
+    }
   };
 
   const handleLogoutStudent = async () => {
@@ -428,83 +440,74 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     });
   };
 
-  // Score Calculation
-  let correctCount = 0;
-  questionsList.forEach((q, idx) => {
-    if (selectedAnswers[idx] === q.correctAnswer) {
-      correctCount++;
-    }
-  });
+  // Scores are authoritative only after PostgreSQL server-side grading.
+  const marksObtained = serverResult?.score ?? 0;
+  const percentage = (serverResult?.percentage ?? 0).toFixed(2);
+  const correctCount = serverResult?.correct_count ?? 0;
+  const marksPerQuestion = selectedTest.totalMarks / Math.max(1, totalQuestions);
 
-  const marksPerQuestion = selectedTest.totalMarks / totalQuestions;
-  const marksObtained = correctCount * marksPerQuestion;
-  const percentage = ((marksObtained / selectedTest.totalMarks) * 100).toFixed(2);
-
-  // Submit Test Handler
+  // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
-    if (!studentDetails) {
-      alert('कृपया पहले विद्यार्थी लॉगिन पूरा करें।');
+    if (!studentDetails || !activeAttempt) {
+      alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
-
     if (!timeExpired && attemptedCount < totalQuestions) {
       const confirmIncomplete = confirm(
-        `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\n\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
+        `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\\n\\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
       );
       if (!confirmIncomplete) return;
     }
 
-    setIsSubmitted(true);
-    setIsTestActive(false);
-    localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-    localStorage.removeItem('krishan_sir_active_student');
-    setSubmissionStatus({ loading: true, message: 'परिणाम सुरक्षित किया जा रहा है...' });
-
-    const submission: StudentTestSubmission = {
-      id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: new Date().toLocaleString('en-IN', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
-      student: studentDetails,
-      testId: selectedTest.id,
-      testTitle: selectedTest.title.hi || selectedTest.title.en,
-      score: marksObtained,
-      totalMarks: selectedTest.totalMarks,
-      percentage: percentage,
-      attempted: attemptedCount,
-      unattempted: unattemptedCount,
-      syncedToGoogleSheet: false,
-      answers: selectedAnswers,
-    };
-
-    // Save locally and send to Google Sheet Web App
-    const syncResult = await sendSubmissionToGoogleSheet(submission);
-
-    setSubmissionStatus({
-      loading: false,
-      success: syncResult.success,
-      message: syncResult.message,
-    });
-
-    // Refresh responses table in memory
-    setSubmissionsList(getLocalSubmissions());
-
-    // Scroll to results banner
-    setTimeout(() => {
-      document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    setSubmissionStatus({ loading: true, message: 'आपके उत्तर सुरक्षित रूप से जाँचे जा रहे हैं...' });
+    try {
+      const answers: Record<number, number | null> = {};
+      for (let index = 0; index < totalQuestions; index += 1) {
+        answers[index] = Number.isInteger(selectedAnswers[index]) ? selectedAnswers[index] : null;
+      }
+      const result = await submitTestAttempt(activeAttempt.id, answers);
+      setServerResult(result);
+      setActiveAttempt(result);
+      setIsSubmitted(true);
+      setIsTestActive(false);
+      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+      localStorage.removeItem('krishan_sir_active_student');
+      setSubmissionStatus({
+        loading: false,
+        success: result.status === 'submitted',
+        message: result.status === 'submitted'
+          ? 'आपका परिणाम database में सुरक्षित हो गया है।'
+          : 'परीक्षा का समय समाप्त हो गया था; प्रयास expired दर्ज किया गया है।',
+      });
+      setTimeout(() => {
+        document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (error) {
+      setSubmissionStatus({
+        loading: false,
+        success: false,
+        message: error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।',
+      });
+      // Keep the attempt active so the student can retry submission without losing answers.
+    }
   };
 
   // Re-attempt test
-  const handleReattempt = () => {
-    setSelectedAnswers({});
-    setMarkedForReview({});
-    setCurrentQuestionIndex(0);
-    setTimeLeftSeconds(TOTAL_TEST_MINUTES * 60);
-    setIsSubmitted(false);
-    setIsTestActive(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleReattempt = async () => {
+    try {
+      const attempt = await startTestAttempt(selectedTest.id);
+      setActiveAttempt(attempt);
+      setServerResult(null);
+      setSelectedAnswers({});
+      setMarkedForReview({});
+      setCurrentQuestionIndex(0);
+      setTimeLeftSeconds(Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000)));
+      setIsSubmitted(false);
+      setIsTestActive(attempt.status === 'in_progress');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      setSubmissionStatus({ loading: false, success: false, message: error instanceof Error ? error.message : 'दोबारा टेस्ट शुरू नहीं हो सका।' });
+    }
   };
 
   // Save Google Sheet Webhook URL
