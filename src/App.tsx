@@ -118,7 +118,6 @@ const MainApp: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       {/* Top Header with navigation to all pages */}
       <Header
-        activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
@@ -129,7 +128,7 @@ const MainApp: React.FC = () => {
         {activePage === 'home' && (
           <div className="space-y-0">
             {/* Hero Banner with Quick Actions */}
-            <Hero onNavigate={navigateTo} />
+            <Hero onNavigate={navigateTo} activeSection={activePage} />
 
             {/* Latest Announcements & Notice Board */}
             <div id="notices">

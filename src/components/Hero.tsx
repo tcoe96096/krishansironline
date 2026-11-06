@@ -5,9 +5,10 @@ import { CheckCircle2, Award, FileText, ArrowRight, ShieldCheck, GraduationCap, 
 
 interface HeroProps {
   onNavigate: (section: string) => void;
+  activeSection: string;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
+export const Hero: React.FC<HeroProps> = ({ onNavigate, activeSection }) => {
   const { language, t } = useLanguage();
 
   return (
@@ -182,6 +183,44 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
         </div>
 
+
+        {/* All portal page tabs are grouped at the bottom of the Home hero. */}
+        <nav aria-label="Portal pages" className="mt-10 pt-5 border-t border-slate-200/90">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              {language === 'en' ? 'Explore Portal' : 'पोर्टल के सभी पृष्ठ'}
+            </span>
+            <span className="text-[11px] text-slate-500 hidden sm:inline">
+              {language === 'en' ? 'Choose a section' : 'अपना अनुभाग चुनें'}
+            </span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 sm:flex-wrap sm:overflow-visible">
+            {[
+              { id: 'home', label: t('nav.home') },
+              { id: 'classes', label: t('nav.classes') },
+              { id: 'tests', label: t('nav.tests') },
+              { id: 'materials', label: t('nav.materials') },
+              { id: 'results', label: t('nav.results') },
+              { id: 'polity', label: t('nav.polity') },
+              { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स' },
+              { id: 'about', label: t('nav.about') },
+              { id: 'contact', label: t('nav.contact') },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                aria-current={activeSection === item.id ? 'page' : undefined}
+                className={`shrink-0 px-3.5 py-2 rounded-full border text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeSection === item.id
+                    ? 'bg-sky-900 text-white border-sky-900 shadow-sm'
+                    : 'bg-white/90 text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </nav>
       </div>
     </section>
   );
