@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, Globe } from 'lucide-react';
+import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -38,11 +38,11 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
             <div className="mt-0.5 text-[9px] sm:text-xs font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
           </div>
-          <div className="hidden md:flex items-center justify-center w-16 h-16 shrink-0 text-amber-500">
-            <BookOpen className="w-12 h-12 text-[#17477e]" strokeWidth={1.6} />
-            <span className="absolute -translate-y-8 text-3xl">☀</span>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
+            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2 shadow-sm"><Search className="w-5 h-5" /></button>
+            <button onClick={toggleLanguage} className="rounded-xl border border-[#17477e]/50 bg-white/90 text-[#092c60] px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1 shadow-sm"><Shield className="w-4 h-4" /><span>Admin</span></a>
           </div>
-          <div className="hidden xl:block text-4xl opacity-80">🌍</div>
         </div>
       </div>
       <nav className="bg-[#082d65] text-white border-b-4 border-cyan-400">
@@ -51,11 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1 overflow-x-auto">
             {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-bold transition-colors ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'hover:bg-white/15'}`}><Icon className="w-5 h-5" />{label}</button>)}
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2"><Search className="w-5 h-5" /></button>
-            <button onClick={toggleLanguage} className="rounded-xl border border-white/70 px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1"><Shield className="w-4 h-4" /><span>Admin</span></a>
-          </div>
+
         </div>
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 gap-2 p-3 bg-[#0b3979]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className="flex items-center gap-2 rounded-lg p-3 text-left text-sm font-semibold hover:bg-white/10"><Icon className="w-4 h-4" />{label}</button>)}<a href={adminUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-3 bg-white text-[#092c60] font-bold text-center">Admin Dashboard</a></div>}
       </nav>
