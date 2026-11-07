@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Globe, Award } from 'lucide-react';
+import { Search, Menu, X, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -14,11 +14,9 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
 
   const navLinks = [
     { id: 'home', label: t('nav.home') },
-    { id: 'classes', label: t('nav.classes') },
+    { id: 'exams', label: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ' },
+    { id: 'classes', label: language === 'en' ? 'Classes' : 'कक्षाएँ' },
     { id: 'tests', label: t('nav.tests') },
-    { id: 'materials', label: t('nav.materials') },
-    { id: 'results', label: t('nav.results') },
-    { id: 'polity', label: t('nav.polity') },
     { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स' },
     { id: 'about', label: t('nav.about') },
     { id: 'contact', label: t('nav.contact') },
@@ -78,8 +76,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             />
             <div className="flex flex-col justify-center">
               <div
-                className="whitespace-nowrap text-[23px] sm:text-[30px] leading-tight font-bold tracking-tight text-left select-none flex items-center text-[#1f4d89]"
-                style={{ fontFamily: 'Georgia, serif' }}
+                className="whitespace-nowrap text-[25px] sm:text-[34px] leading-tight font-bold tracking-tight text-left select-none flex items-center text-[#1f4d89]"
+                style={{ fontFamily: 'Poppins, Inter, system-ui, sans-serif' }}
               >
                 Krishan Sir
               </div>
@@ -131,14 +129,14 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       </div>
 
       {/* Desktop Navigation — kept on its own row so actions never overflow */}
-      <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-1 px-4 sm:px-6 lg:px-8 pb-3 text-xs xl:text-sm font-medium text-slate-700">
+      <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-2 px-4 sm:px-6 lg:px-8 pb-3 text-sm xl:text-base font-semibold text-slate-700">
         {navLinks.map((item) => {
           const isActive = activeSection === item.id;
           return (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
+              className={`px-3 py-2 rounded-lg transition-colors whitespace-nowrap relative ${
                 isActive
                   ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
                   : 'hover:text-slate-900 hover:bg-slate-100'
@@ -161,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-left px-3 py-2.5 rounded-lg text-base font-semibold transition-colors ${
                   activeSection === item.id
                     ? 'bg-sky-50 text-sky-900 font-semibold border-l-2 border-sky-800'
                     : 'text-slate-700 hover:bg-slate-50'
