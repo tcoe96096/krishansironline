@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield } from 'lucide-react';
+import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, Landmark, Award } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -16,6 +16,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     { id: 'classes', label: language === 'en' ? 'Classes' : 'कक्षाएं', icon: BookOpen },
     { id: 'tests', label: language === 'en' ? 'Tests' : 'टेस्ट', icon: Laptop },
     { id: 'materials', label: language === 'en' ? 'Study Materials' : 'अध्ययन सामग्री', icon: Layers },
+    { id: 'polity', label: language === 'en' ? 'Polity' : 'राजव्यवस्था', icon: Landmark },
+    { id: 'results', label: language === 'en' ? 'Results' : 'परिणाम', icon: Award },
     { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', icon: Newspaper },
     { id: 'about', label: language === 'en' ? 'About' : 'परिचय', icon: Info },
     { id: 'contact', label: language === 'en' ? 'Contact' : 'संपर्क', icon: Phone },
@@ -28,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative overflow-hidden bg-gradient-to-r from-[#eef7ff] via-white to-[#f3f8ed]">
         <div className="absolute inset-0 opacity-100 bg-no-repeat bg-center bg-cover" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
-          <div className="h-[68px] w-[68px] sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#0b4aa2]">
+          <div className="h-14 w-14 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#0b4aa2]">
             <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning circular logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
           </div>
           <div className="min-w-0 flex-1">
@@ -38,10 +40,10 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
             <div className="mt-0.5 text-[9px] sm:text-xs font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
           </div>
-          <div className="ml-auto self-start mt-1 pl-2 flex items-center gap-2 sm:gap-3 shrink-0">
-            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2 shadow-sm"><Search className="w-5 h-5" /></button>
-            <button onClick={toggleLanguage} className="rounded-xl border border-[#17477e]/50 bg-white/90 text-[#092c60] px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1 shadow-sm"><Shield className="w-4 h-4" /><span>Admin</span></a>
+          <div className="ml-auto self-start mt-1 pl-1 sm:pl-2 flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <button onClick={onOpenSearch} aria-label="Search" className="rounded-lg sm:rounded-xl bg-white text-[#092c60] p-1.5 sm:p-2 shadow-sm"><Search className="w-5 h-5" /></button>
+            <button onClick={toggleLanguage} className="rounded-lg sm:rounded-xl border border-[#17477e]/50 bg-white/90 text-[#092c60] px-1.5 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-lg sm:rounded-xl bg-white text-slate-900 px-1.5 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-extrabold items-center gap-1 shadow-sm"><Shield className="w-4 h-4" /><span>Admin</span></a>
           </div>
         </div>
       </div>
