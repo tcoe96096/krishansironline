@@ -29,7 +29,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             {en ? 'FREE ONLINE LEARNING' : 'निःशुल्क ऑनलाइन शिक्षा'}
           </div>
           <p className="mt-5 text-lg sm:text-2xl font-extrabold text-[#12396f]">{en ? 'Welcome to' : 'आपका स्वागत है'}</p>
-          <h1 className="mt-1 text-3xl sm:text-5xl lg:text-[3.65rem] leading-[1.08] font-extrabold tracking-[-.045em] text-[#12396f]">{en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>}</h1>
+          <h1 className="mt-1 text-[clamp(1.65rem,3.7vw,3.1rem)] leading-[1.15] font-bold tracking-[-.03em] text-[#12396f]">{en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>}</h1>
           <div className="mt-4 h-1.5 w-44 rounded-full bg-gradient-to-r from-amber-400 via-cyan-500 to-blue-900" />
           <div className="mt-5 max-w-2xl space-y-2 text-[13px] sm:text-[15px] lg:text-base leading-7 font-normal tracking-[0.005em] text-slate-700">
             <p>{en ? <>A dedicated digital learning platform designed to make quality education <span className="font-semibold text-[#24466f]">accessible, engaging and meaningful</span> for every learner.</> : <>प्रत्येक विद्यार्थी तक गुणवत्तापूर्ण शिक्षा को <span className="font-semibold text-[#24466f]">सरल, रोचक और प्रभावी</span> रूप में पहुँचाने के उद्देश्य से विकसित एक समर्पित डिजिटल शिक्षण मंच।</>}</p>
