@@ -41,14 +41,16 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-0 sm:py-0 flex items-center justify-between gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
           <div className="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-none sm:col-start-1">
-            <div className="h-[44px] w-[44px] sm:h-[58px] sm:w-[58px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
+            <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Go to home page" className="h-[44px] w-[44px] sm:h-[58px] sm:w-[58px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70 cursor-pointer">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
-            </div>
+            </a>
+            <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Krishan Sir branding - Go to home page" className="min-w-0 cursor-pointer no-underline">
             <div className="min-w-0">
               <div className="text-[clamp(1.3rem,3.2vw,2rem)] leading-[1.02] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
               <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /> Online Learning</div>
               <div className="mt-0.5 text-[6px] sm:text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
             </div>
+            </a>
           </div>
 
           <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2 sm:col-start-3 sm:row-start-1 sm:w-auto sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
