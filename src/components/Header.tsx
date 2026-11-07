@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   return (
     <header className="sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl">
       <div className="bg-[#090d14] text-white border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-8 flex items-center justify-center overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-7 flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[9px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
             <span className="text-amber-300">✦ {language === 'en' ? 'WELCOME' : 'स्वागत है'}</span>
             <span>{language === 'en' ? 'Bilingual Learning • Classes 6–12 • Competitive Exams' : 'द्विभाषी शिक्षा • कक्षा 6–12 • प्रतियोगी परीक्षाएँ'}</span>
@@ -38,15 +38,15 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative isolate overflow-hidden bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-1.5 sm:py-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-3 min-w-0 sm:col-start-1">
-            <div className="h-[44px] w-[44px] sm:h-[54px] sm:w-[54px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-1 sm:py-1.5 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 min-w-0 sm:col-start-1">
+            <div className="h-[40px] w-[40px] sm:h-[50px] sm:w-[50px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
             </div>
             <div className="min-w-0">
-              <div className="text-[clamp(1.3rem,3.4vw,2.2rem)] leading-[1.04] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
-              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-4 h-4" /> Online Learning</div>
-              <div className="mt-0.5 text-[8px] sm:text-[9px] font-semibold tracking-[.12em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
+              <div className="text-[clamp(1.15rem,3vw,1.9rem)] leading-[1.04] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
+              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm"><GraduationCap className="w-3.5 h-3.5" /> Online Learning</div>
+              <div className="mt-0.5 text-[7px] sm:text-[8px] font-semibold tracking-[.1em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
             </div>
           </div>
 
