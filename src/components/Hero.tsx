@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { CheckCircle2, GraduationCap, Award, BookOpen } from 'lucide-react';
+import { CheckCircle2, Award, BookOpen } from 'lucide-react';
 
 interface HeroProps { onNavigate: (section: string) => void; }
 
@@ -23,6 +23,11 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <div className="mt-3 h-1.5 w-48 rounded-full bg-gradient-to-r from-amber-400 via-amber-400 to-blue-800" />
           <p className="mt-4 max-w-2xl text-base sm:text-xl leading-snug font-medium text-slate-800">{en ? 'A Complete Learning Platform for School Education & Competitive Exams (Bilingual: Hindi – English)' : 'स्कूली शिक्षा एवं प्रतियोगी परीक्षाओं के लिए संपूर्ण अध्ययन मंच (हिंदी – अंग्रेज़ी)'}</p>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">{benefits.map((item) => <span key={item} className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-slate-800"><CheckCircle2 className="w-5 h-5 text-green-600 fill-green-100" />{item}</span>)}</div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button onClick={() => onNavigate('tests')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'Test' : 'टेस्ट'}</button>
+            <button onClick={() => onNavigate('materials')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'Study Material' : 'अध्ययन सामग्री'}</button>
+            <button onClick={() => onNavigate('about')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'About Teacher' : 'शिक्षक परिचय'}</button>
+          </div>
         </div>
 
         {/* Right side: same portrait treatment as the About Teacher section */}
@@ -54,14 +59,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-sky-200 bg-white/95 px-4 py-3 text-center shadow-sm">
-              <div className="flex items-center justify-center gap-2 text-[#12396f]">
-                <BookOpen className="h-4 w-4 shrink-0 text-[#078a8d]" />
-                <p className="text-xs sm:text-sm font-extrabold leading-relaxed">
-                  {en ? 'Guiding Students Towards Conceptual Clarity, Factual Accuracy & Board Exam Excellence' : 'विद्यार्थियों को अवधारणात्मक स्पष्टता, तथ्यात्मक सटीकता एवं बोर्ड परीक्षा में उत्कृष्टता की ओर मार्गदर्शन'}
-                </p>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
