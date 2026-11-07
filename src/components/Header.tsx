@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, Landmark, Award, ChevronDown } from 'lucide-react';
+import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, GraduationCap, ChevronDown, FileText, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -14,10 +14,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const navLinks = [
     { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
     { id: 'classes', label: language === 'en' ? 'Classes' : 'कक्षाएं', icon: BookOpen },
-    { id: 'tests', label: language === 'en' ? 'Tests' : 'टेस्ट', icon: Laptop },
+    { id: 'tests', label: language === 'en' ? 'All Exams' : 'सभी परीक्षाएं', icon: GraduationCap },
     { id: 'materials', label: language === 'en' ? 'Study Materials' : 'अध्ययन सामग्री', icon: Layers },
-    { id: 'polity', label: language === 'en' ? 'Polity' : 'राजव्यवस्था', icon: Landmark },
-    { id: 'results', label: language === 'en' ? 'Results' : 'परिणाम', icon: Award },
     { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', icon: Newspaper },
     { id: 'about', label: language === 'en' ? 'About' : 'परिचय', icon: Info },
     { id: 'contact', label: language === 'en' ? 'Contact' : 'संपर्क', icon: Phone },
@@ -27,33 +25,40 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl">
-      <div className="relative isolate overflow-hidden bg-[#f2f7fc]">
-        <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-5">
-          <div className="h-[58px] w-[58px] sm:h-[76px] sm:w-[76px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
-            <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[clamp(1.55rem,4vw,2.65rem)] leading-[1.04] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
-            <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-[#087d9b] px-3 sm:px-4 py-1 text-white text-xs sm:text-sm font-bold tracking-wide shadow-sm">
-              <span aria-hidden="true">🎓</span> Online Learning
-            </div>
-            <div className="mt-1 text-[9px] sm:text-[11px] font-semibold tracking-[.12em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
-          </div>
-          <div className="relative z-10 mt-1 grid w-full grid-cols-3 gap-2 sm:mt-0 sm:w-auto sm:ml-auto sm:flex sm:items-center sm:gap-2.5" aria-label="Header tools">
-            <button onClick={onOpenSearch} aria-label="Search" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-2.5 py-2 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md">
-              <Search className="w-4 h-4 shrink-0" /><span>Search</span>
-            </button>
-            <button onClick={toggleLanguage} className="min-h-10 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-2.5 py-2 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              {language === 'en' ? 'हिंदी | En' : 'हि | English'}
-            </button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-2.5 py-2 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md">
-              <Shield className="w-4 h-4 shrink-0" /><span>Admin</span>
-            </a>
+      <div className="bg-[#090d14] text-white border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-8 flex items-center justify-center overflow-hidden">
+          <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[9px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
+            <span className="text-amber-300">✦ {language === 'en' ? 'WELCOME' : 'स्वागत है'}</span>
+            <span>{language === 'en' ? 'Bilingual Learning • Classes 6–12 • Competitive Exams' : 'द्विभाषी शिक्षा • कक्षा 6–12 • प्रतियोगी परीक्षाएँ'}</span>
+            <span className="hidden sm:inline text-cyan-300">| {language === 'en' ? 'Learn • Practice • Succeed' : 'सीखें • अभ्यास करें • सफल हों'}</span>
           </div>
         </div>
       </div>
+
+      <div className="relative isolate overflow-hidden bg-[#f2f7fc]">
+        <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 min-w-0 sm:col-start-1">
+            <div className="h-[58px] w-[58px] sm:h-[76px] sm:w-[76px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
+              <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[clamp(1.55rem,4vw,2.65rem)] leading-[1.04] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
+              <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-[#087d9b] px-3 sm:px-4 py-1 text-white text-xs sm:text-sm font-bold tracking-wide shadow-sm"><GraduationCap className="w-4 h-4" /> Online Learning</div>
+              <div className="mt-1 text-[9px] sm:text-[11px] font-semibold tracking-[.12em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex w-full items-center justify-center gap-2 sm:col-start-2 sm:row-start-1 sm:w-auto sm:justify-self-center" aria-label="Header tools">
+            <button onClick={onOpenSearch} aria-label="Search" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-3 py-2 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span>Search</span></button>
+            <button onClick={toggleLanguage} className="min-h-10 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-3 py-2 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-3 py-2 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span>Admin</span></a>
+          </div>
+          <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
+        </div>
+      </div>
+
       <nav className="bg-[#082d65] text-white border-b-[3px] border-cyan-400" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center min-h-[48px]">
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2.5 rounded-lg hover:bg-white/10" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
