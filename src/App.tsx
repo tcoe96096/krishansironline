@@ -31,11 +31,12 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
 
 const VALID_PAGES: PageId[] = [
   'home',
   'classes',
+  'exams',
   'tests',
   'materials',
   'polity',
@@ -52,6 +53,7 @@ const MainApp: React.FC = () => {
   const pathToPage: Record<string, PageId> = {
     '/': 'home',
     '/classes': 'classes',
+    '/all-exams': 'exams',
     '/online-tests': 'tests',
     '/study-materials': 'materials',
     '/constitution': 'polity',
@@ -61,7 +63,7 @@ const MainApp: React.FC = () => {
     '/contact': 'contact',
   };
   const pageToPath: Record<PageId, string> = {
-    home: '/', classes: '/classes/', tests: '/online-tests/',
+    home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
     results: '/results/', about: '/about/', contact: '/contact/',
@@ -159,7 +161,7 @@ const MainApp: React.FC = () => {
                     <div><div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200 mb-3"><GraduationCap className="w-3.5 h-3.5" /><span>{language === 'en' ? 'Learning Hub 02' : 'अध्ययन केंद्र 02'}</span></div>
                     <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">{language === 'en' ? 'Competitive Exam Preparation' : 'प्रतियोगी परीक्षा तैयारी'}</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">{language === 'en' ? 'Focused preparation for UGC NET Political Science, UGC NET Education, HTET, CTET, and teacher recruitment examinations through study resources and practice tests.' : 'यूजीसी नेट राजनीति विज्ञान, यूजीसी नेट शिक्षा, एचटेट, सीटीईटी और शिक्षक भर्ती परीक्षाओं के लिए अध्ययन सामग्री एवं अभ्यास टेस्ट।'}</p></div>
-                    <button onClick={() => navigateTo('tests')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Start Exam Preparation' : 'परीक्षा तैयारी शुरू करें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => navigateTo('exams')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Explore All Exams' : 'सभी परीक्षाएँ देखें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -211,15 +213,15 @@ const MainApp: React.FC = () => {
         )}
 
         {/* ==================== PAGE 3: ONLINE TESTS (ऑनलाइन टेस्ट) ==================== */}
-        {activePage === 'tests' && (
+        {activePage === 'exams' && (
           <div>
             <PageHeaderBanner
-              titleEn="All Competitive Exams & Online Test Portal"
-              titleHi="सभी प्रतियोगी परीक्षाएँ एवं ऑनलाइन टेस्ट पोर्टल"
-              subtitleEn="Explore exam-wise preparation pathways, core syllabus areas, study resources and bilingual mock tests for teaching and competitive examinations."
-              subtitleHi="शिक्षक भर्ती एवं प्रतियोगी परीक्षाओं के लिए परीक्षा-वार तैयारी, प्रमुख पाठ्यक्रम, अध्ययन सामग्री और द्विभाषी मॉक टेस्ट।"
-              badgeEn="Competitive Exam Preparation Hub"
-              badgeHi="प्रतियोगी परीक्षा तैयारी केंद्र"
+              titleEn="All Competitive Exams & Preparation Hub"
+              titleHi="सभी प्रतियोगी परीक्षाएँ एवं तैयारी केंद्र"
+              subtitleEn="Explore exam-wise preparation pathways, core syllabus areas and study resources for teaching and competitive examinations."
+              subtitleHi="शिक्षक भर्ती एवं प्रतियोगी परीक्षाओं के लिए परीक्षा-वार तैयारी, प्रमुख पाठ्यक्रम और अध्ययन सामग्री।"
+              badgeEn="All Exams"
+              badgeHi="सभी परीक्षाएँ"
               icon={GraduationCap}
               onBackHome={() => navigateTo('home')}
             />
@@ -249,7 +251,7 @@ const MainApp: React.FC = () => {
                       <p className="mt-2 text-[11px] sm:text-xs leading-relaxed text-slate-600">{language === 'en' ? exam.topics : exam.topicsHi}</p>
                       <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                         <button onClick={() => navigateTo('materials')} className="inline-flex items-center gap-1 rounded-lg bg-[#0b3979] px-3 py-2 text-[10px] font-bold text-white hover:bg-[#124887]"><FileText className="h-3.5 w-3.5" />{language === 'en' ? 'Study Material' : 'अध्ययन सामग्री'}</button>
-                        <button onClick={() => document.getElementById('exam-test-simulator')?.scrollIntoView({ behavior: 'smooth' })} className="inline-flex items-center gap-1 rounded-lg border border-[#d5e2ee] px-3 py-2 text-[10px] font-bold text-[#12396f] hover:bg-slate-50"><Laptop className="h-3.5 w-3.5" />{language === 'en' ? 'Practice Tests' : 'अभ्यास टेस्ट'}</button>
+                        <button onClick={() => navigateTo('tests')} className="inline-flex items-center gap-1 rounded-lg border border-[#d5e2ee] px-3 py-2 text-[10px] font-bold text-[#12396f] hover:bg-slate-50"><Laptop className="h-3.5 w-3.5" />{language === 'en' ? 'Practice Tests' : 'अभ्यास टेस्ट'}</button>
                       </div>
                     </article>
                   ))}
@@ -257,9 +259,22 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            <div id="exam-test-simulator">
-              <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
-            </div>
+          </div>
+        )}
+
+        {activePage === 'tests' && (
+          <div>
+            <PageHeaderBanner
+              titleEn="Online Tests & Practice Portal"
+              titleHi="ऑनलाइन टेस्ट एवं अभ्यास पोर्टल"
+              subtitleEn="Attempt available online tests and practice questions with the dedicated test engine."
+              subtitleHi="समर्पित टेस्ट पोर्टल के माध्यम से उपलब्ध ऑनलाइन टेस्ट एवं अभ्यास प्रश्न हल करें।"
+              badgeEn="Tests & Practice"
+              badgeHi="टेस्ट एवं अभ्यास"
+              icon={Laptop}
+              onBackHome={() => navigateTo('home')}
+            />
+            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
           </div>
         )}
 
