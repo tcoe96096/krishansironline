@@ -28,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative overflow-hidden bg-gradient-to-r from-[#eef7ff] via-white to-[#f3f8ed]">
         <div className="absolute inset-y-0 right-0 w-2/5 hidden md:block opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 75% 25%, #77b65b 0, transparent 45%), linear-gradient(110deg, transparent, #d9ebd3)' }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
-          <div className="h-12 w-12 sm:h-16 sm:w-16 shrink-0 rounded-full border-[3px] border-sky-500 p-1 bg-white shadow-md">
-            <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt="Krishan Sir" className="h-full w-full rounded-full object-cover object-[24%_28%]" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
+          <div className="h-14 w-14 sm:h-20 sm:w-20 shrink-0">
+            <img src={`${import.meta.env.BASE_URL}images/krishan-sir-approved-logo.webp`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[clamp(1.45rem,4vw,2.8rem)] leading-none font-extrabold tracking-tight text-[#102f63]">Krishan Sir</div>
