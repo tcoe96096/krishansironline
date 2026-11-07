@@ -432,54 +432,6 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            {/* Meet Your Teacher: compact homepage introduction; full profile remains on About page */}
-            <section className="py-12 bg-white border-b border-slate-200">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-sky-50/70 to-white p-5 sm:p-7 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                    <div className="md:col-span-4">
-                      <div className="relative mx-auto max-w-[260px] aspect-[4/3] sm:aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
-                        <img
-                          src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
-                          alt="Krishan Kumar – TGT Social Science"
-                          loading="lazy"
-                          className="h-full w-full object-cover object-[24%_28%]"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 to-transparent px-4 pb-3 pt-8 text-white">
-                          <div className="font-extrabold">Krishan Kumar</div>
-                          <div className="text-xs text-amber-300">{TEACHER_INFO.designation}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="md:col-span-8">
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 mb-2">
-                        <UserRound className="w-4 h-4" />
-                        {language === 'en' ? 'Meet Your Teacher' : 'अपने शिक्षक से मिलें'}
-                      </div>
-                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">
-                        {language === 'en' ? 'Learn with Krishan Sir' : 'कृष्ण सर के साथ सीखें'}
-                      </h2>
-                      <p className="mt-2 text-sm sm:text-base text-slate-600 leading-relaxed">
-                        {language === 'en'
-                          ? 'TGT Social Science and dedicated educator focused on conceptual clarity, bilingual learning and meaningful exam preparation.'
-                          : 'टीजीटी सामाजिक विज्ञान शिक्षक; वैचारिक स्पष्टता, द्विभाषी अध्ययन और प्रभावी परीक्षा तैयारी पर विशेष ध्यान।'}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {['M.A. Political Science', 'M.Phil.', 'UGC NET – Political Science (2×)', 'UGC NET – Education', 'B.Ed. • M.Ed.', 'CTET • HTET'].map((item) => (
-                          <span key={item} className="rounded-lg border border-sky-100 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700">{item}</span>
-                        ))}
-                      </div>
-                      <div className="mt-5 flex flex-wrap items-center gap-3">
-                        <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800 transition-colors">
-                          {language === 'en' ? 'View Full Teacher Profile' : 'शिक्षक का पूरा परिचय देखें'} <ArrowRight className="w-4 h-4" />
-                        </button>
-                        <span className="text-xs text-slate-500">{TEACHER_INFO.school}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
 
             {/* Home Doubts CTA Banner */}
             <section className="py-10 bg-sky-900 text-white">
