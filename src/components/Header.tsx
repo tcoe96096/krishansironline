@@ -27,34 +27,34 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     <header className="sticky top-0 z-40 bg-white shadow-md">
       <div className="relative overflow-hidden bg-gradient-to-r from-[#eef7ff] via-white to-[#f3f8ed]">
         <div className="absolute inset-y-0 right-0 w-2/5 hidden md:block opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 75% 25%, #77b65b 0, transparent 45%), linear-gradient(110deg, transparent, #d9ebd3)' }} />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-5">
-          <div className="h-16 w-16 sm:h-24 sm:w-24 shrink-0 rounded-full border-[3px] border-sky-500 p-1 bg-white shadow-md">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
+          <div className="h-12 w-12 sm:h-16 sm:w-16 shrink-0 rounded-full border-[3px] border-sky-500 p-1 bg-white shadow-md">
             <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt="Krishan Sir" className="h-full w-full rounded-full object-cover object-[24%_28%]" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[clamp(1.7rem,5vw,3.8rem)] leading-none font-extrabold tracking-tight text-[#102f63]">Krishan Sir</div>
-            <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#087d9b] px-3 sm:px-5 py-1 text-white text-sm sm:text-xl font-bold tracking-wide">
+            <div className="text-[clamp(1.45rem,4vw,2.8rem)] leading-none font-extrabold tracking-tight text-[#102f63]">Krishan Sir</div>
+            <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#087d9b] px-3 sm:px-4 py-0.5 text-white text-xs sm:text-base font-bold tracking-wide">
               <GraduationCapMark /> Online Learning
             </div>
-            <div className="mt-1 text-[10px] sm:text-sm font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
+            <div className="mt-0.5 text-[9px] sm:text-xs font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
           </div>
-          <div className="hidden md:flex items-center justify-center w-24 h-24 shrink-0 text-amber-500">
-            <BookOpen className="w-16 h-16 text-[#17477e]" strokeWidth={1.6} />
+          <div className="hidden md:flex items-center justify-center w-16 h-16 shrink-0 text-amber-500">
+            <BookOpen className="w-12 h-12 text-[#17477e]" strokeWidth={1.6} />
             <span className="absolute -translate-y-8 text-3xl">☀</span>
           </div>
-          <div className="hidden xl:block text-6xl opacity-80">🌍</div>
+          <div className="hidden xl:block text-4xl opacity-80">🌍</div>
         </div>
       </div>
       <nav className="bg-[#082d65] text-white border-b-4 border-cyan-400">
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center gap-1 min-h-[58px]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center gap-1 min-h-[46px]">
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden p-2 rounded-lg hover:bg-white/10" aria-label="Toggle navigation">{mobileMenuOpen ? <X /> : <Menu />}</button>
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1 overflow-x-auto">
-            {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-3 text-sm font-bold transition-colors ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'hover:bg-white/15'}`}><Icon className="w-5 h-5" />{label}</button>)}
+            {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-bold transition-colors ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'hover:bg-white/15'}`}><Icon className="w-5 h-5" />{label}</button>)}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2.5"><Search className="w-5 h-5" /></button>
-            <button onClick={toggleLanguage} className="rounded-xl border border-white/70 px-3 py-2 text-sm font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex rounded-xl bg-white text-slate-900 px-3 py-2 text-sm font-extrabold">Admin</a>
+            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2"><Search className="w-5 h-5" /></button>
+            <button onClick={toggleLanguage} className="rounded-xl border border-white/70 px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1"><Shield className="w-4 h-4" /><span className="hidden xs:inline">Admin</span></a>
           </div>
         </div>
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 gap-2 p-3 bg-[#0b3979]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className="flex items-center gap-2 rounded-lg p-3 text-left text-sm font-semibold hover:bg-white/10"><Icon className="w-4 h-4" />{label}</button>)}<a href={adminUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-3 bg-white text-[#092c60] font-bold text-center">Admin Dashboard</a></div>}
