@@ -1,143 +1,27 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Award, FileText, GraduationCap, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { ClipboardList, BookOpen, Laptop, Newspaper, GraduationCap, ArrowRight } from 'lucide-react';
 
-interface QuickAccessCardsProps {
-  onNavigate: (section: string, filter?: string) => void;
-}
+interface QuickAccessCardsProps { onNavigate: (section: string, filter?: string) => void; }
 
 export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }) => {
-  const { language, t } = useLanguage();
-
+  const { language } = useLanguage();
   const cards = [
-    {
-      id: 'tests',
-      icon: Award,
-      title: t('quick.onlineTests'),
-      titleHi: 'ऑनलाइन टेस्ट',
-      desc: {
-        en: 'Chapter-wise CBT tests with live timers, instant scoring, and Hindi-English explanations.',
-        hi: 'टाइमर युक्त ऑनलाइन टेस्ट, तुरंत मूल्यांकन और कृष्ण सर द्वारा विस्तृत समाधान।',
-      },
-      tag: 'CBT Simulator',
-      color: 'sky',
-    },
-    {
-      id: 'materials',
-      icon: FileText,
-      title: t('quick.studyMaterials'),
-      titleHi: 'अध्ययन सामग्री',
-      desc: {
-        en: 'Structured NCERT revision notes, summary points, key terms, and printable PDF documents.',
-        hi: 'एनसीईआरटी आधारित संक्षिप्त नोट्स, मुख्य बिंदु और डाउनलोड करने योग्य पीडीएफ सामग्री।',
-      },
-      tag: 'NCERT & HBSE',
-      color: 'indigo',
-    },
-    {
-      id: 'results',
-      icon: GraduationCap,
-      title: t('quick.results'),
-      titleHi: 'परीक्षा परिणाम',
-      desc: {
-        en: 'Searchable authorized roll number marksheet lookup and merit certificates for GGHS Dhanger.',
-        hi: 'रोल नंबर द्वारा अंकतालिका खोजें, विषयवार प्राप्तांक और आधिकारिक मेरिट प्रमाण पत्र।',
-      },
-      tag: 'GGHS Portal',
-      color: 'amber',
-    },
-    {
-      id: 'polity',
-      icon: BookOpen,
-      title: t('quick.politicalScience'),
-      titleHi: 'राजनीति विज्ञान',
-      desc: {
-        en: 'Democratic politics, Federalism, Power sharing, and competitive polity foundations.',
-        hi: 'लोकतांत्रिक राजनीति, संघवाद, सत्ता की साझेदारी और प्रतियोगी परीक्षाओं हेतु राजव्यवस्था।',
-      },
-      tag: 'Specialized Hub',
-      color: 'cyan',
-    },
-    {
-      id: 'notices',
-      icon: Bell,
-      title: t('quick.announcements'),
-      titleHi: 'नवीनतम सूचनाएं',
-      desc: {
-        en: 'Timely updates on upcoming school assessments, board date sheets, and syllabus alerts.',
-        hi: 'विद्यालयी टेस्ट, बोर्ड परीक्षा तिथियां और नए अध्ययन सामग्री की समयबद्ध सूचनाएं।',
-      },
-      tag: 'Daily Updates',
-      color: 'violet',
-    },
-    {
-      id: 'materials',
-      icon: RefreshCw,
-      title: t('quick.revision'),
-      titleHi: 'पुनरावृत्ति संसाधन',
-      desc: {
-        en: 'Rapid revision charts, timeline summaries, and high-yield board question collections.',
-        hi: 'त्वरित पुनरावृत्ति चार्ट, ऐतिहासिक तिथिक्रम और बोर्ड परीक्षा के संभावित प्रश्न संग्रह।',
-      },
-      tag: 'Quick Review',
-      color: 'teal',
-    },
+    { id:'tests', title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएं', desc: language === 'en' ? 'Teaching, UGC NET, UPSC, HPSC & More' : 'शिक्षक भर्ती, UGC NET, UPSC, HPSC', Icon:ClipboardList, color:'from-indigo-600 to-blue-800' },
+    { id:'classes', title: language === 'en' ? 'Classes' : 'कक्षाएं', desc: language === 'en' ? 'Class-wise Study Resources' : 'कक्षावार अध्ययन सामग्री', Icon:BookOpen, color:'from-teal-400 to-teal-700' },
+    { id:'tests', title: language === 'en' ? 'Tests' : 'टेस्ट', desc: language === 'en' ? 'Online Practice & Mock Tests' : 'ऑनलाइन अभ्यास एवं मॉक टेस्ट', Icon:Laptop, color:'from-amber-400 to-orange-600' },
+    { id:'affairs', title: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', desc: language === 'en' ? 'National & International Updates' : 'राष्ट्रीय एवं अंतरराष्ट्रीय अपडेट', Icon:Newspaper, color:'from-pink-500 to-rose-700' },
+    { id:'materials', title: language === 'en' ? 'Study Materials' : 'अध्ययन सामग्री', desc: language === 'en' ? 'Notes, MCQs, PYQs & PDFs' : 'नोट्स, MCQs, PYQs एवं PDF', Icon:GraduationCap, color:'from-sky-500 to-blue-800' },
   ];
-
   return (
-    <section className="py-12 bg-slate-50 border-b border-slate-200/80">
+    <section className="py-6 sm:py-8 bg-[#f7faff]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
-            {t('quick.title')}
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-slate-600">
-            {language === 'en'
-              ? 'Direct gateways to tests, study notes, announcements, and school results'
-              : 'ऑनलाइन टेस्ट, अध्ययन सामग्री, सूचनाएं एवं परीक्षा परिणाम तक त्वरित पहुंच'}
-          </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          {cards.map(({id,title,desc,Icon,color}) => <button key={title} onClick={() => onNavigate(id)} className={`group min-h-[145px] rounded-2xl bg-gradient-to-br ${color} p-4 sm:p-5 text-left text-white shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-xl flex items-center gap-3`}>
+            <Icon className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 drop-shadow" strokeWidth={1.8} />
+            <span className="min-w-0 flex-1"><span className="block text-lg sm:text-xl font-extrabold leading-tight">{title}</span><span className="mt-2 block text-xs sm:text-sm leading-snug text-white/95">{desc}</span><span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-slate-900"><ArrowRight className="w-4 h-4" /></span></span>
+          </button>)}
         </div>
-
-        {/* Quick Access Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {cards.map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <button
-                key={idx}
-                onClick={() => onNavigate(card.id)}
-                className="group relative text-left bg-white rounded-xl p-5 border border-slate-200/90 hover:border-sky-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between h-full"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-800 flex items-center justify-center group-hover:bg-sky-900 group-hover:text-white transition-colors">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className="text-[11px] font-medium text-slate-500 font-mono">
-                      {card.tag}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-900 transition-colors flex items-center justify-between">
-                    <span>{language === 'hi' ? card.titleHi : card.title}</span>
-                    <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-sky-800 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </h3>
-
-                  <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-                    {language === 'hi' ? card.desc.hi : card.desc.en}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-sky-800 group-hover:text-sky-950">
-                  <span>{language === 'en' ? 'Open Section' : 'अनुभाग खोलें'}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
       </div>
     </section>
   );

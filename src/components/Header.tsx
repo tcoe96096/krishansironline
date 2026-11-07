@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Globe, Award } from 'lucide-react';
+import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -11,182 +11,56 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch }) => {
   const { language, toggleLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const navLinks = [
-    { id: 'home', label: t('nav.home') },
-    { id: 'classes', label: t('nav.classes') },
-    { id: 'tests', label: t('nav.tests') },
-    { id: 'materials', label: t('nav.materials') },
-    { id: 'results', label: t('nav.results') },
-    { id: 'polity', label: t('nav.polity') },
-    { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स' },
-    { id: 'about', label: t('nav.about') },
-    { id: 'contact', label: t('nav.contact') },
+    { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
+    { id: 'classes', label: language === 'en' ? 'Classes' : 'कक्षाएं', icon: BookOpen },
+    { id: 'tests', label: language === 'en' ? 'Tests' : 'टेस्ट', icon: Laptop },
+    { id: 'materials', label: language === 'en' ? 'Study Materials' : 'अध्ययन सामग्री', icon: Layers },
+    { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', icon: Newspaper },
+    { id: 'about', label: language === 'en' ? 'About' : 'परिचय', icon: Info },
+    { id: 'contact', label: language === 'en' ? 'Contact' : 'संपर्क', icon: Phone },
   ];
-
-  const handleNavClick = (id: string) => {
-    onNavigate(id);
-    setMobileMenuOpen(false);
-  };
+  const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
+  const adminUrl = 'https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-colors">
-      {/* Top Banner Notice - Recovered */}
-      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span className="font-medium tracking-wide">
-              {language === 'en'
-                ? 'Free Online Learning • Learn • Practice • Improve • Succeed'
-                : 'निःशुल्क ऑनलाइन लर्निंग • सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें'}
-            </span>
+    <header className="sticky top-0 z-40 bg-white shadow-md">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#eef7ff] via-white to-[#f3f8ed]">
+        <div className="absolute inset-y-0 right-0 w-2/5 hidden md:block opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 75% 25%, #77b65b 0, transparent 45%), linear-gradient(110deg, transparent, #d9ebd3)' }} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-5">
+          <div className="h-16 w-16 sm:h-24 sm:w-24 shrink-0 rounded-full border-[3px] border-sky-500 p-1 bg-white shadow-md">
+            <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt="Krishan Sir" className="h-full w-full rounded-full object-cover object-[24%_28%]" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
           </div>
-          <div className="hidden sm:flex items-center gap-3 text-slate-300 text-xs">
-            <span>HBSE & CBSE Syllabus</span>
-            <span aria-hidden="true" className="text-slate-500">·</span>
-            <span>Classes 6–12</span>
-            <span aria-hidden="true" className="text-slate-500">·</span>
-            <span className="text-amber-300 font-semibold">By Krishan Sir (TGT Social Science)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-[76px] sm:min-h-[88px] items-center justify-between gap-2 sm:gap-3">
-          {/* Mobile menu toggle — placed at the left edge */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
-            aria-label="Toggle Navigation Menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
-          {/* Brand Wordmark */}
-          <button
-            onClick={() => handleNavClick('home')}
-            className="flex min-w-0 flex-1 lg:flex-none items-center gap-2 sm:gap-3 text-left group focus:outline-hidden py-1"
-            aria-label="Krishan Sir home"
-          >
-            <img
-              src={`${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`}
-              alt="Krishan Sir logo"
-              className="h-11 w-11 sm:h-[60px] sm:w-[60px] shrink-0 object-contain transition-transform group-hover:scale-105"
-            />
-            <div className="flex flex-col justify-center">
-              <div
-                className="whitespace-nowrap text-[23px] sm:text-[30px] leading-tight font-bold tracking-tight text-left select-none flex items-center text-[#1f4d89]"
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
-                Krishan Sir
-              </div>
-              <p
-                style={{
-                  fontSize: 'clamp(10px, 2.5vw, 14px)',
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  color: '#3168b5',
-                  backgroundColor: '#def0ef',
-                  fontWeight: 'bold',
-                  textAlign: 'left',
-                }}
-                className="px-2 py-0.5 rounded-sm inline-block mt-1 self-start"
-              >
-                Online Learning
-              </p>
+          <div className="min-w-0 flex-1">
+            <div className="text-[clamp(1.7rem,5vw,3.8rem)] leading-none font-extrabold tracking-tight text-[#102f63]">Krishan Sir</div>
+            <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#087d9b] px-3 sm:px-5 py-1 text-white text-sm sm:text-xl font-bold tracking-wide">
+              <GraduationCapMark /> Online Learning
             </div>
-          </button>
-
-          {/* Zone 3: Actions (Search, Language Switch, Primary CTA, Mobile menu) */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              onClick={onOpenSearch}
-              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
-              title="Search Portal (Ctrl+K)"
-              aria-label="Search"
-            >
-              <Search className="w-4 h-4 text-slate-600" />
-            </button>
-
-            <button
-              onClick={toggleLanguage}
-              className="flex shrink-0 items-center gap-1 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-              title={language === 'en' ? 'Switch to Hindi (हिंदी में पढ़ें)' : 'Switch to English'}
-            >
-              <Globe className="w-4 h-4 text-sky-700" />
-              <span className="hidden sm:inline">{language === 'en' ? 'हिंदी' : 'English'}</span>
-            </button>
-            <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:inline-flex shrink-0 items-center justify-center px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
-              title="Open Admin Dashboard"
-            >Admin</a>
-
+            <div className="mt-1 text-[10px] sm:text-sm font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
           </div>
+          <div className="hidden md:flex items-center justify-center w-24 h-24 shrink-0 text-amber-500">
+            <BookOpen className="w-16 h-16 text-[#17477e]" strokeWidth={1.6} />
+            <span className="absolute -translate-y-8 text-3xl">☀</span>
+          </div>
+          <div className="hidden xl:block text-6xl opacity-80">🌍</div>
         </div>
       </div>
-
-      {/* Desktop Navigation — kept on its own row so actions never overflow */}
-      <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-1 px-4 sm:px-6 lg:px-8 pb-3 text-xs xl:text-sm font-medium text-slate-700">
-        {navLinks.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.id)}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
-                isActive
-                  ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
-                  : 'hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {item.label}
-              {isActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-800 rounded-full" />
-              )}
-            </button>
-          );
-        })}
+      <nav className="bg-[#082d65] text-white border-b-4 border-cyan-400">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center gap-1 min-h-[58px]">
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden p-2 rounded-lg hover:bg-white/10" aria-label="Toggle navigation">{mobileMenuOpen ? <X /> : <Menu />}</button>
+          <div className="hidden lg:flex flex-1 items-center justify-between gap-1 overflow-x-auto">
+            {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-3 text-sm font-bold transition-colors ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'hover:bg-white/15'}`}><Icon className="w-5 h-5" />{label}</button>)}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2.5"><Search className="w-5 h-5" /></button>
+            <button onClick={toggleLanguage} className="rounded-xl border border-white/70 px-3 py-2 text-sm font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex rounded-xl bg-white text-slate-900 px-3 py-2 text-sm font-extrabold">Admin</a>
+          </div>
+        </div>
+        {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 gap-2 p-3 bg-[#0b3979]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className="flex items-center gap-2 rounded-lg p-3 text-left text-sm font-semibold hover:bg-white/10"><Icon className="w-4 h-4" />{label}</button>)}<a href={adminUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-3 bg-white text-[#092c60] font-bold text-center">Admin Dashboard</a></div>}
       </nav>
-
-      {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 shadow-xl animate-in slide-in-from-top-2 duration-150">
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {navLinks.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeSection === item.id
-                    ? 'bg-sky-50 text-sky-900 font-semibold border-l-2 border-sky-800'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-sky-900 bg-sky-50 border border-sky-200"
-            >Admin Dashboard</a>
-            <div className="text-center text-xs text-slate-500 pt-1">
-              {language === 'en'
-                ? 'Krishan Kumar · TGT Social Science'
-                : 'कृष्ण कुमार · टीजीटी सामाजिक विज्ञान'}
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };
+
+const GraduationCapMark: React.FC = () => <span aria-hidden="true" className="text-lg">🎓</span>;
