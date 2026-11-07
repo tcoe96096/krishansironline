@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-0 sm:py-0 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 min-w-0 sm:col-start-1">
-            <div className="h-[24px] w-[24px] sm:h-[30px] sm:w-[30px] shrink-0 overflow-hidden rounded-full border-2 border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
+            <div className="h-[36px] w-[36px] sm:h-[44px] sm:w-[44px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
             </div>
             <div className="min-w-0">
