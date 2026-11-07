@@ -38,9 +38,9 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative isolate overflow-hidden bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-3 min-w-0 sm:col-start-1">
-            <div className="h-[58px] w-[58px] sm:h-[76px] sm:w-[76px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
+            <div className="h-[50px] w-[50px] sm:h-[64px] sm:w-[64px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
             </div>
             <div className="min-w-0">
@@ -50,10 +50,10 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
           </div>
 
-          <div className="relative z-10 flex w-full items-center justify-center gap-2 sm:col-start-2 sm:row-start-1 sm:w-auto sm:justify-self-center" aria-label="Header tools">
-            <button onClick={onOpenSearch} aria-label="Search" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-3 py-2 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span>Search</span></button>
-            <button onClick={toggleLanguage} className="min-h-10 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-3 py-2 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-3 py-2 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span>Admin</span></a>
+          <div className="relative z-10 flex w-full items-center justify-center gap-2 translate-x-1 sm:col-start-2 sm:row-start-1 sm:w-auto sm:justify-self-center sm:translate-x-5" aria-label="Header tools">
+            <button onClick={onOpenSearch} aria-label="Search" className="min-h-9 w-[150px] sm:w-[180px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-3 py-1.5 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span>Search</span></button>
+            <button onClick={toggleLanguage} className="min-h-9 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-3 py-1.5 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-3 py-1.5 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span>Admin</span></a>
           </div>
           <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
         </div>
