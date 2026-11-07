@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch }) => {
-  const { language, toggleLanguage, t } = useLanguage();
+  const { language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navLinks = [
     { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     <header className="sticky top-0 z-40 bg-white shadow-md">
       <div className="relative overflow-hidden bg-gradient-to-r from-[#eef7ff] via-white to-[#f3f8ed]">
         <div className="absolute inset-0 opacity-100 bg-no-repeat bg-center bg-cover" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-start gap-3 sm:gap-4">
           <div className="h-14 w-14 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#0b4aa2]">
             <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning circular logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
           </div>
@@ -39,11 +39,17 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <GraduationCapMark /> Online Learning
             </div>
             <div className="mt-0.5 text-[9px] sm:text-xs font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
-          </div>
-          <div className="ml-auto self-start mt-1 pl-1 sm:pl-2 flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <button onClick={onOpenSearch} aria-label="Search" className="rounded-lg sm:rounded-xl bg-white text-[#092c60] p-1.5 sm:p-2 shadow-sm"><Search className="w-5 h-5" /></button>
-            <button onClick={toggleLanguage} className="rounded-lg sm:rounded-xl border border-[#17477e]/50 bg-white/90 text-[#092c60] px-1.5 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-lg sm:rounded-xl bg-white text-slate-900 px-1.5 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-extrabold items-center gap-1 shadow-sm"><Shield className="w-4 h-4" /><span>Admin</span></a>
+            <div className="mt-3 grid grid-cols-3 sm:flex sm:flex-wrap sm:items-center gap-2 max-w-xl" aria-label="Header tools">
+              <button onClick={onOpenSearch} aria-label="Search" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/95 text-[#092c60] px-2.5 py-2 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold hover:bg-white">
+                <Search className="w-4 h-4 shrink-0" /><span>Search</span>
+              </button>
+              <button onClick={toggleLanguage} className="min-h-10 inline-flex items-center justify-center rounded-lg border border-[#17477e]/30 bg-white/95 text-[#092c60] px-2 py-2 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm hover:bg-white">
+                {language === 'en' ? 'हिंदी | En' : 'हि | English'}
+              </button>
+              <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/95 text-slate-900 px-2.5 py-2 text-xs sm:text-sm font-extrabold shadow-sm ring-1 ring-[#17477e]/15 hover:bg-white">
+                <Shield className="w-4 h-4 shrink-0" /><span>Admin</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -53,7 +59,6 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1 overflow-x-auto">
             {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-bold transition-colors ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'hover:bg-white/15'}`}><Icon className="w-5 h-5" />{label}</button>)}
           </div>
-
         </div>
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 gap-2 p-3 bg-[#0b3979]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className="flex items-center gap-2 rounded-lg p-3 text-left text-sm font-semibold hover:bg-white/10"><Icon className="w-4 h-4" />{label}</button>)}</div>}
       </nav>
