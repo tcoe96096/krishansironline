@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Award, FileText, GraduationCap, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Award, FileText, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
 
 interface QuickAccessCardsProps {
   onNavigate: (section: string, filter?: string) => void;
@@ -23,10 +23,10 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       color: 'sky',
     },
     {
-      id: 'materials',
+      id: 'exams',
       icon: FileText,
-      title: t('quick.studyMaterials'),
-      titleHi: 'अध्ययन सामग्री',
+      title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ',
+      titleHi: 'सभी परीक्षाएँ',
       desc: {
         en: 'Structured NCERT revision notes, summary points, key terms, and printable PDF documents.',
         hi: 'एनसीईआरटी आधारित संक्षिप्त नोट्स, मुख्य बिंदु और डाउनलोड करने योग्य पीडीएफ सामग्री।',
@@ -35,22 +35,10 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       color: 'indigo',
     },
     {
-      id: 'results',
-      icon: GraduationCap,
-      title: t('quick.results'),
-      titleHi: 'परीक्षा परिणाम',
-      desc: {
-        en: 'Searchable authorized roll number marksheet lookup and merit certificates for GGHS Dhanger.',
-        hi: 'रोल नंबर द्वारा अंकतालिका खोजें, विषयवार प्राप्तांक और आधिकारिक मेरिट प्रमाण पत्र।',
-      },
-      tag: 'GGHS Portal',
-      color: 'amber',
-    },
-    {
-      id: 'polity',
+      id: 'exams',
       icon: BookOpen,
-      title: t('quick.politicalScience'),
-      titleHi: 'राजनीति विज्ञान',
+      title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ',
+      titleHi: 'सभी परीक्षाएँ',
       desc: {
         en: 'Democratic politics, Federalism, Power sharing, and competitive polity foundations.',
         hi: 'लोकतांत्रिक राजनीति, संघवाद, सत्ता की साझेदारी और प्रतियोगी परीक्षाओं हेतु राजव्यवस्था।',
@@ -71,10 +59,10 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       color: 'violet',
     },
     {
-      id: 'materials',
+      id: 'exams',
       icon: RefreshCw,
-      title: t('quick.revision'),
-      titleHi: 'पुनरावृत्ति संसाधन',
+      title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ',
+      titleHi: 'सभी परीक्षाएँ',
       desc: {
         en: 'Rapid revision charts, timeline summaries, and high-yield board question collections.',
         hi: 'त्वरित पुनरावृत्ति चार्ट, ऐतिहासिक तिथिक्रम और बोर्ड परीक्षा के संभावित प्रश्न संग्रह।',
@@ -95,8 +83,8 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
             {language === 'en'
-              ? 'Direct gateways to tests, study notes, announcements, and school results'
-              : 'ऑनलाइन टेस्ट, अध्ययन सामग्री, सूचनाएं एवं परीक्षा परिणाम तक त्वरित पहुंच'}
+              ? 'Direct gateways to exam preparation, classes, tests, and updates'
+              : 'परीक्षा तैयारी, कक्षाओं, टेस्ट और सूचनाओं तक त्वरित पहुंच'}
           </p>
         </div>
 
