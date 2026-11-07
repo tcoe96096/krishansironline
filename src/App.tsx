@@ -7,7 +7,6 @@ import { QuickAccessCards } from './components/QuickAccessCards';
 import { ClassSelector } from './components/ClassSelector';
 import { OnlineTestEngine } from './components/OnlineTestEngine';
 import { AllExamsView } from './components/AllExamsView';
-import { ConstitutionCorner } from './components/ConstitutionCorner';
 import { CurrentAffairsView } from './components/CurrentAffairsView';
 import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
@@ -107,7 +106,7 @@ const MainApp: React.FC = () => {
   };
 
   const handleClassAction = (classLevel: ClassLevel, action: 'materials' | 'tests') => {
-    navigateTo(action, classLevel);
+    navigateTo(action === 'materials' ? 'exams' : 'tests', classLevel);
   };
 
   return (
