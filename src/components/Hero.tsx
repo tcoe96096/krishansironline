@@ -49,20 +49,20 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
         <div className="lg:col-span-5 relative z-10 flex justify-center lg:justify-end">
           <div className="w-full max-w-[350px]">
-            <div className="rounded-[1.55rem] border border-white/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
+            <div className="rounded-[1.55rem] border border-white/80 bg-white/90 p-0.5 sm:p-0.75 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
               <div className="relative aspect-[4/3] sm:aspect-[5/4] w-full rounded-[1.1rem] overflow-hidden bg-slate-200 shadow-sm">
                 <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt={en ? 'Krishan Kumar – TGT Social Science' : 'कृष्ण कुमार – टीजीटी सामाजिक विज्ञान'} className="w-full h-full object-cover object-[24%_28%]" loading="eager" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071d3e]/90 via-transparent to-transparent" />
-                <div className="absolute bottom-0 inset-x-0 p-3 sm:p-4 text-white">
+                <div className="absolute bottom-0 inset-x-0 p-6 sm:p-8 text-white">
                   <div className="text-base sm:text-lg font-extrabold">{en ? 'Krishan Kumar' : 'कृष्ण कुमार'}</div>
                   <div className="mt-0.5 text-[11px] sm:text-xs text-amber-300 font-semibold">{en ? 'TGT Social Science · Government School Educator' : 'टीजीटी सामाजिक विज्ञान · सरकारी विद्यालय शिक्षक'}</div>
                 </div>
               </div>
-              <div className="mt-2.5 rounded-xl border border-[#e1eaf2] bg-[#f7faff] p-2.5 sm:p-3">
+              <div className="mt-2.5 rounded-xl border border-[#e1eaf2] bg-[#f7faff] p-5 sm:p-6">
                 <h2 className="flex items-center gap-2 text-[11px] sm:text-xs font-extrabold text-[#12396f]"><Award className="h-3.5 w-3.5 text-amber-600 shrink-0" />{en ? 'Academic Qualifications' : 'शैक्षणिक योग्यताएँ'}</h2>
-                <div className="mt-1.5 flex flex-wrap gap-1">{shortQualifications.map((item) => <span key={item} className="px-1.5 py-0.5 rounded-md bg-white border border-[#dce7f2] text-[9px] sm:text-[10px] font-semibold text-slate-700">{item}</span>)}</div>
+                <div className="mt-1.5 flex flex-wrap gap-1">{shortQualifications.map((item) => <span key={item} className="px-3 py-1 rounded-md bg-white border border-[#dce7f2] text-[9px] sm:text-[10px] font-semibold text-slate-700">{item}</span>)}</div>
               </div>
-              <div className="mt-2.5 rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-center">
+              <div className="mt-2.5 rounded-xl border border-cyan-100 bg-white px-6 py-5 text-center">
                 <div className="flex items-center justify-center gap-2 text-[#12396f]"><BookOpen className="h-4 w-4 shrink-0 text-[#078a8d]" /><p className="text-[8px] sm:text-[9px] font-medium leading-snug tracking-wide text-slate-500">{en ? 'Guiding Students Towards Conceptual Clarity, Factual Accuracy & Board Exam Excellence' : 'विद्यार्थियों को अवधारणात्मक स्पष्टता, तथ्यात्मक सटीकता एवं बोर्ड परीक्षा में उत्कृष्टता की ओर मार्गदर्शन'}</p></div>
               </div>
             </div>
