@@ -13,8 +13,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navLinks = [
     { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
-    { id: 'exams', label: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ', icon: GraduationCap },
     { id: 'tests', label: language === 'en' ? 'Tests' : 'टेस्ट', icon: Laptop },
+    { id: 'exams', label: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ', icon: GraduationCap },
     { id: 'classes', label: language === 'en' ? 'Classes' : 'कक्षाएं', icon: BookOpen },
     { id: 'materials', label: language === 'en' ? 'Study Materials' : 'अध्ययन सामग्री', icon: Layers },
     { id: 'affairs', label: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', icon: Newspaper },
