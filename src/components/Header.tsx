@@ -51,9 +51,11 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           </div>
 
           <div className="relative z-10 flex w-full items-center justify-center gap-2 translate-x-1 sm:col-start-2 sm:row-start-1 sm:w-auto sm:justify-self-center sm:translate-x-12" aria-label="Header tools">
-            <button onClick={onOpenSearch} aria-label="Search" className="min-h-9 w-[210px] sm:w-[240px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-3 py-1.5 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span>Search</span></button>
-            <button onClick={toggleLanguage} className="min-h-9 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-3 py-1.5 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-3 py-1.5 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span>Admin</span></a>
+            <button onClick={onOpenSearch} aria-label="Search" className="min-h-9 w-[280px] sm:w-[360px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-3 py-1.5 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span>Search</span></button>
+            <div className="ml-3 sm:ml-8 flex items-center gap-3 sm:gap-4">
+              <button onClick={toggleLanguage} className="min-h-9 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-3 py-1.5 text-[10px] sm:text-sm font-bold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
+              <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-3 py-1.5 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span>Admin</span></a>
+            </div>
           </div>
           <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
         </div>
