@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
 
       {/* Main Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-[76px] sm:min-h-[88px] items-center justify-between gap-2 sm:gap-3 xl:gap-4">
+        <div className="flex min-h-[76px] sm:min-h-[88px] items-center justify-between gap-2 sm:gap-3">
           {/* Mobile menu toggle — placed at the left edge */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -99,34 +99,11 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
           </button>
 
-          {/* Zone 2: Navigation Links (Recovered all pages in header) */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 text-xs xl:text-sm font-medium text-slate-700">
-            {navLinks.map((item) => {
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item.id)}
-                  className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
-                    isActive
-                      ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
-                      : 'hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-800 rounded-full" />
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
           {/* Zone 3: Actions (Search, Language Switch, Primary CTA, Mobile menu) */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onOpenSearch}
-              className="p-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
+              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
               title="Search Portal (Ctrl+K)"
               aria-label="Search"
             >
@@ -135,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
 
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex shrink-0 items-center gap-1 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               title={language === 'en' ? 'Switch to Hindi (हिंदी में पढ़ें)' : 'Switch to English'}
             >
               <Globe className="w-4 h-4 text-sky-700" />
@@ -145,13 +122,36 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="hidden md:inline-flex shrink-0 items-center justify-center px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
               title="Open Admin Dashboard"
             >Admin</a>
 
           </div>
         </div>
       </div>
+
+      {/* Desktop Navigation — kept on its own row so actions never overflow */}
+      <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-1 px-4 sm:px-6 lg:px-8 pb-3 text-xs xl:text-sm font-medium text-slate-700">
+        {navLinks.map((item) => {
+          const isActive = activeSection === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavClick(item.id)}
+              className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
+                isActive
+                  ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
+                  : 'hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              {item.label}
+              {isActive && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-800 rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
