@@ -56,6 +56,15 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {shortQualifications.map((item) => <span key={item} className="px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-[10px] sm:text-[11px] font-semibold text-slate-700">{item}</span>)}
                 </div>
+                <div className="mt-3 rounded-xl border border-sky-200 bg-white/95 px-4 py-3 text-center shadow-sm">
+                  <div className="flex items-center justify-center gap-2 text-[#12396f]">
+                    <BookOpen className="h-4 w-4 shrink-0 text-[#078a8d]" />
+                    <p className="text-xs font-extrabold leading-relaxed">
+                      {en ? 'Guiding Students Towards Conceptual Clarity, Factual Accuracy & Board Exam Excellence' : 'विद्यार्थियों को अवधारणात्मक स्पष्टता, तथ्यात्मक सटीकता एवं बोर्ड परीक्षा में उत्कृष्टता की ओर मार्गदर्शन'}
+                    </p>
+                  </div>
+                </div>
+                </div>
               </div>
             </div>
 
