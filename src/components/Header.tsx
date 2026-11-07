@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
             <div className="mt-0.5 text-[9px] sm:text-xs font-bold text-[#153b70] tracking-wide">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
           </div>
-          <div className="w-full sm:w-auto sm:ml-auto grid grid-cols-3 sm:flex sm:items-center gap-2 sm:gap-3 sm:self-start" aria-label="Header tools">
+          <div className="relative z-10 mt-1 w-full sm:mt-0 sm:w-auto sm:ml-auto sm:max-w-fit grid grid-cols-3 sm:flex sm:items-center gap-2 sm:gap-3 sm:self-center" aria-label="Header tools">
             <button onClick={onOpenSearch} aria-label="Search" className="min-h-10 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/95 text-[#092c60] px-2.5 py-2 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold hover:bg-white">
               <Search className="w-4 h-4 shrink-0" /><span>Search</span>
             </button>
