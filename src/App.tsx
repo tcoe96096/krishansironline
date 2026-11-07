@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   ChevronRight,
   MessageSquare,
+  Laptop,
 } from 'lucide-react';
 
 type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
