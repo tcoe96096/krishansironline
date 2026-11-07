@@ -130,8 +130,6 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         </div>
       </div>
 
-      </div>
-
       {/* Desktop Navigation — kept on its own row so actions never overflow */}
       <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-1 px-4 sm:px-6 lg:px-8 pb-3 text-xs xl:text-sm font-medium text-slate-700">
         {navLinks.map((item) => {
