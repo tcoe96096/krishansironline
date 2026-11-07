@@ -22,7 +22,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#f7fbff] via-white to-[#e8f3fa]" />
       <div className="absolute inset-y-0 right-0 -z-10 w-full lg:w-[52%] opacity-55 bg-no-repeat bg-right bg-contain pointer-events-none" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-background.webp)` }} aria-hidden="true" />
       <div className="absolute -top-24 -right-20 -z-10 h-72 w-72 rounded-full bg-cyan-200/30 blur-3xl" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-8 sm:py-11 lg:py-14 grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-[10px] sm:py-[14px] lg:py-[18px] grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
         <div className="lg:col-span-7 relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#c9dced] bg-white/80 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-[#17477e] shadow-sm">
             <Sparkles className="w-4 h-4 text-amber-500" />
@@ -49,7 +49,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
         <div className="lg:col-span-5 relative z-10 flex justify-center lg:justify-end">
           <div className="w-full max-w-[410px]">
-            <div className="rounded-[1.8rem] border border-white/80 bg-white/90 p-3 sm:p-4 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
+            <div className="rounded-[1.8rem] border border-white/80 bg-white/90 p-1.5 sm:p-2 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
               <div className="relative aspect-[4/3] sm:aspect-[5/4] w-full rounded-[1.25rem] overflow-hidden bg-slate-200 shadow-sm">
                 <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt={en ? 'Krishan Kumar – TGT Social Science' : 'कृष्ण कुमार – टीजीटी सामाजिक विज्ञान'} className="w-full h-full object-cover object-[24%_28%]" loading="eager" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071d3e]/90 via-transparent to-transparent" />
