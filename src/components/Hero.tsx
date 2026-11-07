@@ -12,6 +12,12 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
     ? ['M.A. Political Science', 'M.Phil.', 'UGC NET – Political Science (2×)', 'UGC NET – Education', 'B.Ed. • M.Ed.', 'CTET (Both Levels) • HTET']
     : ['एम.ए. राजनीति विज्ञान', 'एम.फिल.', 'UGC NET – राजनीति विज्ञान (2 बार)', 'UGC NET – शिक्षा', 'बी.एड. • एम.एड.', 'CTET (दोनों स्तर) • HTET'];
 
+  const heroButtons = [
+    { label: en ? 'Test' : 'टेस्ट', section: 'tests' },
+    { label: en ? 'Study Material' : 'अध्ययन सामग्री', section: 'materials' },
+    { label: en ? 'About Teacher' : 'शिक्षक परिचय', section: 'about' },
+  ];
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-r from-[#edf6ff] via-white to-[#f8fbf4] border-b border-slate-200">
       <div className="absolute inset-y-0 right-0 w-full lg:w-[48%] opacity-90 bg-no-repeat bg-right bg-contain pointer-events-none" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-background.webp)` }} aria-hidden="true" />
@@ -22,10 +28,12 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <div className="mt-3 h-1.5 w-48 rounded-full bg-gradient-to-r from-amber-400 via-amber-400 to-blue-800" />
           <p className="mt-4 max-w-2xl text-base sm:text-xl leading-snug font-medium text-slate-800">{en ? 'A Complete Learning Platform for School Education & Competitive Exams (Bilingual: Hindi – English)' : 'स्कूली शिक्षा एवं प्रतियोगी परीक्षाओं के लिए संपूर्ण अध्ययन मंच (हिंदी – अंग्रेज़ी)'}</p>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">{benefits.map((item) => <span key={item} className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-slate-800"><CheckCircle2 className="w-5 h-5 text-green-600 fill-green-100" />{item}</span>)}</div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button onClick={() => onNavigate('tests')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'Test' : 'टेस्ट'}</button>
-            <button onClick={() => onNavigate('materials')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'Study Material' : 'अध्ययन सामग्री'}</button>
-            <button onClick={() => onNavigate('about')} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-500 px-5 py-2.5 text-sm font-bold text-amber-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_18px_rgba(251,191,36,0.65)]">{en ? 'About Teacher' : 'शिक्षक परिचय'}</button>
+          <div className="mt-6 flex flex-col items-start gap-3 w-full max-w-md">
+            {heroButtons.map(({label, section}) => (
+              <button key={section} onClick={() => onNavigate(section)} className="w-full min-h-[58px] rounded-xl bg-gradient-to-r from-blue-800 via-blue-700 to-sky-500 px-7 py-4 text-base sm:text-lg font-extrabold text-amber-300 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(251,191,36,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/70">
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
