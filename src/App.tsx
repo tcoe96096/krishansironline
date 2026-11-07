@@ -28,13 +28,15 @@ import {
   ShieldCheck,
   ChevronRight,
   MessageSquare,
+  Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
 
 const VALID_PAGES: PageId[] = [
   'home',
   'classes',
+  'exams',
   'tests',
   'materials',
   'polity',
@@ -51,6 +53,7 @@ const MainApp: React.FC = () => {
   const pathToPage: Record<string, PageId> = {
     '/': 'home',
     '/classes': 'classes',
+    '/all-exams': 'exams',
     '/online-tests': 'tests',
     '/study-materials': 'materials',
     '/constitution': 'polity',
@@ -60,7 +63,7 @@ const MainApp: React.FC = () => {
     '/contact': 'contact',
   };
   const pageToPath: Record<PageId, string> = {
-    home: '/', classes: '/classes/', tests: '/online-tests/',
+    home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
     results: '/results/', about: '/about/', contact: '/contact/',
@@ -139,72 +142,6 @@ const MainApp: React.FC = () => {
             {/* 8 Quick Access Cards to Dedicated Pages */}
             <QuickAccessCards onNavigate={navigateTo} />
 
-            {/* Home Showcase: Classes 6 to 12 Quick Jump */}
-            <section className="py-12 bg-white border-b border-slate-200">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-800 mb-2">
-                      <BookOpen className="w-4 h-4" />
-                      <span>{language === 'en' ? 'Class-wise Portal' : 'कक्षावार अध्ययन पोर्टल'}</span>
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">
-                      {language === 'en' ? 'Explore by Class (6 to 12)' : 'अपनी कक्षा चुनें (6 से 12)'}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-                      {language === 'en'
-                        ? 'Jump directly into your syllabus, chapter notes, and online tests.'
-                        : 'सीधे अपने पाठ्यक्रम, अध्यायवार नोट्स और ऑनलाइन टेस्ट तक पहुंचें।'}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => navigateTo('classes')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-900 text-white text-xs font-semibold hover:bg-sky-800 transition-colors shadow-xs self-start md:self-auto"
-                  >
-                    <span>{language === 'en' ? 'View Full Curriculum Page' : 'पूरा पाठ्यक्रम पृष्ठ देखें'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-                  {(['6', '7', '8', '9', '10', '11', '12'] as ClassLevel[]).map((lvl) => (
-                    <div
-                      key={lvl}
-                      className="group bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl p-4 transition-all text-center flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="w-9 h-9 mx-auto rounded-lg bg-sky-900 text-white flex items-center justify-center font-bold text-sm mb-2 shadow-2xs group-hover:scale-105 transition-transform">
-                          {lvl}
-                        </div>
-                        <div className="text-xs font-bold text-slate-900">
-                          {language === 'en' ? `Class ${lvl}` : `कक्षा ${lvl}`}
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          {lvl === '10' ? 'Board Exam' : lvl === '12' ? 'Sr. Secondary' : 'Social Science'}
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-slate-200/70 flex flex-col gap-1">
-                        <button
-                          onClick={() => handleClassAction(lvl, 'materials')}
-                          className="w-full py-1 text-[11px] font-semibold text-sky-800 hover:text-sky-950 hover:underline"
-                        >
-                          {language === 'en' ? 'Notes' : 'नोट्स'}
-                        </button>
-                        <button
-                          onClick={() => handleClassAction(lvl, 'tests')}
-                          className="w-full py-1 text-[11px] font-semibold text-amber-800 hover:text-amber-950 hover:underline"
-                        >
-                          {language === 'en' ? 'Tests' : 'टेस्ट'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
             {/* Special Learning Hubs */}
             <section className="py-12 bg-slate-100/70 border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -224,7 +161,7 @@ const MainApp: React.FC = () => {
                     <div><div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-bold border border-amber-200 mb-3"><GraduationCap className="w-3.5 h-3.5" /><span>{language === 'en' ? 'Learning Hub 02' : 'अध्ययन केंद्र 02'}</span></div>
                     <h3 className="text-xl font-extrabold text-slate-900 mb-2 font-display">{language === 'en' ? 'Competitive Exam Preparation' : 'प्रतियोगी परीक्षा तैयारी'}</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">{language === 'en' ? 'Focused preparation for UGC NET Political Science, UGC NET Education, HTET, CTET, and teacher recruitment examinations through study resources and practice tests.' : 'यूजीसी नेट राजनीति विज्ञान, यूजीसी नेट शिक्षा, एचटेट, सीटीईटी और शिक्षक भर्ती परीक्षाओं के लिए अध्ययन सामग्री एवं अभ्यास टेस्ट।'}</p></div>
-                    <button onClick={() => navigateTo('tests')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Start Exam Preparation' : 'परीक्षा तैयारी शुरू करें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => navigateTo('exams')} className="mt-6 pt-4 border-t border-slate-100 inline-flex items-center gap-2 text-xs font-bold text-sky-900 hover:text-sky-700"><span>{language === 'en' ? 'Explore All Exams' : 'सभी परीक्षाएँ देखें'}</span><ArrowRight className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -276,16 +213,65 @@ const MainApp: React.FC = () => {
         )}
 
         {/* ==================== PAGE 3: ONLINE TESTS (ऑनलाइन टेस्ट) ==================== */}
+        {activePage === 'exams' && (
+          <div>
+            <PageHeaderBanner
+              titleEn="All Competitive Exams & Preparation Hub"
+              titleHi="सभी प्रतियोगी परीक्षाएँ एवं तैयारी केंद्र"
+              subtitleEn="Explore exam-wise preparation pathways, core syllabus areas and study resources for teaching and competitive examinations."
+              subtitleHi="शिक्षक भर्ती एवं प्रतियोगी परीक्षाओं के लिए परीक्षा-वार तैयारी, प्रमुख पाठ्यक्रम और अध्ययन सामग्री।"
+              badgeEn="All Exams"
+              badgeHi="सभी परीक्षाएँ"
+              icon={GraduationCap}
+              onBackHome={() => navigateTo('home')}
+            />
+
+            <section className="bg-[#f4f8fc] py-8 sm:py-10 border-b border-slate-200">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-3xl mb-6">
+                  <p className="text-[10px] sm:text-xs font-extrabold tracking-[.16em] uppercase text-[#087d9b]">{language === 'en' ? 'Exam-wise learning tracks' : 'परीक्षा-वार अध्ययन सामग्री'}</p>
+                  <h2 className="mt-1 text-xl sm:text-2xl font-extrabold text-[#102f63]">{language === 'en' ? 'Choose Your Examination' : 'अपनी परीक्षा चुनें'}</h2>
+                  <p className="mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">{language === 'en' ? 'Start with the syllabus areas below, then use the study-material library and online test simulator for structured practice.' : 'नीचे दिए गए पाठ्यक्रम क्षेत्रों से तैयारी शुरू करें और व्यवस्थित अभ्यास के लिए अध्ययन सामग्री तथा ऑनलाइन टेस्ट का उपयोग करें।'}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {[
+                    { title: 'UGC NET – Political Science', hi: 'UGC NET – राजनीति विज्ञान', topics: 'Political Theory • Indian Government • Comparative Politics • International Relations • Public Administration • Political Thought', topicsHi: 'राजनीतिक सिद्धांत • भारतीय शासन • तुलनात्मक राजनीति • अंतरराष्ट्रीय संबंध • लोक प्रशासन • राजनीतिक चिंतन' },
+                    { title: 'UGC NET – Education', hi: 'UGC NET – शिक्षा', topics: 'Educational Philosophy • Psychology • Research & Statistics • Curriculum • Teacher Education • Educational Management', topicsHi: 'शिक्षा दर्शन • मनोविज्ञान • शोध एवं सांख्यिकी • पाठ्यचर्या • शिक्षक शिक्षा • शैक्षिक प्रबंधन' },
+                    { title: 'HTET – PRT / TGT / PGT', hi: 'HTET – PRT / TGT / PGT', topics: 'Child Development • Pedagogy • Hindi & English • Reasoning • Haryana GK • Subject Knowledge', topicsHi: 'बाल विकास • शिक्षाशास्त्र • हिंदी एवं अंग्रेज़ी • तर्कशक्ति • हरियाणा सामान्य ज्ञान • विषय ज्ञान' },
+                    { title: 'CTET – Paper I & II', hi: 'CTET – पेपर I एवं II', topics: 'Child Development • Learning & Pedagogy • Language I & II • Mathematics • Environmental Studies • Social Studies', topicsHi: 'बाल विकास • अधिगम एवं शिक्षाशास्त्र • भाषा I एवं II • गणित • पर्यावरण अध्ययन • सामाजिक अध्ययन' },
+                    { title: 'UPSC / HPSC – General Studies', hi: 'UPSC / HPSC – सामान्य अध्ययन', topics: 'Indian History • Geography • Constitution • Economy • Environment • Science & Technology • Current Affairs', topicsHi: 'भारतीय इतिहास • भूगोल • संविधान • अर्थव्यवस्था • पर्यावरण • विज्ञान एवं प्रौद्योगिकी • समसामयिकी' },
+                    { title: 'TGT Social Science Recruitment', hi: 'TGT सामाजिक विज्ञान भर्ती', topics: 'History • Geography • Political Science • Economics • Haryana GK • Teaching Aptitude • School Pedagogy', topicsHi: 'इतिहास • भूगोल • राजनीति विज्ञान • अर्थशास्त्र • हरियाणा सामान्य ज्ञान • शिक्षण अभिरुचि • विद्यालयी शिक्षाशास्त्र' },
+                  ].map((exam, index) => (
+                    <article key={exam.title} className="rounded-2xl border border-[#dce7f2] bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf4fb] text-[#0b3979]"><GraduationCap className="h-5 w-5" /></div>
+                        <span className="rounded-full bg-[#f1f6fb] px-2.5 py-1 text-[10px] font-bold text-[#315779]">0{index + 1}</span>
+                      </div>
+                      <h3 className="mt-3 text-base font-extrabold leading-snug text-[#12396f]">{language === 'en' ? exam.title : exam.hi}</h3>
+                      <p className="mt-2 text-[11px] sm:text-xs leading-relaxed text-slate-600">{language === 'en' ? exam.topics : exam.topicsHi}</p>
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                        <button onClick={() => navigateTo('materials')} className="inline-flex items-center gap-1 rounded-lg bg-[#0b3979] px-3 py-2 text-[10px] font-bold text-white hover:bg-[#124887]"><FileText className="h-3.5 w-3.5" />{language === 'en' ? 'Study Material' : 'अध्ययन सामग्री'}</button>
+                        <button onClick={() => navigateTo('tests')} className="inline-flex items-center gap-1 rounded-lg border border-[#d5e2ee] px-3 py-2 text-[10px] font-bold text-[#12396f] hover:bg-slate-50"><Laptop className="h-3.5 w-3.5" />{language === 'en' ? 'Practice Tests' : 'अभ्यास टेस्ट'}</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+          </div>
+        )}
+
         {activePage === 'tests' && (
           <div>
             <PageHeaderBanner
-              titleEn="Online Examination & Assessment Portal"
-              titleHi="ऑनलाइन परीक्षा एवं मूल्यांकन केंद्र"
-              subtitleEn="Practice chapter-wise MCQs in real examination conditions with live timer, question palette, bilingual review, and Google Forms assessment."
-              subtitleHi="टाइमर, प्रश्न तालिका, द्विभाषी प्रश्न और तुरंत समाधान के साथ वास्तविक परीक्षा वातावरण में ऑनलाइन टेस्ट दें।"
-              badgeEn="CBT Simulator & Assessments"
-              badgeHi="ऑनलाइन टेस्ट व मूल्यांकन"
-              icon={Award}
+              titleEn="Online Tests & Practice Portal"
+              titleHi="ऑनलाइन टेस्ट एवं अभ्यास पोर्टल"
+              subtitleEn="Attempt available online tests and practice questions with the dedicated test engine."
+              subtitleHi="समर्पित टेस्ट पोर्टल के माध्यम से उपलब्ध ऑनलाइन टेस्ट एवं अभ्यास प्रश्न हल करें।"
+              badgeEn="Tests & Practice"
+              badgeHi="टेस्ट एवं अभ्यास"
+              icon={Laptop}
               onBackHome={() => navigateTo('home')}
             />
             <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
@@ -435,12 +421,12 @@ const MainApp: React.FC = () => {
                     {t('nav.materials')}
                   </button>
                   <button
-                    onClick={() => navigateTo('polity')}
+                    onClick={() => navigateTo('tests')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'polity' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
+                      activePage === 'tests' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
-                    {t('nav.polity')}
+                    {language === 'en' ? 'All Exams' : 'सभी परीक्षाएं'}
                   </button>
                   <button
                     onClick={() => navigateTo('affairs')}
@@ -448,12 +434,7 @@ const MainApp: React.FC = () => {
                   >
                     {language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स'}
                   </button>
-                  <button
-                    onClick={() => navigateTo('results')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${activePage === 'results' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'}`}
-                  >
-                    {t('nav.results')}
-                  </button>
+
                   <button
                     onClick={() => navigateTo('about')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
