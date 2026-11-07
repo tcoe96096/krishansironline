@@ -6,12 +6,11 @@ import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
 import { ClassSelector } from './components/ClassSelector';
 import { OnlineTestEngine } from './components/OnlineTestEngine';
-import { StudyMaterialsView } from './components/StudyMaterialsView';
-import { ConstitutionCorner } from './components/ConstitutionCorner';
+import { AllExamsView } from './components/AllExamsView';
 import { CurrentAffairsView } from './components/CurrentAffairsView';
 import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
-import { ResultsPortal } from './components/ResultsPortal';
+
 import { Footer } from './components/Footer';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
@@ -30,16 +29,14 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'exams' | 'classes' | 'tests' | 'affairs' | 'about' | 'contact';
 
 const VALID_PAGES: PageId[] = [
   'home',
+  'exams',
   'classes',
   'tests',
-  'materials',
-  'polity',
   'affairs',
-  'results',
   'about',
   'contact',
 ];
@@ -52,18 +49,16 @@ const MainApp: React.FC = () => {
     '/': 'home',
     '/classes': 'classes',
     '/online-tests': 'tests',
-    '/study-materials': 'materials',
-    '/constitution': 'polity',
+    '/all-exams': 'exams',
+    '/study-materials': 'exams',
+    '/constitution': 'exams',
     '/current-affairs': 'affairs',
-    '/results': 'results',
     '/about': 'about',
     '/contact': 'contact',
   };
   const pageToPath: Record<PageId, string> = {
-    home: '/', classes: '/classes/', tests: '/online-tests/',
-    materials: '/study-materials/',
-    polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/',
+    home: '/', exams: '/all-exams/', classes: '/classes/', tests: '/online-tests/',
+    affairs: '/current-affairs/', about: '/about/', contact: '/contact/',
   };
   const readPageFromLocation = (): PageId => {
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -111,7 +106,7 @@ const MainApp: React.FC = () => {
   };
 
   const handleClassAction = (classLevel: ClassLevel, action: 'materials' | 'tests') => {
-    navigateTo(action, classLevel);
+    navigateTo(action === 'materials' ? 'exams' : 'tests', classLevel);
   };
 
   return (
@@ -293,37 +288,19 @@ const MainApp: React.FC = () => {
         )}
 
         {/* ==================== PAGE 4: STUDY MATERIALS (अध्ययन सामग्री) ==================== */}
-        {activePage === 'materials' && (
+        {activePage === 'exams' && (
           <div>
             <PageHeaderBanner
-              titleEn="Chapter-wise Study Materials & Notes"
-              titleHi="अध्यायवार अध्ययन सामग्री एवं नोट्स"
-              subtitleEn="Curated NCERT revision notes, summary points, key terms, and printable PDF documents prepared by Krishan Sir."
-              subtitleHi="कृष्ण सर द्वारा तैयार संक्षिप्त रिवीजन नोट्स, महत्वपूर्ण बिंदु, शब्दावली और अध्ययन सामग्री।"
-              badgeEn="NCERT & HBSE Syllabus"
-              badgeHi="एनसीईआरटी व एचबीएसई नोट्स"
+              titleEn="All Exams – Study Materials & Preparation"
+              titleHi="सभी परीक्षाएँ – अध्ययन सामग्री एवं तैयारी"
+              subtitleEn="Explore exam categories, subjects, notes, practice resources, and Political Science content in one place."
+              subtitleHi="परीक्षा श्रेणियों, विषयों, नोट्स, अभ्यास सामग्री और राजनीति विज्ञान की सामग्री को एक ही स्थान पर देखें।"
+              badgeEn="All Exam Categories"
+              badgeHi="सभी परीक्षा श्रेणियाँ"
               icon={FileText}
               onBackHome={() => navigateTo('home')}
             />
-            <StudyMaterialsView initialClass={selectedClassForMaterials} />
-          </div>
-        )}
-
-        {/* ==================== PAGE 6: POLITY & CONSTITUTION (संविधान / राजनीति) ==================== */}
-        {activePage === 'polity' && (
-          <div>
-            <PageHeaderBanner
-              titleEn="Indian Constitution & Political Science Corner"
-              titleHi="भारतीय संविधान एवं राजनीति विज्ञान केंद्र"
-              subtitleEn="Interactive Preamble explorer, Fundamental Rights, Articles, Democratic Politics, and General Civic Awareness."
-              subtitleHi="संविधान की प्रस्तावना, मौलिक अधिकार, महत्वपूर्ण अनुच्छेद, लोकतांत्रिक राजनीति और नागरिक जागरूकता।"
-              badgeEn="Civics & Constitutional Law"
-              badgeHi="संविधान व नागरिक शास्त्र"
-              icon={Landmark}
-              onBackHome={() => navigateTo('home')}
-            />
-            <ConstitutionCorner onStartQuiz={() => navigateTo('tests')} />
-            <CurrentAffairsView />
+            <AllExamsView initialClass={selectedClassForMaterials} onStartQuiz={() => navigateTo('tests')} />
           </div>
         )}
 
@@ -341,23 +318,6 @@ const MainApp: React.FC = () => {
               onBackHome={() => navigateTo('home')}
             />
             <CurrentAffairsView />
-          </div>
-        )}
-
-        {/* ==================== RESULTS PAGE ==================== */}
-        {activePage === 'results' && (
-          <div>
-            <PageHeaderBanner
-              titleEn="Student Results Portal"
-              titleHi="विद्यार्थी परीक्षा परिणाम पोर्टल"
-              subtitleEn="Access verified student assessment results when authorized result data is available."
-              subtitleHi="अधिकृत परिणाम डेटा उपलब्ध होने पर विद्यार्थियों के सत्यापित परीक्षा परिणाम देखें।"
-              badgeEn="Results & Assessment"
-              badgeHi="परिणाम एवं मूल्यांकन"
-              icon={Award}
-              onBackHome={() => navigateTo('home')}
-            />
-            <ResultsPortal />
           </div>
         )}
 
@@ -416,7 +376,7 @@ const MainApp: React.FC = () => {
                       activePage === 'classes' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
-                    {t('nav.classes')}
+                    {language === 'en' ? 'Classes' : 'कक्षाएँ'}
                   </button>
                   <button
                     onClick={() => navigateTo('tests')}
@@ -427,32 +387,16 @@ const MainApp: React.FC = () => {
                     {t('nav.tests')}
                   </button>
                   <button
-                    onClick={() => navigateTo('materials')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'materials' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
-                    }`}
+                    onClick={() => navigateTo('exams')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${activePage === 'exams' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'}`}
                   >
-                    {t('nav.materials')}
-                  </button>
-                  <button
-                    onClick={() => navigateTo('polity')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'polity' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
-                    }`}
-                  >
-                    {t('nav.polity')}
+                    {language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ'}
                   </button>
                   <button
                     onClick={() => navigateTo('affairs')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${activePage === 'affairs' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'}`}
                   >
                     {language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स'}
-                  </button>
-                  <button
-                    onClick={() => navigateTo('results')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${activePage === 'results' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'}`}
-                  >
-                    {t('nav.results')}
                   </button>
                   <button
                     onClick={() => navigateTo('about')}

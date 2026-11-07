@@ -77,28 +77,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('materials')}
+                  onClick={() => onNavigate('exams')}
                   className="hover:text-amber-300 transition-colors"
                 >
-                  Chapter-Wise Study Notes
+                  All Exams – Study Materials & Notes
                 </button>
               </li>
               <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">Current Affairs & General Awareness</button></li>
               <li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">Competitive Exam Preparation</button></li>
               <li>
-                <button
-                  onClick={() => onNavigate('results')}
-                  className="hover:text-amber-300 transition-colors"
-                >
-                  Student Result Portal & Certificates
-                </button>
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('polity')}
+                  onClick={() => onNavigate('exams')}
                   className="hover:text-amber-300 transition-colors"
                 >
-                  Indian Constitution & Preamble Explorer
+                  Political Science & Constitution
                 </button>
               </li>
               <li>
