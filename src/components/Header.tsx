@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Globe, Award } from 'lucide-react';
+import { Search, Menu, X, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -29,161 +29,135 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     setMobileMenuOpen(false);
   };
 
+  const adminUrl = 'https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec';
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-colors">
-      {/* Top Banner Notice - Recovered */}
-      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span className="font-medium tracking-wide">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm">
+      <div className="bg-[#071b3b] text-slate-100 text-[11px] sm:text-xs py-2 px-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-70" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+            </span>
+            <span className="font-semibold tracking-wide truncate">
               {language === 'en'
-                ? 'Free Online Learning • Learn • Practice • Improve • Succeed'
-                : 'निःशुल्क ऑनलाइन लर्निंग • सीखें • अभ्यास करें • सुधार करें • सफलता प्राप्त करें'}
+                ? 'Free Online Learning • Learn • Practice • Succeed'
+                : 'निःशुल्क ऑनलाइन लर्निंग • सीखें • अभ्यास करें • सफलता पाएं'}
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-3 text-slate-300 text-xs">
-            <span>HBSE & CBSE Syllabus</span>
-            <span aria-hidden="true" className="text-slate-500">·</span>
-            <span>Classes 6–12</span>
-            <span aria-hidden="true" className="text-slate-500">·</span>
-            <span className="text-amber-300 font-semibold">By Krishan Sir (TGT Social Science)</span>
-          </div>
+          <span className="hidden sm:block shrink-0 text-slate-300">HBSE & CBSE · Classes 6–12</span>
         </div>
       </div>
 
-      {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-[76px] sm:min-h-[88px] items-center justify-between gap-2 sm:gap-3">
-          {/* Mobile menu toggle — placed at the left edge */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex min-h-[72px] sm:min-h-[82px] items-center justify-between gap-2 sm:gap-4">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+            className="lg:hidden shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50"
             aria-label="Toggle Navigation Menu"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Brand Wordmark */}
           <button
             onClick={() => handleNavClick('home')}
-            className="flex min-w-0 flex-1 lg:flex-none items-center gap-2 sm:gap-3 text-left group focus:outline-hidden py-1"
+            className="flex min-w-0 flex-1 lg:flex-none items-center gap-2.5 sm:gap-3 text-left group py-1"
             aria-label="Krishan Sir home"
           >
-            <img
-              src={`${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`}
-              alt="Krishan Sir logo"
-              className="h-11 w-11 sm:h-[60px] sm:w-[60px] shrink-0 object-contain transition-transform group-hover:scale-105"
-            />
-            <div className="flex flex-col justify-center">
-              <div
-                className="whitespace-nowrap text-[23px] sm:text-[30px] leading-tight font-bold tracking-tight text-left select-none flex items-center text-[#1f4d89]"
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
+            <span className="relative shrink-0 h-11 w-11 sm:h-[58px] sm:w-[58px] rounded-full p-[3px] bg-gradient-to-br from-amber-400 via-sky-500 to-[#102b59] shadow-md">
+              <img
+                src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
+                alt="Krishan Sir"
+                className="h-full w-full rounded-full object-cover object-[24%_28%] border-2 border-white bg-slate-100"
+                onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }}
+              />
+            </span>
+            <span className="min-w-0 flex flex-col justify-center">
+              <span className="whitespace-nowrap text-[20px] sm:text-[29px] leading-tight font-extrabold tracking-tight text-[#102b59]">
                 Krishan Sir
-              </div>
-              <p
-                style={{
-                  fontSize: 'clamp(10px, 2.5vw, 14px)',
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  color: '#3168b5',
-                  backgroundColor: '#def0ef',
-                  fontWeight: 'bold',
-                  textAlign: 'left',
-                }}
-                className="px-2 py-0.5 rounded-sm inline-block mt-1 self-start"
-              >
-                Online Learning
-              </p>
-            </div>
+              </span>
+              <span className="mt-1 inline-flex self-start rounded-md bg-[#eaf3ff] px-2 py-0.5 text-[10px] sm:text-xs font-bold tracking-wide text-[#24558f]">
+                ONLINE LEARNING
+              </span>
+            </span>
           </button>
 
-          {/* Zone 3: Actions (Search, Language Switch, Primary CTA, Mobile menu) */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onOpenSearch}
-              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
+              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               title="Search Portal (Ctrl+K)"
               aria-label="Search"
             >
-              <Search className="w-4 h-4 text-slate-600" />
+              <Search className="w-4 h-4" />
             </button>
-
             <button
               onClick={toggleLanguage}
-              className="flex shrink-0 items-center gap-1 px-2 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-              title={language === 'en' ? 'Switch to Hindi (हिंदी में पढ़ें)' : 'Switch to English'}
+              className="flex shrink-0 items-center gap-1 px-2 sm:px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              title={language === 'en' ? 'Switch to Hindi' : 'Switch to English'}
             >
               <Globe className="w-4 h-4 text-sky-700" />
-              <span className="hidden sm:inline">{language === 'en' ? 'हिंदी' : 'English'}</span>
+              <span>{language === 'en' ? 'हिंदी' : 'English'}</span>
             </button>
             <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
+              href={adminUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex shrink-0 items-center justify-center px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
+              className="hidden sm:inline-flex shrink-0 items-center justify-center rounded-xl bg-[#102b59] px-3 sm:px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#19427e] transition-colors"
               title="Open Admin Dashboard"
             >Admin</a>
-
           </div>
         </div>
       </div>
 
-      {/* Desktop Navigation — kept on its own row so actions never overflow */}
-      <nav className="hidden lg:flex max-w-7xl mx-auto flex-wrap items-center justify-center gap-1 px-4 sm:px-6 lg:px-8 pb-3 text-xs xl:text-sm font-medium text-slate-700">
-        {navLinks.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.id)}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap relative ${
-                isActive
-                  ? 'text-sky-950 bg-sky-100 font-bold shadow-2xs'
-                  : 'hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {item.label}
-              {isActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-800 rounded-full" />
-              )}
-            </button>
-          );
-        })}
+      <nav className="hidden lg:flex bg-[#102b59] text-white">
+        <div className="max-w-7xl mx-auto w-full flex flex-wrap items-center justify-center gap-1 px-4 py-2">
+          {navLinks.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`relative whitespace-nowrap rounded-lg px-3 py-2 text-xs xl:text-sm font-semibold transition-colors ${
+                  isActive
+                    ? 'bg-white text-[#102b59] shadow-sm'
+                    : 'text-slate-100 hover:bg-white/15 hover:text-white'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 shadow-xl animate-in slide-in-from-top-2 duration-150">
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 shadow-xl">
           <div className="grid grid-cols-2 gap-2 mb-4">
             {navLinks.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                   activeSection === item.id
-                    ? 'bg-sky-50 text-sky-900 font-semibold border-l-2 border-sky-800'
-                    : 'text-slate-700 hover:bg-slate-50'
+                    ? 'bg-sky-50 text-sky-900 border border-sky-200'
+                    : 'text-slate-700 hover:bg-slate-50 border border-transparent'
                 }`}
               >
                 {item.label}
               </button>
             ))}
           </div>
-
-          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <a
-              href="https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-sky-900 bg-sky-50 border border-sky-200"
-            >Admin Dashboard</a>
-            <div className="text-center text-xs text-slate-500 pt-1">
-              {language === 'en'
-                ? 'Krishan Kumar · TGT Social Science'
-                : 'कृष्ण कुमार · टीजीटी सामाजिक विज्ञान'}
-            </div>
+          <a
+            href={adminUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full text-center px-3 py-3 rounded-xl text-sm font-bold text-white bg-[#102b59]"
+          >Admin Dashboard</a>
+          <div className="text-center text-xs text-slate-500 pt-3">
+            {language === 'en' ? 'Krishan Kumar · TGT Social Science' : 'कृष्ण कुमार · टीजीटी सामाजिक विज्ञान'}
           </div>
         </div>
       )}
