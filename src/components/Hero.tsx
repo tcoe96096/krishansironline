@@ -49,7 +49,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
         <div className="lg:col-span-5 relative z-10 flex justify-center lg:justify-end">
           <div className="w-full max-w-[350px]">
-            <div className="rounded-[1.55rem] border border-white/80 bg-white/90 p-0.5 sm:p-0.75 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
+            <div className="rounded-[1.55rem] border border-white/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_22px_60px_rgba(15,48,87,.16)] backdrop-blur-sm">
               <div className="relative aspect-[4/3] sm:aspect-[5/4] w-full rounded-[1.1rem] overflow-hidden bg-slate-200 shadow-sm">
                 <img src={`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt={en ? 'Krishan Kumar – TGT Social Science' : 'कृष्ण कुमार – टीजीटी सामाजिक विज्ञान'} className="w-full h-full object-cover object-[24%_28%]" loading="eager" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071d3e]/90 via-transparent to-transparent" />
