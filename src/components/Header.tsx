@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
           <div className="ml-auto flex items-center gap-2">
             <button onClick={onOpenSearch} aria-label="Search" className="rounded-xl bg-white text-[#092c60] p-2"><Search className="w-5 h-5" /></button>
             <button onClick={toggleLanguage} className="rounded-xl border border-white/70 px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">{language === 'en' ? 'हिंदी | En' : 'हि | English'}</button>
-            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1"><Shield className="w-4 h-4" /><span className="hidden xs:inline">Admin</span></a>
+            <a href={adminUrl} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-white text-slate-900 px-2.5 py-1.5 text-xs font-extrabold items-center gap-1"><Shield className="w-4 h-4" /><span>Admin</span></a>
           </div>
         </div>
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 gap-2 p-3 bg-[#0b3979]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} className="flex items-center gap-2 rounded-lg p-3 text-left text-sm font-semibold hover:bg-white/10"><Icon className="w-4 h-4" />{label}</button>)}<a href={adminUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-3 bg-white text-[#092c60] font-bold text-center">Admin Dashboard</a></div>}
