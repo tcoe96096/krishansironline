@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
             <span className="text-amber-300">✦ {language === 'en' ? 'WELCOME' : 'स्वागत है'}</span>
-            <span>{language === 'en' ? 'Bilingual Learning • Classes 6–12 • Competitive Exams' : 'द्विभाषी शिक्षा • कक्षा 6–12 • प्रतियोगी परीक्षाएँ'}</span>
+            <span><span className="text-amber-400 font-extrabold animate-pulse">{language === 'en' ? 'FREE Online Learning' : 'फ्री ऑनलाइन लर्निंग'}</span><span> • {language === 'en' ? 'Classes 6–12 • Competitive Exams' : 'कक्षा 6–12 • प्रतियोगी परीक्षाएँ'}</span></span>
             <span className="hidden sm:inline text-cyan-300">| {language === 'en' ? 'Learn • Practice • Succeed' : 'सीखें • अभ्यास करें • सफल हों'}</span>
           </div>
         </div>
