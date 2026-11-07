@@ -62,14 +62,14 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       </div>
 
       <nav className="bg-[#082d65] text-white border-b-[3px] border-cyan-400" aria-label="Main navigation">
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center min-h-[48px]">
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2.5 rounded-lg hover:bg-white/10" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center min-h-[40px]">
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg hover:bg-white/10" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             <span className="text-xs font-bold">{language === 'en' ? 'Menu' : 'मेन्यू'}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1">
-            {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2.5 text-[11px] xl:text-xs font-bold transition-all ${activeSection === id ? 'bg-amber-400 text-[#092c60] shadow-sm' : 'text-white/90 hover:bg-white/15 hover:text-white'}`}><Icon className="w-4 h-4" />{label}</button>)}
+            {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-[10px] xl:text-[11px] font-bold transition-all ${activeSection === id ? 'bg-amber-400 text-[#092c60] shadow-sm' : 'text-white/90 hover:bg-white/15 hover:text-white'}`}><Icon className="w-4 h-4" />{label}</button>)}
           </div>
         </div>
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#0b3979] border-t border-white/10">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 rounded-xl p-3 text-left text-xs font-semibold transition ${activeSection === id ? 'bg-amber-400 text-[#092c60]' : 'bg-white/5 text-white hover:bg-white/10'}`}><Icon className="w-4 h-4 shrink-0" />{label}</button>)}</div>}
