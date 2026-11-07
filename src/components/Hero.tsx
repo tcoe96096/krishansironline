@@ -1,66 +1,66 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { GraduationCap, ClipboardCheck, BookOpen, Trophy, UserRound, ArrowRight, Award, Briefcase } from 'lucide-react';
+import { CheckCircle2, GraduationCap, Award, BookOpen } from 'lucide-react';
 
 interface HeroProps { onNavigate: (section: string) => void; }
 
 export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
   const en = language === 'en';
-  const actions = [
-    { label: en ? 'Online Tests' : 'ऑनलाइन टेस्ट', page: 'tests', Icon: ClipboardCheck },
-    { label: en ? 'Study Materials' : 'अध्ययन सामग्री', page: 'materials', Icon: BookOpen },
-    { label: en ? 'Results' : 'परिणाम', page: 'results', Icon: Trophy },
-    { label: en ? 'About Me' : 'मेरे बारे में', page: 'about', Icon: UserRound },
-  ];
+  const benefits = en ? ['Study Materials','Online Tests','Practice Questions','Revision Notes'] : ['अध्ययन सामग्री','ऑनलाइन टेस्ट','अभ्यास प्रश्न','रिवीजन नोट्स'];
+  const shortQualifications = en
+    ? ['M.A. Political Science','M.Phil.','UGC NET – Political Science (2×)','UGC NET – Education','B.Ed. • M.Ed.','CTET (Both Levels) • HTET']
+    : ['एम.ए. राजनीति विज्ञान','एम.फिल.','UGC NET – राजनीति विज्ञान (2 बार)','UGC NET – शिक्षा','बी.एड. • एम.एड.','CTET (दोनों स्तर) • HTET'];
 
   return (
-    <section className="relative overflow-hidden border-b border-slate-200 bg-[#eaf4ff]">
-      <div className="relative mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-6 lg:px-7">
-        <div className="relative isolate overflow-hidden rounded-[26px] border border-white bg-gradient-to-br from-[#0b4f91] via-[#5ca8e6] to-[#d8edff] shadow-xl">
-          <div className="absolute inset-0 -z-10 bg-no-repeat bg-right bg-cover opacity-25" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-background.webp)` }} aria-hidden="true" />
-          <div className="grid min-h-[390px] grid-cols-1 lg:grid-cols-12">
-            <div className="relative z-10 flex flex-col justify-center px-5 py-6 sm:px-8 sm:py-8 lg:col-span-8 lg:px-9 lg:py-8">
-              <div className="border-l-[5px] border-amber-400 pl-4 sm:pl-5">
-                <p className="text-2xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-[2.7rem]">Krishan Kumar</p>
-                <p className="mt-1 text-lg font-extrabold text-amber-300 sm:text-2xl">TGT Social Science</p>
-                <p className="mt-1 text-sm font-semibold text-white sm:text-lg">{en ? 'Govt. Girls High School, Dhanger (Haryana)' : 'राजकीय कन्या उच्च विद्यालय, ढांगर (हरियाणा)'}</p>
+    <section className="relative overflow-hidden bg-gradient-to-r from-[#edf6ff] via-white to-[#f8fbf4] border-b border-slate-200">
+      <div className="absolute inset-y-0 right-0 w-full lg:w-[48%] opacity-90 bg-no-repeat bg-right bg-contain pointer-events-none" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-background.webp)` }} aria-hidden="true" />
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 py-7 sm:py-9 lg:py-10 grid lg:grid-cols-12 gap-6 items-center">
+        {/* Left side: keep the existing Welcome / Hero content */}
+        <div className="lg:col-span-7 relative z-10">
+          <p className="text-lg sm:text-2xl font-extrabold text-[#12396f]">{en ? 'Welcome to' : 'आपका स्वागत है'}</p>
+          <h1 className="mt-1 text-3xl sm:text-5xl lg:text-[3.4rem] leading-[1.08] font-extrabold tracking-tight text-[#12396f]">{en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>}</h1>
+          <div className="mt-3 h-1.5 w-48 rounded-full bg-gradient-to-r from-amber-400 via-amber-400 to-blue-800" />
+          <p className="mt-4 max-w-2xl text-base sm:text-xl leading-snug font-medium text-slate-800">{en ? 'A Complete Learning Platform for School Education & Competitive Exams (Bilingual: Hindi – English)' : 'स्कूली शिक्षा एवं प्रतियोगी परीक्षाओं के लिए संपूर्ण अध्ययन मंच (हिंदी – अंग्रेज़ी)'}</p>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">{benefits.map((item) => <span key={item} className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-slate-800"><CheckCircle2 className="w-5 h-5 text-green-600 fill-green-100" />{item}</span>)}</div>
+        </div>
+
+        {/* Right side: same portrait treatment as the About Teacher section */}
+        <div className="lg:col-span-5 relative z-10 flex justify-center lg:justify-end">
+          <div className="w-full max-w-[390px] space-y-3">
+            <div className="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm">
+              <div className="relative aspect-[4/3] sm:aspect-square w-full rounded-xl overflow-hidden bg-slate-200 shadow-xs border border-slate-200">
+                <img
+                  src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
+                  alt={en ? 'Krishan Kumar – TGT Social Science' : 'कृष्ण कुमार – टीजीटी सामाजिक विज्ञान'}
+                  className="w-full h-full object-cover object-[24%_28%]"
+                  loading="eager"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/85 via-slate-900/50 to-transparent p-4 text-white">
+                  <div className="text-base sm:text-lg font-bold">{en ? 'Krishan Kumar' : 'कृष्ण कुमार'}</div>
+                  <div className="text-xs sm:text-sm text-amber-300">{en ? 'TGT Social Science · Government School Educator' : 'टीजीटी सामाजिक विज्ञान · सरकारी विद्यालय शिक्षक'}</div>
+                </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/70 bg-white/90 p-3 shadow-sm backdrop-blur-sm">
-                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-blue-700"><GraduationCap className="h-5 w-5 shrink-0" />{en ? 'Qualifications:' : 'शैक्षणिक योग्यताएँ:'}</h3>
-                  <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-800 sm:text-sm">B.A. · M.A. (Political Science)<br />UGC NET (2×) · B.Ed.<br />M.Ed. · M.Phil.</p>
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                <h2 className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-900">
+                  <Award className="h-4 w-4 text-amber-600 shrink-0" />
+                  {en ? 'Academic Qualifications' : 'शैक्षणिक योग्यताएँ'}
+                </h2>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {shortQualifications.map((item) => <span key={item} className="px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-[10px] sm:text-[11px] font-semibold text-slate-700">{item}</span>)}
                 </div>
-                <div className="rounded-xl border border-white/70 bg-white/90 p-3 shadow-sm backdrop-blur-sm">
-                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-emerald-700"><Award className="h-5 w-5 shrink-0" />{en ? 'Eligibility Tests:' : 'पात्रता परीक्षाएँ:'}</h3>
-                  <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-800 sm:text-sm">UGC NET Education<br />CTET (Both Levels)<br />HTET TGT (Hindi & SST)</p>
-                </div>
-                <div className="rounded-xl border border-white/70 bg-white/90 p-3 shadow-sm backdrop-blur-sm">
-                  <h3 className="flex items-center gap-2 text-sm font-extrabold text-violet-700"><Briefcase className="h-5 w-5 shrink-0" />{en ? 'Experience:' : 'अनुभव:'}</h3>
-                  <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-800 sm:text-sm">2 Yrs Asst. Professor<br />2 Yrs 8 Mos Govt. TGT</p>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-xl border border-sky-100 bg-sky-50/95 px-3 py-3 text-xs font-medium leading-relaxed text-[#12396f] sm:text-sm">
-                <span className="mr-2 inline-flex align-middle"><GraduationCap className="h-4 w-4" /></span>
-                “{en ? 'Guiding students towards conceptual clarity, factual accuracy, and board exam excellence.' : 'विद्यार्थियों को वैचारिक स्पष्टता, तथ्यात्मक शुद्धता और बोर्ड परीक्षा में उत्कृष्टता की ओर मार्गदर्शन।'}”
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {actions.map(({ label, page, Icon }) => <button key={page} type="button" onClick={() => onNavigate(page)} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-white/40 bg-white/95 px-2 py-2 text-[11px] font-bold text-[#12396f] shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-50 sm:text-xs"><Icon className="h-4 w-4 shrink-0" /><span>{label}</span><ArrowRight className="h-3 w-3 shrink-0" /></button>)}
               </div>
             </div>
 
-            <div className="relative min-h-[300px] overflow-hidden lg:col-span-4 lg:min-h-full">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#5ca8e6]/10 via-transparent to-[#0b4f91]/10" />
-              <img
-                src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
-                alt="Krishan Kumar – TGT Social Science"
-                className="absolute inset-0 h-full w-full scale-x-[-1] object-cover object-[24%_28%] lg:object-[24%_center]"
-                loading="eager"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#082d55]/45 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:via-transparent lg:to-[#0b4f91]/15" />
+            <div className="rounded-xl border border-sky-200 bg-white/95 px-4 py-3 text-center shadow-sm">
+              <div className="flex items-center justify-center gap-2 text-[#12396f]">
+                <BookOpen className="h-4 w-4 shrink-0 text-[#078a8d]" />
+                <p className="text-xs sm:text-sm font-extrabold leading-relaxed">
+                  {en ? 'Guiding Students Towards Conceptual Clarity, Factual Accuracy & Board Exam Excellence' : 'विद्यार्थियों को अवधारणात्मक स्पष्टता, तथ्यात्मक सटीकता एवं बोर्ड परीक्षा में उत्कृष्टता की ओर मार्गदर्शन'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
