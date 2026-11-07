@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Award, FileText, BookOpen, Bell, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Award, FileText, Bell, ArrowUpRight } from 'lucide-react';
 
 interface QuickAccessCardsProps {
   onNavigate: (section: string, filter?: string) => void;
@@ -35,18 +35,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       color: 'indigo',
     },
     {
-      id: 'exams',
-      icon: BookOpen,
-      title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ',
-      titleHi: 'सभी परीक्षाएँ',
-      desc: {
-        en: 'Democratic politics, Federalism, Power sharing, and competitive polity foundations.',
-        hi: 'लोकतांत्रिक राजनीति, संघवाद, सत्ता की साझेदारी और प्रतियोगी परीक्षाओं हेतु राजव्यवस्था।',
-      },
-      tag: 'Specialized Hub',
-      color: 'cyan',
-    },
-    {
       id: 'notices',
       icon: Bell,
       title: t('quick.announcements'),
@@ -57,18 +45,6 @@ export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }
       },
       tag: 'Daily Updates',
       color: 'violet',
-    },
-    {
-      id: 'exams',
-      icon: RefreshCw,
-      title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ',
-      titleHi: 'सभी परीक्षाएँ',
-      desc: {
-        en: 'Rapid revision charts, timeline summaries, and high-yield board question collections.',
-        hi: 'त्वरित पुनरावृत्ति चार्ट, ऐतिहासिक तिथिक्रम और बोर्ड परीक्षा के संभावित प्रश्न संग्रह।',
-      },
-      tag: 'Quick Review',
-      color: 'teal',
     },
   ];
 
