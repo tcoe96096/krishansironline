@@ -388,19 +388,9 @@ const MainApp: React.FC = () => {
                   </button>
                   <button
                     onClick={() => navigateTo('exams')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'materials' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${activePage === 'exams' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'}`}
                   >
-                    {t('nav.materials')}
-                  </button>
-                  <button
-                    onClick={() => navigateTo('exams')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'polity' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
-                    }`}
-                  >
-                    {t('nav.polity')}
+                    {language === 'en' ? 'All Exams' : 'सभी परीक्षाएँ'}
                   </button>
                   <button
                     onClick={() => navigateTo('affairs')}
