@@ -31,7 +31,11 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <p className="mt-5 text-lg sm:text-2xl font-extrabold text-[#12396f]">{en ? 'Welcome to' : 'आपका स्वागत है'}</p>
           <h1 className="mt-1 text-3xl sm:text-5xl lg:text-[3.65rem] leading-[1.08] font-extrabold tracking-[-.045em] text-[#12396f]">{en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>}</h1>
           <div className="mt-4 h-1.5 w-44 rounded-full bg-gradient-to-r from-amber-400 via-cyan-500 to-blue-900" />
-          <p className="mt-5 max-w-2xl text-base sm:text-lg leading-relaxed font-medium text-slate-700">{en ? 'A complete bilingual learning platform for school education and competitive examinations.' : 'स्कूली शिक्षा एवं प्रतियोगी परीक्षाओं के लिए हिंदी-अंग्रेज़ी द्विभाषी अध्ययन मंच।'}</p>
+          <div className="mt-5 max-w-2xl space-y-2 text-[13px] sm:text-[15px] lg:text-base leading-7 font-normal tracking-[0.005em] text-slate-700">
+            <p>{en ? <>A dedicated digital learning platform designed to make quality education <span className="font-semibold text-[#24466f]">accessible, engaging and meaningful</span> for every learner.</> : <>प्रत्येक विद्यार्थी तक गुणवत्तापूर्ण शिक्षा को <span className="font-semibold text-[#24466f]">सरल, रोचक और प्रभावी</span> रूप में पहुँचाने के उद्देश्य से विकसित एक समर्पित डिजिटल शिक्षण मंच।</>}</p>
+            <p>{en ? <>Explore bilingual study resources for Classes 6–12, Social Science, NCERT and HBSE, along with online tests, practice questions, current affairs and competitive exam preparation.</> : <>यहाँ कक्षा 6–12, सामाजिक विज्ञान, NCERT एवं HBSE के लिए द्विभाषी अध्ययन सामग्री के साथ ऑनलाइन टेस्ट, अभ्यास प्रश्न, समसामयिक घटनाएँ और प्रतियोगी परीक्षाओं की तैयारी हेतु उपयोगी संसाधन उपलब्ध हैं।</>}</p>
+            <p className="pt-1 text-[12px] sm:text-sm font-semibold text-[#17477e]">{en ? 'Learn with Confidence. Prepare with Purpose. Achieve with Excellence.' : 'आत्मविश्वास से सीखें। उद्देश्य के साथ तैयारी करें। उत्कृष्टता के साथ सफलता पाएँ।'}</p>
+          </div>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">{benefits.map((item) => <span key={item} className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700"><CheckCircle2 className="w-4 h-4 text-emerald-600" />{item}</span>)}</div>
           <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
             {heroButtons.map(({label, section, hint}, index) => (
