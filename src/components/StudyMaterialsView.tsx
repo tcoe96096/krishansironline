@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { Class10PresentationPlayer } from './Class10PresentationPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
@@ -145,6 +146,10 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                 </button>
               ))}
             </div>
+
+            {selectedClass === '10' && (selectedSubject === 'all' || selectedSubject === 'History') && (
+              <Class10PresentationPlayer language={language} />
+            )}
 
             {/* Chapters Grid */}
             {chaptersForClass.length === 0 ? (
