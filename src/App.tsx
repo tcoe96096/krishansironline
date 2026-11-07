@@ -376,7 +376,7 @@ const MainApp: React.FC = () => {
                       activePage === 'classes' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
-                    {t('nav.classes')}
+                    {language === 'en' ? 'Classes' : 'कक्षाएँ'}
                   </button>
                   <button
                     onClick={() => navigateTo('tests')}
