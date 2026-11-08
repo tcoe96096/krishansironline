@@ -29,6 +29,16 @@ In Authentication → Sign In / Providers:
 - Use a minimum password length of at least 8 characters and appropriate auth rate limits.
 - Mobile numbers are not verified and must not be treated as proof of identity. The generated identifier cannot receive email password-reset links; establish an administrator-assisted identity verification and recovery process before production. Since mobile numbers are not verified, prevent account takeover by checking school records before any assisted reset.
 
+## Dashboard status checked from the owner's screenshots (8 Nov 2026)
+- Email provider: enabled.
+- Confirm email: disabled (matches the no-SMS synthetic-identifier student flow).
+- Phone provider: disabled (expected; do not enable for the no-SMS design).
+- Google provider: disabled in the screenshot; OAuth admin login will not work until valid Google OAuth credentials are configured.
+- The `user_roles` table was empty in the screenshot; no admin role had been granted yet.
+- The `student_profiles` table showed two records, but this does not by itself prove end-to-end login, RLS, or profile-provisioning tests have passed.
+
+Do not enable Google provider with placeholder credentials. Configure a Google Cloud OAuth Web Client first, then add its Client ID and Client Secret in Supabase Auth → Sign In / Providers → Google. Keep the secret in the Supabase dashboard only.
+
 ## Google OAuth administrator login
 In Authentication → Providers → Google:
 1. Enable Google provider.
