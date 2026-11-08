@@ -43,8 +43,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative isolate overflow-visible bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-0 sm:py-0 flex items-center justify-between gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-none sm:col-start-1">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-1 sm:py-0 flex flex-col items-stretch justify-center gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
+          <div className="flex w-full items-center gap-1.5 min-w-0 sm:w-auto sm:flex-none sm:col-start-1">
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Go to home page" className="h-[44px] w-[44px] sm:h-[58px] sm:w-[58px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70 cursor-pointer">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
             </a>
@@ -57,12 +57,15 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </a>
           </div>
 
-          <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2 sm:col-start-3 sm:row-start-1 sm:w-auto sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
+          <div className="relative z-10 hidden sm:flex w-full shrink-0 items-center justify-end gap-1 py-1 sm:w-auto sm:gap-2 sm:py-0 sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
-              <button onClick={toggleLanguage} className="h-10 min-w-[34px] sm:min-h-7 sm:h-7 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-1.5 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'E/H' : 'H/E'}</button>
+              <div role="group" aria-label="Select language" className="inline-flex h-9 sm:h-8 items-center rounded-full border border-[#17477e]/15 bg-[#eaf1fb] p-1 shadow-sm">
+                <button type="button" onClick={() => { if (language === 'en') toggleLanguage(); }} aria-pressed={language !== 'en'} aria-label="हिन्दी" className={`rounded-full px-2.5 sm:px-3 h-full text-[11px] sm:text-xs font-extrabold transition-colors ${language !== 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e] hover:bg-white/80'}`}><span className="sm:hidden">HI</span><span className="hidden sm:inline">हिन्दी</span></button>
+                <button type="button" onClick={() => { if (language !== 'en') toggleLanguage(); }} aria-pressed={language === 'en'} aria-label="English" className={`rounded-full px-2.5 sm:px-3 h-full text-[11px] sm:text-xs font-extrabold transition-colors ${language === 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e] hover:bg-white/80'}`}><span className="sm:hidden">EN</span><span className="hidden sm:inline">English</span></button>
+              </div>
               <div className="relative">
-              <button type="button" onClick={() => { if (user) setAccountMenuOpen(open => !open); else onOpenAuth(); }} aria-haspopup={user ? 'menu' : undefined} aria-expanded={user ? accountMenuOpen : undefined} aria-label={user ? "Student account menu" : "Student and Admin Login"} title={user ? studentDisplayName : "Student and Admin Login"} className="h-10 max-w-[148px] sm:max-w-none sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-2 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><UserRound className="w-4 h-4 shrink-0" /><span className="max-w-[104px] truncate sm:max-w-[180px]">{user ? studentDisplayName : "Student Login"}</span>{user && <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />}</button>
+              <button type="button" onClick={() => { if (user) setAccountMenuOpen(open => !open); else onOpenAuth(); }} aria-haspopup={user ? 'menu' : undefined} aria-expanded={user ? accountMenuOpen : undefined} aria-label={user ? "Student account menu" : "Student and Admin Login"} title={user ? studentDisplayName : "Student and Admin Login"} className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-auto sm:max-w-none inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-0 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><UserRound className="w-4 h-4 shrink-0" /><span className="hidden sm:inline max-w-[180px] truncate">{user ? studentDisplayName : "Student Login"}</span>{user && <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />}</button>
               {user && accountMenuOpen && <div role="menu" aria-label="Student account options" className="absolute right-0 top-full z-[80] mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-slate-800 shadow-[0_16px_40px_rgba(15,23,42,.22)]">
                 <div className="border-b border-slate-100 px-4 py-2.5"><p className="truncate text-sm font-bold text-slate-900">{studentDisplayName}</p><p className="text-[11px] text-slate-500">{language === 'en' ? 'Student Account' : 'विद्यार्थी खाता'}</p></div>
                 <button role="menuitem" type="button" onClick={() => { setAccountMenuOpen(false); setAccountMenuError(''); onOpenAuth(); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold hover:bg-sky-50"><UserRound className="h-4 w-4 text-sky-800" />{language === 'en' ? 'My Dashboard' : 'मेरा डैशबोर्ड'}</button>
@@ -80,12 +83,20 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       </div>
 
       <nav className="bg-[#edf3f9] text-[#173b68] border-b-[3px] border-[#c8d9e9] shadow-sm" aria-label="Main navigation">
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center min-h-[36px]">
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg text-[#173b68] hover:bg-[#dce8f3]" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center justify-between gap-2 min-h-[44px]">
+                    <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg text-[#173b68] hover:bg-[#dce8f3]" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             <span className="text-xs font-bold">{language === 'en' ? 'Menu' : 'मेन्यू'}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
+<div className="lg:hidden flex items-center justify-end gap-2">
+            <button type="button" onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] shadow-sm transition hover:bg-[#f5f9ff]"><Search className="h-4 w-4" /></button>
+            <div role="group" aria-label="Select language" className="inline-flex h-10 shrink-0 items-center rounded-xl border border-[#17477e]/20 bg-white p-1 shadow-sm">
+              <button type="button" onClick={() => { if (language === 'en') toggleLanguage(); }} aria-pressed={language !== 'en'} aria-label="हिन्दी" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language !== 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>HI</button>
+              <button type="button" onClick={() => { if (language !== 'en') toggleLanguage(); }} aria-pressed={language === 'en'} aria-label="English" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language === 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>EN</button>
+            </div>
+            <button type="button" onClick={() => onOpenAuth()} aria-label="Student Login" title="Student Login" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-[#123c70] text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4" /></button>
+          </div>
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1">
             {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs sm:text-sm font-extrabold transition-all ${activeSection === id ? 'bg-[#d4e5f3] text-[#092c60] shadow-sm ring-1 ring-[#b7cde1]' : 'text-[#24466f] hover:bg-[#dce8f3] hover:text-[#092c60]'}`}><Icon className="w-4 h-4" />{label}</button>)}
           </div>
