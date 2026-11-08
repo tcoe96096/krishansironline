@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, GraduationCap, ChevronDown, FileText, Globe } from 'lucide-react';
+import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, UserRound, GraduationCap, ChevronDown, FileText, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -11,6 +12,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth }) => {
   const { language, toggleLanguage } = useLanguage();
+  const { user, profile, profileLoading } = useAuth();
+  const studentDisplayName = profile?.student_name || user?.user_metadata?.full_name || user?.user_metadata?.name || (profileLoading ? (language === 'en' ? 'Loading…' : 'लोड हो रहा है…') : (language === 'en' ? 'Student' : 'विद्यार्थी'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navLinks = [
     { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
@@ -56,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
               <button onClick={toggleLanguage} className="h-10 min-w-[34px] sm:min-h-7 sm:h-7 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-1.5 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'E/H' : 'H/E'}</button>
-              <button type="button" onClick={onOpenAuth} aria-label="Student and Admin Login" title="Student and Admin Login" className="h-10 w-9 sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-1.5 sm:px-3 py-1 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Student Login</span></button>
+              <button type="button" onClick={onOpenAuth} aria-label={user ? "Student account" : "Student and Admin Login"} title={user ? studentDisplayName : "Student and Admin Login"} className="h-10 max-w-[148px] sm:max-w-none sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-2 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><UserRound className="w-4 h-4 shrink-0" /><span className="max-w-[104px] truncate sm:max-w-[180px]">{user ? studentDisplayName : "Student Login"}</span>{user && <ChevronDown className="hidden sm:block w-3.5 h-3.5 shrink-0" />}</button>
             </div>
           </div>
           <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
