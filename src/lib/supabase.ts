@@ -46,3 +46,10 @@ export const normalizeIndianMobile = (mobile: string): string => {
   }
   return normalized;
 };
+
+/** Stable internal Auth identifier for password-only Indian mobile login. */
+export const studentLoginEmail = (mobile: string): string => {
+  const normalized = normalizeIndianMobile(mobile);
+  const digits = normalized.replace(/\D/g, '');
+  return `student.${digits}@login.krishansir.online`;
+};

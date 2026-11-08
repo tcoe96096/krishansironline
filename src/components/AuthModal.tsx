@@ -7,9 +7,9 @@ type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
-  const { user, configured, isAdmin, adminLoading, signInWithGoogle, signInWithEmail, registerStudent, signOut } = useAuth();
+  const { user, configured, isAdmin, adminLoading, signInWithGoogle, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState<'8' | '9' | '10'>('10');
@@ -28,16 +28,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setBusy(true); setError(''); setMessage('');
     try {
       if (mode === 'login') {
-        await signInWithEmail(email, password);
+        await signInWithMobile(mobile, password);
         setMessage(en ? 'Login successful.' : 'लॉगिन सफल रहा।');
       } else {
         await registerStudent({
-          email, password, studentName, studentClass, rollNo,
+          mobile, password, studentName, studentClass, rollNo,
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
         });
         setMessage(en
-          ? 'Registration successful. Email confirmation is currently disabled, so you can sign in with this email and password.'
-          : 'पंजीकरण सफल रहा। Email confirmation बंद है, इसलिए आप इसी ईमेल और पासवर्ड से लॉगिन कर सकते हैं।');
+          ? 'Registration successful. You can now sign in with your mobile number and password.'
+          : 'पंजीकरण सफल रहा। अब आप मोबाइल नंबर और पासवर्ड से लॉगिन कर सकते हैं।');
         setMode('login');
       }
     } catch (cause) {
@@ -52,7 +52,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <button onClick={onClose} className="absolute right-4 top-4 rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-900"><UserRound className="h-5 w-5" /></div>
-          <div><h2 className="text-xl font-bold text-slate-900">{en ? 'Student Account' : 'विद्यार्थी लॉगिन'}</h2><p className="text-xs text-slate-500">{en ? 'Email address + password' : 'ईमेल पता + पासवर्ड'}</p></div>
+          <div><h2 className="text-xl font-bold text-slate-900">{en ? 'Student Account' : 'विद्यार्थी लॉगिन'}</h2><p className="text-xs text-slate-500">{en ? 'Mobile number + password' : 'मोबाइल नंबर + पासवर्ड'}</p></div>
         </div>
         {!configured && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{en ? 'Supabase environment variables are not configured for this deployment yet.' : 'इस deployment में Supabase environment variables अभी configure नहीं हैं।'}</p>}
         {user ? (
@@ -84,9 +84,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
               </>}
-              <input required type="email" inputMode="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={en ? 'Email address' : 'ईमेल पता'} className={inputClass} />
+              <input required type="text" inputMode="text" autoComplete="username" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder={en ? '10-digit mobile number' : '10 अंकों का मोबाइल नंबर'} className={inputClass} />
               <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />
-              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Use an email address you can access. Email confirmation is disabled in the current project settings.' : 'ऐसा ईमेल पता इस्तेमाल करें जिस तक आपकी पहुँच हो। वर्तमान project settings में email confirmation बंद है।'}</p>}
+              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Use your Indian mobile number. SMS OTP is not used; keep your password safe.' : 'अपना भारतीय मोबाइल नंबर दर्ज करें। SMS OTP का उपयोग नहीं होगा; अपना पासवर्ड सुरक्षित रखें।'}</p>}
               <button disabled={!configured || busy} className="w-full rounded-lg bg-sky-900 px-4 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Please wait…' : 'कृपया प्रतीक्षा करें…') : mode === 'login' ? (en ? 'Login securely' : 'सुरक्षित लॉगिन') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>
             </form>
           </>

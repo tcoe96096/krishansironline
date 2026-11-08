@@ -7,10 +7,10 @@ import React, {
   useState,
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { requireSupabase } from '../lib/supabase';
+import { normalizeIndianMobile, requireSupabase, studentLoginEmail } from '../lib/supabase';
 
 type StudentRegistration = {
-  email: string;
+  mobile: string;
   password: string;
   studentName: string;
   studentClass: '8' | '9' | '10';
@@ -39,7 +39,7 @@ type AuthContextValue = {
   adminLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithMobile: (mobile: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -169,20 +169,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   }, []);
 
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const { error } = await requireSupabase().auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+  const signInWithMobile = useCallback(async (mobile: string, password: string) => {
+    // Legacy email accounts remain able to sign in during the transition.
+    const identifier = mobile.includes('@') ? mobile.trim().toLowerCase() : studentLoginEmail(mobile);
+    const { error } = await requireSupabase().auth.signInWithPassword({ email: identifier, password });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
-    const email = details.email.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error('कृपया वैध ईमेल पता दर्ज करें।');
-    }
+    const mobile = normalizeIndianMobile(details.mobile);
+    const email = studentLoginEmail(mobile);
     if (details.password.length < 8 || !/[A-Za-z]/.test(details.password) || !/\d/.test(details.password)) {
       throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए और उसमें अक्षर तथा अंक दोनों होने चाहिए।');
     }
@@ -196,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
           account_type: 'student',
+          mobile_number: mobile,
         },
       },
     });
@@ -221,10 +218,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try { requireSupabase(); return true; } catch { return false; }
     })(),
     refreshProfile,
-    signInWithEmail,
+    signInWithMobile,
     registerStudent,
     signOut,
-  }), [session, profile, loading, profileLoading, isAdmin, adminLoading, signInWithGoogle, refreshProfile, signInWithEmail, registerStudent, signOut]);
+  }), [session, profile, loading, profileLoading, isAdmin, adminLoading, signInWithGoogle, refreshProfile, signInWithMobile, registerStudent, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
