@@ -29,6 +29,10 @@ export const StudentDashboard: React.FC = () => {
 
   const completed = attempts.filter((attempt) => attempt.status === 'submitted');
   const inProgress = attempts.filter((attempt) => attempt.status === 'in_progress');
+  // Match the dashboard count to the same class-level catalogue shown in the test portal.
+  const availableTests = profile
+    ? tests.filter((test) => test.class_level === String(profile.class_level))
+    : [];
 
   return (
     <section className="space-y-4" aria-label="Student dashboard">
@@ -44,7 +48,7 @@ export const StudentDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-slate-200 p-3 text-center"><BookOpen className="mx-auto mb-1 h-5 w-5 text-sky-800" /><strong className="block text-xl">{tests.length}</strong><span className="text-[11px] text-slate-500">उपलब्ध टेस्ट</span></div>
+        <div className="rounded-lg border border-slate-200 p-3 text-center"><BookOpen className="mx-auto mb-1 h-5 w-5 text-sky-800" /><strong className="block text-xl">{availableTests.length}</strong><span className="text-[11px] text-slate-500">उपलब्ध टेस्ट</span></div>
         <div className="rounded-lg border border-slate-200 p-3 text-center"><ClipboardCheck className="mx-auto mb-1 h-5 w-5 text-emerald-700" /><strong className="block text-xl">{completed.length}</strong><span className="text-[11px] text-slate-500">पूर्ण टेस्ट</span></div>
         <div className="rounded-lg border border-slate-200 p-3 text-center"><RefreshCw className="mx-auto mb-1 h-5 w-5 text-amber-700" /><strong className="block text-xl">{inProgress.length}</strong><span className="text-[11px] text-slate-500">जारी टेस्ट</span></div>
       </div>
