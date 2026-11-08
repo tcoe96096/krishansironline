@@ -12,9 +12,11 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth }) => {
   const { language, toggleLanguage } = useLanguage();
-  const { user, profile, profileLoading } = useAuth();
+  const { user, profile, profileLoading, signOut } = useAuth();
   const studentDisplayName = profile?.student_name || user?.user_metadata?.full_name || user?.user_metadata?.name || (profileLoading ? (language === 'en' ? 'Loading…' : 'लोड हो रहा है…') : (language === 'en' ? 'Student' : 'विद्यार्थी'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [accountMenuError, setAccountMenuError] = useState('');
   const navLinks = [
     { id: 'home', label: language === 'en' ? 'Home' : 'होम', icon: Home },
     { id: 'tests', label: language === 'en' ? 'Tests' : 'टेस्ट', icon: Laptop },
@@ -38,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         </div>
       </div>
 
-      <div className="relative isolate overflow-hidden bg-[#f2f7fc]">
+      <div className="relative isolate overflow-visible bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-0 sm:py-0 flex items-center justify-between gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
@@ -59,7 +61,18 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
               <button onClick={toggleLanguage} className="h-10 min-w-[34px] sm:min-h-7 sm:h-7 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-1.5 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'E/H' : 'H/E'}</button>
-              <button type="button" onClick={onOpenAuth} aria-label={user ? "Student account" : "Student and Admin Login"} title={user ? studentDisplayName : "Student and Admin Login"} className="h-10 max-w-[148px] sm:max-w-none sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-2 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><UserRound className="w-4 h-4 shrink-0" /><span className="max-w-[104px] truncate sm:max-w-[180px]">{user ? studentDisplayName : "Student Login"}</span>{user && <ChevronDown className="hidden sm:block w-3.5 h-3.5 shrink-0" />}</button>
+              <div className="relative">
+              <button type="button" onClick={() => { if (user) setAccountMenuOpen(open => !open); else onOpenAuth(); }} aria-haspopup={user ? 'menu' : undefined} aria-expanded={user ? accountMenuOpen : undefined} aria-label={user ? "Student account menu" : "Student and Admin Login"} title={user ? studentDisplayName : "Student and Admin Login"} className="h-10 max-w-[148px] sm:max-w-none sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-2 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><UserRound className="w-4 h-4 shrink-0" /><span className="max-w-[104px] truncate sm:max-w-[180px]">{user ? studentDisplayName : "Student Login"}</span>{user && <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />}</button>
+              {user && accountMenuOpen && <div role="menu" aria-label="Student account options" className="absolute right-0 top-full z-[80] mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-slate-800 shadow-[0_16px_40px_rgba(15,23,42,.22)]">
+                <div className="border-b border-slate-100 px-4 py-2.5"><p className="truncate text-sm font-bold text-slate-900">{studentDisplayName}</p><p className="text-[11px] text-slate-500">{language === 'en' ? 'Student Account' : 'विद्यार्थी खाता'}</p></div>
+                <button role="menuitem" type="button" onClick={() => { setAccountMenuOpen(false); setAccountMenuError(''); onOpenAuth(); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold hover:bg-sky-50"><UserRound className="h-4 w-4 text-sky-800" />{language === 'en' ? 'My Dashboard' : 'मेरा डैशबोर्ड'}</button>
+                <button role="menuitem" type="button" onClick={() => { setAccountMenuOpen(false); setAccountMenuError(''); onOpenAuth(); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold hover:bg-sky-50"><FileText className="h-4 w-4 text-sky-800" />{language === 'en' ? 'My Results' : 'मेरे परिणाम'}</button>
+                <button role="menuitem" type="button" onClick={() => { setAccountMenuOpen(false); setAccountMenuError(''); onOpenAuth(); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold hover:bg-sky-50"><UserRound className="h-4 w-4 text-sky-800" />{language === 'en' ? 'My Profile' : 'मेरी प्रोफाइल'}</button>
+                <div className="my-1 border-t border-slate-100" />
+                <button role="menuitem" type="button" onClick={async () => { setAccountMenuError(''); try { await signOut(); setAccountMenuOpen(false); } catch (error) { setAccountMenuError(error instanceof Error ? error.message : 'Sign out failed.'); } }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50"><Shield className="h-4 w-4" />{language === 'en' ? 'Sign Out' : 'लॉगआउट'}</button>
+                {accountMenuError && <p role="alert" className="px-4 py-2 text-xs text-rose-700">{accountMenuError}</p>}
+              </div>}
+            </div>
             </div>
           </div>
           <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
