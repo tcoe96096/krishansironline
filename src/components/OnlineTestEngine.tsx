@@ -444,7 +444,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
       if (thisTestAttempts.length >= 1 && !hasInProgressAttempt) {
         setSubmissionStatus({ loading: false, success: false, message: '' });
-        setLoginError('आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।');
+        setLoginError((language === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.'));
         return;
       }
       const attempt = await startTestAttempt(selectedTest.id);
@@ -467,7 +467,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setLoginError(isAttemptLimitReached
-        ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
+        ? (language === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
         : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
     }
   };
@@ -596,7 +596,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
-        ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
+        ? (language === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
