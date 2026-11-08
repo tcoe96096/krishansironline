@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { ONLINE_TESTS } from '../data/portalData';
 import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
+import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -35,14 +37,11 @@ import {
 } from 'lucide-react';
 import {
   getLocalSubmissions,
-  saveLocalSubmission,
-  sendSubmissionToGoogleSheet,
   getGoogleSheetUrl,
   saveGoogleSheetUrl,
   exportSubmissionsToCSV,
   deleteLocalSubmission,
   GOOGLE_APPS_SCRIPT_CODE,
-  DEFAULT_SHEET_URL,
 } from '../utils/googleSheetsSync';
 
 
@@ -102,16 +101,27 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
 
 interface OnlineTestEngineProps {
   initialClassFilter?: string;
+  onRequestLogin: () => void;
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
-  const [restoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
+  const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
+  const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const [catalogueError, setCatalogueError] = useState('');
+  // Authenticated students see only tests published for their canonical profile class.
+  const availableTests = user && profile
+    ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
+    : [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
+  // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
+  const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
   const elapsedWhileAway = restoredSession
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
     : 0;
   const [selectedTest, setSelectedTest] = useState<OnlineTest>(restoredTest);
+  const isDatabaseTest = databaseTests.some((test) => test.id === selectedTest.id);
 
   // Test duration follows the selected assessment. Time spent away is deducted on resume.
   const TOTAL_TEST_MINUTES = selectedTest.durationMinutes;
@@ -122,9 +132,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   );
 
   // Restore student details only when an unfinished test session exists.
-  const [studentDetails, setStudentDetails] = useState<StudentLoginDetails | null>(
-    () => restoredSession?.student || null
-  );
+  const [studentDetails, setStudentDetails] = useState<StudentLoginDetails | null>(null);
 
   const [loginForm, setLoginForm] = useState<StudentLoginDetails>({
     mobile: '',
@@ -138,7 +146,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [loginError, setLoginError] = useState<string>('');
 
   // Test Execution State
-  const [isTestActive, setIsTestActive] = useState<boolean>(Boolean(restoredSession));
+  const [isTestActive, setIsTestActive] = useState<boolean>(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(() =>
     restoredSession
       ? Math.min(Math.max(0, restoredSession.currentQuestionIndex), Math.max(0, restoredTest.questions.length - 1))
@@ -152,16 +160,27 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
+  const attemptLimitMessageHi = 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।';
+  const attemptLimitMessageEn = 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.';
+  const isAttemptLimitMessage = (message: string) => message.includes('निर्धारित प्रयास पूरा') || message.includes('allowed attempt');
+  const displayLoginError = isAttemptLimitMessage(loginError) ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : loginError;
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
   const selectedTestEffectInitialized = useRef(false);
+
+  const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
+  const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
+  // Prevent timer and manual-submit events from sending duplicate RPC requests.
+  const submissionInFlight = useRef(false);
 
   const [submissionStatus, setSubmissionStatus] = useState<{
     loading: boolean;
     success?: boolean;
     message?: string;
   }>({ loading: false });
+
+  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
 
   // Teacher / Admin Responses Management
   const [showTeacherPanel, setShowTeacherPanel] = useState<boolean>(false);
@@ -180,46 +199,89 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   });
 
   // Local development teacher tools. Production results are stored in the private Google Sheet.
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem('krishan_sir_admin_auth') === 'true') return true;
-      // Local development only; this is not a production authentication system.
-      return isAIStudioEnvironment();
-    }
-    return false;
-  });
+  // This legacy teacher panel is strictly development-only. Production admin access
+  // must use the database-backed Google OAuth role gate, never a browser flag or PIN.
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => isAIStudioEnvironment());
   const [showAdminAuthModal, setShowAdminAuthModal] = useState<boolean>(false);
   const [adminPinInput, setAdminPinInput] = useState<string>('');
   const [adminPinError, setAdminPinError] = useState<string>('');
 
   const handleVerifyAdminPin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!import.meta.env.DEV) {
+      setAdminPinError('यह legacy PIN सुविधा केवल local development में उपलब्ध है।');
+      return;
+    }
     const correctPin = '1234';
     if (adminPinInput.trim() === correctPin) {
       setIsAdmin(true);
       setShowTeacherPanel(true);
       setShowAdminAuthModal(false);
       setAdminPinError('');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('krishan_sir_admin_auth', 'true');
-      }
     } else {
-      setAdminPinError('गलत पिन! केवल कृषण सर (Admin) ही यह डेटा देख सकते हैं। (डिफ़ॉल्ट पिन: 1234)');
+      setAdminPinError('गलत PIN।');
     }
   };
 
   const handleAdminLogout = () => {
     setIsAdmin(false);
     setShowTeacherPanel(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('krishan_sir_admin_auth');
-    }
+    // No persistent browser-side admin authorization is retained.
   };
 
-  // Load existing submissions & configured Google Sheet URL
+  // Load published test content from Supabase. Answer keys never enter the browser.
+  useEffect(() => {
+    let active = true;
+    const loadPublishedTests = async () => {
+      try {
+        setCatalogueLoading(true);
+        setCatalogueError('');
+        const rows = await getPublishedTests();
+        const mapped: OnlineTest[] = rows.map((test: PublishedTest) => ({
+          id: test.id,
+          title: test.title,
+          classLevel: test.class_level as OnlineTest['classLevel'],
+          subject: test.subject as OnlineTest['subject'],
+          chapter: test.chapter,
+          durationMinutes: test.duration_minutes,
+          totalMarks: Number(test.total_marks),
+          questions: test.questions.map((question) => ({
+            id: question.id,
+            question: question.question,
+            options: question.options,
+            correctAnswer: -1,
+            explanation: { en: '', hi: '' },
+            chapter: question.chapter || test.chapter,
+            marks: question.marks ?? 1,
+            type: question.type ?? 'mcq',
+          })),
+          instructions: {
+            en: ['Read each question carefully.', 'Submit your answers before the timer ends.'],
+            hi: ['प्रत्येक प्रश्न ध्यानपूर्वक पढ़ें।', 'समय समाप्त होने से पहले अपने उत्तर जमा करें।'],
+          },
+        }));
+        if (active) setDatabaseTests(mapped);
+      } catch (error) {
+        if (active) setCatalogueError(error instanceof Error ? error.message : 'Published tests could not be loaded.');
+      } finally {
+        if (active) setCatalogueLoading(false);
+      }
+    };
+    void loadPublishedTests();
+    return () => { active = false; };
+  }, []);
+
+  // Keep the selected assessment inside the authenticated student's published class catalogue.
+  useEffect(() => {
+    if (!catalogueLoading && user && profile && availableTests.length > 0 &&
+        !availableTests.some((test) => test.id === selectedTest.id)) {
+      setSelectedTest(availableTests[0]);
+    }
+  }, [catalogueLoading, user?.id, profile?.class_level, databaseTests, selectedTest.id]);
+
+  // Load legacy local-only development submissions. Student test results are stored in Supabase.
   useEffect(() => {
     setSubmissionsList(getLocalSubmissions());
-    setGoogleSheetUrlInput(getGoogleSheetUrl());
   }, []);
 
   // Reset on an actual test change; keep restored progress on the first render.
@@ -252,12 +314,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   useEffect(() => {
     if (restoredSession) return;
     if (initialClassFilter) {
-      const match = ONLINE_TESTS.find((t) => t.classLevel === initialClassFilter);
+      const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
         setSelectedTest(match);
       }
     }
-  }, [initialClassFilter]);
+  }, [initialClassFilter, databaseTests, user?.id, profile?.class_level]);
 
 
   // Auto-save every active attempt locally for refresh/tab-close recovery.
@@ -308,7 +370,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     if (!isTestActive || isSubmitted) return;
 
     if (timeLeftSeconds <= 0) {
-      alert('समय समाप्त हो गया है! (Time Up). आपका टेस्ट स्वतः सबमिट किया जा रहा है।');
       handleSubmitQuiz(true);
       return;
     }
@@ -336,65 +397,89 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const reviewCount = Object.values(markedForReview).filter(Boolean).length;
   const unattemptedCount = totalQuestions - attemptedCount;
 
-  // Handle Student Login Form Submission
-  const handleStudentLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    if (!loginForm.mobile || loginForm.mobile.trim().length !== 10 || !/^\d{10}$/.test(loginForm.mobile.trim())) {
-      setLoginError('कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें (Valid 10-digit mobile number required).');
+  // Derive test identity from the canonical database profile, not editable browser metadata.
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+    if (!user) {
+      setStudentDetails(null);
+      setIsTestActive(false);
       return;
     }
-
-    if (!loginForm.studentName.trim()) {
-      setLoginError('कृपया अपना पूरा नाम दर्ज करें (Student name required).');
+    if (!profile) {
+      setStudentDetails(null);
+      setIsTestActive(false);
+      setLoginError('आपका विद्यार्थी प्रोफाइल database में उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
-
-    if (!loginForm.rollNo.trim()) {
-      setLoginError('कृपया रोल नंबर दर्ज करें (Roll number required).');
+    const studentClass = `${profile.class_level}th`;
+    if (!profile.student_name.trim() || !profile.roll_no.trim() || !profile.school_name.trim() || !['6th', '7th', '8th', '9th', '10th', '11th', '12th'].includes(studentClass)) {
+      setStudentDetails(null);
+      setIsTestActive(false);
+      setLoginError('आपके विद्यार्थी प्रोफाइल का विवरण अधूरा है। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
-
-    if (loginForm.studentClass.replace(/th$/i, '') !== selectedTest.classLevel) {
-      setLoginError(`कृपया चुने गए टेस्ट के अनुसार कक्षा ${selectedTest.classLevel}th चुनें। (Select the matching class for this test.)`);
-      return;
-    }
-
-    if (loginForm.school === 'Other' && !loginForm.otherSchool?.trim()) {
-      setLoginError('कृपया अपने विद्यालय का नाम दर्ज करें (School name required).');
-      return;
-    }
-
     const details: StudentLoginDetails = {
-      mobile: loginForm.mobile.trim(),
-      studentName: loginForm.studentName.trim(),
-      studentClass: loginForm.studentClass,
-      rollNo: loginForm.rollNo.trim(),
-      school: loginForm.school === 'Other' ? (loginForm.otherSchool?.trim() || 'Other') : loginForm.school,
+      mobile: user.phone || String(user.user_metadata?.mobile_number || ''),
+      studentName: profile.student_name,
+      studentClass,
+      rollNo: profile.roll_no,
+      school: profile.school_name,
+      otherSchool: '',
     };
-
     setStudentDetails(details);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('krishan_sir_active_student', JSON.stringify(details));
+    setLoginForm(details);
+    setLoginError('');
+  }, [user, profile, authLoading, profileLoading]);
+
+  const handleStudentLogin = async () => {
+    setLoginError('');
+    if (!user || !studentDetails) {
+      onRequestLogin();
+      return;
     }
-
-    // Start the selected test
-    setSelectedAnswers({});
-    setMarkedForReview({});
-    setCurrentQuestionIndex(0);
-    setTimeLeftSeconds(TOTAL_TEST_MINUTES * 60);
-    setIsSubmitted(false);
-    setIsTestActive(true);
-
-    setTimeout(() => {
-      document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' });
-    }, 60);
+    if (studentDetails.studentClass.replace(/th$/i, '') !== selectedTest.classLevel) {
+      setLoginError(`यह टेस्ट कक्षा ${selectedTest.classLevel} के लिए है। आपके खाते की कक्षा ${studentDetails.studentClass} है।`);
+      return;
+    }
+    try {
+      setSubmissionStatus({ loading: true, message: 'Database से परीक्षा अनुमति जाँची जा रही है...' });
+      // Give students a clear message before invoking the RPC when their single allowed
+      // attempt is already submitted/expired. An in-progress attempt remains resumable.
+      const previousAttempts = await getMyTestAttempts();
+      const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id);
+      const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
+      if (thisTestAttempts.length >= 1 && !hasInProgressAttempt) {
+        setSubmissionStatus({ loading: false, success: false, message: '' });
+        setLoginError((questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.'));
+        return;
+      }
+      const attempt = await startTestAttempt(selectedTest.id);
+      setActiveAttempt(attempt);
+      setServerResult(null);
+      setSelectedAnswers({});
+      setMarkedForReview({});
+      setCurrentQuestionIndex(0);
+      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      setTimeLeftSeconds(remaining);
+      setIsSubmitted(false);
+      setIsTestActive(remaining > 0);
+      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
+      setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
+    } catch (error) {
+      setSubmissionStatus({ loading: false, success: false, message: '' });
+      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+      const errorDetails = (() => {
+        try { return JSON.stringify(error); } catch { return errorMessage; }
+      })();
+      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      setLoginError(isAttemptLimitReached
+        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
+        : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
+    }
   };
 
-  const handleLogoutStudent = () => {
-    if (confirm('क्या आप विद्यार्थी विवरण बदलना चाहते हैं? (Change student login?)')) {
-      setStudentDetails(null);
+  const handleLogoutStudent = async () => {
+    if (confirm('क्या आप लॉगआउट करना चाहते हैं? (Sign out?)')) {
       setIsTestActive(false);
       setIsSubmitted(false);
       setSelectedAnswers({});
@@ -404,6 +489,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         localStorage.removeItem('krishan_sir_active_student');
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       }
+      await signOut();
     }
   };
 
@@ -435,25 +521,19 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     });
   };
 
-  // Score Calculation
-  let correctCount = 0;
-  questionsList.forEach((q, idx) => {
-    if (selectedAnswers[idx] === q.correctAnswer) {
-      correctCount++;
-    }
-  });
+  // Scores are authoritative only after PostgreSQL server-side grading.
+  const marksObtained = serverResult?.score ?? 0;
+  const percentage = (serverResult?.percentage ?? 0).toFixed(2);
+  const correctCount = serverResult?.correct_count ?? 0;
+  const marksPerQuestion = selectedTest.totalMarks / Math.max(1, totalQuestions);
 
-  const marksPerQuestion = selectedTest.totalMarks / totalQuestions;
-  const marksObtained = correctCount * marksPerQuestion;
-  const percentage = ((marksObtained / selectedTest.totalMarks) * 100).toFixed(2);
-
-  // Submit Test Handler
+  // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
-    if (!studentDetails) {
-      alert('कृपया पहले विद्यार्थी लॉगिन पूरा करें।');
+    if (submissionInFlight.current) return;
+    if (!studentDetails || !activeAttempt) {
+      alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
-
     if (!timeExpired && attemptedCount < totalQuestions) {
       const confirmIncomplete = confirm(
         `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\n\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
@@ -461,57 +541,70 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       if (!confirmIncomplete) return;
     }
 
-    setIsSubmitted(true);
-    setIsTestActive(false);
-    localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-    localStorage.removeItem('krishan_sir_active_student');
-    setSubmissionStatus({ loading: true, message: 'परिणाम सुरक्षित किया जा रहा है...' });
-
-    const submission: StudentTestSubmission = {
-      id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: new Date().toLocaleString('en-IN', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
-      student: studentDetails,
-      testId: selectedTest.id,
-      testTitle: selectedTest.title.hi || selectedTest.title.en,
-      score: marksObtained,
-      totalMarks: selectedTest.totalMarks,
-      percentage: percentage,
-      attempted: attemptedCount,
-      unattempted: unattemptedCount,
-      syncedToGoogleSheet: false,
-      answers: selectedAnswers,
-    };
-
-    // Save locally and send to Google Sheet Web App
-    const syncResult = await sendSubmissionToGoogleSheet(submission);
-
+    submissionInFlight.current = true;
     setSubmissionStatus({
-      loading: false,
-      success: syncResult.success,
-      message: syncResult.message,
+      loading: true,
+      message: timeExpired
+        ? 'समय समाप्त हो गया है। आपकी परीक्षा स्वतः सबमिट की जा रही है...'
+        : 'आपके उत्तर सुरक्षित रूप से जाँचे जा रहे हैं...',
     });
-
-    // Refresh responses table in memory
-    setSubmissionsList(getLocalSubmissions());
-
-    // Scroll to results banner
-    setTimeout(() => {
-      document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    try {
+      const answers: Record<number, number | null> = {};
+      for (let index = 0; index < totalQuestions; index += 1) {
+        answers[index] = Number.isInteger(selectedAnswers[index]) ? selectedAnswers[index] : null;
+      }
+      const result = await submitTestAttempt(activeAttempt.id, answers);
+      setServerResult(result);
+      setActiveAttempt(result);
+      setIsSubmitted(true);
+      setIsTestActive(false);
+      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+      localStorage.removeItem('krishan_sir_active_student');
+      setSubmissionStatus({
+        loading: false,
+        success: result.status === 'submitted',
+        message: result.status === 'submitted'
+          ? 'आपका परिणाम database में सुरक्षित हो गया है।'
+          : 'परीक्षा का समय समाप्त हो गया था; प्रयास expired दर्ज किया गया है।',
+      });
+      setTimeout(() => {
+        document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (error) {
+      setSubmissionStatus({
+        loading: false,
+        success: false,
+        message: error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।',
+      });
+      // Keep the attempt active so the student can retry submission without losing answers.
+    } finally {
+      submissionInFlight.current = false;
+    }
   };
 
   // Re-attempt test
-  const handleReattempt = () => {
-    setSelectedAnswers({});
-    setMarkedForReview({});
-    setCurrentQuestionIndex(0);
-    setTimeLeftSeconds(TOTAL_TEST_MINUTES * 60);
-    setIsSubmitted(false);
-    setIsTestActive(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleReattempt = async () => {
+    try {
+      const attempt = await startTestAttempt(selectedTest.id);
+      setActiveAttempt(attempt);
+      setServerResult(null);
+      setSelectedAnswers({});
+      setMarkedForReview({});
+      setCurrentQuestionIndex(0);
+      setTimeLeftSeconds(Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000)));
+      setIsSubmitted(false);
+      setIsTestActive(attempt.status === 'in_progress');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+      const errorDetails = (() => {
+        try { return JSON.stringify(error); } catch { return errorMessage; }
+      })();
+      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
+        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
+        : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
+    }
   };
 
   // Save Google Sheet Webhook URL
@@ -561,14 +654,17 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">कक्षा 8 और कक्षा 9 के टेस्ट यहाँ से चुन सकते हैं।</p>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">Supabase में प्रकाशित और आपकी कक्षा के लिए उपलब्ध ऑनलाइन टेस्ट चुनें।</p>
+              {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
+              {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
+              {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
-              {ONLINE_TESTS.length} Tests Available
+              {availableTests.length} Tests Available
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {ONLINE_TESTS.map((test) => {
+            {availableTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
                 <button
@@ -885,150 +981,41 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
         )}
 
-        {/* VIEW 1: STUDENT LOGIN PANEL (Shown before starting test) */}
+        {/* VIEW 1: AUTHENTICATED STUDENT GATE */}
         {!studentDetails && (
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-md mb-8">
-            <div className="max-w-xl mx-auto">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
-                  <UserCheck className="w-6 h-6" />
-                </div>
-                <h2 className="text-2xl font-extrabold text-slate-900 font-display">
-                  Student Login / विद्यार्थी लॉगिन
-                </h2>
-                <p className="mt-1 text-xs sm:text-sm text-slate-600">
-                  टेस्ट शुरू करने से पहले अपनी जानकारी भरें। {TOTAL_TEST_MINUTES} मिनट में {totalQuestions} वस्तुनिष्ठ प्रश्न होंगे।
-                </p>
+            <div className="max-w-xl mx-auto text-center">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
+                <UserCheck className="w-6 h-6" />
               </div>
-
-              {loginError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleStudentLogin} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Mobile Number */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Mobile Number / मोबाइल नंबर <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]{10}"
-                      maxLength={10}
-                      value={loginForm.mobile}
-                      onChange={(e) => setLoginForm({ ...loginForm, mobile: e.target.value.replace(/\D/g, '') })}
-                      placeholder="10 अंकों का मोबाइल नंबर"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-
-                  {/* Student Name */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Student Name / विद्यार्थी का नाम <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.studentName}
-                      onChange={(e) => setLoginForm({ ...loginForm, studentName: e.target.value })}
-                      placeholder="पूरा नाम लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-
-                  {/* Class */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Class / कक्षा <span className="text-red-600">*</span>
-                    </label>
-                    <select
-                      value={loginForm.studentClass}
-                      onChange={(e) => setLoginForm({ ...loginForm, studentClass: e.target.value })}
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    >
-                      <option value="8th">8th</option>
-                      <option value="9th">9th</option>
-                      <option value="10th">10th</option>
-                    </select>
-                  </div>
-
-                  {/* Roll Number */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Roll Number / रोल नंबर <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.rollNo}
-                      onChange={(e) => setLoginForm({ ...loginForm, rollNo: e.target.value })}
-                      placeholder="रोल नंबर लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* School Name */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                    School Name / विद्यालय का नाम <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={loginForm.school}
-                    onChange={(e) => setLoginForm({ ...loginForm, school: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                  >
-                    <option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                {/* Conditional Other School input */}
-                {loginForm.school === 'Other' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      Other School Name / अन्य विद्यालय का नाम <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginForm.otherSchool || ''}
-                      onChange={(e) => setLoginForm({ ...loginForm, otherSchool: e.target.value })}
-                      placeholder="विद्यालय का नाम लिखें"
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white"
-                    />
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-sky-900 hover:bg-sky-800 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    <span>Login &amp; Start {TOTAL_TEST_MINUTES} Minute Test / टेस्ट शुरू करें</span>
-                  </button>
-                </div>
-              </form>
-
-              <div className="mt-4 p-3 bg-sky-50 rounded-xl border border-sky-100 text-center text-xs text-slate-600">
-                ⏱️ परीक्षा अवधि: <b>{TOTAL_TEST_MINUTES} मिनट</b> | प्रश्न: <b>{totalQuestions}</b> | परिणाम सीधे Google Sheets में दर्ज होंगे।
-              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
+              <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
+              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{displayLoginError}</p>}
+              <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
+                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
+              </button>
             </div>
           </div>
         )}
 
-        {/* VIEW 2: ACTIVE TEST WORKSPACE (PREVIOUS STYLE WITH ATTEMPT DETAILS BOXES ON THE SIDE) */}
-        {studentDetails && !isSubmitted && (
+        {/* VIEW 2: START GATE — create a server-side attempt before showing questions */}
+        {studentDetails && !activeAttempt && !isSubmitted && (
+          <div className="mb-8 rounded-3xl border border-sky-200 bg-white p-6 text-center shadow-md sm:p-8">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 text-sky-800">
+              <Clock className="h-6 w-6" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">परीक्षा शुरू करें</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">प्रश्न देखने और उत्तर देने से पहले परीक्षा का सुरक्षित रिकॉर्ड बनाया जाएगा। समय Start Test दबाने के बाद ही शुरू होगा।</p>
+            {loginError && <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{displayLoginError}</p>}
+            {submissionStatus.message && <p role="status" className="mt-3 text-xs font-semibold text-sky-700">{displaySubmissionMessage}</p>}
+            <button type="button" onClick={handleStudentLogin} disabled={submissionStatus.loading || authLoading || profileLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
+              {submissionStatus.loading ? 'परीक्षा का रिकॉर्ड बनाया जा रहा है…' : 'Start Test / परीक्षा शुरू करें'}
+            </button>
+          </div>
+        )}
+
+        {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
+        {studentDetails && activeAttempt && !isSubmitted && (
           <div className="space-y-4">
             {/* PROFESSIONAL FIXED EXAM STATUS BAR */}
             <div
@@ -1720,7 +1707,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {submissionStatus.message && (
                 <div className="mb-4 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 inline-flex items-center gap-2">
                   <Database className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{submissionStatus.message}</span>
+                  <span>{displaySubmissionMessage}</span>
                 </div>
               )}
 
@@ -1746,7 +1733,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
 
-            {/* Detailed Question Review with Green/Red highlights & Explanations */}
+            {isDatabaseTest ? (
+              <div className="bg-sky-50 rounded-3xl border border-sky-200 p-6 sm:p-8 text-center">
+                <ShieldCheck className="w-8 h-8 text-sky-700 mx-auto mb-2" />
+                <h3 className="font-bold text-sky-950">आपका परिणाम सुरक्षित रूप से जाँचा गया है।</h3>
+                <p className="text-sm text-sky-800 mt-1">सही उत्तरों की सूची इस स्क्रीन पर नहीं दिखाई जाती।</p>
+              </div>
+            ) : (
+            /* Detailed Question Review with Green/Red highlights & Explanations */
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
               <h3 className="text-lg font-bold text-slate-900 mb-6 font-display flex items-center justify-between">
                 <span>Detailed Question Review &amp; Explanations (विस्तृत उत्तर एवं समाधान)</span>
@@ -1836,6 +1830,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 })}
               </div>
             </div>
+            )}
 
           </div>
         )}
