@@ -73,6 +73,6 @@ After migrations `0001` through `0004` have been applied, run `supabase/migratio
 
 
 ## Trigger-function privilege hardening (migration 0006)
-`supabase/migrations/0006_restrict_trigger_function_execute.sql` removes direct EXECUTE grants from the API roles for the custom trigger-only functions `handle_new_user()`, `prevent_role_escalation()`, and `set_student_profile_updated_at()`, when present. It intentionally leaves `is_admin()` unchanged because RLS policies call it directly, and it does not modify Supabase-managed event-trigger functions. PostgreSQL fires registered triggers as part of the table operation; the API caller does not need direct EXECUTE permission on the trigger function.
+`supabase/migrations/0006_restrict_trigger_function_execute.sql` removes direct EXECUTE grants from the API roles for the custom trigger-only functions `handle_new_user()`, `prevent_role_escalation()`, `set_student_profile_updated_at()`, and the DDL event-trigger function `rls_auto_enable()`, when present. It intentionally leaves `is_admin()` unchanged because RLS policies call it directly, and it does not modify Supabase-managed event-trigger functions. PostgreSQL fires registered triggers as part of the table operation; the API caller does not need direct EXECUTE permission on the trigger function.
 
 For an existing Supabase project, first verify the function definitions, registered triggers, backup status, and migration baseline. This migration is a proposed hardening step; do not run it until that review is complete.
