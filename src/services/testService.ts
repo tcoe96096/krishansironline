@@ -1,0 +1,136 @@
+import { requireSupabase } from '../lib/supabase';
+
+export interface StudentProfile {
+  user_id: string;
+  student_name: string;
+  class_level: string;
+  roll_no: string;
+  school_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+
+export interface PublishedTestQuestion {
+  id: string;
+  chapter: string;
+  question: { en: string; hi: string };
+  options: { en: string[]; hi: string[] };
+  marks?: number;
+  type?: 'mcq' | 'short' | 'long' | 'map';
+}
+
+export interface PublishedTest {
+  id: string;
+  title: { en: string; hi: string };
+  class_level: string;
+  subject: string;
+  chapter: string;
+  duration_minutes: number;
+  total_marks: number;
+  attempt_limit: number;
+  questions: PublishedTestQuestion[];
+}
+
+/**
+ * Fetches only published test content from the RLS-protected public catalogue.
+ * The public payload intentionally has no correctAnswer, explanation, or answer key.
+ */
+export async function getPublishedTests(classLevel?: string): Promise<PublishedTest[]> {
+  let query = requireSupabase()
+    .from('tests')
+    .select('id, title, class_level, subject, chapter, duration_minutes, total_marks, attempt_limit, questions')
+    .eq('is_published', true)
+    .order('class_level', { ascending: true })
+    .order('title', { ascending: true });
+
+  if (classLevel) query = query.eq('class_level', classLevel);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    ...row,
+    questions: Array.isArray(row.questions) ? row.questions : [],
+  })) as PublishedTest[];
+}
+
+export interface TestAttempt {
+  id: string;
+  student_id: string;
+  test_id: string;
+  attempt_number: number;
+  status: 'in_progress' | 'submitted' | 'expired';
+  started_at: string;
+  expires_at: string;
+  submitted_at: string | null;
+  score: number | null;
+  total_marks: number | null;
+  percentage: number | null;
+  correct_count: number | null;
+  attempted_count: number | null;
+}
+
+/** Reads only the signed-in student's own profile; RLS remains authoritative. */
+export async function getMyStudentProfile(): Promise<StudentProfile | null> {
+  const { data, error } = await requireSupabase()
+    .from('student_profiles')
+    .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as StudentProfile | null;
+}
+
+/** Starts or resumes an attempt; the database enforces class and attempt limits atomically. */
+export async function startTestAttempt(testId: string): Promise<TestAttempt> {
+  const { data, error } = await requireSupabase()
+    .rpc('start_test_attempt', { p_test_id: testId });
+
+  if (error) throw error;
+  return data as TestAttempt;
+}
+
+/** Sends answer indexes only. The private answer key and grading stay in PostgreSQL. */
+export async function submitTestAttempt(
+  attemptId: string,
+  answers: Record<number, number | null>,
+): Promise<TestAttempt> {
+  const normalizedAnswers: Record<string, number | null> = {};
+  for (const [questionIndex, answerIndex] of Object.entries(answers)) {
+    if (!/^\d+$/.test(questionIndex)) continue;
+    normalizedAnswers[questionIndex] = Number.isInteger(answerIndex) ? answerIndex : null;
+  }
+
+  const { data, error } = await requireSupabase()
+    .rpc('submit_test_attempt', {
+      p_attempt_id: attemptId,
+      p_answers: normalizedAnswers,
+    });
+
+  if (error) throw error;
+  return data as TestAttempt;
+}
+
+/** RLS limits this query to the current student's own attempt history. */
+export async function getMyTestAttempts(): Promise<TestAttempt[]> {
+  const { data, error } = await requireSupabase()
+    .from('test_attempts')
+    .select('id, student_id, test_id, attempt_number, status, started_at, expires_at, submitted_at, score, total_marks, percentage, correct_count, attempted_count')
+    .order('started_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as TestAttempt[];
+}
+
+/** Admin-only result feed. The database RLS policy rejects non-admin users. */
+export async function getAdminTestAttempts(): Promise<TestAttempt[]> {
+  const { data, error } = await requireSupabase()
+    .from('test_attempts')
+    .select('id, student_id, test_id, attempt_number, status, started_at, expires_at, submitted_at, score, total_marks, percentage, correct_count, attempted_count')
+    .order('started_at', { ascending: false })
+    .limit(1000);
+
+  if (error) throw error;
+  return (data ?? []) as TestAttempt[];
+}
