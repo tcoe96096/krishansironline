@@ -51,7 +51,7 @@ const MainApp: React.FC = () => {
   
   // Respect Vite's deployment base path (e.g. /krishansironline-preview/)
   // so internal navigation stays inside the Preview repository on GitHub Pages.
-  const basePath = import.meta.env.BASE_URL.replace(/\\/$/, '');
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   // Support clean SEO URLs and legacy hash links.
   const pathToPage: Record<string, PageId> = {
     '/': 'home',
@@ -71,7 +71,9 @@ const MainApp: React.FC = () => {
     results: '/results/', about: '/about/', contact: '/contact/',
   };
   const readPageFromLocation = (): PageId => {
-    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    const pathname = window.location.pathname;
+    const appPath = basePath && pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : pathname;
+    const path = appPath.replace(/\/+$/, '') || '/';
     const fromPath = pathToPage[path];
     if (fromPath) return fromPath;
     const hash = window.location.hash.replace('#', '') as PageId;
