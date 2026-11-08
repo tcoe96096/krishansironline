@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - "feature/student-auth-test-system"
+      - "feature/student-mobile-password-auth"
   pull_request:
     branches:
+      - "feature/student-auth-test-system"
       - "main"
 
 permissions:
