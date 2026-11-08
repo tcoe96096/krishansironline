@@ -17,7 +17,7 @@ In Supabase Dashboard → SQL Editor, run these files in numeric order:
 3. `supabase/migrations/0003_lock_student_identity_and_attempts.sql`
 4. `supabase/migrations/0004_validate_test_submission_answers.sql`
 
-Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Do not mark the system production-ready until all migrations execute successfully.
+Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Then run migration 0005 once to seed the selected Class 8 and Class 9 tests. Do not mark the system production-ready until migrations 0001–0005 execute successfully.
 
 ## Student password login (no SMS OTP)
 The portal presents a mobile-number + password interface. It normalizes Indian mobile numbers to +91 format and maps each number to a stable internal identifier (`student.<country-code-and-number>@login.krishansir.online`) for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing. The generated identifier is not a real mailbox. During transition, existing accounts created with the old email form can still sign in by entering their email in the same identifier field; new registrations must use a mobile number.
