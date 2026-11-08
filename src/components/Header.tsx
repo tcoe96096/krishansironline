@@ -6,9 +6,10 @@ interface HeaderProps {
   activeSection: string;
   onNavigate: (section: string) => void;
   onOpenSearch: () => void;
+  onOpenAuth: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch }) => {
+export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth }) => {
   const { language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navLinks = [
@@ -22,8 +23,6 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     { id: 'contact', label: language === 'en' ? 'Contact' : 'संपर्क', icon: Phone },
   ];
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
-  const adminUrl = 'https://script.google.com/macros/s/AKfycbwfc1ERULBNJ_tu9mKWK4kLcfx88Mw0bbHwlCcmUk82GNk0tV78bBvLyeBPlBvXWX-u/exec';
-
   return (
     <header className="sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl">
       <div className="bg-[#090d14] text-white border-b border-white/10">
@@ -57,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
               <button onClick={toggleLanguage} className="h-10 min-w-[34px] sm:min-h-7 sm:h-7 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] px-1.5 sm:px-3 py-1 text-[11px] sm:text-sm font-extrabold whitespace-nowrap shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">{language === 'en' ? 'E/H' : 'H/E'}</button>
-              <a href={adminUrl} target="_blank" rel="noopener noreferrer" aria-label="Admin" className="h-10 w-9 sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-1.5 sm:px-3 py-1 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Admin</span></a>
+              <button type="button" onClick={onOpenAuth} aria-label="Student and Admin Login" title="Student and Admin Login" className="h-10 w-9 sm:min-h-7 sm:h-7 sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#092f68] text-white px-1.5 sm:px-3 py-1 text-xs sm:text-sm font-extrabold shadow-sm transition hover:-translate-y-0.5 hover:bg-[#124887] hover:shadow-md"><Shield className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Student Login</span></button>
             </div>
           </div>
           <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
