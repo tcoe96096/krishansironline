@@ -364,7 +364,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     if (!isTestActive || isSubmitted) return;
 
     if (timeLeftSeconds <= 0) {
-      alert('समय समाप्त हो गया है! (Time Up). आपका टेस्ट स्वतः सबमिट किया जा रहा है।');
       handleSubmitQuiz(true);
       return;
     }
@@ -520,7 +519,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     submissionInFlight.current = true;
-    setSubmissionStatus({ loading: true, message: 'आपके उत्तर सुरक्षित रूप से जाँचे जा रहे हैं...' });
+    setSubmissionStatus({
+      loading: true,
+      message: timeExpired
+        ? 'समय समाप्त हो गया है। आपकी परीक्षा स्वतः सबमिट की जा रही है...'
+        : 'आपके उत्तर सुरक्षित रूप से जाँचे जा रहे हैं...',
+    });
     try {
       const answers: Record<number, number | null> = {};
       for (let index = 0; index < totalQuestions; index += 1) {
