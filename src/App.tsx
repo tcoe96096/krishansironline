@@ -49,6 +49,9 @@ const VALID_PAGES: PageId[] = [
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
   
+  // Respect Vite's deployment base path (e.g. /krishansironline-preview/)
+  // so internal navigation stays inside the Preview repository on GitHub Pages.
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   // Support clean SEO URLs and legacy hash links.
   const pathToPage: Record<string, PageId> = {
     '/': 'home',
@@ -68,7 +71,9 @@ const MainApp: React.FC = () => {
     results: '/results/', about: '/about/', contact: '/contact/',
   };
   const readPageFromLocation = (): PageId => {
-    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    const pathname = window.location.pathname;
+    const appPath = basePath && pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : pathname;
+    const path = appPath.replace(/\/+$/, '') || '/';
     const fromPath = pathToPage[path];
     if (fromPath) return fromPath;
     const hash = window.location.hash.replace('#', '') as PageId;
@@ -101,14 +106,15 @@ const MainApp: React.FC = () => {
 
     if (pageId === 'notices') {
       setActivePage('home');
-      if (window.location.pathname !== '/') window.history.pushState(null, '', '/');
+      const homePath = `${basePath}/`;
+      if (window.location.pathname !== homePath) window.history.pushState(null, '', homePath);
       setTimeout(() => document.getElementById('notices')?.scrollIntoView({ behavior: 'smooth' }), 50);
       return;
     }
 
     const targetPage = VALID_PAGES.includes(pageId as PageId) ? (pageId as PageId) : 'home';
     setActivePage(targetPage);
-    const targetPath = pageToPath[targetPage];
+    const targetPath = `${basePath}${pageToPath[targetPage]}`;
     if (window.location.pathname !== targetPath) window.history.pushState(null, '', targetPath);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
