@@ -164,7 +164,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const attemptLimitMessageEn = 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.';
   const isAttemptLimitMessage = (message: string) => message.includes('निर्धारित प्रयास पूरा') || message.includes('allowed attempt');
   const displayLoginError = isAttemptLimitMessage(loginError) ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : loginError;
-  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
@@ -180,6 +179,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     success?: boolean;
     message?: string;
   }>({ loading: false });
+
+  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
 
   // Teacher / Admin Responses Management
   const [showTeacherPanel, setShowTeacherPanel] = useState<boolean>(false);
