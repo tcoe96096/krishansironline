@@ -160,6 +160,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
+  const attemptLimitMessageHi = 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।';
+  const attemptLimitMessageEn = 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.';
+  const isAttemptLimitMessage = (message: string) => message.includes('निर्धारित प्रयास पूरा') || message.includes('allowed attempt');
+  const displayLoginError = isAttemptLimitMessage(loginError) ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : loginError;
+  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
@@ -753,8 +758,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 </>
               )}
               <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/10 p-1 text-[11px] font-semibold">
-                <button onClick={() => { setQuestionLang('hi'); if (loginError.includes('निर्धारित प्रयास पूरा') || loginError.includes('allowed attempt')) setLoginError('आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है。'); if (submissionStatus.message?.includes('निर्धारित प्रयास पूरा') || submissionStatus.message?.includes('allowed attempt')) setSubmissionStatus((prev) => ({ ...prev, message: 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है。' })); }} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>हिंदी</button>
-                <button onClick={() => { setQuestionLang('en'); if (loginError.includes('निर्धारित प्रयास पूरा') || loginError.includes('allowed attempt')) setLoginError('You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.'); if (submissionStatus.message?.includes('निर्धारित प्रयास पूरा') || submissionStatus.message?.includes('allowed attempt')) setSubmissionStatus((prev) => ({ ...prev, message: 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.' })); }} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>English</button>
+                <button onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>हिंदी</button>
+                <button onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>English</button>
               </div>
             </div>
           </div>
@@ -984,7 +989,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
               <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
-              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{loginError}</p>}
+              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{displayLoginError}</p>}
               <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
                 {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
               </button>
@@ -1000,8 +1005,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             </div>
             <h2 className="text-xl font-extrabold text-slate-900">परीक्षा शुरू करें</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">प्रश्न देखने और उत्तर देने से पहले परीक्षा का सुरक्षित रिकॉर्ड बनाया जाएगा। समय Start Test दबाने के बाद ही शुरू होगा।</p>
-            {loginError && <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{loginError}</p>}
-            {submissionStatus.message && <p role="status" className="mt-3 text-xs font-semibold text-sky-700">{submissionStatus.message}</p>}
+            {loginError && <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{displayLoginError}</p>}
+            {submissionStatus.message && <p role="status" className="mt-3 text-xs font-semibold text-sky-700">{displaySubmissionMessage}</p>}
             <button type="button" onClick={handleStudentLogin} disabled={submissionStatus.loading || authLoading || profileLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
               {submissionStatus.loading ? 'परीक्षा का रिकॉर्ड बनाया जा रहा है…' : 'Start Test / परीक्षा शुरू करें'}
             </button>
@@ -1701,7 +1706,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {submissionStatus.message && (
                 <div className="mb-4 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 inline-flex items-center gap-2">
                   <Database className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{submissionStatus.message}</span>
+                  <span>{displaySubmissionMessage}</span>
                 </div>
               )}
 
