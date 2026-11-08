@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { X, UserRound, LogOut, ShieldCheck } from 'lucide-react';
+import { StudentDashboard } from './StudentDashboard';
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
@@ -48,7 +49,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const inputClass = 'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100';
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-3" role="dialog" aria-modal="true" aria-label={en ? 'Student account' : 'विद्यार्थी खाता'}>
-      <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-7">
+      <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-7">
         <button onClick={onClose} className="absolute right-4 top-4 rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-900"><UserRound className="h-5 w-5" /></div>
@@ -58,7 +59,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {user ? (
           <div className="space-y-4">
             {adminLoading ? <p className="text-xs text-slate-500">Admin role जाँचा जा रहा है…</p> : isAdmin ? <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Admin access verified / एडमिन अनुमति सत्यापित</p> : null}
-            <p className="text-sm text-slate-700">{en ? 'You are signed in.' : 'आप लॉगिन हैं।'} <span className="font-semibold">{user.email || 'Account'}</span></p>
+            <StudentDashboard />
             <button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button>
           </div>
         ) : (
