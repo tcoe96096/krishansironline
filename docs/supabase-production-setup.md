@@ -20,14 +20,14 @@ In Supabase Dashboard → SQL Editor, run these files in numeric order:
 Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Do not mark the system production-ready until all migrations execute successfully.
 
 ## Student password login (no SMS OTP)
-The portal presents a mobile-number + password interface but maps each normalized Indian mobile number to a stable internal email identifier for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing.
+The portal presents a mobile-number + password interface. It normalizes Indian mobile numbers to +91 format and maps each number to a stable internal identifier (`student.<country-code-and-number>@login.krishansir.online`) for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing. The generated identifier is not a real mailbox. During transition, existing accounts created with the old email form can still sign in by entering their email in the same identifier field; new registrations must use a mobile number.
 
 In Authentication → Sign In / Providers:
 - Keep Email provider enabled.
 - Disable Confirm email because the generated identifier is not a real mailbox.
 - Keep Phone provider disabled; no Twilio credentials are required.
 - Use a minimum password length of at least 8 characters and appropriate auth rate limits.
-- Mobile numbers are not verified and must not be treated as proof of identity. The generated identifier cannot receive email password-reset links; establish an administrator-assisted identity verification and recovery process before production.
+- Mobile numbers are not verified and must not be treated as proof of identity. The generated identifier cannot receive email password-reset links; establish an administrator-assisted identity verification and recovery process before production. Since mobile numbers are not verified, prevent account takeover by checking school records before any assisted reset.
 
 ## Google OAuth administrator login
 In Authentication → Providers → Google:
