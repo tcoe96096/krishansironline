@@ -85,19 +85,14 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <nav className="bg-[#edf3f9] text-[#173b68] border-b-[3px] border-[#c8d9e9] shadow-sm" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center justify-between gap-2 min-h-[44px]">
           <div className="flex items-center gap-1">
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg text-[#173b68] hover:bg-[#dce8f3]" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            <span className="text-xs font-bold">{language === 'en' ? 'Menu' : 'मेन्यू'}</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
           </div>
           <div className="lg:hidden flex items-center justify-end gap-2">
-            <button type="button" onClick={onOpenSearch} aria-label="Search" title="Search" className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-white text-[#092c60] shadow-sm ring-1 ring-[#17477e]/15"><Search className="h-4 w-4" /></button>
-            <div role="group" aria-label="Select language" className="inline-flex h-9 items-center rounded-full border border-[#17477e]/15 bg-[#eaf1fb] p-1 shadow-sm">
+            <button type="button" onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] shadow-sm transition hover:bg-[#f5f9ff]"><Search className="h-4 w-4" /></button>
+            <div role="group" aria-label="Select language" className="inline-flex h-10 shrink-0 items-center rounded-xl border border-[#17477e]/20 bg-white p-1 shadow-sm">
               <button type="button" onClick={() => { if (language === 'en') toggleLanguage(); }} aria-pressed={language !== 'en'} aria-label="हिन्दी" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language !== 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>HI</button>
               <button type="button" onClick={() => { if (language !== 'en') toggleLanguage(); }} aria-pressed={language === 'en'} aria-label="English" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language === 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>EN</button>
             </div>
-            <button type="button" onClick={() => onOpenAuth()} aria-label="Student Login" title="Student Login" className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-[#092f68] text-white shadow-sm hover:bg-[#124887]"><UserRound className="h-4 w-4" /></button>
+            <button type="button" onClick={() => onOpenAuth()} aria-label="Student Login" title="Student Login" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-[#123c70] text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4" /></button>
           </div>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg text-[#173b68] hover:bg-[#dce8f3]" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
