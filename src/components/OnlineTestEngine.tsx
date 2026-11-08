@@ -649,8 +649,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* AVAILABLE TESTS SELECTOR */}
-        <div className="mb-6 rounded-3xl border border-sky-200 bg-white p-5 sm:p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+        <div className="mb-6 rounded-2xl sm:rounded-3xl border border-sky-200 bg-white p-3.5 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
@@ -663,7 +663,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {availableTests.length} Tests Available
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {availableTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
@@ -681,7 +681,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     }
                     setSelectedTest(test);
                   }}
-                  className={`rounded-2xl border-2 p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                  className={`w-full min-w-0 rounded-xl sm:rounded-2xl border-2 p-3.5 sm:p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                     isSelected
                       ? 'border-sky-700 bg-sky-50 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50'
@@ -692,8 +692,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <span className="inline-flex rounded-lg bg-sky-900 px-2.5 py-1 text-[11px] font-bold text-white">
                         Class {test.classLevel}
                       </span>
-                      <h3 className="mt-3 text-sm sm:text-base font-extrabold text-slate-900">{test.title.hi}</h3>
-                      <p className="mt-1 text-xs text-slate-600">{test.title.en}</p>
+                      <h3 className="mt-2 sm:mt-3 text-[15px] sm:text-base leading-snug font-extrabold text-slate-900 break-words">{test.title.hi}</h3>
+                      <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-slate-600 break-words">{test.title.en}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
                       isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
@@ -701,8 +701,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       {isSelected ? 'चयनित / SELECTED' : 'चुनें / SELECT'}
                     </span>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.questions.length} MCQs</span>
+                  <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2 text-xs font-semibold text-slate-600">
+                    <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 sm:py-1">{test.questions.length} MCQs</span>
                     <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.totalMarks} Marks</span>
                     <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.durationMinutes} Minutes</span>
                   </div>
