@@ -50,14 +50,14 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </a>
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Krishan Sir branding - Go to home page" className="min-w-0 cursor-pointer no-underline">
             <div className="min-w-0">
-              <div className="text-[clamp(1.3rem,3.2vw,2rem)] leading-[1.02] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
-              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /> Online Learning</div>
-              <div className="mt-0.5 text-[6px] sm:text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
+              <div className="whitespace-nowrap text-[clamp(1.15rem,5vw,2rem)] leading-none font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
+              <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-[#087d9b] px-2 sm:px-3 py-0.5 text-white text-[10px] sm:text-xs font-bold tracking-wide shadow-sm whitespace-nowrap"><GraduationCap className="w-3 h-3" /> Online Learning</div>
+              <div className="hidden sm:block mt-0.5 text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
             </div>
             </a>
           </div>
 
-          <div className="relative z-10 flex w-full shrink-0 items-center justify-end gap-1 py-1 sm:w-auto sm:gap-2 sm:py-0 sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
+          <div className="relative z-10 flex w-full shrink-0 items-center justify-between gap-2 py-1 sm:w-auto sm:justify-end sm:gap-2 sm:py-0 sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
               <div role="group" aria-label="Select language" className="inline-flex h-9 sm:h-8 items-center rounded-full border border-[#17477e]/15 bg-[#eaf1fb] p-1 shadow-sm">
