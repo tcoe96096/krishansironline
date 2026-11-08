@@ -1,0 +1,48 @@
+name: Preview build (no production deploy)
+
+on:
+  push:
+    branches:
+      - "feature/student-auth-test-system"
+      - "feature/student-mobile-password-auth"
+  pull_request:
+    branches:
+      - "feature/student-auth-test-system"
+      - "main"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-build:
+    name: Build preview artifact only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Build Vite preview
+        run: npm run build
+
+      - name: Upload preview files (no publish)
+        uses: actions/upload-artifact@v4
+        with:
+          name: krishansir-preview-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
