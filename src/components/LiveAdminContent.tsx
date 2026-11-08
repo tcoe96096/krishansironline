@@ -15,6 +15,12 @@ const CONFIG: Record<Section, { title: string; subtitle: string; icon: React.Ele
 };
 
 
+declare global {
+  interface Window {
+    [key: string]: any;
+  }
+}
+
 interface Props { section: Section; }
 
 export const LiveAdminContent: React.FC<Props> = ({ section }) => {
