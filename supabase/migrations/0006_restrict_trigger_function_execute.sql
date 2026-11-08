@@ -12,6 +12,10 @@ begin
     execute 'revoke all on function public.handle_new_user() from public, anon, authenticated';
   end if;
 
+  if to_regprocedure('public.handle_new_student_profile()') is not null then
+    execute 'revoke all on function public.handle_new_student_profile() from public, anon, authenticated';
+  end if;
+
   if to_regprocedure('public.prevent_role_escalation()') is not null then
     execute 'revoke all on function public.prevent_role_escalation() from public, anon, authenticated';
   end if;
