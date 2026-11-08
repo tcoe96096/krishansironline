@@ -3,8 +3,8 @@
 -- do not need EXECUTE privileges to cause the owning table operation to fire a trigger.
 -- Keep public.is_admin() unchanged because RLS policies call it directly.
 --
--- This migration intentionally does not alter Supabase-managed event-trigger
--- functions such as public.rls_auto_enable().
+-- The event-trigger function public.rls_auto_enable() is also restricted from
+-- direct API invocation; PostgreSQL still invokes it for registered DDL events.
 
 do $$
 begin
