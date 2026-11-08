@@ -451,8 +451,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
-      const errorMessage = error instanceof Error ? error.message : '';
-      setLoginError(/attempt limit reached/i.test(errorMessage)
+      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+      const errorDetails = (() => {
+        try { return JSON.stringify(error); } catch { return errorMessage; }
+      })();
+      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      setLoginError(isAttemptLimitReached
         ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
         : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
     }
@@ -576,8 +580,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setIsTestActive(attempt.status === 'in_progress');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '';
-      setSubmissionStatus({ loading: false, success: false, message: /attempt limit reached/i.test(errorMessage)
+      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+      const errorDetails = (() => {
+        try { return JSON.stringify(error); } catch { return errorMessage; }
+      })();
+      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
         ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
