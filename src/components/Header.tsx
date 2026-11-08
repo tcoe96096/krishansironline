@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative isolate overflow-visible bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-0 sm:py-0 flex items-center justify-between gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-1 sm:py-0 flex flex-col items-stretch justify-center gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
           <div className="flex w-full items-center gap-1.5 min-w-0 sm:w-auto sm:flex-none sm:col-start-1">
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Go to home page" className="h-[44px] w-[44px] sm:h-[58px] sm:w-[58px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70 cursor-pointer">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
