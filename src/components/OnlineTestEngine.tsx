@@ -451,7 +451,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
-      setLoginError(error instanceof Error ? error.message : 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।');
+      const errorMessage = error instanceof Error ? error.message : '';
+      setLoginError(/attempt limit reached/i.test(errorMessage)
+        ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
+        : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
     }
   };
 
@@ -573,7 +576,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setIsTestActive(attempt.status === 'in_progress');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      setSubmissionStatus({ loading: false, success: false, message: error instanceof Error ? error.message : 'दोबारा टेस्ट शुरू नहीं हो सका।' });
+      const errorMessage = error instanceof Error ? error.message : '';
+      setSubmissionStatus({ loading: false, success: false, message: /attempt limit reached/i.test(errorMessage)
+        ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।'
+        : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
 
