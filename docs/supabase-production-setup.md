@@ -17,7 +17,7 @@ In Supabase Dashboard → SQL Editor, run these files in numeric order:
 3. `supabase/migrations/0003_lock_student_identity_and_attempts.sql`
 4. `supabase/migrations/0004_validate_test_submission_answers.sql`
 
-Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Then run migration 0005 once to seed the selected Class 8 and Class 9 tests. Do not mark the system production-ready until migrations 0001–0005 execute successfully.
+Run migration 0004 after the first three migrations. It validates question and option indexes before grading, preventing malformed browser submissions from inflating attempted counts. Then run migration 0005 once to seed the selected Class 8 and Class 9 tests. Migration 0006 restricts direct API execution of trigger-only functions; apply it only after confirming the matching custom triggers/functions exist in the target project and after reconciling that project's existing schema and migration baseline. Do not blindly replay migrations 0001–0005 on an existing project. Do not mark the system production-ready until the schema baseline, migration history, and end-to-end tests are verified.
 
 ## Student password login (no SMS OTP)
 The portal presents a mobile-number + password interface. It normalizes Indian mobile numbers to +91 format and maps each number to a stable internal identifier (`student.<country-code-and-number>@login.krishansir.online`) for Supabase Email/Password Auth. This avoids the Phone provider and Twilio/SMS billing. The generated identifier is not a real mailbox. During transition, existing accounts created with the old email form can still sign in by entering their email in the same identifier field; new registrations must use a mobile number.
@@ -70,3 +70,9 @@ The script is intended to be called only by a trusted server-side Edge Function.
 
 ## Seed the Class 8 and Class 9 test catalogue
 After migrations `0001` through `0004` have been applied, run `supabase/migrations/0005_seed_secure_test_catalogue.sql` once in Supabase SQL Editor. This seed contains only three tests: Class 9 History (60 questions), Class 9 Constitution Quiz (4 questions), and Class 8 NMMS History (40 questions). Public question JSON excludes correct answers and explanations; answer indexes are stored separately in `test_answer_keys`. Re-running the migration updates these three test IDs only; it does not delete other tests or student attempt history.
+
+
+## Trigger-function privilege hardening (migration 0006)
+`supabase/migrations/0006_restrict_trigger_function_execute.sql` removes direct EXECUTE grants from the API roles for the custom trigger-only functions `handle_new_user()`, `prevent_role_escalation()`, and `set_student_profile_updated_at()`, when present. It intentionally leaves `is_admin()` unchanged because RLS policies call it directly, and it does not modify Supabase-managed event-trigger functions. PostgreSQL fires registered triggers as part of the table operation; the API caller does not need direct EXECUTE permission on the trigger function.
+
+For an existing Supabase project, first verify the function definitions, registered triggers, backup status, and migration baseline. This migration is a proposed hardening step; do not run it until that review is complete.
