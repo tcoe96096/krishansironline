@@ -964,8 +964,24 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
         )}
 
-        {/* VIEW 2: ACTIVE TEST WORKSPACE (PREVIOUS STYLE WITH ATTEMPT DETAILS BOXES ON THE SIDE) */}
-        {studentDetails && !isSubmitted && (
+        {/* VIEW 2: START GATE — create a server-side attempt before showing questions */}
+        {studentDetails && !activeAttempt && !isSubmitted && (
+          <div className="mb-8 rounded-3xl border border-sky-200 bg-white p-6 text-center shadow-md sm:p-8">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 text-sky-800">
+              <Clock className="h-6 w-6" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">परीक्षा शुरू करें</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">प्रश्न देखने और उत्तर देने से पहले परीक्षा का सुरक्षित रिकॉर्ड बनाया जाएगा। समय Start Test दबाने के बाद ही शुरू होगा।</p>
+            {loginError && <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{loginError}</p>}
+            {submissionStatus.message && <p role="status" className="mt-3 text-xs font-semibold text-sky-700">{submissionStatus.message}</p>}
+            <button type="button" onClick={handleStudentLogin} disabled={submissionStatus.loading || authLoading || profileLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
+              {submissionStatus.loading ? 'परीक्षा का रिकॉर्ड बनाया जा रहा है…' : 'Start Test / परीक्षा शुरू करें'}
+            </button>
+          </div>
+        )}
+
+        {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
+        {studentDetails && activeAttempt && !isSubmitted && (
           <div className="space-y-4">
             {/* PROFESSIONAL FIXED EXAM STATUS BAR */}
             <div
