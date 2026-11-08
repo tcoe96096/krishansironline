@@ -1,25 +1,33 @@
-# Supabase phone + password setup — Krishan Sir Online Learning Portal
+# Student mobile + password login (no SMS OTP)
 
-## Approved login choice
-- Students sign up and sign in using their 10-digit Indian mobile number and password.
-- SMS OTP is not part of registration or login; no SMS provider is required.
-- Supabase Phone Auth must be configured for password-based phone sign-in.
-- Disable phone confirmation in Supabase Auth before enabling registration, otherwise Supabase may send a confirmation OTP and incur SMS charges.
+## Approved implementation
+
+The portal accepts an Indian mobile number and password in the student interface. The application normalizes the number to +91 format and converts it to a stable internal email-shaped identifier for Supabase Email/Password Auth.
+
+- Supabase Email provider: enabled.
+- Supabase Phone provider: **disabled**.
+- SMS OTP: not used; no SMS provider or Twilio credentials are required.
+- The generated identifier is not a real mailbox and cannot receive email confirmation or password-reset links.
+- Mobile ownership is not verified during signup. A mobile number alone must not be treated as proof of identity.
 
 ## Supabase configuration
-1. Open the existing Supabase project.
-2. Go to Authentication → Providers → Phone and enable Phone provider.
-3. Ensure phone confirmation is disabled for this password-only flow. Confirm the dashboard wording and behavior in a test account before production.
-4. Set strong password requirements and configure CAPTCHA / rate limits where available.
-5. Configure password recovery. Since phone numbers are not verified at signup, do not treat possession of the number as verified identity. For account recovery or changing a number, use a separately verified recovery process controlled by the project owner.
-6. Test signup, duplicate number, correct password, wrong password, logout, session refresh and recovery. Confirm that no SMS is sent.
 
-## Important security limitations
-- A mobile number entered during signup is not proof that the student owns that number when phone confirmation is disabled.
-- Mobile numbers can be recycled by carriers. Do not rely on an unverified phone number alone for sensitive account recovery.
-- Never store passwords in localStorage or send them to Google Sheets.
-- Use Supabase Auth persisted, refreshable sessions; never create a permanent client-side “logged in” flag.
-- Keep service-role keys and all provider secrets out of frontend code and GitHub.
+1. Keep Authentication → Sign In / Providers → Email enabled.
+2. Keep Confirm email disabled for this specific synthetic-identifier flow.
+3. Keep Authentication → Sign In / Providers → Phone disabled.
+4. Require strong passwords and configure available rate limits / CAPTCHA protections.
+5. Do not enable Phone Auth for this design. Enabling it would change the authentication model and may introduce OTP delivery or provider costs.
 
-## No-SMS cost model
-There is no per-login SMS charge because the chosen flow does not send OTP messages. Supabase project usage and any separately enabled paid features remain subject to the selected Supabase plan.
+## Account recovery and safety
+
+Because the generated identifier is not a real mailbox, ordinary email password-reset links will not reach students. Before production, implement a controlled recovery process that verifies a student's identity against school records through an authorized administrator. Never reset an account solely because someone knows or currently controls the unverified mobile number.
+
+## Testing checklist
+
+Test new registration, duplicate mobile number, valid and invalid passwords, sign-in, sign-out, session restoration, profile provisioning, and administrator-assisted recovery in a non-production test account. Confirm that no SMS is sent.
+
+Never store passwords in localStorage or Google Sheets. Never expose Supabase service-role keys or provider secrets in frontend code or GitHub.
+
+## Cost note
+
+This flow does not incur per-login SMS OTP charges because it does not send SMS. Supabase project usage and any separately enabled paid features remain subject to the selected Supabase plan.
