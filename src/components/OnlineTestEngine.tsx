@@ -514,7 +514,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
     if (!timeExpired && attemptedCount < totalQuestions) {
       const confirmIncomplete = confirm(
-        `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\\n\\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
+        `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\n\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
       );
       if (!confirmIncomplete) return;
     }
