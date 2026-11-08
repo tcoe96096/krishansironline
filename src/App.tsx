@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
+import { AuthModal } from './components/AuthModal';
+import { FloatingStudentLogin } from './components/FloatingStudentLogin';
 import { Hero } from './components/Hero';
 import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
@@ -150,6 +152,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
   const pathToPage: Record<string, PageId> = {
@@ -171,7 +174,9 @@ const MainApp: React.FC = () => {
     results: '/results/', about: '/about/', contact: '/contact/',
   };
   const readPageFromLocation = (): PageId => {
-    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    const pathname = window.location.pathname;
+    const appPath = basePath && pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : pathname;
+    const path = appPath.replace(/\/+$/, '') || '/';
     const fromPath = pathToPage[path];
     if (fromPath) return fromPath;
     const hash = window.location.hash.replace('#', '') as PageId;
@@ -182,6 +187,7 @@ const MainApp: React.FC = () => {
   );
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<ClassLevel>('9');
 
 
@@ -203,14 +209,15 @@ const MainApp: React.FC = () => {
 
     if (pageId === 'notices') {
       setActivePage('home');
-      if (window.location.pathname !== '/') window.history.pushState(null, '', '/');
+      const homePath = `${basePath}/`;
+      if (window.location.pathname !== homePath) window.history.pushState(null, '', homePath);
       setTimeout(() => document.getElementById('notices')?.scrollIntoView({ behavior: 'smooth' }), 50);
       return;
     }
 
     const targetPage = VALID_PAGES.includes(pageId as PageId) ? (pageId as PageId) : 'home';
     setActivePage(targetPage);
-    const targetPath = pageToPath[targetPage];
+    const targetPath = `${basePath}${pageToPath[targetPage]}`;
     if (window.location.pathname !== targetPath) window.history.pushState(null, '', targetPath);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -226,6 +233,7 @@ const MainApp: React.FC = () => {
         activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Main Dedicated Page Routing */}
@@ -540,7 +548,7 @@ const MainApp: React.FC = () => {
               icon={Laptop}
               onBackHome={() => navigateTo('home')}
             />
-            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} />
+            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} onRequestLogin={() => setIsAuthOpen(true)} />
           </div>
         )}
 
@@ -733,6 +741,8 @@ const MainApp: React.FC = () => {
         onClose={() => setIsSearchOpen(false)}
         onNavigate={navigateTo}
       />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />
     </div>
   );
 };
