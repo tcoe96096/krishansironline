@@ -108,12 +108,21 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
+  const [testSearch, setTestSearch] = useState('');
+  const [testClassFilter, setTestClassFilter] = useState('all');
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
   // Authenticated students see only tests published for their canonical profile class.
   const availableTests = user && profile
     ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
     : [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
+  const filteredTests = availableTests.filter((test) => {
+    const query = testSearch.trim().toLowerCase();
+    const matchesQuery = !query || (test.title.hi + ' ' + test.title.en + ' ' + test.subject + ' ' + test.classLevel).toLowerCase().includes(query);
+    const matchesClass = testClassFilter === 'all' || String(test.classLevel) === testClassFilter;
+    return matchesQuery && matchesClass;
+  });
+  const testClassOptions = [...new Set(availableTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
   // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
   const [restoredSession] = useState<PersistedTestSession | null>(null);
   const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
@@ -660,11 +669,21 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
-              {availableTests.length} Tests Available
+              {filteredTests.length} Tests Available
             </span>
           </div>
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_170px] gap-2.5">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input value={testSearch} onChange={(event) => setTestSearch(event.target.value)} placeholder="टेस्ट खोजें / Search tests..." aria-label="Search tests" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" />
+            </label>
+            <select value={testClassFilter} onChange={(event) => setTestClassFilter(event.target.value)} aria-label="Filter tests by class" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+              <option value="all">सभी कक्षाएँ / All Classes</option>
+              {testClassOptions.map((classLevel) => <option key={classLevel} value={classLevel}>Class {classLevel}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            {availableTests.map((test) => {
+            {filteredTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
                 <button
@@ -681,7 +700,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     }
                     setSelectedTest(test);
                   }}
-                  className={`w-full min-w-0 rounded-xl sm:rounded-2xl border-2 p-3.5 sm:p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                  className={`w-full min-w-0 rounded-2xl border-2 p-4 text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                     isSelected
                       ? 'border-sky-700 bg-sky-50 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50'
@@ -766,7 +785,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
 
           {/* Essential information only; live countdown is shown in the sticky exam dashboard. */}
-          <div className={`relative z-10 mt-4 grid gap-2 border-t border-white/15 pt-3 text-center ${studentDetails ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 border-t border-white/15 pt-3 text-center">
             <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
               <div className="text-[10px] font-semibold text-sky-200 sm:text-[11px]">कुल प्रश्न / Questions</div>
               <div className="mt-0.5 font-mono text-lg font-extrabold text-white sm:text-xl">{totalQuestions} MCQs</div>
