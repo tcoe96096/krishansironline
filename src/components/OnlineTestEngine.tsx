@@ -672,7 +672,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {filteredTests.length} Tests Available
             </span>
           </div>
-          <div className="mb-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_170px] gap-2.5">
+          <div className="mb-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_190px] gap-2.5">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input value={testSearch} onChange={(event) => setTestSearch(event.target.value)} placeholder="टेस्ट खोजें / Search tests..." aria-label="Search tests" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" />
@@ -682,7 +682,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {testClassOptions.map((classLevel) => <option key={classLevel} value={classLevel}>Class {classLevel}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             {filteredTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
@@ -1002,16 +1002,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* VIEW 1: AUTHENTICATED STUDENT GATE */}
         {!studentDetails && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-md mb-8">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-md mb-6 sm:mb-8">
             <div className="max-w-xl mx-auto text-center">
               <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
                 <UserCheck className="w-6 h-6" />
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
               <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
               {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{displayLoginError}</p>}
               <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
-                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
+                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login to Start Test / टेस्ट शुरू करने के लिए लॉगिन करें'}
               </button>
             </div>
           </div>
