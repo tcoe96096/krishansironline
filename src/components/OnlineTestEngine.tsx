@@ -686,10 +686,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             {filteredTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
-                <button
+                <div
                   key={test.id}
-                  type="button"
-                  aria-pressed={isSelected}
+                  className={`w-full min-w-0 rounded-2xl border-2 p-3.5 sm:p-4 shadow-sm transition-all hover:shadow-md ${isSelected ? 'border-sky-700 bg-sky-50 shadow-sm' : 'border-slate-200 bg-white'}`}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={isSelected}
                   onClick={() => {
                     if (isSelected) return;
                     if (studentDetails && !window.confirm('दूसरा टेस्ट चुनने पर वर्तमान टेस्ट/परिणाम स्क्रीन बंद होगी। क्या आगे बढ़ें?')) return;
@@ -700,11 +703,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     }
                     setSelectedTest(test);
                   }}
-                  className={`w-full min-w-0 rounded-2xl border-2 p-4 text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                    isSelected
-                      ? 'border-sky-700 bg-sky-50 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50'
-                  }`}
+                  className="w-full min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -725,7 +724,29 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.totalMarks} Marks</span>
                     <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.durationMinutes} Minutes</span>
                   </div>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (authLoading || profileLoading || submissionStatus.loading) return;
+                      if (!user) {
+                        onRequestLogin();
+                        return;
+                      }
+                      if (!studentDetails) {
+                        setLoginError('आपका विद्यार्थी प्रोफाइल अधूरा है। कृपया अपनी प्रोफाइल पूरी करें।');
+                        return;
+                      }
+                      handleStudentLogin();
+                    }}
+                    disabled={authLoading || profileLoading || submissionStatus.loading}
+                    className={`mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-900 hover:bg-sky-800'}`}
+                  >
+                    <span>{submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? 'Continue / Start Test' : 'Login to Start Test'}</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  {isSelected && loginError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
+                </div>
               );
             })}
           </div>
@@ -997,39 +1018,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 Switch Student
               </button>
             </div>
-          </div>
-        )}
-
-        {/* VIEW 1: AUTHENTICATED STUDENT GATE */}
-        {!studentDetails && (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-md mb-6 sm:mb-8">
-            <div className="max-w-xl mx-auto text-center">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
-                <UserCheck className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
-              <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
-              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{displayLoginError}</p>}
-              <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
-                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login to Start Test / टेस्ट शुरू करने के लिए लॉगिन करें'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 2: START GATE — create a server-side attempt before showing questions */}
-        {studentDetails && !activeAttempt && !isSubmitted && (
-          <div className="mb-8 rounded-3xl border border-sky-200 bg-white p-6 text-center shadow-md sm:p-8">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 text-sky-800">
-              <Clock className="h-6 w-6" />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900">परीक्षा शुरू करें</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">प्रश्न देखने और उत्तर देने से पहले परीक्षा का सुरक्षित रिकॉर्ड बनाया जाएगा। समय Start Test दबाने के बाद ही शुरू होगा।</p>
-            {loginError && <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{displayLoginError}</p>}
-            {submissionStatus.message && <p role="status" className="mt-3 text-xs font-semibold text-sky-700">{displaySubmissionMessage}</p>}
-            <button type="button" onClick={handleStudentLogin} disabled={submissionStatus.loading || authLoading || profileLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
-              {submissionStatus.loading ? 'परीक्षा का रिकॉर्ड बनाया जा रहा है…' : 'Start Test / परीक्षा शुरू करें'}
-            </button>
           </div>
         )}
 
