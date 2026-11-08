@@ -14,6 +14,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState<'6' | '7' | '8' | '9' | '10' | '11' | '12'>('10');
+  const [classMenuOpen, setClassMenuOpen] = useState(false);
   const [rollNo, setRollNo] = useState('');
   const [schoolName, setSchoolName] = useState('Govt Girls High School, Dhanger');
   const [otherSchool, setOtherSchool] = useState('');
@@ -80,7 +81,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
                 <input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'} className={inputClass} autoComplete="name" />
-                <select value={studentClass} onChange={e=>setStudentClass(e.target.value as '6'|'7'|'8'|'9'|'10'|'11'|'12')} className={inputClass}>{(['6','7','8','9','10','11','12'] as const).map((grade) => <option key={grade} value={grade}>{en ? `Class ${grade}` : `कक्षा ${grade}`}</option>)}</select>
+                <div className="relative">
+                  <button type="button" aria-haspopup="listbox" aria-expanded={classMenuOpen} onClick={() => setClassMenuOpen(open => !open)} className={`${inputClass} flex items-center justify-between bg-white text-left`}>
+                    <span>{en ? `Class ${studentClass}` : `कक्षा ${studentClass}`}</span>
+                    <span aria-hidden="true" className="text-slate-500">▾</span>
+                  </button>
+                  {classMenuOpen && <div role="listbox" aria-label={en ? 'Select class' : 'कक्षा चुनें'} className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto overscroll-contain rounded-lg border border-slate-300 bg-white p-1 shadow-xl">
+                    {(['6','7','8','9','10','11','12'] as const).map(grade => <button key={grade} type="button" role="option" aria-selected={studentClass === grade} onClick={() => { setStudentClass(grade); setClassMenuOpen(false); }} className={`w-full rounded-md px-3 py-3 text-left text-sm ${studentClass === grade ? 'bg-sky-100 font-semibold text-sky-900' : 'text-slate-700 hover:bg-slate-100'}`}>{en ? `Class ${grade}` : `कक्षा ${grade}`}</button>)}
+                  </div>}
+                </div>
                 <input required value={rollNo} onChange={e=>setRollNo(e.target.value)} placeholder={en ? 'Roll number' : 'रोल नंबर'} className={inputClass} />
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
