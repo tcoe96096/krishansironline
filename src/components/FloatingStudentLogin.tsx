@@ -19,8 +19,7 @@ export const FloatingStudentLogin: React.FC<FloatingStudentLoginProps> = ({ onCl
         <GraduationCap className="h-5 w-5" aria-hidden="true" />
       </span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="sm:hidden">{en ? 'Login' : 'लॉगिन'}</span>
-        <span className="hidden sm:inline">{en ? 'Student Login' : 'विद्यार्थी लॉगिन'}</span>
+        <span>{en ? 'Student Login' : 'विद्यार्थी लॉगिन'}</span>
         <span className="mt-0.5 hidden text-[10px] font-medium text-white/80 sm:block">
           {en ? 'Login / Register' : 'लॉगिन / पंजीकरण'}
         </span>
