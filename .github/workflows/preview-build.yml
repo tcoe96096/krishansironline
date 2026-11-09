@@ -5,9 +5,11 @@ on:
     branches:
       - "feature/student-auth-test-system"
       - "feature/student-mobile-password-auth"
+      - "preview/student-system-live-design-integration"
   pull_request:
     branches:
       - "feature/student-auth-test-system"
+      - "preview/student-system-live-design-integration"
       - "main"
 
 permissions:
