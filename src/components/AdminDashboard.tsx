@@ -29,9 +29,9 @@ const modules: { id: ModuleId; label: string; labelHi: string; group: string; ic
   { id: 'health', label: 'Website Health', labelHi: 'वेबसाइट स्वास्थ्य', group: 'SYSTEM & SECURITY', icon: Activity, description: 'Website, database, authentication, backup, errors and performance status.' },
 ];
 
-type Props = { onBackToWebsite: () => void };
+type Props = { onBackToWebsite: () => void; demoMode?: boolean };
 
-export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite }) => {
+export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite, demoMode = false }) => {
   const { user, isAdmin, adminLoading, loading, signOut, signInWithGoogle } = useAuth();
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -52,15 +52,15 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite }) => {
   const selected = modules.find((item) => item.id === active) ?? modules[0];
   const filtered = modules.filter((item) => (item.label + ' ' + item.labelHi).toLowerCase().includes(query.toLowerCase()));
 
-  if (loading || adminLoading) {
+  if (!demoMode && (loading || adminLoading)) {
     return <div className="min-h-screen grid place-items-center bg-slate-100 p-6"><div className="rounded-2xl bg-white p-8 text-center shadow-sm"><div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-sky-100 border-t-sky-800" /><p className="text-sm font-semibold text-slate-700">Admin access सत्यापित किया जा रहा है…</p></div></div>;
   }
 
-  if (!user) {
+  if (!demoMode && !user) {
     return <div className="min-h-screen grid place-items-center bg-slate-100 p-5"><div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-sky-50 text-sky-900"><ShieldCheck className="h-7 w-7" /></div><h1 className="mt-5 text-2xl font-extrabold text-slate-900">Admin Login</h1><p className="mt-2 text-sm leading-6 text-slate-600">इस सुरक्षित क्षेत्र में प्रवेश के लिए अधिकृत Admin Google account से लॉगिन करें।</p><button onClick={() => void handleAdminLogin()} disabled={loginBusy} className="mt-6 w-full rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-wait disabled:opacity-60">{loginBusy ? 'Google से जोड़ा जा रहा है…' : 'Continue with Google · Admin Login'}</button>{loginError && <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{loginError}</p>}<p className="mt-3 text-xs leading-5 text-slate-500">केवल database में अधिकृत Admin Role वाले Google account को Dashboard access मिलेगा। Student registration यहाँ उपलब्ध नहीं है।</p><button onClick={onBackToWebsite} className="mt-3 text-sm font-semibold text-slate-600 hover:text-sky-900">← वापस वेबसाइट पर जाएँ</button></div></div>;
   }
 
-  if (!isAdmin) {
+  if (!demoMode && !isAdmin) {
     return <div className="min-h-screen grid place-items-center bg-slate-100 p-5"><div className="w-full max-w-md rounded-3xl border border-rose-100 bg-white p-8 text-center shadow-sm"><Shield className="mx-auto h-10 w-10 text-rose-600" /><h1 className="mt-4 text-xl font-extrabold text-slate-900">Admin Access नहीं मिला</h1><p className="mt-2 text-sm leading-6 text-slate-600">इस खाते को Database में Admin Role नहीं मिला है। सुरक्षा के लिए Dashboard उपलब्ध नहीं कराया गया है।</p><button onClick={onBackToWebsite} className="mt-6 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">वेबसाइट पर वापस जाएँ</button></div></div>;
   }
 
@@ -87,7 +87,7 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite }) => {
       <div className={`min-h-screen transition-[padding] duration-200 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[278px]'}`}>
         <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-7">
           <div className="flex min-w-0 items-center gap-3"><button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu className="h-5 w-5" /></button><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-sky-700">ADMIN CONTROL CENTER</p><h1 className="truncate text-base font-extrabold text-slate-900 sm:text-lg">{selected.label}</h1></div></div>
-          <div className="flex items-center gap-2 sm:gap-4"><div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 md:flex"><ShieldCheck className="h-4 w-4 text-emerald-600" />Admin verified</div><button className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-500" /></button><div className="hidden h-8 w-px bg-slate-200 sm:block" /><div className="hidden text-right sm:block"><p className="text-xs font-bold text-slate-800">Super Admin</p><p className="max-w-[150px] truncate text-[10px] text-slate-500">{user.email}</p></div><button onClick={() => void signOut()} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700" title="Sign out"><LogOut className="h-4 w-4" /></button></div>
+          <div className="flex items-center gap-2 sm:gap-4"><div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 md:flex"><ShieldCheck className="h-4 w-4 text-emerald-600" />{demoMode ? "Design Demo · No live access" : "Admin verified"}</div><button className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Notifications"><Bell className="h-5 w-5" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-500" /></button><div className="hidden h-8 w-px bg-slate-200 sm:block" /><div className="hidden text-right sm:block"><p className="text-xs font-bold text-slate-800">{demoMode ? "Dashboard Preview" : "Super Admin"}</p><p className="max-w-[150px] truncate text-[10px] text-slate-500">{demoMode ? "Sample interface · No live data" : user?.email}</p></div>{!demoMode && <button onClick={() => void signOut()} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700" title="Sign out"><LogOut className="h-4 w-4" /></button>}</div>
         </header>
 
         <main className="mx-auto max-w-[1600px] p-4 sm:p-7">
