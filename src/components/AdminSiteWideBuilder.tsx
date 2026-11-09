@@ -91,7 +91,26 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
 
   const updatePage = (key: keyof SitePage, value: string | boolean) => {
     setPages(current => current.map(p => p.id === selectedId ? { ...p, [key]: value } : p));
-    setDraftMessage('Unsaved UI draft · केवल इस browser session में');
+    setDraftMessage('Unsaved UI draft · Save Local Draft दबाएँ');
+  };
+  const updateBlock = (blockId: string, key: keyof Omit<PageBlock, 'id'>, value: string) => {
+    setPages(current => current.map(page => page.id === selectedId
+      ? { ...page, blocks: blocksForPage(page).map(block => block.id === blockId ? { ...block, [key]: value } : block) }
+      : page));
+    setDraftMessage('Unsaved UI draft · Save Local Draft दबाएँ');
+  };
+  const addContentBlock = () => {
+    const block: PageBlock = {
+      id: 'section-' + Date.now(),
+      titleEn: 'New Content Section',
+      titleHi: 'नया सामग्री अनुभाग',
+      textEn: 'Add your content here.',
+      textHi: 'यहाँ अपनी सामग्री जोड़ें।',
+    };
+    setPages(current => current.map(page => page.id === selectedId
+      ? { ...page, blocks: [...blocksForPage(page), block] }
+      : page));
+    setDraftMessage('New content block added to the local draft.');
   };
   const addPage = () => {
     const label = newLabel.trim();
@@ -100,7 +119,7 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
     if (!slug) { setNewPageError('Page URL slug लिखें।'); return; }
     if (pages.some(p => p.path.replace(/^\/+|\/+$/g,'') === slug)) { setNewPageError('यह Page URL पहले से मौजूद है।'); return; }
     const id = 'draft-'+slug;
-    const page: SitePage = { id,path:'/'+slug+'/',labelEn:label,labelHi:label,titleEn:label,titleHi:label,badgeEn:'New Page',badgeHi:'नया पृष्ठ',subtitleEn:'Add a page description here.',subtitleHi:'यहाँ पृष्ठ का विवरण जोड़ें।',sectionTitleEn:'New Section',sectionTitleHi:'नया अनुभाग',sectionTextEn:'Add your content here.',sectionTextHi:'यहाँ अपनी सामग्री जोड़ें।',visible:true,custom:true };
+    const page: SitePage = { id,path:'/'+slug+'/',labelEn:label,labelHi:label,titleEn:label,titleHi:label,badgeEn:'New Page',badgeHi:'नया पृष्ठ',subtitleEn:'Add a page description here.',subtitleHi:'यहाँ पृष्ठ का विवरण जोड़ें।',sectionTitleEn:'New Section',sectionTitleHi:'नया अनुभाग',sectionTextEn:'Add your content here.',sectionTextHi:'यहाँ अपनी सामग्री जोड़ें।',blocks:[],visible:true,custom:true };
     setPages(current => [...current,page]);
     setSelectedId(id);
     setNewLabel('');
@@ -109,17 +128,38 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
     setTab('content');
     setDraftMessage('New page draft created · अभी actual website route नहीं बना है');
   };
-  const upload = async (file: File | undefined, type: 'logo' | 'photo') => {
+  const upload = async (file: File | undefined, type: 'logo' | 'photo' | 'pageImage') => {
     if (!file) return;
     try {
       const data = await readImage(file);
       if (type === 'logo') { setLogo(data); setLogoName(file.name); }
-      else { setTeacherPhoto(data); setPhotoName(file.name); }
+      else if (type === 'photo') { setTeacherPhoto(data); setPhotoName(file.name); }
+      else { setPageImage(data); setPageImageName(file.name); }
       setMediaError('');
-      setDraftMessage('Local media preview selected · अभी upload/save नहीं हुआ');
+      setDraftMessage('Local media preview selected · cloud upload अभी disabled है');
     } catch (error) { setMediaError(error instanceof Error ? error.message : 'Image preview विफल रहा।'); }
   };
-  const saveDraftPreview = () => setDraftMessage('Preview draft तैयार है · Database में save नहीं हुआ और refresh पर reset होगा।');
+  const saveDraftPreview = () => {
+    try {
+      const payload: BuilderDraft = {
+        version: 1, savedAt: new Date().toISOString(), pages, theme, font, headingScale,
+        cardFrame, textFrame, imageFrame, cornerRadius, borderWidth, shadow,
+      };
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      setDraftMessage('Draft saved on this browser · Database/Live website unchanged.');
+    } catch {
+      setDraftMessage('Browser storage full or unavailable. Reduce draft content and try again.');
+    }
+  };
+  const resetLocalDraft = () => {
+    try { window.localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* local storage may be unavailable */ }
+    setPages(starterPages); setSelectedId('home'); setTheme(defaultTheme); setFont('system');
+    setHeadingScale(38); setCardFrame('shadow'); setTextFrame('soft'); setImageFrame('rounded');
+    setCornerRadius(18); setBorderWidth(1); setShadow(true);
+    setLogo(''); setTeacherPhoto(''); setPageImage('');
+    setLogoName(''); setPhotoName(''); setPageImageName('');
+    setDraftMessage('Local draft cleared. Original website content remains unchanged.');
+  };
 
   const tabs: { id:BuilderTab; label:string; icon:React.ElementType }[] = [
     {id:'pages',label:'Pages & Navigation',icon:PanelsTopLeft},
