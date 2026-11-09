@@ -241,7 +241,7 @@ const MainApp: React.FC = () => {
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
-        {activePage === 'admin' && <AdminDashboard onRequestLogin={() => setIsAuthOpen(true)} onBackToWebsite={() => navigateTo('home')} />}
+        {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {/* ==================== PAGE 1: HOME ==================== */}
         {activePage === 'home' && (
           <div className="space-y-0">
