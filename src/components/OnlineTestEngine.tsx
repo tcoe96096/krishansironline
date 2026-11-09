@@ -532,6 +532,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Scores are authoritative only after PostgreSQL server-side grading.
   const marksObtained = serverResult?.score ?? 0;
+  const scorecardTotalMarks = serverResult?.total_marks ?? selectedTest.totalMarks;
   const percentage = (serverResult?.percentage ?? 0).toFixed(2);
   const correctCount = serverResult?.correct_count ?? 0;
   const marksPerQuestion = selectedTest.totalMarks / Math.max(1, totalQuestions);
@@ -1669,7 +1670,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                   <div className="text-xs text-slate-500">कुल अंक (Score)</div>
                   <div className="text-3xl sm:text-4xl font-black text-sky-900 font-mono mt-1">
-                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {totalQuestions}</span>
+                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {scorecardTotalMarks}</span>
                   </div>
                 </div>
 
