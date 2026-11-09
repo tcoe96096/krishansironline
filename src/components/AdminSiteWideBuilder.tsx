@@ -5,12 +5,33 @@ import {
   Upload, LockKeyhole, RotateCcw, LayoutTemplate
 } from 'lucide-react';
 
+type PageBlock = { id: string; titleEn: string; titleHi: string; textEn: string; textHi: string };
 type SitePage = {
   id: string; path: string; labelEn: string; labelHi: string; titleEn: string; titleHi: string;
   badgeEn: string; badgeHi: string; subtitleEn: string; subtitleHi: string;
   sectionTitleEn: string; sectionTitleHi: string; sectionTextEn: string; sectionTextHi: string;
+  blocks?: PageBlock[];
   visible: boolean; custom: boolean;
 };
+
+const DRAFT_STORAGE_KEY = 'krishansir.admin-site-builder.draft.v1';
+const defaultTheme = { primary:'#0b3979', accent:'#078a8d', background:'#f2f7fc', surface:'#ffffff', text:'#18263b' };
+type BuilderDraft = {
+  version: 1; savedAt: string; pages: SitePage[]; theme: typeof defaultTheme;
+  font: string; headingScale: number; cardFrame: string; textFrame: string;
+  imageFrame: string; cornerRadius: number; borderWidth: number; shadow: boolean;
+};
+const loadBuilderDraft = (): BuilderDraft | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BuilderDraft;
+    if (parsed.version !== 1 || !Array.isArray(parsed.pages) || !parsed.pages.length) return null;
+    return parsed;
+  } catch { return null; }
+};
+const blocksForPage = (page: SitePage): PageBlock[] => page.blocks ?? [];
 
 const starterPages: SitePage[] = [
   { id:'home',path:'/',labelEn:'Home',labelHi:'होम',titleEn:'Krishan Sir Online Learning',titleHi:'कृष्ण सर ऑनलाइन लर्निंग',badgeEn:'FREE ONLINE LEARNING',badgeHi:'निःशुल्क ऑनलाइन शिक्षा',subtitleEn:'A dedicated digital learning platform for every learner.',subtitleHi:'प्रत्येक विद्यार्थी के लिए एक समर्पित डिजिटल शिक्षण मंच।',sectionTitleEn:'Explore the portal',sectionTitleHi:'पोर्टल का अन्वेषण करें',sectionTextEn:'Study materials, online tests, learning pathways and teacher information.',sectionTextHi:'अध्ययन सामग्री, ऑनलाइन टेस्ट, अध्ययन मार्ग और शिक्षक परिचय।',visible:true,custom:false },
@@ -38,28 +59,32 @@ const readImage = (file: File): Promise<string> => new Promise((resolve, reject)
 });
 
 export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+  const [initialDraft] = useState<BuilderDraft | null>(() => loadBuilderDraft());
   const [tab,setTab] = useState<BuilderTab>('pages');
   const [lang,setLang] = useState<Language>('en');
-  const [pages,setPages] = useState<SitePage[]>(starterPages);
+  const [pages,setPages] = useState<SitePage[]>(initialDraft?.pages ?? starterPages);
   const [selectedId,setSelectedId] = useState('home');
   const [newLabel,setNewLabel] = useState('');
   const [newPath,setNewPath] = useState('');
   const [newPageError,setNewPageError] = useState('');
-  const [draftMessage,setDraftMessage] = useState('');
+  const [draftMessage,setDraftMessage] = useState(initialDraft ? 'Saved local draft restored from this browser.' : '');
   const [logo,setLogo] = useState('');
   const [teacherPhoto,setTeacherPhoto] = useState('');
+  const [pageImage,setPageImage] = useState('');
   const [logoName,setLogoName] = useState('');
   const [photoName,setPhotoName] = useState('');
+  const [pageImageName,setPageImageName] = useState('');
   const [mediaError,setMediaError] = useState('');
-  const [theme,setTheme] = useState({ primary:'#0b3979', accent:'#078a8d', background:'#f2f7fc', surface:'#ffffff', text:'#18263b' });
-  const [font,setFont] = useState('system');
-  const [headingScale,setHeadingScale] = useState(38);
-  const [cardFrame,setCardFrame] = useState('shadow');
-  const [textFrame,setTextFrame] = useState('soft');
-  const [imageFrame,setImageFrame] = useState('rounded');
-  const [cornerRadius,setCornerRadius] = useState(18);
-  const [borderWidth,setBorderWidth] = useState(1);
-  const [shadow,setShadow] = useState(true);
+  const [theme,setTheme] = useState(initialDraft?.theme ?? defaultTheme);
+  const [font,setFont] = useState(initialDraft?.font ?? 'system');
+  const [headingScale,setHeadingScale] = useState(initialDraft?.headingScale ?? 38);
+  const [cardFrame,setCardFrame] = useState(initialDraft?.cardFrame ?? 'shadow');
+  const [textFrame,setTextFrame] = useState(initialDraft?.textFrame ?? 'soft');
+  const [imageFrame,setImageFrame] = useState(initialDraft?.imageFrame ?? 'rounded');
+  const [cornerRadius,setCornerRadius] = useState(initialDraft?.cornerRadius ?? 18);
+  const [borderWidth,setBorderWidth] = useState(initialDraft?.borderWidth ?? 1);
+  const [shadow,setShadow] = useState(initialDraft?.shadow ?? true);
+  const [previewMode,setPreviewMode] = useState<'desktop'|'mobile'>('desktop');
   const selected = pages.find((page) => page.id === selectedId) ?? pages[0];
   const [pageSearch,setPageSearch] = useState('');
   const filteredPages = useMemo(() => pages.filter(p => (p.labelEn+' '+p.labelHi+' '+p.path).toLowerCase().includes(pageSearch.toLowerCase())),[pages,pageSearch]);
