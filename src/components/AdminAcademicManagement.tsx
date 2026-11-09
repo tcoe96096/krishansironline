@@ -32,11 +32,11 @@ type FormState = {
 };
 
 const STORAGE_KEY = 'krishansir.admin-academic-management.draft.v1';
-const makeId = (kind: string) => \`\${kind}-draft-\${Date.now()}-\${Math.random().toString(36).slice(2, 7)}\`;
+const makeId = (kind: string) => `${kind}-draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 const initialWorkspace = (): Workspace => ({
   classes: CLASSES_METADATA.map((item) => ({
-    id: \`class-\${item.level}\`, level: item.level, titleEn: item.title.en, titleHi: item.title.hi,
+    id: `class-${item.level}`, level: item.level, titleEn: item.title.en, titleHi: item.title.hi,
     badgeEn: item.badge.en, badgeHi: item.badge.hi, descriptionEn: item.description.en,
     descriptionHi: item.description.hi, status: item.status,
     resourceCount: { ...item.resourceCount },
@@ -48,7 +48,7 @@ const initialWorkspace = (): Workspace => ({
     { id: 'competitive-exams', titleEn: 'Competitive Exams', titleHi: 'प्रतियोगी परीक्षाएँ', descriptionEn: 'UGC NET, HTET, CTET and teacher recruitment practice.', descriptionHi: 'UGC NET, HTET, CTET और शिक्षक भर्ती परीक्षा अभ्यास।', classLevels: ['11','12'], status: 'active' },
   ],
   subjects: CLASSES_METADATA.flatMap((item) => item.subjects.map((subject, index) => ({
-    id: \`subject-\${item.level}-\${index + 1}\`, classLevel: item.level,
+    id: `subject-${item.level}-${index + 1}`, classLevel: item.level,
     titleEn: subject.en, titleHi: subject.hi, status: 'active' as Status,
   }))),
   chapters: STUDY_CHAPTERS.map((item) => ({
@@ -101,16 +101,16 @@ export const AdminAcademicManagement: React.FC = () => {
     data.subjects.filter(x => x.status === 'active').length + data.chapters.filter(x => x.status === 'active').length;
 
   const filteredClasses = useMemo(() => data.classes.filter(x => {
-    const text = \`\${x.level} \${x.titleEn} \${x.titleHi} \${x.badgeEn}\`.toLowerCase();
+    const text = `${x.level} ${x.titleEn} ${x.titleHi} ${x.badgeEn}`.toLowerCase();
     return text.includes(query.toLowerCase());
   }), [data.classes, query]);
-  const filteredCourses = useMemo(() => data.courses.filter(x => \`\${x.titleEn} \${x.titleHi}\`.toLowerCase().includes(query.toLowerCase())), [data.courses, query]);
+  const filteredCourses = useMemo(() => data.courses.filter(x => `${x.titleEn} ${x.titleHi}`.toLowerCase().includes(query.toLowerCase())), [data.courses, query]);
   const filteredSubjects = useMemo(() => data.subjects.filter(x => {
-    const text = \`\${x.titleEn} \${x.titleHi} \${x.classLevel}\`.toLowerCase();
+    const text = `${x.titleEn} ${x.titleHi} ${x.classLevel}`.toLowerCase();
     return text.includes(query.toLowerCase()) && (filterClass === 'all' || x.classLevel === filterClass);
   }), [data.subjects, query, filterClass]);
   const filteredChapters = useMemo(() => data.chapters.filter(x => {
-    const text = \`\${x.titleEn} \${x.titleHi} \${x.subject} \${x.classLevel}\`.toLowerCase();
+    const text = `${x.titleEn} ${x.titleHi} ${x.subject} ${x.classLevel}`.toLowerCase();
     return text.includes(query.toLowerCase()) && (filterClass === 'all' || x.classLevel === filterClass);
   }), [data.chapters, query, filterClass]);
 
@@ -255,7 +255,7 @@ export const AdminAcademicManagement: React.FC = () => {
           <div className="relative w-full sm:max-w-xs"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search records..." className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /></div>
         </div>
         <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 pt-2">
-          {tabs.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => { setTab(item.id); setQuery(''); setFilterClass('all'); setForm(null); }} className={\`inline-flex shrink-0 items-center gap-2 rounded-t-lg px-3 py-3 text-xs font-bold transition \${tab === item.id ? 'border-b-2 border-sky-800 bg-sky-50 text-sky-900' : 'text-slate-500 hover:bg-slate-50'}\`}><Icon className="h-4 w-4" />{item.label}<span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px]">{({ overview: totalCount, classes: data.classes.length, courses: data.courses.length, subjects: data.subjects.length, chapters: data.chapters.length })[item.id]}</span></button>; })}
+          {tabs.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => { setTab(item.id); setQuery(''); setFilterClass('all'); setForm(null); }} className={`inline-flex shrink-0 items-center gap-2 rounded-t-lg px-3 py-3 text-xs font-bold transition ${tab === item.id ? 'border-b-2 border-sky-800 bg-sky-50 text-sky-900' : 'text-slate-500 hover:bg-slate-50'}`}><Icon className="h-4 w-4" />{item.label}<span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px]">{({ overview: totalCount, classes: data.classes.length, courses: data.courses.length, subjects: data.subjects.length, chapters: data.chapters.length })[item.id]}</span></button>; })}
         </div>
 
         <div className="space-y-3 p-4 sm:p-5">
