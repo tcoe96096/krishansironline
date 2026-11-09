@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   FilePlus2, FileText, Globe, Image as ImageIcon, Palette, Type, PanelsTopLeft,
-  Smartphone, Monitor, Eye, CheckCircle2, Info, Plus, ChevronRight, Trash2,
+  Smartphone, Monitor, Eye, CheckCircle2, Info, Plus, ChevronRight,
   Upload, LockKeyhole, RotateCcw, LayoutTemplate
 } from 'lucide-react';
 
