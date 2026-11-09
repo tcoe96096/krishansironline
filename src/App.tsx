@@ -40,7 +40,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'admin';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'admin' | 'adminPreview';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -54,6 +54,7 @@ const VALID_PAGES: PageId[] = [
   'about',
   'contact',
   'admin',
+  'adminPreview',
 ];
 
 interface HomeStudentSession {
@@ -169,12 +170,13 @@ const MainApp: React.FC = () => {
     '/about': 'about',
     '/contact': 'contact',
     '/admin': 'admin',
+    '/admin-preview': 'adminPreview',
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/', admin: '/admin/',
+    results: '/results/', about: '/about/', contact: '/contact/', admin: '/admin/', adminPreview: '/admin-preview/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -232,7 +234,7 @@ const MainApp: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       {/* Top Header with navigation to all pages */}
-      {activePage !== 'admin' && <Header
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <Header
         activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -242,6 +244,7 @@ const MainApp: React.FC = () => {
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
+        {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
         {/* ==================== PAGE 1: HOME ==================== */}
         {activePage === 'home' && (
           <div className="space-y-0">
@@ -737,7 +740,7 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Footer */}
-      {activePage !== 'admin' && <Footer onNavigate={navigateTo} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <Footer onNavigate={navigateTo} />}
 
       {/* Global Search Modal */}
       <SearchModal
@@ -746,7 +749,7 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      {activePage !== 'admin' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
     </div>
   );
 };
