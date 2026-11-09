@@ -154,8 +154,8 @@ export const AdminWebsiteManagement: React.FC = () => {
               {field('Top Label', language === 'en' ? hero.eyebrowEn : hero.eyebrowHi, (value) => updateHero(language === 'en' ? 'eyebrowEn' : 'eyebrowHi', value))}
               {field('Welcome Line', language === 'en' ? hero.welcomeEn : hero.welcomeHi, (value) => updateHero(language === 'en' ? 'welcomeEn' : 'welcomeHi', value))}
               {field('Main Heading', language === 'en' ? hero.titleEn : hero.titleHi, (value) => updateHero(language === 'en' ? 'titleEn' : 'titleHi', value))}
-              {field('Description', language === 'en' ? hero.descriptionEn : hero.descriptionHi, (value) => updateHero(language === 'en' ? 'descriptionEn' : 'descriptionHi', value, true))}
-              {field('Additional Description', language === 'en' ? hero.secondaryEn : hero.secondaryHi, (value) => updateHero(language === 'en' ? 'secondaryEn' : 'secondaryHi', value, true))}
+              {field('Description', language === 'en' ? hero.descriptionEn : hero.descriptionHi, (value) => updateHero(language === 'en' ? 'descriptionEn' : 'descriptionHi', value), true)}
+              {field('Additional Description', language === 'en' ? hero.secondaryEn : hero.secondaryHi, (value) => updateHero(language === 'en' ? 'secondaryEn' : 'secondaryHi', value), true)}
               {field('Tagline', language === 'en' ? hero.taglineEn : hero.taglineHi, (value) => updateHero(language === 'en' ? 'taglineEn' : 'taglineHi', value))}
               <div className="grid gap-3 sm:grid-cols-2">
                 {field('Primary Button', language === 'en' ? hero.primaryCtaEn : hero.primaryCtaHi, (value) => updateHero(language === 'en' ? 'primaryCtaEn' : 'primaryCtaHi', value))}
