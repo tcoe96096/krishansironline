@@ -29,10 +29,22 @@ const modules: { id: ModuleId; label: string; labelHi: string; group: string; ic
   { id: 'health', label: 'Website Health', labelHi: 'वेबसाइट स्वास्थ्य', group: 'SYSTEM & SECURITY', icon: Activity, description: 'Website, database, authentication, backup, errors and performance status.' },
 ];
 
-type Props = { onRequestLogin: () => void; onBackToWebsite: () => void };
+type Props = { onBackToWebsite: () => void };
 
-export const AdminDashboard: React.FC<Props> = ({ onRequestLogin, onBackToWebsite }) => {
-  const { user, isAdmin, adminLoading, loading, signOut } = useAuth();
+export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite }) => {
+  const { user, isAdmin, adminLoading, loading, signOut, signInWithGoogle } = useAuth();
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const handleAdminLogin = async () => {
+    setLoginBusy(true);
+    setLoginError('');
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Google Admin Login विफल रहा।');
+      setLoginBusy(false);
+    }
+  };
   const [active, setActive] = useState<ModuleId>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -45,7 +57,7 @@ export const AdminDashboard: React.FC<Props> = ({ onRequestLogin, onBackToWebsit
   }
 
   if (!user) {
-    return <div className="min-h-screen grid place-items-center bg-slate-100 p-5"><div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-sky-50 text-sky-900"><ShieldCheck className="h-7 w-7" /></div><h1 className="mt-5 text-2xl font-extrabold text-slate-900">Admin Login</h1><p className="mt-2 text-sm leading-6 text-slate-600">इस सुरक्षित क्षेत्र में प्रवेश के लिए अधिकृत Admin Google account से लॉगिन करें।</p><button onClick={onRequestLogin} className="mt-6 w-full rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white hover:bg-sky-800">Login to continue</button><button onClick={onBackToWebsite} className="mt-3 text-sm font-semibold text-slate-600 hover:text-sky-900">← वापस वेबसाइट पर जाएँ</button></div></div>;
+    return <div className="min-h-screen grid place-items-center bg-slate-100 p-5"><div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-sky-50 text-sky-900"><ShieldCheck className="h-7 w-7" /></div><h1 className="mt-5 text-2xl font-extrabold text-slate-900">Admin Login</h1><p className="mt-2 text-sm leading-6 text-slate-600">इस सुरक्षित क्षेत्र में प्रवेश के लिए अधिकृत Admin Google account से लॉगिन करें।</p><button onClick={() => void handleAdminLogin()} disabled={loginBusy} className="mt-6 w-full rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-wait disabled:opacity-60">{loginBusy ? 'Google से जोड़ा जा रहा है…' : 'Continue with Google · Admin Login'}</button>{loginError && <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{loginError}</p>}<p className="mt-3 text-xs leading-5 text-slate-500">केवल database में अधिकृत Admin Role वाले Google account को Dashboard access मिलेगा। Student registration यहाँ उपलब्ध नहीं है।</p><button onClick={onBackToWebsite} className="mt-3 text-sm font-semibold text-slate-600 hover:text-sky-900">← वापस वेबसाइट पर जाएँ</button></div></div>;
   }
 
   if (!isAdmin) {
