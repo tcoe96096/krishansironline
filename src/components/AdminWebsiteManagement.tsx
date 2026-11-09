@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
   LayoutTemplate, Type, Palette, History, LockKeyhole, CheckCircle2,
@@ -36,6 +37,7 @@ export const AdminWebsiteManagement: React.FC = () => {
   const [notice, setNotice] = useState('');
   const [draftLabel, setDraftLabel] = useState('Unsaved UI changes');
   const [palette, setPalette] = useState<PaletteKey>('navy');
+  const [siteWideBuilderOpen, setSiteWideBuilderOpen] = useState(false);
   const [hero, setHero] = useState({
     eyebrowEn: 'FREE ONLINE LEARNING',
     eyebrowHi: 'निःशुल्क ऑनलाइन शिक्षा',
@@ -114,6 +116,8 @@ export const AdminWebsiteManagement: React.FC = () => {
     </label>
   );
 
+  if (siteWideBuilderOpen) return <AdminSiteWideBuilder onBack={() => setSiteWideBuilderOpen(false)} />;
+
   const tabs: { id: EditorTab; label: string; icon: React.ElementType }[] = [
     { id: 'hero', label: 'Homepage Hero', icon: Type },
     { id: 'header', label: 'Header & Footer', icon: PanelsTopLeft },
@@ -130,6 +134,7 @@ export const AdminWebsiteManagement: React.FC = () => {
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage, hero, announcements, teacher profile, header/footer और design settings का प्रबंधन। बदलाव अभी केवल इस Preview screen में दिखाई देंगे।</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-800"><Info className="h-3.5 w-3.5" />Preview only · Not connected</span>
           <button onClick={() => { setShowPreview((value) => !value); setNotice(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{showPreview ? 'Hide Preview' : 'Show Preview'}</button>
         </div>
