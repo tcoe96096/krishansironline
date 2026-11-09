@@ -88,10 +88,6 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
     }
-    if (!ONLINE_TESTS.some((test) => test.id === value.testId)) {
-      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-      return null;
-    }
     return value as PersistedTestSession;
   } catch {
     localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
@@ -123,9 +119,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     return matchesQuery && matchesClass;
   });
   const testClassOptions = [...new Set(availableTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
-  // Test attempts are not restored from untrusted browser storage until server-side attempt persistence is connected.
-  const [restoredSession] = useState<PersistedTestSession | null>(null);
-  const restoredTest = ONLINE_TESTS.find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
+  // Browser storage is a recovery aid only; the authenticated profile and database attempt remain authoritative.
+  const [restoredSession, setRestoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
+  const restoredTest = [...ONLINE_TESTS, ...databaseTests].find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
   const elapsedWhileAway = restoredSession
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
     : 0;
@@ -293,12 +289,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setSubmissionsList(getLocalSubmissions());
   }, []);
 
-  // Reset on an actual test change; keep restored progress on the first render.
+  // Preserve a saved session while the published database catalogue is loading.
+  // A matching authenticated database attempt is still required before answers are restored.
   useEffect(() => {
-    if (!selectedTestEffectInitialized.current) {
+    if (restoredSession && restoredSession.testId !== selectedTest.id) return;
+    if (restoredSession && restoredSession.testId === selectedTest.id) {
       selectedTestEffectInitialized.current = true;
-      if (restoredSession && restoredSession.testId === selectedTest.id) return;
+      return;
     }
+    if (!selectedTestEffectInitialized.current) selectedTestEffectInitialized.current = true;
 
     setTimeLeftSeconds(selectedTest.durationMinutes * 60);
     setIsTestActive(false);
@@ -318,6 +317,18 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       return current;
     });
   }, [selectedTest.id, selectedTest.durationMinutes, selectedTest.classLevel]);
+
+  // Select the saved assessment once the published catalogue is available.
+  useEffect(() => {
+    if (!restoredSession || catalogueLoading) return;
+    const match = [...ONLINE_TESTS, ...databaseTests].find((test) => test.id === restoredSession.testId);
+    if (match) {
+      if (selectedTest.id !== match.id) setSelectedTest(match);
+    } else {
+      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+      setRestoredSession(null);
+    }
+  }, [restoredSession, catalogueLoading, databaseTests, selectedTest.id]);
 
   // Do not override a saved in-progress test after a refresh.
   useEffect(() => {
@@ -465,13 +476,34 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
-      setSelectedAnswers({});
-      setMarkedForReview({});
-      setCurrentQuestionIndex(0);
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      const saved = restoredSession;
+      const sameStudent = !!saved &&
+        saved.student.studentName === studentDetails.studentName &&
+        saved.student.rollNo === studentDetails.rollNo &&
+        saved.student.studentClass === studentDetails.studentClass &&
+        saved.student.school === studentDetails.school;
+      const canRestoreAnswers = !!saved &&
+        saved.testId === selectedTest.id &&
+        sameStudent &&
+        attempt.status === 'in_progress' &&
+        remaining > 0;
+      if (canRestoreAnswers && saved) {
+        setSelectedAnswers(saved.selectedAnswers);
+        setMarkedForReview(saved.markedForReview);
+        setCurrentQuestionIndex(Math.min(Math.max(0, saved.currentQuestionIndex), Math.max(0, selectedTest.questions.length - 1)));
+        setQuestionLang(saved.questionLang);
+        setViewLayout(saved.viewLayout);
+      } else {
+        setSelectedAnswers({});
+        setMarkedForReview({});
+        setCurrentQuestionIndex(0);
+        if (saved && !sameStudent) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+      }
+      const active = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
       setIsSubmitted(false);
-      setIsTestActive(remaining > 0);
+      setIsTestActive(active);
       setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
