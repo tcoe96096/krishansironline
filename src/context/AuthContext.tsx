@@ -164,7 +164,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = useCallback(async () => {
     const { error } = await requireSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        // Preserve the exact Preview/Admin path so OAuth returns to the same interface.
+        redirectTo: new URL(window.location.pathname, window.location.origin).toString(),
+      },
     });
     if (error) throw error;
   }, []);
