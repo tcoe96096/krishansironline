@@ -15,6 +15,7 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
+import { AdminDashboard } from './components/AdminDashboard';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -39,7 +40,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'admin';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -52,6 +53,7 @@ const VALID_PAGES: PageId[] = [
   'results',
   'about',
   'contact',
+  'admin',
 ];
 
 interface HomeStudentSession {
@@ -166,12 +168,13 @@ const MainApp: React.FC = () => {
     '/results': 'results',
     '/about': 'about',
     '/contact': 'contact',
+    '/admin': 'admin',
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/',
+    results: '/results/', about: '/about/', contact: '/contact/', admin: '/admin/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -229,15 +232,16 @@ const MainApp: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       {/* Top Header with navigation to all pages */}
-      <Header
+      {activePage !== 'admin' && <Header
         activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
-      />
+      />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
+        {activePage === 'admin' && <AdminDashboard onRequestLogin={() => setIsAuthOpen(true)} onBackToWebsite={() => navigateTo('home')} />}
         {/* ==================== PAGE 1: HOME ==================== */}
         {activePage === 'home' && (
           <div className="space-y-0">
@@ -656,7 +660,7 @@ const MainApp: React.FC = () => {
         )}
 
         {/* Explore Other Pages Bottom Ribbon (shown on all dedicated subpages) */}
-        {activePage !== 'home' && (
+        {activePage !== 'home' && activePage !== 'admin' && (
           <div className="py-8 bg-slate-100 border-t border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -733,7 +737,7 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <Footer onNavigate={navigateTo} />
+      {activePage !== 'admin' && <Footer onNavigate={navigateTo} />}
 
       {/* Global Search Modal */}
       <SearchModal
@@ -742,7 +746,7 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />
+      {activePage !== 'admin' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
     </div>
   );
 };
