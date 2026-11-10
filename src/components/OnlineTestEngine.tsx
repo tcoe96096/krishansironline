@@ -295,6 +295,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   }, [catalogueLoading, user?.id, profile?.class_level, databaseTests, selectedTest.id]);
 
+  // Select the first published database test for visitors when no class filter is supplied.
+  useEffect(() => {
+    if (!catalogueLoading && !user && !initialClassFilter && !selectedTest.id && databaseTests.length > 0) {
+      setSelectedTest(databaseTests[0]);
+    }
+  }, [catalogueLoading, user?.id, initialClassFilter, databaseTests, selectedTest.id]);
+
   // Load legacy local-only development submissions. Student test results are stored in Supabase.
   useEffect(() => {
     setSubmissionsList(getLocalSubmissions());
