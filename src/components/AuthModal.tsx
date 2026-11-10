@@ -103,6 +103,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setRegistrationStep(1);
         setPassword('');
         setConfirmPassword('');
+        await new Promise(resolve => window.setTimeout(resolve, 1800));
+        setMessage('');
+        onClose();
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (en ? 'Something went wrong.' : 'कुछ त्रुटि हुई।'));
