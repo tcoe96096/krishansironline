@@ -197,7 +197,7 @@ The repository does not contain a verified Sheet ID, Apps Script deployment URL/
 - Existing main database catalogue was checked: all four existing test records have matching answer-key lengths (4/4), 10/10, 40/40 and 60/60. No test content was changed.
 
 ### Still gated before final live acceptance
-- Add the authenticated admin test-management interface (publish/unpublish, question bank, answer-key entry and attempt-limit editing).
+- Admin test-management panel is now implemented for publication status, per-test attempt limits and recent student attempts. Bulk question-bank/answer-key entry remains pending the approved test dataset.
 - Complete the secure Google Sheets bridge and retryable sync path. The current Apps Script code is present, but the preview project has no deployed Edge Functions and the required Sheet ID, Apps Script URL/secret and admin OAuth allowlist are not configured.
 - Run the browser-level student journey on the actual preview deployment, including registration/login, start, refresh/resume, submit, result history and logout.
 - Run the repository TypeScript/build checks and then review the preview deployment. No live deployment or production database changes were made as part of this branch work.
