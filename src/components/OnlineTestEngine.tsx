@@ -48,7 +48,9 @@ import {
 const ACTIVE_TEST_SESSION_KEY = 'krishan_sir_active_test_session';
 
 interface PersistedTestSession {
-  version: 1;
+  version: 2;
+  userId: string;
+  attemptId: string;
   testId: string;
   student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
@@ -68,7 +70,9 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
     const value = JSON.parse(raw) as Partial<PersistedTestSession>;
     const student = value.student as StudentLoginDetails | undefined;
     if (
-      value.version !== 1 ||
+      value.version !== 2 ||
+      typeof value.userId !== 'string' ||
+      typeof value.attemptId !== 'string' ||
       typeof value.testId !== 'string' ||
       !student ||
       typeof student.studentName !== 'string' ||
@@ -85,10 +89,6 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
       !value.selectedAnswers ||
       !value.markedForReview
     ) {
-      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-      return null;
-    }
-    if (!ONLINE_TESTS.some((test) => test.id === value.testId)) {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
     }
@@ -341,7 +341,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // savedAt is refreshed with the countdown so time away can be deducted on resume.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isTestActive || isSubmitted || !studentDetails) {
+    if (!isTestActive || isSubmitted || !studentDetails || !activeAttempt || !user) {
       if (isSubmitted) {
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
         localStorage.removeItem('krishan_sir_active_student');
@@ -350,7 +350,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     const session: PersistedTestSession = {
-      version: 1,
+      version: 2,
+      userId: user.id,
+      attemptId: activeAttempt.id,
       testId: selectedTest.id,
       student: studentDetails,
       selectedAnswers,
@@ -370,6 +372,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   }, [
     selectedTest.id,
     studentDetails,
+    activeAttempt?.id,
+    user?.id,
     selectedAnswers,
     markedForReview,
     currentQuestionIndex,
@@ -471,14 +475,30 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
-      setSelectedAnswers({});
-      setMarkedForReview({});
-      setCurrentQuestionIndex(0);
+      // Recover this device's draft only when the server confirms the same signed-in
+      // user, test and active attempt. PostgreSQL remains authoritative for identity,
+      // attempt status, deadline and final grading.
+      const savedSession = readPersistedTestSession();
+      const canRestoreDraft = Boolean(savedSession && user &&
+        savedSession.userId === user.id &&
+        savedSession.attemptId === attempt.id &&
+        savedSession.testId === selectedTest.id);
+      setSelectedAnswers(canRestoreDraft ? savedSession!.selectedAnswers : {});
+      setMarkedForReview(canRestoreDraft ? savedSession!.markedForReview : {});
+      setCurrentQuestionIndex(canRestoreDraft
+        ? Math.min(Math.max(0, savedSession!.currentQuestionIndex), Math.max(0, questionsList.length - 1))
+        : 0);
+      if (canRestoreDraft) {
+        setQuestionLang(savedSession!.questionLang);
+        setViewLayout(savedSession!.viewLayout);
+      }
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
       setTimeLeftSeconds(remaining);
       setIsSubmitted(false);
       setIsTestActive(remaining > 0);
-      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
+      setSubmissionStatus({ loading: false, success: true, message: canRestoreDraft
+        ? 'आपका पिछला टेस्ट और सेव किए गए उत्तर वापस मिल गए हैं।'
+        : 'आपकी परीक्षा शुरू हो गई है।' });
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
