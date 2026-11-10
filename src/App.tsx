@@ -3,6 +3,8 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
 import { AuthModal } from './components/AuthModal';
 import { FloatingStudentLogin } from './components/FloatingStudentLogin';
+import { StudentDashboard } from './components/StudentDashboard';
+import { useAuth } from './context/AuthContext';
 import { Hero } from './components/Hero';
 import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
@@ -40,7 +42,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'admin' | 'adminPreview';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'admin' | 'adminPreview';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -53,6 +55,7 @@ const VALID_PAGES: PageId[] = [
   'results',
   'about',
   'contact',
+  'studentDashboard',
   'admin',
   'adminPreview',
 ];
@@ -155,6 +158,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
+  const { user, profile } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -169,6 +173,7 @@ const MainApp: React.FC = () => {
     '/results': 'results',
     '/about': 'about',
     '/contact': 'contact',
+    '/student-dashboard': 'studentDashboard',
     '/admin': 'admin',
     '/admin-preview': 'adminPreview',
   };
@@ -176,7 +181,7 @@ const MainApp: React.FC = () => {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/', admin: '/admin/', adminPreview: '/admin-preview/',
+    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/', admin: '/admin/', adminPreview: '/admin-preview/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -243,6 +248,7 @@ const MainApp: React.FC = () => {
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
+        {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
         {/* ==================== PAGE 1: HOME ==================== */}
@@ -749,7 +755,10 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => {
+        if (user && profile) navigateTo('studentDashboard');
+        else setIsAuthOpen(true);
+      }} />}
     </div>
   );
 };
