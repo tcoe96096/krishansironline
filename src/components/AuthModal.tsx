@@ -18,6 +18,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [rollNo, setRollNo] = useState('');
   const [schoolName, setSchoolName] = useState('Govt Girls High School, Dhanger');
   const [otherSchool, setOtherSchool] = useState('');
+  const [country, setCountry] = useState('India');
+  const [state, setState] = useState('Haryana');
+  const [district, setDistrict] = useState('');
+  const [areaType, setAreaType] = useState<'village' | 'city' | 'town' | 'other'>('village');
+  const [localityName, setLocalityName] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,11 +37,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       if (mode === 'login') {
         await signInWithMobile(identifier, password);
-        setMessage(en ? 'Login successful.' : 'लॉगिन सफल रहा।');
+        onClose();
       } else {
         await registerStudent({
           identifier, password, studentName, studentClass, rollNo,
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
+          country, state, district, areaType, localityName, pinCode,
         });
         setMessage(en
           ? 'Registration successful. You can now sign in with your mobile number or email ID and password.'
@@ -95,6 +102,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <input required value={rollNo} onChange={e=>setRollNo(e.target.value)} placeholder={en ? 'Roll number' : 'रोल नंबर'} className={inputClass} />
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
+                <div className="border-t border-slate-200 pt-3"><p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-sky-800">Location Details / स्थान विवरण</p>
+                  <input required value={country} onChange={e=>setCountry(e.target.value)} placeholder="Country / देश" className={inputClass} />
+                  <input required value={state} onChange={e=>setState(e.target.value)} placeholder="State / राज्य" className={inputClass} />
+                  <input required value={district} onChange={e=>setDistrict(e.target.value)} placeholder="District / जिला" className={inputClass} />
+                  <select required value={areaType} onChange={e=>setAreaType(e.target.value as typeof areaType)} className={inputClass}><option value="village">Village / गाँव</option><option value="city">City / शहर</option><option value="town">Town / कस्बा</option><option value="other">Other / अन्य</option></select>
+                  <input required value={localityName} onChange={e=>setLocalityName(e.target.value)} placeholder="Village / City / Town Name" className={inputClass} />
+                  <input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="PIN Code (optional)" className={inputClass} />
+                </div>
               </>}
               <input required type="text" inputMode="text" autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)} placeholder={en ? 'Mobile Number / Email ID' : 'मोबाइल नंबर / Email ID'} className={inputClass} />
               <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />

@@ -6,6 +6,12 @@ export interface StudentProfile {
   class_level: string;
   roll_no: string;
   school_name: string;
+  country: string;
+  state: string | null;
+  district: string | null;
+  area_type: string | null;
+  locality_name: string | null;
+  pin_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,7 +81,7 @@ export interface TestAttempt {
 export async function getMyStudentProfile(): Promise<StudentProfile | null> {
   const { data, error } = await requireSupabase()
     .from('student_profiles')
-    .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+    .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at')
     .maybeSingle();
 
   if (error) throw error;
