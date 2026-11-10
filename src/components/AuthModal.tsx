@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { X, UserRound, LogOut, ShieldCheck, GraduationCap, Sparkles, School } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
+import { AdminDashboard } from './AdminDashboard';
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
@@ -63,6 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {adminLoading ? <p className="rounded-xl bg-slate-100 p-3 text-xs text-slate-500">Admin role जाँचा जा रहा है…</p> : isAdmin ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Admin access verified / एडमिन अनुमति सत्यापित</p> : null}
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-sky-700">{en ? 'Your learning overview' : 'आपकी पढ़ाई का संक्षिप्त विवरण'}</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{en ? 'Keep learning, keep improving!' : 'सीखते रहें, आगे बढ़ते रहें!'}</h3><p className="mt-1 text-sm text-slate-500">{en ? 'Your tests, progress and results in one place.' : 'आपके टेस्ट, प्रगति और परिणाम एक ही स्थान पर।'}</p></div><div className="inline-flex w-fit items-center gap-2 rounded-xl border border-sky-100 bg-white px-3 py-2 text-xs font-semibold text-sky-900 shadow-sm"><School className="h-4 w-4" />{profile?.school_name || (en ? 'Student Portal' : 'विद्यार्थी पोर्टल')}</div></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5"><StudentDashboard /></div>
+            {isAdmin && <AdminDashboard />}
             <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-slate-500"><ShieldCheck className="mr-1 inline h-4 w-4 text-emerald-700" />{en ? 'Your student session is secure.' : 'आपका विद्यार्थी सत्र सुरक्षित है।'}</p><button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button></div>
           </div>
         ) : (
