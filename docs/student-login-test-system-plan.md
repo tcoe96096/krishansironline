@@ -193,6 +193,8 @@ The repository does not contain a verified Sheet ID, Apps Script deployment URL/
 ### Validation completed
 - Preview database RPC validation passed for attempt creation, resuming an existing in-progress attempt, rejecting out-of-range answers, server-side scoring, attempt-limit enforcement and expiry handling.
 - Validation records were created inside a transaction and rolled back; no test, answer-key or attempt rows were retained.
+
+- GitHub Actions TypeScript check and Vite production build both passed on the isolated branch; generated SEO pages were verified. The workflow uploaded an artifact only and did not publish it.
 - Preview database currently has no published test catalogue rows. This is intentionally left empty until the owner supplies the next approved test dataset.
 - Existing main database catalogue was checked: all four existing test records have matching answer-key lengths (4/4), 10/10, 40/40 and 60/60. No test content was changed.
 
