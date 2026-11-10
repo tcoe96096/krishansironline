@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { X, UserRound, LogOut, ShieldCheck, GraduationCap, Sparkles, School } from 'lucide-react';
+import { X, UserRound, LogOut, ShieldCheck, GraduationCap, Sparkles, School, Eye, EyeOff } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
-  const { user, profile, configured, isAdmin, adminLoading, signInWithGoogle, signInWithMobile, registerStudent, signOut } = useAuth();
+  const { user, profile, configured, isAdmin, adminLoading, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState<'6' | '7' | '8' | '9' | '10' | '11' | '12'>('10');
   const [classMenuOpen, setClassMenuOpen] = useState(false);
@@ -78,15 +79,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
               <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
             </div>
-            <button type="button" disabled={!configured || busy} onClick={async () => {
-              setBusy(true); setError('');
-              try { await signInWithGoogle(); }
-              catch (cause) { setError(cause instanceof Error ? cause.message : 'Google sign-in failed.'); }
-              finally { setBusy(false); }
-            }} className="mb-3 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
-              Continue with Google · Admin Login
-            </button>
-            <p className="mb-3 text-xs text-slate-500">केवल database में Admin role दिए गए Google account को Admin access मिलेगा।</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
                 <input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'} className={inputClass} autoComplete="name" />
@@ -108,11 +100,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <input required value={district} onChange={e=>setDistrict(e.target.value)} placeholder="District / जिला" className={inputClass} />
                   <select required value={areaType} onChange={e=>setAreaType(e.target.value as typeof areaType)} className={inputClass}><option value="village">Village / गाँव</option><option value="city">City / शहर</option><option value="town">Town / कस्बा</option><option value="other">Other / अन्य</option></select>
                   <input required value={localityName} onChange={e=>setLocalityName(e.target.value)} placeholder="Village / City / Town Name" className={inputClass} />
-                  <input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="PIN Code (optional)" className={inputClass} />
+                  <input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="PIN Code (optional)" className={inputClass} />
                 </div>
               </>}
               <input required type="text" inputMode="text" autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)} placeholder={en ? 'Mobile Number / Email ID' : 'मोबाइल नंबर / Email ID'} className={inputClass} />
-              <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />
+              <div className="relative"><input required type={showPassword ? 'text' : 'password'} minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass+' pr-11'} /><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-3 text-slate-500">{showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button></div>
               {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Enter either a mobile number or an email ID. Both are not required. Keep your password safe.' : 'मोबाइल नंबर या Email ID में से कोई एक दर्ज करें। दोनों देना आवश्यक नहीं है। अपना पासवर्ड सुरक्षित रखें।'}</p>}
               <button disabled={!configured || busy} className="w-full rounded-lg bg-sky-900 px-4 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Please wait…' : 'कृपया प्रतीक्षा करें…') : mode === 'login' ? (en ? 'Login securely' : 'सुरक्षित लॉगिन') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>
             </form>
