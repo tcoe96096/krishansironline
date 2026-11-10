@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Class10PresentationPlayer } from './Class10PresentationPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { saveMyLearningProgress } from '../services/learningProgressService';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
 
 interface StudyMaterialsViewProps {
@@ -11,10 +13,45 @@ interface StudyMaterialsViewProps {
 
 export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialClass = '10' }) => {
   const { language } = useLanguage();
+  const { user } = useAuth();
+  const readerRef = useRef<HTMLDivElement | null>(null);
+  const lastSavedProgress = useRef(-1);
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const openChapter = (chapter: StudyChapter) => {
+    setActiveChapter(chapter);
+    lastSavedProgress.current = 0;
+    if (user) {
+      void saveMyLearningProgress({
+        materialId: chapter.id,
+        classLevel: chapter.classLevel,
+        subject: chapter.subject,
+        chapterTitle: chapter.title.en,
+        progressPercent: 0,
+        lastPosition: { section: 'overview', scrollTop: 0 },
+      }).catch((error) => console.warn('Learning progress could not be saved:', error));
+    }
+  };
+
+  const saveReaderPosition = () => {
+    const element = readerRef.current;
+    if (!user || !activeChapter || !element) return;
+    const maxScroll = element.scrollHeight - element.clientHeight;
+    const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 100;
+    if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
+    lastSavedProgress.current = percent;
+    void saveMyLearningProgress({
+      materialId: activeChapter.id,
+      classLevel: activeChapter.classLevel,
+      subject: activeChapter.subject,
+      chapterTitle: activeChapter.title.en,
+      progressPercent: percent,
+      lastPosition: { section: 'chapter_reader', scrollTop: element.scrollTop },
+    }).catch((error) => console.warn('Learning progress could not be saved:', error));
+  };
 
   const classMeta = CLASSES_METADATA.find((c) => c.level === selectedClass);
   const isClassComingSoon = classMeta?.status === 'coming-soon';
@@ -190,7 +227,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
 
                     <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-2">
                       <button
-                        onClick={() => setActiveChapter(chap)}
+                        onClick={() => openChapter(chap)}
                         className="text-xs font-semibold text-sky-800 hover:text-sky-950 flex items-center gap-1"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -253,7 +290,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800">
+            <div ref={readerRef} onScroll={saveReaderPosition} className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800">
               
               {/* Summary */}
               <div>
