@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { X, UserRound, LogOut, ShieldCheck, GraduationCap, Sparkles, School, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle2, MapPin, LockKeyhole, BookOpen } from 'lucide-react';
+import { X, UserRound, LogOut, ShieldCheck, GraduationCap, School, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle2, MapPin, LockKeyhole, BookOpen } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
