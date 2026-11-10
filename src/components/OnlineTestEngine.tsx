@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { ONLINE_TESTS } from '../data/portalData';
-import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
@@ -46,6 +44,17 @@ import {
 
 
 const ACTIVE_TEST_SESSION_KEY = 'krishan_sir_active_test_session';
+const EMPTY_TEST: OnlineTest = {
+  id: '',
+  title: { en: 'Select a published test', hi: 'प्रकाशित टेस्ट चुनें' },
+  classLevel: '9',
+  subject: 'History',
+  chapter: '',
+  durationMinutes: 30,
+  totalMarks: 0,
+  questions: [],
+  instructions: { en: [], hi: [] },
+};
 
 interface PersistedTestSession {
   version: 1;
@@ -109,9 +118,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
   // Authenticated students see only tests published for their canonical profile class.
+  // Only database-published tests are exposed in the portal. Legacy local question
+  // banks contain answer keys and must never be bundled into this student-facing route.
   const availableTests = user && profile
     ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
-    : [...ONLINE_TESTS, ...databaseTests.filter((dbTest) => !ONLINE_TESTS.some((localTest) => localTest.id === dbTest.id))];
+    : databaseTests;
   const filteredTests = availableTests.filter((test) => {
     const query = testSearch.trim().toLowerCase();
     const matchesQuery = !query || (test.title.hi + ' ' + test.title.en + ' ' + test.subject + ' ' + test.classLevel).toLowerCase().includes(query);
@@ -121,7 +132,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const testClassOptions = [...new Set(availableTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
   // Browser storage is a recovery aid only; the authenticated profile and database attempt remain authoritative.
   const [restoredSession, setRestoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
-  const restoredTest = [...ONLINE_TESTS, ...databaseTests].find((test) => test.id === restoredSession?.testId) || ONLINE_TESTS[0];
+  const restoredTest = databaseTests.find((test) => test.id === restoredSession?.testId) || EMPTY_TEST;
   const elapsedWhileAway = restoredSession
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
     : 0;
@@ -284,6 +295,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   }, [catalogueLoading, user?.id, profile?.class_level, databaseTests, selectedTest.id]);
 
+  // Select the first published database test for visitors when no class filter is supplied.
+  useEffect(() => {
+    if (!catalogueLoading && !user && !initialClassFilter && !selectedTest.id && databaseTests.length > 0) {
+      setSelectedTest(databaseTests[0]);
+    }
+  }, [catalogueLoading, user?.id, initialClassFilter, databaseTests, selectedTest.id]);
+
   // Load legacy local-only development submissions. Student test results are stored in Supabase.
   useEffect(() => {
     setSubmissionsList(getLocalSubmissions());
@@ -321,7 +339,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Select the saved assessment once the published catalogue is available.
   useEffect(() => {
     if (!restoredSession || catalogueLoading) return;
-    const match = [...ONLINE_TESTS, ...databaseTests].find((test) => test.id === restoredSession.testId);
+    const match = databaseTests.find((test) => test.id === restoredSession.testId);
     if (match) {
       if (selectedTest.id !== match.id) setSelectedTest(match);
     } else {
@@ -408,9 +426,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
 
   // Questions List
-  const questionsList: Question[] = selectedTest.questions && selectedTest.questions.length > 0
-    ? selectedTest.questions
-    : CLASS9_60_QUESTIONS;
+  const questionsList: Question[] = selectedTest.questions || [];
 
   const totalQuestions = questionsList.length;
   const attemptedCount = Object.keys(selectedAnswers).length;
