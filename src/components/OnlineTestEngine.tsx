@@ -684,21 +684,23 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* AVAILABLE TESTS SELECTOR */}
-        <div className="mb-6 rounded-3xl border border-sky-200 bg-white p-5 sm:p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+        <div className="mb-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_16px_45px_-30px_rgba(15,23,42,0.35)]">
+          <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-sky-50/70 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">Supabase में प्रकाशित और आपकी कक्षा के लिए उपलब्ध ऑनलाइन टेस्ट चुनें।</p>
-              {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
-              {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
+              <div className="mb-1 inline-flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Assessment Library
+              </div>
+              <h2 className="text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">अपनी कक्षा और तैयारी के अनुसार टेस्ट चुनें। चयनित टेस्ट की जानकारी नीचे दिखाई देगी।</p>
+              {catalogueLoading && <p role="status" className="mt-2 text-xs font-semibold text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
+              {catalogueError && <p role="alert" className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
               {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
             </div>
-            <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
-              {availableTests.length} Tests Available
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-sky-100 bg-white px-3.5 py-2 text-xs font-bold text-sky-900 shadow-sm">
+              <Layers className="h-4 w-4" /> {availableTests.length} Tests Available
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-5">
             {availableTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               return (
@@ -716,30 +718,31 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     }
                     setSelectedTest(test);
                   }}
-                  className={`rounded-2xl border-2 p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                  className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-sky-200 ${
                     isSelected
-                      ? 'border-sky-700 bg-sky-50 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50'
+                      ? 'border-sky-600 bg-gradient-to-br from-sky-50 to-white shadow-[0_10px_28px_-18px_rgba(3,105,161,0.65)]'
+                      : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md'
                   }`}
                 >
+                  {isSelected && <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-sky-500 to-cyan-400" />}
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="inline-flex rounded-lg bg-sky-900 px-2.5 py-1 text-[11px] font-bold text-white">
-                        Class {test.classLevel}
+                    <div className="min-w-0">
+                      <span className="inline-flex rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-white">
+                        CLASS {test.classLevel}
                       </span>
-                      <h3 className="mt-3 text-sm sm:text-base font-extrabold text-slate-900">{test.title.hi}</h3>
-                      <p className="mt-1 text-xs text-slate-600">{test.title.en}</p>
+                      <h3 className="mt-3 text-sm font-extrabold leading-snug text-slate-950 sm:text-base">{test.title.hi}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{test.title.en}</p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                      isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
+                      isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600 group-hover:bg-sky-50 group-hover:text-sky-800'
                     }`}>
-                      {isSelected ? 'चयनित / SELECTED' : 'चुनें / SELECT'}
+                      {isSelected ? '✓ चयनित' : 'चुनें'}
                     </span>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.questions.length} MCQs</span>
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.totalMarks} Marks</span>
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.durationMinutes} Minutes</span>
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 text-[10px] font-bold text-slate-600">
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1.5">{test.questions.length} MCQs</span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1.5">{test.totalMarks} Marks</span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1.5">{test.durationMinutes} Minutes</span>
                   </div>
                 </button>
               );
@@ -1016,19 +1019,51 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
         )}
 
-        {/* VIEW 1: AUTHENTICATED STUDENT GATE */}
+        {/* VIEW 1: PREMIUM STUDENT ACCESS GATE */}
         {!studentDetails && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-md mb-8">
-            <div className="max-w-xl mx-auto text-center">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
-                <UserCheck className="w-6 h-6" />
+          <div className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.4)]">
+            <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
+              <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#071d3d] via-[#0b3979] to-[#075985] p-6 text-white sm:p-8">
+                <div className="pointer-events-none absolute -right-14 -top-16 h-48 w-48 rounded-full border border-white/10" />
+                <div className="pointer-events-none absolute -right-5 -top-7 h-32 w-32 rounded-full border border-white/10" />
+                <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-cyan-300/10 blur-2xl" />
+                <div className="relative z-10 flex h-full flex-col justify-between gap-8">
+                  <div>
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-cyan-100">
+                      <ShieldCheck className="h-3.5 w-3.5" /> Secure Student Zone
+                    </div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-inner shadow-white/10">
+                      <Lock className="h-7 w-7 text-cyan-200" />
+                    </div>
+                    <h2 className="mt-5 text-2xl font-black tracking-tight text-white sm:text-3xl">विद्यार्थी लॉगिन</h2>
+                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-sky-100">आपकी परीक्षा, प्रगति और परिणाम सुरक्षित विद्यार्थी खाते से जुड़े हैं।</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-sky-100">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2"><ShieldCheck className="h-3.5 w-3.5" /> सुरक्षित प्रवेश</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2"><KeyRound className="h-3.5 w-3.5" /> निजी परिणाम</span>
+                  </div>
+                </div>
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 font-display">Student Login / विद्यार्थी लॉगिन</h2>
-              <p className="mt-2 text-sm text-slate-600">टेस्ट शुरू करने के लिए पहले अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन करें। / Sign in with your registered mobile number and password before starting.</p>
-              {loginError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{displayLoginError}</p>}
-              <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-5 inline-flex items-center justify-center rounded-xl bg-sky-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50">
-                {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
-              </button>
+              <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-9">
+                <div className="mx-auto w-full max-w-md">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-900 ring-1 ring-sky-100">
+                    <UserCheck className="h-6 w-6" />
+                  </div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-800">Your learning account</p>
+                  <h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">टेस्ट शुरू करने के लिए लॉगिन करें</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">अपने पंजीकृत मोबाइल नंबर और पासवर्ड से प्रवेश करें। लॉगिन के बाद चयनित टेस्ट की जानकारी यहीं से आगे बढ़ेगी।</p>
+                  {loginError && <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-relaxed text-amber-800">{displayLoginError}</p>}
+                  <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0b3979] to-[#075985] px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-sky-900/20 transition-all hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-50">
+                    <Lock className="h-4 w-4" />
+                    {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <div className="mt-4 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+                    आपका खाता और परीक्षा परिणाम निजी रहेंगे।
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
