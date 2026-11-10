@@ -55,6 +55,8 @@ export interface OnlineTest {
   chapter: string;
   durationMinutes: number;
   totalMarks: number;
+  /** Maximum number of server-enforced attempts configured for this test. */
+  attemptLimit?: number;
   questions: Question[];
   googleFormUrl?: string;
   instructions: {

@@ -5,6 +5,7 @@ on:
     branches:
       - "feature/student-auth-test-system"
       - "feature/student-mobile-password-auth"
+      - "test-module-finalization"
   pull_request:
     branches:
       - "feature/student-auth-test-system"

@@ -134,3 +134,70 @@ export async function getAdminTestAttempts(): Promise<TestAttempt[]> {
   if (error) throw error;
   return (data ?? []) as TestAttempt[];
 }
+
+
+export interface AdminTestSummary {
+  id: string;
+  title: { en: string; hi: string };
+  class_level: string;
+  subject: string;
+  chapter: string;
+  duration_minutes: number;
+  total_marks: number;
+  attempt_limit: number;
+  is_published: boolean;
+  question_count: number;
+}
+
+export interface AdminStudentSummary {
+  user_id: string;
+  student_name: string;
+  class_level: string;
+  roll_no: string;
+  school_name: string;
+}
+
+/** Admin-only catalogue read; RLS is the authority for administrator access. */
+export async function getAdminTests(): Promise<AdminTestSummary[]> {
+  const { data, error } = await requireSupabase()
+    .from('tests')
+    .select('id, title, class_level, subject, chapter, duration_minutes, total_marks, attempt_limit, is_published, questions')
+    .order('class_level', { ascending: true })
+    .order('title', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    ...row,
+    question_count: Array.isArray(row.questions) ? row.questions.length : 0,
+  })) as AdminTestSummary[];
+}
+
+/** Updates only the administrator-controlled publication and attempt settings. */
+export async function updateAdminTestSettings(
+  testId: string,
+  settings: { attempt_limit: number; is_published: boolean },
+): Promise<void> {
+  if (!Number.isInteger(settings.attempt_limit) || settings.attempt_limit < 1 || settings.attempt_limit > 2147483647) {
+    throw new Error('Attempt limit must be a positive whole number.');
+  }
+  const { data, error } = await requireSupabase()
+    .from('tests')
+    .update({ attempt_limit: settings.attempt_limit, is_published: settings.is_published })
+    .eq('id', testId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Test was not found or admin permission was denied.');
+}
+
+/** Admin-only student labels for the admin result table; no mobile numbers are fetched. */
+export async function getAdminStudentSummaries(userIds: string[]): Promise<AdminStudentSummary[]> {
+  const uniqueIds = [...new Set(userIds)].filter(Boolean);
+  if (!uniqueIds.length) return [];
+  const { data, error } = await requireSupabase()
+    .from('student_profiles')
+    .select('user_id, student_name, class_level, roll_no, school_name')
+    .in('user_id', uniqueIds);
+  if (error) throw error;
+  return (data ?? []) as AdminStudentSummary[];
+}

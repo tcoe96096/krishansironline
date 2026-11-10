@@ -48,7 +48,9 @@ import {
 const ACTIVE_TEST_SESSION_KEY = 'krishan_sir_active_test_session';
 
 interface PersistedTestSession {
-  version: 1;
+  version: 2;
+  userId: string;
+  attemptId: string;
   testId: string;
   student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
@@ -68,7 +70,9 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
     const value = JSON.parse(raw) as Partial<PersistedTestSession>;
     const student = value.student as StudentLoginDetails | undefined;
     if (
-      value.version !== 1 ||
+      value.version !== 2 ||
+      typeof value.userId !== 'string' ||
+      typeof value.attemptId !== 'string' ||
       typeof value.testId !== 'string' ||
       !student ||
       typeof student.studentName !== 'string' ||
@@ -85,10 +89,6 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
       !value.selectedAnswers ||
       !value.markedForReview
     ) {
-      localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-      return null;
-    }
-    if (!ONLINE_TESTS.some((test) => test.id === value.testId)) {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
     }
@@ -165,10 +165,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
-  const attemptLimitMessageHi = 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।';
-  const attemptLimitMessageEn = 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.';
+  const configuredAttemptLimit = Math.max(1, Number(selectedTest.attemptLimit ?? 1));
+  const getAttemptLimitMessage = () => questionLang === 'hi'
+    ? `आप इस परीक्षा के सभी ${configuredAttemptLimit} अनुमत प्रयास पूरे कर चुके हैं। आपका पिछला परिणाम सुरक्षित है।`
+    : `You have used all ${configuredAttemptLimit} allowed attempt(s) for this test. Your previous result is saved.`;
   const isAttemptLimitMessage = (message: string) => message.includes('निर्धारित प्रयास पूरा') || message.includes('allowed attempt');
-  const displayLoginError = isAttemptLimitMessage(loginError) ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : loginError;
+  const displayLoginError = isAttemptLimitMessage(loginError) ? getAttemptLimitMessage() : loginError;
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
@@ -185,7 +187,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     message?: string;
   }>({ loading: false });
 
-  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
+  const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? getAttemptLimitMessage() : submissionStatus.message;
 
   // Teacher / Admin Responses Management
   const [showTeacherPanel, setShowTeacherPanel] = useState<boolean>(false);
@@ -250,6 +252,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           chapter: test.chapter,
           durationMinutes: test.duration_minutes,
           totalMarks: Number(test.total_marks),
+          attemptLimit: test.attempt_limit,
           questions: test.questions.map((question) => ({
             id: question.id,
             question: question.question,
@@ -338,7 +341,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // savedAt is refreshed with the countdown so time away can be deducted on resume.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isTestActive || isSubmitted || !studentDetails) {
+    if (!isTestActive || isSubmitted || !studentDetails || !activeAttempt || !user) {
       if (isSubmitted) {
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
         localStorage.removeItem('krishan_sir_active_student');
@@ -347,7 +350,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     const session: PersistedTestSession = {
-      version: 1,
+      version: 2,
+      userId: user.id,
+      attemptId: activeAttempt.id,
       testId: selectedTest.id,
       student: studentDetails,
       selectedAnswers,
@@ -367,6 +372,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   }, [
     selectedTest.id,
     studentDetails,
+    activeAttempt?.id,
+    user?.id,
     selectedAnswers,
     markedForReview,
     currentQuestionIndex,
@@ -460,22 +467,38 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const previousAttempts = await getMyTestAttempts();
       const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id);
       const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
-      if (thisTestAttempts.length >= 1 && !hasInProgressAttempt) {
+      if (thisTestAttempts.length >= configuredAttemptLimit && !hasInProgressAttempt) {
         setSubmissionStatus({ loading: false, success: false, message: '' });
-        setLoginError((questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.'));
+        setLoginError(questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं।' : 'You have used your allowed attempt.');
         return;
       }
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
-      setSelectedAnswers({});
-      setMarkedForReview({});
-      setCurrentQuestionIndex(0);
+      // Recover this device's draft only when the server confirms the same signed-in
+      // user, test and active attempt. PostgreSQL remains authoritative for identity,
+      // attempt status, deadline and final grading.
+      const savedSession = readPersistedTestSession();
+      const canRestoreDraft = Boolean(savedSession && user &&
+        savedSession.userId === user.id &&
+        savedSession.attemptId === attempt.id &&
+        savedSession.testId === selectedTest.id);
+      setSelectedAnswers(canRestoreDraft ? savedSession!.selectedAnswers : {});
+      setMarkedForReview(canRestoreDraft ? savedSession!.markedForReview : {});
+      setCurrentQuestionIndex(canRestoreDraft
+        ? Math.min(Math.max(0, savedSession!.currentQuestionIndex), Math.max(0, questionsList.length - 1))
+        : 0);
+      if (canRestoreDraft) {
+        setQuestionLang(savedSession!.questionLang);
+        setViewLayout(savedSession!.viewLayout);
+      }
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
       setTimeLeftSeconds(remaining);
       setIsSubmitted(false);
       setIsTestActive(remaining > 0);
-      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
+      setSubmissionStatus({ loading: false, success: true, message: canRestoreDraft
+        ? 'आपका पिछला टेस्ट और सेव किए गए उत्तर वापस मिल गए हैं।'
+        : 'आपकी परीक्षा शुरू हो गई है।' });
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
@@ -485,7 +508,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setLoginError(isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं।' : 'You have used your allowed attempt.')
         : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
     }
   };
@@ -614,7 +637,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं। इस टेस्ट के लिए केवल 1 प्रयास अनुमत है। आपका पिछला परिणाम सुरक्षित है।' : 'You have used your allowed attempt for this test. Only 1 attempt is permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं।' : 'You have used your allowed attempt.')
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
