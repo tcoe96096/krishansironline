@@ -111,16 +111,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10';
-  const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
+  const inputClass = 'w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10 sm:rounded-xl sm:px-3.5 sm:py-2.5';
+  const labelClass = 'mb-1 block text-[11px] font-semibold text-slate-600 sm:text-xs';
   const stepTitles = en ? ['Personal & Academic', 'Location Details', 'Account Security'] : ['व्यक्तिगत व शैक्षणिक', 'स्थान विवरण', 'खाता सुरक्षा'];
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label={en ? 'Student account' : 'विद्यार्थी खाता'}>
-      <div className="relative flex max-h-[100dvh] min-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:max-h-[94vh] sm:flex-row sm:rounded-[2rem]">
+      <div className="relative flex max-h-[100dvh] min-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:max-h-[92vh] sm:flex-row sm:rounded-[1.5rem]">
         <button onClick={onClose} className="absolute right-3 top-3 z-30 rounded-full bg-white/15 p-2.5 text-white ring-1 ring-white/30 transition hover:bg-white/25" aria-label="Close"><X className="h-5 w-5" /></button>
 
-        {!user && <aside className="relative hidden w-[36%] flex-col justify-between overflow-hidden bg-gradient-to-br from-[#102b50] via-[#123f68] to-[#087f89] p-8 text-white sm:flex">
+        {!user && <aside className="relative hidden w-[30%] shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-[#102b50] via-[#123f68] to-[#087f89] p-6 text-white lg:flex">
           <div className="absolute -right-20 -top-16 h-64 w-64 rounded-full border-[36px] border-white/5" />
           <div className="absolute -bottom-24 -left-20 h-72 w-72 rounded-full border-[42px] border-white/5" />
           <div className="relative">
@@ -138,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </aside>}
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#f7fafc]">
-          <header className="shrink-0 bg-gradient-to-r from-[#102b50] to-[#087f89] px-5 pb-5 pt-5 text-white sm:bg-white sm:px-9 sm:pb-3 sm:pt-8 sm:text-slate-900">
+          <header className="shrink-0 bg-gradient-to-r from-[#102b50] to-[#087f89] px-4 pb-3 pt-3 text-white sm:bg-white sm:px-7 sm:pb-2 sm:pt-5 sm:text-slate-900">
             <div className="flex items-center gap-3 sm:hidden">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15"><GraduationCap className="h-6 w-6" /></div>
               <div><p className="text-[9px] font-bold tracking-[.18em] text-teal-100">KRISHAN SIR</p><p className="text-sm font-extrabold">ONLINE LEARNING</p></div>
@@ -148,7 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <p className="mt-1 text-xs text-blue-100 sm:text-slate-500">{user ? (en ? 'Your learning, progress and results in one place.' : 'आपकी पढ़ाई, प्रगति और परिणाम एक ही जगह।') : mode === 'login' ? (en ? 'Access your classes, tests and learning progress.' : 'अपनी कक्षाओं, टेस्ट और अध्ययन प्रगति तक पहुँचें।') : (en ? 'A few simple steps to set up your account.' : 'अपना खाता बनाने के लिए कुछ आसान चरण।')}</p>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-9 sm:pt-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3 sm:px-6 sm:pb-5 sm:pt-3">
             {!configured && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{en ? 'Supabase environment variables are not configured for this deployment yet.' : 'इस deployment में Supabase environment variables अभी configure नहीं हैं।'}</p>}
 
             {user ? (
@@ -159,8 +159,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-slate-500"><ShieldCheck className="mr-1 inline h-4 w-4 text-emerald-700" />{en ? 'Your student session is secure.' : 'आपका विद्यार्थी सत्र सुरक्षित है।'}</p><button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button></div>
               </div>
             ) : (
-              <div className="mx-auto w-full max-w-2xl">
-                <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+              <div className="mx-auto w-full max-w-3xl">
+                <div className="mb-3 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                   <div className="grid grid-cols-2 gap-1">
                     <button type="button" onClick={() => switchMode('login')} className={`rounded-xl px-3 py-3 text-sm font-bold transition ${mode === 'login' ? 'bg-[#102b50] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>{en ? 'Student Login' : 'विद्यार्थी लॉगिन'}</button>
                     <button type="button" onClick={() => switchMode('register')} className={`rounded-xl px-3 py-3 text-sm font-bold transition ${mode === 'register' ? 'bg-[#102b50] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>{en ? 'New Registration' : 'नया पंजीकरण'}</button>
@@ -179,46 +179,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </form>
                 ) : (
                   <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_36px_-24px_rgba(15,45,80,.35)] sm:p-6">
-                    <div className="mb-5 flex items-center justify-between gap-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
                       <div><h3 className="font-extrabold text-slate-900">{stepTitles[registrationStep - 1]}</h3><p className="mt-1 text-xs text-slate-500">{en ? `Step ${registrationStep} of 3` : `चरण ${registrationStep} / 3`}</p></div>
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">{registrationStep === 1 ? <UserRound className="h-5 w-5"/> : registrationStep === 2 ? <MapPin className="h-5 w-5"/> : <LockKeyhole className="h-5 w-5"/>}</div>
                     </div>
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         {stepTitles.map((title, index) => <div key={title} className={`flex min-w-0 items-center gap-1.5 text-[10px] font-bold sm:text-xs ${registrationStep >= index + 1 ? 'text-teal-700' : 'text-slate-400'}`}><span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${registrationStep > index + 1 ? 'bg-teal-600 text-white' : registrationStep === index + 1 ? 'bg-[#102b50] text-white' : 'bg-slate-100 text-slate-400'}`}>{registrationStep > index + 1 ? <CheckCircle2 className="h-4 w-4"/> : index + 1}</span><span className="hidden truncate sm:inline">{title}</span></div>)}
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-[#102b50] to-teal-500 transition-all duration-300" style={{ width: `${registrationStep / 3 * 100}%` }} /></div>
                     </div>
 
-                    {registrationStep === 1 && <div className="space-y-4">
+                    {registrationStep === 1 && <div className="space-y-3">
                       <div><label className={labelClass}>{en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'}</label><input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Enter full name' : 'पूरा नाम लिखें'} className={inputClass} autoComplete="name" /></div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div><label className={labelClass}>{en ? 'Class' : 'कक्षा'}</label><div className="relative"><button type="button" aria-haspopup="listbox" aria-expanded={classMenuOpen} onClick={() => setClassMenuOpen(open => !open)} className={inputClass + ' flex items-center justify-between text-left'}><span>{en ? `Class ${studentClass}` : `कक्षा ${studentClass}`}</span><span className="text-slate-500">▾</span></button>{classMenuOpen && <div role="listbox" aria-label={en ? 'Select class' : 'कक्षा चुनें'} className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">{(['6','7','8','9','10','11','12'] as const).map(grade => <button key={grade} type="button" role="option" aria-selected={studentClass === grade} onClick={() => { setStudentClass(grade); setClassMenuOpen(false); }} className={`w-full rounded-lg px-3 py-3 text-left text-sm ${studentClass === grade ? 'bg-teal-50 font-bold text-teal-800' : 'text-slate-700 hover:bg-slate-50'}`}>{en ? `Class ${grade}` : `कक्षा ${grade}`}</button>)}</div>}</div></div>
                         <div><label className={labelClass}>{en ? 'Roll number' : 'रोल नंबर'}</label><input required value={rollNo} onChange={e=>setRollNo(e.target.value)} placeholder={en ? 'Enter roll number' : 'रोल नंबर लिखें'} className={inputClass} /></div>
                       </div>
                       <div><label className={labelClass}>{en ? 'School name' : 'विद्यालय का नाम'}</label><select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>{schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass + ' mt-3'} />}</div>
                     </div>}
 
-                    {registrationStep === 2 && <div className="space-y-4">
+                    {registrationStep === 2 && <div className="space-y-3">
                       <div className="rounded-xl bg-teal-50 px-3 py-2 text-xs text-teal-800"><MapPin className="mr-1 inline h-4 w-4"/> {en ? 'Your location helps organize relevant learning resources.' : 'आपका स्थान सही अध्ययन सामग्री व्यवस्थित करने में सहायता करता है।'}</div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <div><label className={labelClass}>{en ? 'Country' : 'देश'}</label><input required value={country} onChange={e=>setCountry(e.target.value)} placeholder="India" className={inputClass} /></div>
                         <div><label className={labelClass}>{en ? 'State' : 'राज्य'}</label><input required value={state} onChange={e=>setState(e.target.value)} placeholder="Haryana" className={inputClass} /></div>
                         <div><label className={labelClass}>{en ? 'District' : 'जिला'}</label><input required value={district} onChange={e=>setDistrict(e.target.value)} placeholder={en ? 'Enter district' : 'जिला लिखें'} className={inputClass} /></div>
                         <div><label className={labelClass}>{en ? 'Area type' : 'क्षेत्र का प्रकार'}</label><select required value={areaType} onChange={e=>setAreaType(e.target.value as typeof areaType)} className={inputClass}><option value="village">Village / गाँव</option><option value="city">City / शहर</option><option value="town">Town / कस्बा</option><option value="other">Other / अन्य</option></select></div>
                       </div>
-                      <div><label className={labelClass}>{en ? 'Village / City / Town name' : 'गाँव / शहर / कस्बे का नाम'}</label><input required value={localityName} onChange={e=>setLocalityName(e.target.value)} placeholder={en ? 'Enter locality name' : 'अपने गाँव या शहर का नाम लिखें'} className={inputClass} /></div>
-                      <div><label className={labelClass}>{en ? 'PIN Code (optional)' : 'पिन कोड (वैकल्पिक)'}</label><input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="6-digit PIN Code" className={inputClass} /></div>
+                      <div className="sm:col-span-2 xl:col-span-3"><label className={labelClass}>{en ? 'Village / City / Town name' : 'गाँव / शहर / कस्बे का नाम'}</label><input required value={localityName} onChange={e=>setLocalityName(e.target.value)} placeholder={en ? 'Enter locality name' : 'अपने गाँव या शहर का नाम लिखें'} className={inputClass} /></div>
+                      <div className="sm:col-span-2 xl:col-span-1"><label className={labelClass}>{en ? 'PIN Code (optional)' : 'पिन कोड (वैकल्पिक)'}</label><input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="6-digit PIN Code" className={inputClass} /></div>
                     </div>}
 
-                    {registrationStep === 3 && <div className="space-y-4">
+                    {registrationStep === 3 && <div className="space-y-3">
                       <div className="rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800"><ShieldCheck className="mr-1 inline h-4 w-4"/> {en ? 'Use either your mobile number or email ID. Keep your password private.' : 'मोबाइल नंबर या Email ID में से कोई एक दें। अपना पासवर्ड गोपनीय रखें।'}</div>
                       <div><label className={labelClass}>{en ? 'Mobile Number / Email ID' : 'मोबाइल नंबर / Email ID'}</label><input required type="text" autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)} placeholder={en ? 'Enter mobile number or email' : 'मोबाइल नंबर या Email ID लिखें'} className={inputClass} /></div>
                       <div><label className={labelClass}>{en ? 'Create password' : 'पासवर्ड बनाएँ'}</label><div className="relative"><input required type={showPassword ? 'text' : 'password'} minLength={8} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'At least 8 characters' : 'कम-से-कम 8 अक्षर'} className={inputClass + ' pr-12'} /><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-3 text-slate-500">{showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button></div></div>
                       <div><label className={labelClass}>{en ? 'Confirm password' : 'पासवर्ड की पुष्टि करें'}</label><div className="relative"><input required type={showConfirmPassword ? 'text' : 'password'} minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder={en ? 'Re-enter password' : 'पासवर्ड दोबारा लिखें'} className={inputClass + ' pr-12'} /><button type="button" onClick={()=>setShowConfirmPassword(value=>!value)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-3 text-slate-500">{showConfirmPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button></div></div>
                     </div>}
 
-                    <div className="mt-6 flex gap-3">
+                    <div className="mt-4 flex gap-2 sm:mt-3">
                       {registrationStep > 1 && <button type="button" onClick={()=>{setError('');setRegistrationStep(step=>step-1);}} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4"/>{en ? 'Back' : 'वापस'}</button>}
                       {registrationStep < 3 ? <button type="button" onClick={nextRegistrationStep} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#102b50] to-[#087f89] px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-teal-900/10 hover:brightness-110">{en ? 'Continue' : 'आगे बढ़ें'}<ArrowRight className="h-4 w-4"/></button> : <button type="submit" disabled={!configured || busy} className="flex-1 rounded-xl bg-gradient-to-r from-[#102b50] to-[#087f89] px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-teal-900/10 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Creating account…' : 'खाता बनाया जा रहा है…') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>}
                     </div>
