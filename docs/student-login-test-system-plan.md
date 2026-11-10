@@ -179,3 +179,25 @@ Deployment must be configured to execute as the script owner. Set `PORTAL_SHARED
 ## Important deployment gates
 
 The repository does not contain a verified Sheet ID, Apps Script deployment URL/configuration, Supabase project credentials, Google OAuth client configuration, or an allowlisted admin account UUID. Therefore code preparation can be committed, but a live end-to-end connection cannot be activated or verified until the owner supplies/configures those resources. Do not claim that the live Sheet is connected until a test read and write are verified.
+
+
+---
+
+## Workstream status — 10 Nov 2026 (test-module-finalization branch)
+
+### Implemented in the isolated branch
+- Test UI now reads the configured per-test attempt limit instead of assuming every test allows exactly one attempt.
+- In-progress test drafts can be restored on the same browser only when the signed-in user, test ID and server-issued attempt ID all match. The server remains authoritative for attempt ownership, expiry and grading.
+- Results Portal now displays only the signed-in student's own attempt history and server-calculated scores. It does not expose a public all-student results list.
+
+### Validation completed
+- Preview database RPC validation passed for attempt creation, resuming an existing in-progress attempt, rejecting out-of-range answers, server-side scoring, attempt-limit enforcement and expiry handling.
+- Validation records were created inside a transaction and rolled back; no test, answer-key or attempt rows were retained.
+- Preview database currently has no published test catalogue rows. This is intentionally left empty until the owner supplies the next approved test dataset.
+- Existing main database catalogue was checked: all four existing test records have matching answer-key lengths (4/4), 10/10, 40/40 and 60/60. No test content was changed.
+
+### Still gated before final live acceptance
+- Add the authenticated admin test-management interface (publish/unpublish, question bank, answer-key entry and attempt-limit editing).
+- Complete the secure Google Sheets bridge and retryable sync path. The current Apps Script code is present, but the preview project has no deployed Edge Functions and the required Sheet ID, Apps Script URL/secret and admin OAuth allowlist are not configured.
+- Run the browser-level student journey on the actual preview deployment, including registration/login, start, refresh/resume, submit, result history and logout.
+- Run the repository TypeScript/build checks and then review the preview deployment. No live deployment or production database changes were made as part of this branch work.
