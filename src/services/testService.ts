@@ -177,14 +177,17 @@ export async function updateAdminTestSettings(
   testId: string,
   settings: { attempt_limit: number; is_published: boolean },
 ): Promise<void> {
-  if (!Number.isInteger(settings.attempt_limit) || settings.attempt_limit < 1 || settings.attempt_limit > 20) {
-    throw new Error('Attempt limit must be a whole number between 1 and 20.');
+  if (!Number.isInteger(settings.attempt_limit) || settings.attempt_limit < 1 || settings.attempt_limit > 2147483647) {
+    throw new Error('Attempt limit must be a positive whole number.');
   }
-  const { error } = await requireSupabase()
+  const { data, error } = await requireSupabase()
     .from('tests')
     .update({ attempt_limit: settings.attempt_limit, is_published: settings.is_published })
-    .eq('id', testId);
+    .eq('id', testId)
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Test was not found or admin permission was denied.');
 }
 
 /** Admin-only student labels for the admin result table; no mobile numbers are fetched. */
