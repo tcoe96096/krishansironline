@@ -1019,54 +1019,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
         )}
 
-        {/* VIEW 1: PREMIUM STUDENT ACCESS GATE */}
-        {!studentDetails && (
-          <div className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.4)]">
-            <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
-              <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#071d3d] via-[#0b3979] to-[#075985] p-6 text-white sm:p-8">
-                <div className="pointer-events-none absolute -right-14 -top-16 h-48 w-48 rounded-full border border-white/10" />
-                <div className="pointer-events-none absolute -right-5 -top-7 h-32 w-32 rounded-full border border-white/10" />
-                <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-cyan-300/10 blur-2xl" />
-                <div className="relative z-10 flex h-full flex-col justify-between gap-8">
-                  <div>
-                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-cyan-100">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Secure Student Zone
-                    </div>
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-inner shadow-white/10">
-                      <Lock className="h-7 w-7 text-cyan-200" />
-                    </div>
-                    <h2 className="mt-5 text-2xl font-black tracking-tight text-white sm:text-3xl">विद्यार्थी लॉगिन</h2>
-                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-sky-100">आपकी परीक्षा, प्रगति और परिणाम सुरक्षित विद्यार्थी खाते से जुड़े हैं।</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-sky-100">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2"><ShieldCheck className="h-3.5 w-3.5" /> सुरक्षित प्रवेश</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2"><KeyRound className="h-3.5 w-3.5" /> निजी परिणाम</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-9">
-                <div className="mx-auto w-full max-w-md">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-900 ring-1 ring-sky-100">
-                    <UserCheck className="h-6 w-6" />
-                  </div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-800">Your learning account</p>
-                  <h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">टेस्ट शुरू करने के लिए लॉगिन करें</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">अपने पंजीकृत मोबाइल नंबर और पासवर्ड से प्रवेश करें। लॉगिन के बाद चयनित टेस्ट की जानकारी यहीं से आगे बढ़ेगी।</p>
-                  {loginError && <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-relaxed text-amber-800">{displayLoginError}</p>}
-                  <button type="button" onClick={onRequestLogin} disabled={authLoading} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0b3979] to-[#075985] px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-sky-900/20 transition-all hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-50">
-                    <Lock className="h-4 w-4" />
-                    {authLoading ? 'Checking session… / लॉगिन जाँच रहे हैं…' : 'Login / Register to Continue'}
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  <div className="mt-4 flex items-center gap-2 text-[11px] font-medium text-slate-500">
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
-                    आपका खाता और परीक्षा परिणाम निजी रहेंगे।
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Login is provided by the site's existing floating account control. */}
 
         {/* VIEW 2: START GATE — create a server-side attempt before showing questions */}
         {studentDetails && !activeAttempt && !isSubmitted && (
