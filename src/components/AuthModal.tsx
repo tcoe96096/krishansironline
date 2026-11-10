@@ -55,7 +55,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setError(en ? 'Please complete all required location details.' : 'कृपया स्थान विवरण के सभी आवश्यक कॉलम भरें।');
         return;
       }
-      if (pinCode && !/^\\d{6}$/.test(pinCode)) {
+      if (pinCode && !/^\d{6}$/.test(pinCode)) {
         setError(en ? 'PIN Code must contain 6 digits.' : 'PIN Code में 6 अंक होने चाहिए।');
         return;
       }
@@ -208,7 +208,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         <div><label className={labelClass}>{en ? 'Area type' : 'क्षेत्र का प्रकार'}</label><select required value={areaType} onChange={e=>setAreaType(e.target.value as typeof areaType)} className={inputClass}><option value="village">Village / गाँव</option><option value="city">City / शहर</option><option value="town">Town / कस्बा</option><option value="other">Other / अन्य</option></select></div>
                       </div>
                       <div className="sm:col-span-2 xl:col-span-3"><label className={labelClass}>{en ? 'Village / City / Town name' : 'गाँव / शहर / कस्बे का नाम'}</label><input required value={localityName} onChange={e=>setLocalityName(e.target.value)} placeholder={en ? 'Enter locality name' : 'अपने गाँव या शहर का नाम लिखें'} className={inputClass} /></div>
-                      <div className="sm:col-span-2 xl:col-span-1"><label className={labelClass}>{en ? 'PIN Code (optional)' : 'पिन कोड (वैकल्पिक)'}</label><input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="6-digit PIN Code" className={inputClass} /></div>
+                      <div className="sm:col-span-2 xl:col-span-1"><label className={labelClass}>{en ? 'PIN Code (optional)' : 'पिन कोड (वैकल्पिक)'}</label><input value={pinCode} onChange={e=>setPinCode(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric" pattern="[0-9]{6}" placeholder="6-digit PIN Code" className={inputClass} /></div>
                     </div>}
 
                     {registrationStep === 3 && <div className="space-y-3">
