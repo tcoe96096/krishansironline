@@ -201,3 +201,8 @@ The repository does not contain a verified Sheet ID, Apps Script deployment URL/
 - Complete the secure Google Sheets bridge and retryable sync path. The current Apps Script code is present, but the preview project has no deployed Edge Functions and the required Sheet ID, Apps Script URL/secret and admin OAuth allowlist are not configured.
 - Run the browser-level student journey on the actual preview deployment, including registration/login, start, refresh/resume, submit, result history and logout.
 - Run the repository TypeScript/build checks and then review the preview deployment. No live deployment or production database changes were made as part of this branch work.
+
+
+### Additional production security finding
+- The main Supabase project's security advisor reports that the anon role can execute several SECURITY DEFINER functions, including trigger-only functions and public.is_admin(). The preview project does not report the same anonymous-execution findings.
+- An idempotent hardening migration, 0007_restrict_public_test_rpc_execute.sql, has been added to this branch. It is not applied to the main/production database. Review and apply it through the approved database-change process before live acceptance.
