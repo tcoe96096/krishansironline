@@ -1,0 +1,32 @@
+name: Trigger Preview Website Deployment
+
+on:
+  push:
+    branches:
+      - preview/student-system-live-design-integration
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch-preview:
+    name: Notify Preview deployment repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger isolated Preview build
+        env:
+          PREVIEW_DEPLOY_TOKEN: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if [ -z "${PREVIEW_DEPLOY_TOKEN:-}" ]; then
+            echo "::error::Repository secret PREVIEW_DEPLOY_TOKEN is not configured."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --url https://api.github.com/repos/tcoe96096/krishansironline-preview/dispatches \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${PREVIEW_DEPLOY_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "{\"event_type\":\"preview-source-updated\",\"client_payload\":{\"source_ref\":\"preview/student-system-live-design-integration\"}}"
