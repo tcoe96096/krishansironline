@@ -107,6 +107,11 @@ interface OnlineTestEngineProps {
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
+  // A shared test link may preselect one published assessment by its stable test ID.
+  const requestedTestId = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('test')
+    : null;
+  const requestedLocalTest = ONLINE_TESTS.find((test) => test.id === requestedTestId);
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
@@ -120,7 +125,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const elapsedWhileAway = restoredSession
     ? Math.max(0, Math.floor((Date.now() - restoredSession.savedAt) / 1000))
     : 0;
-  const [selectedTest, setSelectedTest] = useState<OnlineTest>(restoredTest);
+  const [selectedTest, setSelectedTest] = useState<OnlineTest>(requestedLocalTest || restoredTest);
   const isDatabaseTest = databaseTests.some((test) => test.id === selectedTest.id);
 
   // Test duration follows the selected assessment. Time spent away is deducted on resume.
@@ -310,16 +315,23 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     });
   }, [selectedTest.id, selectedTest.durationMinutes, selectedTest.classLevel]);
 
-  // Do not override a saved in-progress test after a refresh.
+  // A direct shared-test link takes priority over the page's default class filter.
   useEffect(() => {
-    if (restoredSession) return;
+    if (restoredSession || requestedTestId) return;
     if (initialClassFilter) {
       const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
         setSelectedTest(match);
       }
     }
-  }, [initialClassFilter, databaseTests, user?.id, profile?.class_level]);
+  }, [initialClassFilter, databaseTests, user?.id, profile?.class_level, requestedTestId]);
+
+  // Resolve the shared test ID against the available guest or published database catalogue.
+  useEffect(() => {
+    if (!requestedTestId || catalogueLoading) return;
+    const match = availableTests.find((test) => test.id === requestedTestId);
+    if (match) setSelectedTest(match);
+  }, [requestedTestId, catalogueLoading, databaseTests, user?.id, profile?.class_level]);
 
 
   // Auto-save every active attempt locally for refresh/tab-close recovery.
