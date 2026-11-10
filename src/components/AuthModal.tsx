@@ -10,7 +10,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
   const { user, profile, configured, isAdmin, adminLoading, signInWithGoogle, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [mobile, setMobile] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState<'6' | '7' | '8' | '9' | '10' | '11' | '12'>('10');
@@ -30,16 +30,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setBusy(true); setError(''); setMessage('');
     try {
       if (mode === 'login') {
-        await signInWithMobile(mobile, password);
+        await signInWithMobile(identifier, password);
         setMessage(en ? 'Login successful.' : 'लॉगिन सफल रहा।');
       } else {
         await registerStudent({
-          mobile, password, studentName, studentClass, rollNo,
+          identifier, password, studentName, studentClass, rollNo,
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
         });
         setMessage(en
-          ? 'Registration successful. You can now sign in with your mobile number and password.'
-          : 'पंजीकरण सफल रहा। अब आप मोबाइल नंबर और पासवर्ड से लॉगिन कर सकते हैं।');
+          ? 'Registration successful. You can now sign in with your mobile number or email ID and password.'
+          : 'पंजीकरण सफल रहा। अब आप मोबाइल नंबर या Email ID और पासवर्ड से लॉगिन कर सकते हैं।');
         setMode('login');
       }
     } catch (cause) {
@@ -96,9 +96,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
               </>}
-              <input required type="text" inputMode="text" autoComplete="username" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder={en ? '10-digit mobile number' : '10 अंकों का मोबाइल नंबर'} className={inputClass} />
+              <input required type="text" inputMode={identifier.includes('@') ? 'email' : 'text'} autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)} placeholder={en ? 'Mobile Number / Email ID' : 'मोबाइल नंबर / Email ID'} className={inputClass} />
               <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />
-              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Use your Indian mobile number. SMS OTP is not used; keep your password safe.' : 'अपना भारतीय मोबाइल नंबर दर्ज करें। SMS OTP का उपयोग नहीं होगा; अपना पासवर्ड सुरक्षित रखें।'}</p>}
+              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Enter either a mobile number or an email ID. Both are not required. Keep your password safe.' : 'मोबाइल नंबर या Email ID में से कोई एक दर्ज करें। दोनों देना आवश्यक नहीं है। अपना पासवर्ड सुरक्षित रखें।'}</p>}
               <button disabled={!configured || busy} className="w-full rounded-lg bg-sky-900 px-4 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Please wait…' : 'कृपया प्रतीक्षा करें…') : mode === 'login' ? (en ? 'Login securely' : 'सुरक्षित लॉगिन') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>
             </form>
           </>
