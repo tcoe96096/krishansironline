@@ -31,14 +31,14 @@ export const requireSupabase = (): SupabaseClient => {
 
 /** Accept a 10-digit Indian mobile number or an international +91 number. */
 export const normalizeIndianMobile = (mobile: string): string => {
-  const value = mobile.trim().replace(/[\\s()-]/g, '');
-  const normalized = /^\\d{10}$/.test(value)
+  const value = mobile.trim().replace(/[\s()-]/g, '');
+  const normalized = /^\d{10}$/.test(value)
     ? `+91${value}`
     : value.startsWith('0091')
       ? `+${value.slice(2)}`
       : value;
 
-  if (!/^\\+91[6-9]\\d{9}$/.test(normalized)) {
+  if (!/^\+91[6-9]\d{9}$/.test(normalized)) {
     throw new Error('कृपया 10 अंकों का वैध भारतीय मोबाइल नंबर दर्ज करें।');
   }
   return normalized;
@@ -47,6 +47,6 @@ export const normalizeIndianMobile = (mobile: string): string => {
 /** Stable internal Auth identifier for password-only Indian mobile login. */
 export const studentLoginEmail = (mobile: string): string => {
   const normalized = normalizeIndianMobile(mobile);
-  const digits = normalized.replace(/\\D/g, '');
+  const digits = normalized.replace(/\D/g, '');
   return `student.${digits}@login.krishansir.online`;
 };
