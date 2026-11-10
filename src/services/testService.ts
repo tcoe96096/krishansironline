@@ -41,8 +41,7 @@ export async function getPublishedTests(classLevel?: string): Promise<PublishedT
     .from('tests')
     .select('id, title, class_level, subject, chapter, duration_minutes, total_marks, attempt_limit, questions')
     .eq('is_published', true)
-    .order('class_level', { ascending: true })
-    .order('title', { ascending: true });
+    .order('class_level', { ascending: true });
 
   if (classLevel) query = query.eq('class_level', classLevel);
 
