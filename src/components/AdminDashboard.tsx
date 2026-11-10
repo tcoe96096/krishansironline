@@ -124,7 +124,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
                     <label className="flex flex-col gap-1 text-xs font-semibold text-slate-700">
                       {en ? 'Allowed attempts' : 'अनुमत प्रयास'}
-                      <input type="number" min={1} max={20} step={1} value={draft.attemptLimit}
+                      <input type="number" min={1}  step={1} value={draft.attemptLimit}
                         onChange={(event) => setDrafts((current) => ({ ...current, [test.id]: { ...draft, attemptLimit: Number(event.target.value) } }))}
                         className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                     </label>
@@ -134,7 +134,7 @@ export const AdminDashboard: React.FC = () => {
                         className="h-4 w-4 rounded border-slate-300" />
                       {en ? 'Published' : 'विद्यार्थियों के लिए प्रकाशित'}
                     </label>
-                    <button type="button" onClick={() => void saveSettings(test)} disabled={savingId === test.id || draft.attemptLimit < 1 || draft.attemptLimit > 20 || !Number.isInteger(draft.attemptLimit)}
+                    <button type="button" onClick={() => void saveSettings(test)} disabled={savingId === test.id || draft.attemptLimit < 1 || !Number.isInteger(draft.attemptLimit)}
                       className="ml-auto inline-flex items-center gap-2 rounded-lg bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-50">
                       <Save className="h-3.5 w-3.5" /> {savingId === test.id ? (en ? 'Saving…' : 'सेव हो रहा है…') : (en ? 'Save settings' : 'सेटिंग सेव करें')}
                     </button>
