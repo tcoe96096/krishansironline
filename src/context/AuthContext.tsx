@@ -10,7 +10,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { normalizeIndianMobile, requireSupabase, studentLoginEmail } from '../lib/supabase';
 
 type StudentRegistration = {
-  mobile: string;
+  identifier: string;
   password: string;
   studentName: string;
   studentClass: '6' | '7' | '8' | '9' | '10' | '11' | '12';
@@ -39,7 +39,7 @@ type AuthContextValue = {
   adminLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  signInWithMobile: (mobile: string, password: string) => Promise<void>;
+  signInWithMobile: (identifier: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -172,16 +172,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   }, []);
 
-  const signInWithMobile = useCallback(async (mobile: string, password: string) => {
-    // Legacy email accounts remain able to sign in during the transition.
-    const identifier = mobile.includes('@') ? mobile.trim().toLowerCase() : studentLoginEmail(mobile);
-    const { error } = await requireSupabase().auth.signInWithPassword({ email: identifier, password });
+  const signInWithMobile = useCallback(async (identifierInput: string, password: string) => {
+    const input = identifierInput.trim();
+    // Email accounts use their real email; legacy/new mobile accounts use a stable internal alias.
+    const email = input.includes('@') ? input.toLowerCase() : studentLoginEmail(input);
+    const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
-    const mobile = normalizeIndianMobile(details.mobile);
-    const email = studentLoginEmail(mobile);
+    const input = details.identifier.trim();
+    const isEmail = input.includes('@');
+    const mobile = isEmail ? null : normalizeIndianMobile(input);
+    const email = isEmail ? input.toLowerCase() : studentLoginEmail(mobile as string);
+    if (isEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('कृपया वैध Email ID दर्ज करें।');
+    }
     if (details.password.length < 8 || !/[A-Za-z]/.test(details.password) || !/\d/.test(details.password)) {
       throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए और उसमें अक्षर तथा अंक दोनों होने चाहिए।');
     }
@@ -195,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
           account_type: 'student',
+          login_method: isEmail ? 'email' : 'mobile',
           mobile_number: mobile,
         },
       },
