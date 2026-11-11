@@ -31,7 +31,7 @@ const generateSeoPages = () => ({
         .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${canonical}" />`)
         .replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${page.title}" />`)
         .replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${page.description}" />`);
-      if (page.slug === 'admin') html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\\n</head>');
+      if (page.slug === 'admin') html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\n</head>');
       const directory = path.resolve(__dirname, 'dist', page.slug);
       mkdirSync(directory, { recursive: true });
       writeFileSync(path.join(directory, 'index.html'), html);
