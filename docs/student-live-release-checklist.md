@@ -48,7 +48,9 @@ Read-only audit of the existing Production project found:
 - Before enabling registration, re-check Supabase Auth settings: Email provider enabled, Confirm email disabled (the generated identifiers are not real mailboxes), and Phone provider disabled for the no-SMS design.
 - Generated internal login identifiers are not real mailboxes, so email confirmation and password-reset links cannot reach students.
 - Self-service password recovery is not available. School-record verification and an administrator-assisted recovery process must be in place before public student registration is promoted.
-- Supabase's leaked-password protection was reported disabled by the Production security advisor. Enable it in Supabase Auth settings before broad public registration.
+- Supabase's leaked-password protection is disabled in the Production security advisor. Enable it in Supabase Auth settings before broad public registration. The available project-management connection does not expose Auth security-setting controls, so this remains an owner-side Supabase Dashboard action.
+- The latest Production security advisor also flags `test_answer_keys` and `payment_events` as RLS-enabled tables with no policies. This is intentional deny-by-default for answer keys and private payment events; do not add public policies to silence the warning.
+- The advisor flags `is_admin()`, `start_test_attempt()`, and `submit_test_attempt()` because authenticated users can execute SECURITY DEFINER functions. These are intentional API entry points: each checks the caller/ownership and is used by RLS or the protected test workflow. Review their definitions before changing grants; do not revoke execution blindly.
 - Production currently has no administrator role row. Admin Website/OAuth setup remains a separate later phase; do not grant a role or enable Google OAuth as part of the Student release.
 
 ## Live-site content cleanup
