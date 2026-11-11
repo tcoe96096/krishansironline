@@ -23,8 +23,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const en = language === 'en';
-  // Public self-registration stays closed until student identity verification is available.
-  const allowStudentRegistration = import.meta.env.VITE_STUDENT_REGISTRATION_ENABLED === 'true';
+  const allowStudentRegistration = true;
 
   if (!isOpen) return null;
 
