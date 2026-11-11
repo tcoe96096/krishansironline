@@ -170,8 +170,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithMobile = useCallback(async (mobile: string, password: string) => {
-    // Legacy email accounts remain able to sign in during the transition.
-    const identifier = mobile.includes('@') ? mobile.trim().toLowerCase() : studentLoginEmail(mobile);
+    // Student login is mobile-only; legacy email-based test accounts are not part of
+    // the fresh Student Website account rollout.
+    const identifier = studentLoginEmail(mobile);
     const { error } = await requireSupabase().auth.signInWithPassword({ email: identifier, password });
     if (error) throw error;
   }, []);
