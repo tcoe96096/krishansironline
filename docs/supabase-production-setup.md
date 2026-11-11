@@ -45,7 +45,7 @@ In Authentication → Providers → Google:
 2. Configure the Google OAuth Client ID and Client Secret in the Supabase dashboard only.
 3. Add the Supabase callback URL shown in the provider settings to the Google Cloud OAuth client's Authorized redirect URIs.
 4. Add the portal's production URL to Supabase Authentication → URL Configuration → Site URL and Redirect URLs.
-5. Open the portal and use Student Login → Continue with Google · Admin Login.
+5. This flow is deferred until the separate Admin Portal is released. Do not expect Google Admin Login in the Student Release Candidate.
 6. Sign in with the approved account `tcoe96096@gmail.com`.
 7. After the first successful OAuth login, run `supabase/bootstrap-admin.sql` in SQL Editor.
 8. Sign out and sign in again. The portal checks the `user_roles` table; Google email alone does not grant admin access.
