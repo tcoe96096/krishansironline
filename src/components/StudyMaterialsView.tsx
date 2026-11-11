@@ -17,51 +17,68 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const { user } = useAuth();
   const readerRef = useRef<HTMLDivElement | null>(null);
   const lastSavedProgress = useRef(-1);
-  const isRestoringPosition = useRef(false);
+  const openChapterRequest = useRef(0);
+  const progressLoadReady = useRef(true);
+  const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const openChapter = (chapter: StudyChapter) => {
-    lastSavedProgress.current = -1;
-    isRestoringPosition.current = Boolean(user);
-    setActiveChapter(chapter);
-  };
-
-  // Restore the last saved reader position before accepting new scroll progress.
   useEffect(() => {
-    if (!activeChapter || !user) return;
-    let cancelled = false;
-    void getMyLearningProgressForMaterial(activeChapter.id)
-      .then((saved) => {
-        if (cancelled) return;
-        const savedPosition = Number(saved?.last_position?.scrollTop ?? 0);
-        lastSavedProgress.current = saved?.progress_percent ?? 0;
-        if (readerRef.current) readerRef.current.scrollTop = Number.isFinite(savedPosition) ? Math.max(0, savedPosition) : 0;
-        if (!saved) {
-          return saveMyLearningProgress({
-            materialId: activeChapter.id,
-            classLevel: activeChapter.classLevel,
-            subject: activeChapter.subject,
-            chapterTitle: activeChapter.title.en,
+    if (restoreScrollTop === null || !readerRef.current) return;
+    readerRef.current.scrollTop = restoreScrollTop;
+    setRestoreScrollTop(null);
+  }, [activeChapter, restoreScrollTop]);
+
+  const openChapter = (chapter: StudyChapter) => {
+    const requestId = ++openChapterRequest.current;
+    setActiveChapter(chapter);
+    setRestoreScrollTop(null);
+    lastSavedProgress.current = 0;
+    progressLoadReady.current = !user;
+
+    if (user) {
+      void getMyLearningProgressForMaterial(chapter.id)
+        .then((savedProgress) => {
+          if (requestId !== openChapterRequest.current) return;
+          if (savedProgress) {
+            lastSavedProgress.current = savedProgress.progress_percent;
+            const savedScrollTop = Number(savedProgress.last_position?.scrollTop ?? 0);
+            setRestoreScrollTop(Number.isFinite(savedScrollTop) ? Math.max(0, savedScrollTop) : 0);
+            progressLoadReady.current = true;
+            return;
+          }
+
+          // Finish the initial 0% write before allowing scroll autosave.
+          void saveMyLearningProgress({
+            materialId: chapter.id,
+            classLevel: chapter.classLevel,
+            subject: chapter.subject,
+            chapterTitle: chapter.title.en,
             progressPercent: 0,
             lastPosition: { section: 'overview', scrollTop: 0 },
-          });
-        }
-      })
-      .catch((error) => console.warn('Learning progress could not be restored:', error))
-      .finally(() => {
-        if (!cancelled) isRestoringPosition.current = false;
-      });
-    return () => { cancelled = true; };
-  }, [activeChapter, user]);
+          }).then(() => {
+            if (requestId === openChapterRequest.current) progressLoadReady.current = true;
+          }).catch((error) => console.warn('Learning progress could not be saved; autosave remains paused:', error));
+        })
+        .catch((error) => console.warn('Saved learning progress could not be restored; saving is paused to protect existing progress:', error));
+    }
+  };
+
+  const closeChapter = () => {
+    openChapterRequest.current += 1;
+    progressLoadReady.current = true;
+    setActiveChapter(null);
+    setRestoreScrollTop(null);
+  };
 
   const saveReaderPosition = () => {
     const element = readerRef.current;
-    if (isRestoringPosition.current || !user || !activeChapter || !element) return;
+    if (!user || !progressLoadReady.current || !activeChapter || !element) return;
     const maxScroll = element.scrollHeight - element.clientHeight;
-    const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 100;
+    // A chapter that fits in the viewport has no measurable scroll progress.
+    const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 0;
     if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
     lastSavedProgress.current = percent;
     void saveMyLearningProgress({
@@ -137,7 +154,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                 onClick={() => {
                   setSelectedClass(lvl);
                   setSelectedSubject('all');
-                  setActiveChapter(null);
+                  closeChapter();
                 }}
                 className={`px-4 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                   isSelected
@@ -302,7 +319,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   <span>Print</span>
                 </button>
                 <button
-                  onClick={() => setActiveChapter(null)}
+                  onClick={closeChapter}
                   className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-bold"
                 >
                   ✕
