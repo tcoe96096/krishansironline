@@ -823,7 +823,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <button
                         onClick={() => setShowTeacherPanel(!showTeacherPanel)}
                         className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-                          showTeacherPanel ? 'bg-amber-300 text-sky-950' : 'border border-white/20 bg-white/10 text-white hover:bg-white/15'
+                          showTeacherPanel ? 'bg-amber-300 text-sky-950' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                         title="AI Studio Admin: Google Sheet & Student Results Vault"
                       >
@@ -838,7 +838,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   ) : (
                     <button
                       onClick={() => { setAdminPinInput(''); setAdminPinError(''); setShowAdminAuthModal(true); }}
-                      className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-white/15"
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-white/15"
                       title="Teacher / Admin Access (केवल AI Studio हेतु)"
                     >
                       <Lock className="h-3.5 w-3.5 text-amber-300" />
@@ -847,9 +847,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   )}
                 </>
               )}
-              <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/10 p-1 text-[11px] font-semibold">
-                <button onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>हिंदी</button>
-                <button onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-sky-100 hover:bg-white/10'}`}>English</button>
+              <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-1 text-[11px] font-semibold">
+                <button onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>हिंदी</button>
+                <button onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>English</button>
               </div>
             </div>
           </div>
@@ -857,17 +857,17 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           {/* Essential information only; live countdown is shown in the sticky exam dashboard. */}
           <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 border-t border-slate-200 pt-3 text-center">
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <div className="text-[10px] font-semibold text-sky-200 sm:text-[11px]">कुल प्रश्न / Questions</div>
+              <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल प्रश्न / Questions</div>
               <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
-              <div className="text-[10px] font-semibold text-sky-200 sm:text-[11px]">कुल अंक / Total Marks</div>
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल अंक / Total Marks</div>
               <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
             </div>
             {!studentDetails && (
-              <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2">
-                <div className="text-[10px] font-semibold text-amber-200 sm:text-[11px]">समय / Duration</div>
-                <div className="mt-0.5 font-mono text-lg font-extrabold text-white sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                <div className="text-[10px] font-semibold text-amber-800 sm:text-[11px]">समय / Duration</div>
+                <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
               </div>
             )}
           </div>
