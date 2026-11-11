@@ -22,6 +22,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const en = language === 'en';
+  // Public self-registration stays closed until student identity verification is available.
+  const allowStudentRegistration = import.meta.env.VITE_STUDENT_REGISTRATION_ENABLED === 'true';
 
   if (!isOpen) return null;
 
@@ -66,10 +68,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </div>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
-              <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
-              <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
-            </div>
+            {allowStudentRegistration ? (
+              <div className="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+                <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
+                <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
+              </div>
+            ) : (
+              <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">{en ? 'New student registration is temporarily closed while school identity verification is prepared. Existing students can log in with their registered mobile number.' : 'विद्यालय पहचान सत्यापन की व्यवस्था पूरी होने तक नया विद्यार्थी पंजीकरण अस्थायी रूप से बंद है। पहले से पंजीकृत विद्यार्थी अपने मोबाइल नंबर से लॉगिन कर सकते हैं।'}</p>
+            )}
             <p className="mb-3 text-xs text-slate-500">{en ? 'Admin access is provided through the separate Admin Portal.' : 'एडमिन प्रवेश अलग Admin Portal के माध्यम से उपलब्ध होगा।'}</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
