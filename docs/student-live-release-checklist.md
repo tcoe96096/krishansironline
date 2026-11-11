@@ -73,6 +73,17 @@ Before Live release, complete these with an owner-approved student test account 
 9. Verify answer keys and explanations are not present in public test responses.
 10. Check mobile layout, navigation, printing, and all required SEO entry pages.
 
+
+## Fresh Student Data Policy (owner decision, 11 November 2026)
+
+- Do not import or depend on any student identity, login, profile, learning history, or test-attempt data from the legacy Google Apps Script workflow.
+- Student authentication and student-owned records for the new release use Supabase Auth and Supabase tables, not Google Apps Script.
+- The current Notice Board's Google Apps Script endpoint is a separate public-announcements feed; it does not authenticate students or store student learning progress. Keep this distinction clear. If the owner wants the public notice feed removed too, replace it in a separate reviewed change so the public site does not silently lose notices.
+- Treat existing Production student accounts/profiles/attempts as legacy test records: do not migrate them into the new student onboarding process or use them as launch accounts.
+- New student accounts must be created afresh from school-verified records using a controlled process. Public self-registration remains disabled until trusted identity verification and account recovery are ready.
+- Do not delete existing Production Auth users or their linked rows as part of this code release. Deletion is a separate destructive database operation and requires a specific final confirmation after the owner reviews the affected records.
+- No existing Production student account or record was deleted, migrated, or modified during this work.
+
 ## Release boundary
 
 No Production database migration, role grant, test-data edit, announcement edit, PR merge, DNS change, or Production deployment was performed during this audit. Each remains a separate approval step.
