@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Mail, Send, CheckCircle2, MessageSquare, School, HelpCircle } from 'lucide-react';
+import { Mail, Phone, Send, CheckCircle2, MessageSquare, School, HelpCircle } from 'lucide-react';
 
 export const ContactSection: React.FC = () => {
   const { language } = useLanguage();
