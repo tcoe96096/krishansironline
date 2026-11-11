@@ -10,7 +10,8 @@ import type { Session, User } from '@supabase/supabase-js';
 import { normalizeIndianMobile, requireSupabase, studentLoginEmail } from '../lib/supabase';
 
 type StudentRegistration = {
-  mobile: string;
+  identifier: string;
+  identifierType: 'mobile' | 'email';
   password: string;
   studentName: string;
   studentClass: '6' | '7' | '8' | '9' | '10' | '11' | '12';
@@ -169,17 +170,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   }, []);
 
-  const signInWithMobile = useCallback(async (mobile: string, password: string) => {
-    // Student login is mobile-only; legacy email-based test accounts are not part of
-    // the fresh Student Website account rollout.
-    const identifier = studentLoginEmail(mobile);
+  const signInWithMobile = useCallback(async (identifierInput: string, password: string) => {
+    const value = identifierInput.trim();
+    const identifier = value.includes('@')
+      ? value.toLowerCase()
+      : studentLoginEmail(value);
     const { error } = await requireSupabase().auth.signInWithPassword({ email: identifier, password });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
-    const mobile = normalizeIndianMobile(details.mobile);
-    const email = studentLoginEmail(mobile);
+    const isEmail = details.identifierType === 'email';
+    const mobile = isEmail ? null : normalizeIndianMobile(details.identifier);
+    const email = isEmail
+      ? details.identifier.trim().toLowerCase()
+      : studentLoginEmail(details.identifier);
+    if (isEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('कृपया वैध Email ID दर्ज करें।');
+    }
     if (details.password.length < 8 || !/[A-Za-z]/.test(details.password) || !/\d/.test(details.password)) {
       throw new Error('पासवर्ड कम-से-कम 8 अक्षरों का होना चाहिए और उसमें अक्षर तथा अंक दोनों होने चाहिए।');
     }
@@ -193,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
           account_type: 'student',
-          mobile_number: mobile,
+          ...(mobile ? { mobile_number: mobile } : {}),
         },
       },
     });
