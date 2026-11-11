@@ -99,8 +99,8 @@ export const Class10PresentationPlayer: React.FC<{ language: string }> = ({ lang
       </div>
 
       {activePresentation && (
-        <div className="fixed inset-0 z-[80] bg-slate-950/90 p-2 sm:p-5 flex items-center justify-center">
-          <div className="w-full max-w-6xl h-[94vh] bg-white rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-[80] bg-slate-950 p-0 flex items-stretch justify-stretch">
+          <div className="w-full max-w-none h-[100dvh] bg-white rounded-none overflow-hidden flex flex-col shadow-2xl">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-white">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-sky-800">
