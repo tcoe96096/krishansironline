@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       <div className="relative isolate overflow-visible bg-[#f2f7fc]">
         <div className="absolute inset-0 -z-10 bg-no-repeat bg-center bg-cover opacity-[.18]" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/file_00000000eb6482108586a0d9a2d631c8.png)` }} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-white/95 via-white/85 to-[#e9f4ff]/90" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-1 sm:py-0 flex flex-col items-stretch justify-center gap-1.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-5 py-1 sm:py-0 flex flex-col items-stretch justify-center gap-1.5 lg:grid lg:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
           <div className="flex w-full items-center gap-1.5 min-w-0 sm:w-auto sm:flex-none sm:col-start-1">
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Go to home page" className="h-[44px] w-[44px] sm:h-[58px] sm:w-[58px] shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-white shadow-lg ring-2 ring-[#17477e]/70 cursor-pointer">
               <img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Krishan Sir Online Learning logo" className="h-full w-full rounded-full object-contain" onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`; }} />
@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </a>
           </div>
 
-          <div className="relative z-10 hidden sm:flex w-full shrink-0 items-center justify-end gap-1 py-1 sm:w-auto sm:gap-2 sm:py-0 sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
+          <div className="relative z-10 hidden lg:flex w-full shrink-0 items-center justify-end gap-1 py-1 sm:w-auto sm:gap-2 sm:py-0 sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:translate-x-0" aria-label="Header tools">
             <button onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 sm:min-h-7 sm:h-7 sm:w-[360px] inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white text-[#092c60] px-0 sm:px-3 py-1 shadow-sm ring-1 ring-[#17477e]/15 text-xs sm:text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md"><Search className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Search</span></button>
             <div className="flex shrink-0 items-center gap-1 sm:ml-4 sm:gap-4">
               <div role="group" aria-label="Select language" className="inline-flex h-9 sm:h-8 items-center rounded-full border border-[#17477e]/15 bg-[#eaf1fb] p-1 shadow-sm">
@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
             </div>
           </div>
-          <div className="hidden sm:block sm:col-start-3" aria-hidden="true" />
+          <div className="hidden lg:block lg:col-start-3" aria-hidden="true" />
         </div>
       </div>
 
