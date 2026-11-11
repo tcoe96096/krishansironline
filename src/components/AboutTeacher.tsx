@@ -38,7 +38,7 @@ export const AboutTeacher: React.FC = () => {
                   className="w-full h-full object-cover object-[24%_28%] group-hover:scale-105 transition-transform duration-300"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`;
+                    e.currentTarget.src = `${import.meta.env.BASE_URL}assets/aistudio/Smiling_Educator_with_Study_Essentials_be80b46f.png`;
                   }}
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/85 via-slate-900/50 to-transparent p-4 text-white">
@@ -178,7 +178,7 @@ export const AboutTeacher: React.FC = () => {
                 className="w-full h-full object-cover object-center"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
-                  e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`;
+                  e.currentTarget.src = `${import.meta.env.BASE_URL}assets/aistudio/Smiling_Educator_with_Study_Essentials_be80b46f.png`;
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-6 sm:p-8">
