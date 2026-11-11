@@ -24,6 +24,17 @@ export async function getMyLearningProgress(): Promise<StudentLearningProgress[]
   return (data ?? []) as StudentLearningProgress[];
 }
 
+/** Reads one chapter's saved position for the signed-in student. */
+export async function getMyLearningProgressForMaterial(materialId: string): Promise<StudentLearningProgress | null> {
+  const { data, error } = await requireSupabase()
+    .from('student_learning_progress')
+    .select('id, student_id, material_id, class_level, subject, chapter_title, progress_percent, last_position, last_opened_at, completed_at, updated_at')
+    .eq('material_id', materialId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as StudentLearningProgress | null;
+}
+
 /** Upserts a student's position for a material without exposing another student's records. */
 export async function saveMyLearningProgress(input: {
   materialId: string;
