@@ -27,13 +27,14 @@ export const LiveAdminContent: React.FC<Props> = ({ section }) => {
     let active = true;
     const callbackName = '__krishanAdmin_' + section + '_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
+    const windowWithCallbacks = window as unknown as Record<string, any>;
     const timeout = window.setTimeout(() => {
       if (active) { setLoading(false); setError(true); }
-      delete window[callbackName];
+      delete windowWithCallbacks[callbackName];
       script.remove();
     }, 12000);
 
-    window[callbackName] = (response: any) => {
+    windowWithCallbacks[callbackName] = (response: any) => {
       window.clearTimeout(timeout);
       if (active) {
         if (response?.status === 'success' && Array.isArray(response.items)) {
@@ -44,7 +45,7 @@ export const LiveAdminContent: React.FC<Props> = ({ section }) => {
         }
         setLoading(false);
       }
-      delete window[callbackName];
+      delete windowWithCallbacks[callbackName];
       script.remove();
     };
 
@@ -52,14 +53,14 @@ export const LiveAdminContent: React.FC<Props> = ({ section }) => {
     script.onerror = () => {
       window.clearTimeout(timeout);
       if (active) { setLoading(false); setError(true); }
-      delete window[callbackName];
+      delete windowWithCallbacks[callbackName];
     };
     document.body.appendChild(script);
 
     return () => {
       active = false;
       window.clearTimeout(timeout);
-      delete window[callbackName];
+      delete windowWithCallbacks[callbackName];
       script.remove();
     };
   }, [section]);
