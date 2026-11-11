@@ -85,6 +85,8 @@ export interface StudyChapter {
     definition: { en: string; hi: string };
   }[];
   pdfUrl?: string;
+  videoUrl?: string;
+  videoTitle?: string;
   hasResources: boolean;
 }
 
