@@ -6,6 +6,12 @@ export interface StudentProfile {
   class_level: string;
   roll_no: string;
   school_name: string;
+  country: string;
+  state: string | null;
+  district: string | null;
+  area_type: string | null;
+  locality_name: string | null;
+  pin_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,6 +22,7 @@ export interface PublishedTestQuestion {
   chapter: string;
   question: { en: string; hi: string };
   options: { en: string[]; hi: string[] };
+  explanation?: { en: string; hi: string };
   marks?: number;
   type?: 'mcq' | 'short' | 'long' | 'map';
 }
@@ -34,7 +41,7 @@ export interface PublishedTest {
 
 /**
  * Fetches only published test content from the RLS-protected public catalogue.
- * The public payload intentionally has no correctAnswer, explanation, or answer key.
+ * The public payload may include authored bilingual explanations after publication, but never includes correctAnswer indexes or the private answer key.
  */
 export async function getPublishedTests(classLevel?: string): Promise<PublishedTest[]> {
   let query = requireSupabase()
@@ -74,7 +81,7 @@ export interface TestAttempt {
 export async function getMyStudentProfile(): Promise<StudentProfile | null> {
   const { data, error } = await requireSupabase()
     .from('student_profiles')
-    .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+    .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at')
     .maybeSingle();
 
   if (error) throw error;
@@ -119,12 +126,7 @@ export async function getMyTestAttempts(): Promise<TestAttempt[]> {
     .order('started_at', { ascending: false });
 
   if (error) throw error;
-  const now = Date.now();
-  return ((data ?? []) as TestAttempt[]).map((attempt) =>
-    attempt.status === 'in_progress' && new Date(attempt.expires_at).getTime() <= now
-      ? { ...attempt, status: 'expired' as const }
-      : attempt
-  );
+  return (data ?? []) as TestAttempt[];
 }
 
 /** Admin-only result feed. The database RLS policy rejects non-admin users. */
@@ -137,71 +139,4 @@ export async function getAdminTestAttempts(): Promise<TestAttempt[]> {
 
   if (error) throw error;
   return (data ?? []) as TestAttempt[];
-}
-
-
-export interface AdminTestSummary {
-  id: string;
-  title: { en: string; hi: string };
-  class_level: string;
-  subject: string;
-  chapter: string;
-  duration_minutes: number;
-  total_marks: number;
-  attempt_limit: number;
-  is_published: boolean;
-  question_count: number;
-}
-
-export interface AdminStudentSummary {
-  user_id: string;
-  student_name: string;
-  class_level: string;
-  roll_no: string;
-  school_name: string;
-}
-
-/** Admin-only catalogue read; RLS is the authority for administrator access. */
-export async function getAdminTests(): Promise<AdminTestSummary[]> {
-  const { data, error } = await requireSupabase()
-    .from('tests')
-    .select('id, title, class_level, subject, chapter, duration_minutes, total_marks, attempt_limit, is_published, questions')
-    .order('class_level', { ascending: true })
-    .order('title', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
-    ...row,
-    question_count: Array.isArray(row.questions) ? row.questions.length : 0,
-  })) as AdminTestSummary[];
-}
-
-/** Updates only the administrator-controlled publication and attempt settings. */
-export async function updateAdminTestSettings(
-  testId: string,
-  settings: { attempt_limit: number; is_published: boolean },
-): Promise<void> {
-  if (!Number.isInteger(settings.attempt_limit) || settings.attempt_limit < 1 || settings.attempt_limit > 2147483647) {
-    throw new Error('Attempt limit must be a positive whole number.');
-  }
-  const { data, error } = await requireSupabase()
-    .from('tests')
-    .update({ attempt_limit: settings.attempt_limit, is_published: settings.is_published })
-    .eq('id', testId)
-    .select('id')
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error('Test was not found or admin permission was denied.');
-}
-
-/** Admin-only student labels for the admin result table; no mobile numbers are fetched. */
-export async function getAdminStudentSummaries(userIds: string[]): Promise<AdminStudentSummary[]> {
-  const uniqueIds = [...new Set(userIds)].filter(Boolean);
-  if (!uniqueIds.length) return [];
-  const { data, error } = await requireSupabase()
-    .from('student_profiles')
-    .select('user_id, student_name, class_level, roll_no, school_name')
-    .in('user_id', uniqueIds);
-  if (error) throw error;
-  return (data ?? []) as AdminStudentSummary[];
 }
