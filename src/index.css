@@ -83,8 +83,12 @@
 
 @layer utilities {
   /* Shared vertical rhythm for the main learning pages. */
+  #classes,
   #tests,
   #materials,
+  #polity,
+  #affairs,
+  #results,
   #about,
   #contact {
     padding-block: clamp(1.75rem, 3.2vw, 2.75rem) !important;
