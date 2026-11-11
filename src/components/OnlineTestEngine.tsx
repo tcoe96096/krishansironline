@@ -33,13 +33,6 @@ import {
   BarChart3,
   X
 } from 'lucide-react';
-import {
-  getLocalSubmissions,
-  getGoogleSheetUrl,
-  saveGoogleSheetUrl,
-  exportSubmissionsToCSV,
-  deleteLocalSubmission,
-  GOOGLE_APPS_SCRIPT_CODE,
 } from '../utils/googleSheetsSync';
 
 
@@ -199,53 +192,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   const displaySubmissionMessage = isAttemptLimitMessage(submissionStatus.message || '') ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : submissionStatus.message;
 
-  // Teacher / Admin Responses Management
-  const [showTeacherPanel, setShowTeacherPanel] = useState<boolean>(false);
-  const [googleSheetUrlInput, setGoogleSheetUrlInput] = useState<string>('');
-  const [submissionsList, setSubmissionsList] = useState<StudentTestSubmission[]>([]);
-  const [searchStudentQuery, setSearchStudentQuery] = useState<string>('');
-  const [copiedScript, setCopiedScript] = useState<boolean>(false);
-  const [saveUrlSuccess, setSaveUrlSuccess] = useState<boolean>(false);
-
-  // Teacher tools are intentionally available only in local development.
-  // GitHub Pages is a static public site and cannot securely protect an admin panel.
-  const isAIStudioEnvironment = (): boolean => import.meta.env.DEV;
-
-  const [isAIStudio, setIsAIStudio] = useState<boolean>(() => {
-    return isAIStudioEnvironment();
-  });
-
-  // Local development teacher tools. Production results are stored in the private Google Sheet.
-  // This legacy teacher panel is strictly development-only. Production admin access
-  // must use the database-backed Google OAuth role gate, never a browser flag or PIN.
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => isAIStudioEnvironment());
-  const [showAdminAuthModal, setShowAdminAuthModal] = useState<boolean>(false);
-  const [adminPinInput, setAdminPinInput] = useState<string>('');
-  const [adminPinError, setAdminPinError] = useState<string>('');
-
-  const handleVerifyAdminPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!import.meta.env.DEV) {
-      setAdminPinError('यह legacy PIN सुविधा केवल local development में उपलब्ध है।');
-      return;
-    }
-    const correctPin = '1234';
-    if (adminPinInput.trim() === correctPin) {
-      setIsAdmin(true);
-      setShowTeacherPanel(true);
-      setShowAdminAuthModal(false);
-      setAdminPinError('');
-    } else {
-      setAdminPinError('गलत PIN।');
-    }
-  };
-
-  const handleAdminLogout = () => {
-    setIsAdmin(false);
-    setShowTeacherPanel(false);
-    // No persistent browser-side admin authorization is retained.
-  };
-
   // Load published test content from Supabase. Answer keys never enter the browser.
   useEffect(() => {
     let active = true;
@@ -303,11 +249,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setSelectedTest(databaseTests[0]);
     }
   }, [catalogueLoading, user?.id, initialClassFilter, databaseTests, selectedTest.id]);
-
-  // Load legacy local-only development submissions. Student test results are stored in Supabase.
-  useEffect(() => {
-    setSubmissionsList(getLocalSubmissions());
-  }, []);
 
   // Preserve a saved session while the published database catalogue is loading.
   // A matching authenticated database attempt is still required before answers are restored.
@@ -667,41 +608,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   };
 
-  // Save Google Sheet Webhook URL
-  const handleSaveGoogleSheetUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveGoogleSheetUrl(googleSheetUrlInput);
-    setSaveUrlSuccess(true);
-    setTimeout(() => setSaveUrlSuccess(false), 3000);
-  };
-
-  // Copy Apps Script code
-  const handleCopyScript = () => {
-    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
-    setCopiedScript(true);
-    setTimeout(() => setCopiedScript(false), 2500);
-  };
-
-  // Delete submission
-  const handleDeleteSubmission = (id: string) => {
-    if (confirm('क्या आप इस विद्यार्थी का रिकॉर्ड हटाना चाहते हैं?')) {
-      const updated = deleteLocalSubmission(id);
-      setSubmissionsList(updated);
-    }
-  };
-
-  // Filtered submissions
-  const filteredSubmissions = submissionsList.filter((s) => {
-    const q = searchStudentQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      s.student.studentName.toLowerCase().includes(q) ||
-      s.student.rollNo.toLowerCase().includes(q) ||
-      s.student.mobile.includes(q) ||
-      s.student.school.toLowerCase().includes(q)
-    );
-  });
-
   const currentQ = questionsList[currentQuestionIndex] || questionsList[0];
 
   return (
@@ -828,37 +734,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-600 sm:text-base">{selectedTest.title.hi}</p>
             </div>
             <div className="relative z-10 flex flex-wrap items-center gap-2 sm:justify-end">
-              {isAIStudio && (
-                <>
-                  {isAdmin ? (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setShowTeacherPanel(!showTeacherPanel)}
-                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-                          showTeacherPanel ? 'bg-amber-300 text-sky-950' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
-                        title="AI Studio Admin: Google Sheet & Student Results Vault"
-                      >
-                        <Database className="h-4 w-4" />
-                        <span>{showTeacherPanel ? 'Hide Teacher Vault' : 'Results Vault'}</span>
-                        <span className="rounded-md bg-sky-950/40 px-1.5 py-0.5 font-mono text-[10px]">{submissionsList.length}</span>
-                      </button>
-                      <button onClick={handleAdminLogout} className="rounded-lg border border-rose-300/30 p-2 text-rose-200 transition-colors hover:bg-rose-500/20 hover:text-white" title="Lock Admin / लॉगआउट">
-                        <LogOut className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setAdminPinInput(''); setAdminPinError(''); setShowAdminAuthModal(true); }}
-                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-white/15"
-                      title="Teacher / Admin Access (केवल AI Studio हेतु)"
-                    >
-                      <Lock className="h-3.5 w-3.5 text-amber-300" />
-                      <span>Teacher Access</span>
-                    </button>
-                  )}
-                </>
-              )}
               <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-1 text-[11px] font-semibold">
                 <button onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>हिंदी</button>
                 <button onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>English</button>
@@ -885,166 +760,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
           </div>
         </div>
-
-        {/* TEACHER / ADMIN DATA VAULT & GOOGLE SHEETS SYNC PANEL (Visible ONLY in AI Studio) */}
-        {isAIStudio && isAdmin && showTeacherPanel && (
-          <div className="mb-8 bg-white rounded-3xl border border-sky-200 shadow-xl p-6 sm:p-8 animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200">
-              <div>
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 uppercase tracking-wider mb-1">
-                  <Database className="w-4 h-4 text-sky-700" />
-                  <span>Teacher Assessment Hub & Google Sheet Sync</span>
-                </div>
-                <h2 className="text-xl font-extrabold text-slate-900 font-display">
-                  विद्यार्थी परीक्षा परिणाम एवं डेटा संग्रह (Student Responses)
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-600">
-                  यह सूची केवल इस ब्राउज़र के स्थानीय रिकॉर्ड दिखाती है। सभी विद्यार्थियों के केंद्रीकृत परिणाम निजी Google Sheet में देखें।
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => exportSubmissionsToCSV(submissionsList)}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download Excel/CSV</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Google Sheets Link / Web App Setup Configuration */}
-            <div className="my-6 p-5 rounded-2xl bg-sky-50 border border-sky-200/80">
-              <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span>Google Sheet Webhook Link Configuration (गूगल शीट लिंक)</span>
-              </h3>
-              <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-                यहाँ अपने Google Sheets Apps Script Web App का URL दर्ज करें। जैसे ही कोई विद्यार्थी टेस्ट सबमिट करेगा, उसका सारा डेटा सीधे आपकी Google Sheet में स्वतः नई पंक्ति में दर्ज हो जाएगा।
-              </p>
-              {/* Active Link Status Indicator */}
-              <div className="mb-3 flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="font-semibold">Google Sheet Web App URL:</span>
-                <span className="font-mono text-[11px] truncate text-emerald-950 font-medium">
-                  {googleSheetUrlInput || 'अभी सेट नहीं है — प्रकाशित करने से पहले src/config.ts में URL जोड़ें'}
-                </span>
-              </div>
-
-              <form onSubmit={handleSaveGoogleSheetUrl} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="url"
-                  value={googleSheetUrlInput}
-                  onChange={(e) => setGoogleSheetUrlInput(e.target.value)}
-                  placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-                  className="flex-1 px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-mono text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-sky-600"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-sky-900 hover:bg-sky-800 text-white text-xs font-bold rounded-xl transition-colors shrink-0 shadow-sm"
-                >
-                  Update / Link Sheet
-                </button>
-              </form>
-
-              {saveUrlSuccess && (
-                <div className="mt-2 text-xs font-semibold text-emerald-700 flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Google Sheets URL सफलतापूर्वक सहेज लिया गया है!</span>
-                </div>
-              )}
-
-              {/* Instructions & Script Code Toggle */}
-              <div className="mt-4 pt-3 border-t border-sky-200/60 flex items-center justify-between text-xs">
-                <span className="text-slate-600 font-medium">
-                  Google Sheet में Apps Script कैसे जोड़ें?
-                </span>
-                <button
-                  onClick={handleCopyScript}
-                  className="text-sky-800 hover:text-sky-950 font-bold flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-sky-200"
-                >
-                  {copiedScript ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedScript ? 'Code Copied!' : 'Copy Google Apps Script Code'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Responses Search & Filter */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchStudentQuery}
-                  onChange={(e) => setSearchStudentQuery(e.target.value)}
-                  placeholder="विद्यार्थी का नाम, रोल नंबर या मोबाइल खोजें..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-              <div className="text-xs text-slate-500 font-medium">
-                कुल सबमिशन: <span className="font-bold text-slate-900">{filteredSubmissions.length}</span>
-              </div>
-            </div>
-
-            {/* Submissions Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-3">Roll No</th>
-                    <th className="py-3 px-3">Student Name</th>
-                    <th className="py-3 px-3">Mobile</th>
-                    <th className="py-3 px-3">Class</th>
-                    <th className="py-3 px-3">School</th>
-                    <th className="py-3 px-3 text-center">Score</th>
-                    <th className="py-3 px-3 text-center">%</th>
-                    <th className="py-3 px-3">Date & Time</th>
-                    <th className="py-3 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {filteredSubmissions.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-400">
-                        कोई सबमिशन नहीं मिला। जैसे ही विद्यार्थी टेस्ट पूरा करेंगे, यहाँ परिणाम दिखाई देगा।
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredSubmissions.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 px-3 font-mono font-bold text-sky-900">{sub.student.rollNo}</td>
-                        <td className="py-3 px-3 font-semibold text-slate-900">{sub.student.studentName}</td>
-                        <td className="py-3 px-3 font-mono text-slate-600">{sub.student.mobile}</td>
-                        <td className="py-3 px-3">{sub.student.studentClass}</td>
-                        <td className="py-3 px-3 max-w-[180px] truncate" title={sub.student.school}>
-                          {sub.student.school}
-                        </td>
-                        <td className="py-3 px-3 text-center font-bold text-sky-900 font-mono">
-                          {sub.score} / {sub.totalMarks}
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-emerald-700">
-                          {sub.percentage}%
-                        </td>
-                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{sub.timestamp}</td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => handleDeleteSubmission(sub.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Record"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-        )}
 
         {/* COMPACT CANDIDATE STRIP */}
         {studentDetails && (
@@ -1910,74 +1625,6 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             </div>
             )}
 
-          </div>
-        )}
-
-        {/* TEACHER / ADMIN PIN AUTHENTICATION MODAL (Visible ONLY in AI Studio) */}
-        {isAIStudio && showAdminAuthModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 max-w-md w-full">
-              <div className="text-center mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-800 mx-auto flex items-center justify-center mb-3">
-                  <ShieldCheck className="w-6 h-6 text-sky-900" />
-                </div>
-                <h3 className="text-xl font-extrabold text-slate-900 font-display">
-                  Teacher / Admin Verification
-                </h3>
-                <p className="mt-1 text-xs text-slate-600">
-                  यह अनुभाग केवल कृषण सर (Admin) के लिए सुरक्षित है। Google Sheet और सभी विद्यार्थियों के परिणाम देखने के लिए शिक्षक पिन दर्ज करें।
-                </p>
-              </div>
-
-              {adminPinError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{adminPinError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleVerifyAdminPin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                    Teacher Security PIN (शिक्षक पिन)
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                    <input
-                      type="password"
-                      autoFocus
-                      value={adminPinInput}
-                      onChange={(e) => setAdminPinInput(e.target.value)}
-                      placeholder="पिन दर्ज करें (उदा. 1234)"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-sky-600 bg-white tracking-widest font-mono"
-                    />
-                  </div>
-                  <p className="mt-1.5 text-[11px] text-slate-400">
-                    डिफ़ॉल्ट शिक्षक पिन: <code className="font-bold text-sky-800 font-mono">1234</code>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAdminAuthModal(false);
-                      setAdminPinError('');
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                  >
-                    रद्द करें (Cancel)
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-sky-900 hover:bg-sky-800 text-white text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>सत्यापित करें (Unlock)</span>
-                  </button>
-                </div>
-              </form>
-            </div>
           </div>
         )}
 
