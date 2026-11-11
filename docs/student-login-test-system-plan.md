@@ -208,3 +208,20 @@ The repository does not contain a verified Sheet ID, Apps Script deployment URL/
 ### Additional production security finding
 - The main Supabase project's security advisor reports that the anon role can execute several SECURITY DEFINER functions, including trigger-only functions and public.is_admin(). The preview project does not report the same anonymous-execution findings.
 - An idempotent hardening migration, 0007_restrict_public_test_rpc_execute.sql, has been added to this branch. It is not applied to the main/production database. Review and apply it through the approved database-change process before live acceptance.
+
+
+---
+
+## Current integration status — 11 Nov 2026
+
+The following status supersedes earlier preparation notes where they conflict with the current `main` branch:
+
+- The live application now includes the Supabase-backed student authentication context, student dashboard, online test engine, test service and learning-progress service. The implementation is present in the 11 Nov production release; complete browser-level acceptance is still pending.
+- The floating Student Login control requires a real-device smoke test after authentication. Verify it transitions to the authenticated account/dashboard state and does not remain visible as a redundant login prompt.
+- New test/question content is intentionally **not being added**. The owner will supply the next approved dataset.
+- Production has the core `start_test_attempt` and `submit_test_attempt` RPCs. The Production `start_test_attempt` already expires stale attempts before resuming/counting attempts.
+- Production scoring currently distributes `total_marks` equally across the question count. Per-question weighted scoring exists in the reviewed Preview implementation but is not yet applied to Production.
+- Preview contains Admin test-management RPCs (`admin_save_test`, `admin_get_test_for_edit`, `admin_set_test_published`) that were not found in Production during the 11 Nov schema review. Do not assume Admin test publishing is production-ready until the Production migration is reviewed and tested.
+- Production `public.is_admin()` checks `auth.uid()` against `public.user_roles`. This is the authorization basis to preserve; never trust a client-supplied role or metadata flag.
+- The legacy Notice Board and Live Admin Content Apps Script feeds remain active until replacement publishing/read paths pass Preview and Production acceptance. See `docs/content-feed-migration-plan.md`.
+- The Production database has not been changed by this documentation/workflow update. No new question data has been seeded.
