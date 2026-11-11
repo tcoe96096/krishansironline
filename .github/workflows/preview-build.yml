@@ -5,22 +5,25 @@ on:
     branches:
       - "feature/student-auth-test-system"
       - "feature/student-mobile-password-auth"
+      - "feature/student-dashboard-supabase-integration"
       - "test-module-finalization"
+      - "release/all-nov11-work"
+      - "integration/**"
   pull_request:
     branches:
-      - "feature/student-auth-test-system"
       - "main"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: preview-build-${{ github.ref }}
+  group: preview-build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   preview-build:
-    name: Build preview artifact only
+    name: Validate and build preview artifact only
     runs-on: ubuntu-latest
     steps:
       - name: Checkout preview branch
@@ -30,11 +33,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: TypeScript check
+      - name: TypeScript and lint check
         run: npm run lint
 
       - name: Build Vite preview
