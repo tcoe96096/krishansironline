@@ -41,7 +41,7 @@ export interface PublishedTest {
 
 /**
  * Fetches only published test content from the RLS-protected public catalogue.
- * The public payload intentionally has no correctAnswer, explanation, or answer key.
+ * The public payload may include authored bilingual explanations after publication, but never includes correctAnswer indexes or the private answer key.
  */
 export async function getPublishedTests(classLevel?: string): Promise<PublishedTest[]> {
   let query = requireSupabase()
