@@ -45,7 +45,7 @@ In Authentication → Providers → Google:
 2. Configure the Google OAuth Client ID and Client Secret in the Supabase dashboard only.
 3. Add the Supabase callback URL shown in the provider settings to the Google Cloud OAuth client's Authorized redirect URIs.
 4. Add the portal's production URL to Supabase Authentication → URL Configuration → Site URL and Redirect URLs.
-5. Open the portal and use Student Login → Continue with Google · Admin Login.
+5. This flow is deferred until the separate Admin Portal is released. Do not expect Google Admin Login in the Student Release Candidate.
 6. Sign in with the approved account `tcoe96096@gmail.com`.
 7. After the first successful OAuth login, run `supabase/bootstrap-admin.sql` in SQL Editor.
 8. Sign out and sign in again. The portal checks the `user_roles` table; Google email alone does not grant admin access.
@@ -62,10 +62,20 @@ The script is intended to be called only by a trusted server-side Edge Function.
 
 ## Current implementation boundaries
 - Student Supabase Auth UI and database profile provisioning are present.
-- Google OAuth sign-in and database role lookup are present; actual provider setup and admin bootstrap are manual.
-- OnlineTestEngine starts and submits attempts through protected Supabase RPCs; the browser does not calculate authoritative marks. Published test content is still sourced from bundled frontend data, so answer-key secrecy is not complete until the test catalogue is migrated to the database and served without correct answers.
-- The Apps Script bridge is present but has not been deployed or connected to a trusted Edge Function.
-- Do not merge/deploy until migrations, provider configuration, Edge Function, secure test engine, and end-to-end tests are complete.
+- Google OAuth sign-in and database role lookup are present; actual provider setup and admin bootstrap are manual. Production currently has no administrator role row; complete this in the separate Admin release phase.
+- The Student Release Candidate hides public self-registration by default using `VITE_STUDENT_REGISTRATION_ENABLED`, but this is only a UI gate. Until school identity verification/approval exists, disable new sign-ups in Supabase Auth as well (existing users must still be able to sign in), or implement a trusted invitation flow. The current signup trigger trusts submitted student metadata, and direct Auth API requests can bypass the UI.
+- Authenticated students load published test content from Supabase and submit attempts through protected PostgreSQL RPCs. The browser sends answer indexes only; authoritative grading is performed by PostgreSQL. Production test question JSON has been checked for answer-key and explanation fields, and none were found.
+- The legacy `ONLINE_TESTS` array remains bundled in browser code and includes client-side answers/explanations, which are publicly inspectable. Treat it as public practice content only; never use that local array for confidential or scored assessments. Use the Supabase-published test catalogue for authenticated student attempts.
+- The Student Dashboard learning-progress feature requires migration `0008_student_learning_progress_and_profile_location.sql`. Migration `0009_expire_stale_test_attempts.sql` updates timed-out in-progress attempts to expired when the student next starts that test. Neither migration is applied to Production as part of this preparation.
+- The Apps Script results bridge is present but has not been deployed or connected to a trusted Edge Function. The public Notice Board uses a separate Apps Script announcements feed.
+- Do not merge/deploy until the Production schema baseline is reconciled, the reviewed pending migrations are applied with approval, authentication/recovery limitations are accepted, the secure test flow is manually verified, and the release checklist is complete.
+
+## Later student release migrations
+- `0007_restrict_public_test_rpc_execute.sql` is recorded in the current Production migration history.
+- `0008_student_learning_progress_and_profile_location.sql` is pending in Production and is required for persistent chapter progress.
+- `0009_expire_stale_test_attempts.sql` is a new pending migration that improves expired-attempt status handling without increasing the attempt limit.
+
+For the existing Production project, do not replay migrations `0001`–`0007`. The earlier student-system schema exists, but its migration history is not a complete numeric record. Reconcile the live schema and backup first; apply only reviewed pending migrations after explicit release approval. Do not copy Preview-only migrations into Production without a separate review.
 
 
 ## Seed the Class 8 and Class 9 test catalogue

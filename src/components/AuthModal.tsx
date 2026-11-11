@@ -3,13 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { X, UserRound, LogOut, ShieldCheck, GraduationCap, Sparkles, School } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
-import { AdminDashboard } from './AdminDashboard';
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
-  const { user, profile, configured, isAdmin, adminLoading, signInWithGoogle, signInWithMobile, registerStudent, signOut } = useAuth();
+  const { user, profile, configured, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +22,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const en = language === 'en';
+  // Public self-registration stays closed until student identity verification is available.
+  const allowStudentRegistration = import.meta.env.VITE_STUDENT_REGISTRATION_ENABLED === 'true';
 
   if (!isOpen) return null;
 
@@ -61,27 +62,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {!configured && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{en ? 'Supabase environment variables are not configured for this deployment yet.' : 'इस deployment में Supabase environment variables अभी configure नहीं हैं।'}</p>}
         {user ? (
           <div className="space-y-5">
-            {adminLoading ? <p className="rounded-xl bg-slate-100 p-3 text-xs text-slate-500">Admin role जाँचा जा रहा है…</p> : isAdmin ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Admin access verified / एडमिन अनुमति सत्यापित</p> : null}
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-sky-700">{en ? 'Your learning overview' : 'आपकी पढ़ाई का संक्षिप्त विवरण'}</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{en ? 'Keep learning, keep improving!' : 'सीखते रहें, आगे बढ़ते रहें!'}</h3><p className="mt-1 text-sm text-slate-500">{en ? 'Your tests, progress and results in one place.' : 'आपके टेस्ट, प्रगति और परिणाम एक ही स्थान पर।'}</p></div><div className="inline-flex w-fit items-center gap-2 rounded-xl border border-sky-100 bg-white px-3 py-2 text-xs font-semibold text-sky-900 shadow-sm"><School className="h-4 w-4" />{profile?.school_name || (en ? 'Student Portal' : 'विद्यार्थी पोर्टल')}</div></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5"><StudentDashboard /></div>
-            {isAdmin && <AdminDashboard />}
             <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-slate-500"><ShieldCheck className="mr-1 inline h-4 w-4 text-emerald-700" />{en ? 'Your student session is secure.' : 'आपका विद्यार्थी सत्र सुरक्षित है।'}</p><button onClick={async () => { await signOut(); setMessage(en ? 'Signed out.' : 'लॉगआउट हो गया।'); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50"><LogOut className="h-4 w-4" />{en ? 'Sign out' : 'लॉगआउट'}</button></div>
           </div>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
-              <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
-              <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
-            </div>
-            <button type="button" disabled={!configured || busy} onClick={async () => {
-              setBusy(true); setError('');
-              try { await signInWithGoogle(); }
-              catch (cause) { setError(cause instanceof Error ? cause.message : 'Google sign-in failed.'); }
-              finally { setBusy(false); }
-            }} className="mb-3 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
-              Continue with Google · Admin Login
-            </button>
-            <p className="mb-3 text-xs text-slate-500">केवल database में Admin role दिए गए Google account को Admin access मिलेगा।</p>
+            {allowStudentRegistration ? (
+              <div className="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+                <button type="button" onClick={() => {setMode('login');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'login' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Login' : 'लॉगिन'}</button>
+                <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
+              </div>
+            ) : (
+              <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">{en ? 'New student registration is temporarily closed while school identity verification is prepared. Existing students can log in with their registered mobile number.' : 'विद्यालय पहचान सत्यापन की व्यवस्था पूरी होने तक नया विद्यार्थी पंजीकरण अस्थायी रूप से बंद है। पहले से पंजीकृत विद्यार्थी अपने मोबाइल नंबर से लॉगिन कर सकते हैं।'}</p>
+            )}
+            <p className="mb-3 text-xs text-slate-500">{en ? 'Admin access is provided through the separate Admin Portal.' : 'एडमिन प्रवेश अलग Admin Portal के माध्यम से उपलब्ध होगा।'}</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === 'register' && <>
                 <input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'} className={inputClass} autoComplete="name" />
@@ -100,6 +95,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </>}
               <input required type="text" inputMode="text" autoComplete="username" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder={en ? '10-digit mobile number' : '10 अंकों का मोबाइल नंबर'} className={inputClass} />
               <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />
+              {mode === 'login' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Forgot your password? SMS/email self-service reset is not available yet. Please contact your school administration for identity-verified assistance.' : 'पासवर्ड भूल गए? अभी SMS/ईमेल से स्वयं रीसेट की सुविधा उपलब्ध नहीं है। पहचान सत्यापन के बाद विद्यालय प्रशासन से सहायता लें।'}</p>}
               {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Use your Indian mobile number. SMS OTP is not used; keep your password safe.' : 'अपना भारतीय मोबाइल नंबर दर्ज करें। SMS OTP का उपयोग नहीं होगा; अपना पासवर्ड सुरक्षित रखें।'}</p>}
               <button disabled={!configured || busy} className="w-full rounded-lg bg-sky-900 px-4 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Please wait…' : 'कृपया प्रतीक्षा करें…') : mode === 'login' ? (en ? 'Login securely' : 'सुरक्षित लॉगिन') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>
             </form>

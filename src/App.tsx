@@ -15,6 +15,8 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
+import { StudentDashboard } from './components/StudentDashboard';
+import { useAuth } from './context/AuthContext';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -105,7 +107,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
               </div>
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                  {en ? 'Student Dashboard' : 'विद्यार्थी डैशबोर्ड'}
+                  {en ? 'Student Learning Hub' : 'विद्यार्थी लर्निंग हब'}
                 </div>
                 <h2 className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900">
                   {session
@@ -125,7 +127,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
                 {session ? (en ? 'Continue Tests' : 'टेस्ट जारी रखें') : (en ? 'Start Learning' : 'पढ़ाई शुरू करें')}
               </button>
               <button onClick={() => onNavigate('results')} className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-bold text-sky-900 hover:bg-sky-50 transition-colors">
-                {en ? 'My Results' : 'मेरे परिणाम'}
+                {en ? 'View Results' : 'परिणाम देखें'}
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>
@@ -142,7 +144,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
             </button>
           </div>
           <p className="mt-3 text-[11px] text-slate-500">
-            {en ? 'Dashboard shortcuts use the existing learning portal and locally saved test progress; they do not create a separate student account.' : 'डैशबोर्ड मौजूदा पोर्टल और इस डिवाइस पर सेव टेस्ट प्रगति का उपयोग करता है; यह अलग विद्यार्थी अकाउंट नहीं बनाता।'}
+            {en ? 'These shortcuts open public learning resources. Sign in to access your personal chapter progress and test history.' : 'ये शॉर्टकट सार्वजनिक अध्ययन सामग्री खोलते हैं। अपनी अध्याय-प्रगति और टेस्ट इतिहास देखने के लिए विद्यार्थी लॉगिन करें।'}
           </p>
         </div>
       </div>
@@ -152,6 +154,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
+  const { user, profile, profileLoading, loading: authLoading, isAdmin, adminLoading } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -249,8 +252,8 @@ const MainApp: React.FC = () => {
               <NoticeBoard onNavigate={navigateTo} />
             </div>
 
-            {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
-            <StudentDashboardHome onNavigate={navigateTo} language={language} />
+            {/* Signed-in students get their secure dashboard; visitors keep the existing shortcuts. */}
+            {user && (authLoading || adminLoading || profileLoading) ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">आपका डैशबोर्ड लोड हो रहा है…</p></div></section> : user && !isAdmin && profile ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><StudentDashboard /></div></section> : <StudentDashboardHome onNavigate={navigateTo} language={language} />}
 
             {/* 8 Quick Access Cards to Dedicated Pages */}
             <QuickAccessCards onNavigate={navigateTo} />

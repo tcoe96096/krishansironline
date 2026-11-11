@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ONLINE_TESTS } from '../data/portalData';
 import { CLASS9_60_QUESTIONS } from '../data/class9Test60Data';
 import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
-import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
+import { getPublishedTests, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -462,16 +462,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
     try {
       setSubmissionStatus({ loading: true, message: 'Database से परीक्षा अनुमति जाँची जा रही है...' });
-      // Give students a clear message before invoking the RPC when their single allowed
-      // attempt is already submitted/expired. An in-progress attempt remains resumable.
-      const previousAttempts = await getMyTestAttempts();
-      const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id);
-      const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
-      if (thisTestAttempts.length >= configuredAttemptLimit && !hasInProgressAttempt) {
-        setSubmissionStatus({ loading: false, success: false, message: '' });
-        setLoginError(questionLang === 'hi' ? 'आप इस परीक्षा का निर्धारित प्रयास पूरा कर चुके हैं।' : 'You have used your allowed attempt.');
-        return;
-      }
+      // PostgreSQL is authoritative for resumable attempts, deadlines and attempt limits.
+      // Always call the RPC so stale in-progress rows can be marked expired before the limit check.
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
@@ -1685,7 +1677,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                   <div className="text-xs text-slate-500">कुल अंक (Score)</div>
                   <div className="text-3xl sm:text-4xl font-black text-sky-900 font-mono mt-1">
-                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {totalQuestions}</span>
+                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {selectedTest.totalMarks}</span>
                   </div>
                 </div>
 

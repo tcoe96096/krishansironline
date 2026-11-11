@@ -119,7 +119,12 @@ export async function getMyTestAttempts(): Promise<TestAttempt[]> {
     .order('started_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as TestAttempt[];
+  const now = Date.now();
+  return ((data ?? []) as TestAttempt[]).map((attempt) =>
+    attempt.status === 'in_progress' && new Date(attempt.expires_at).getTime() <= now
+      ? { ...attempt, status: 'expired' as const }
+      : attempt
+  );
 }
 
 /** Admin-only result feed. The database RLS policy rejects non-admin users. */

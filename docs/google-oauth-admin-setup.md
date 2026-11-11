@@ -25,6 +25,6 @@ Do not grant admin based only on user-editable metadata, a mobile number, or an 
 
 ## Current implementation boundary
 
-The frontend currently exposes a Google sign-in button labelled for Admin Login and reads `user_roles` to determine `isAdmin`. The Admin role is not yet provisioned in the database. A Google OAuth button is not proof that Google OAuth is configured; test the full redirect and callback after the provider is enabled.
+The Student Release Candidate keeps the student login modal student-only; Google Admin Login and the Admin Dashboard are deferred to the separate Admin Portal phase. The Admin role is not currently provisioned in Production. When the Admin Portal is ready, expose Google sign-in on its dedicated route and test the complete OAuth redirect/callback before granting any role.
 
-Student mobile/password login uses synthetic email identifiers and does not use SMS OTP. Normal email password recovery is not available for those synthetic addresses; implement an identity-verified Admin-assisted recovery process before production launch.
+Student mobile/password login uses synthetic email identifiers and does not use SMS OTP. Normal email password recovery is not available for those synthetic addresses; an identity-verified, administrator-assisted recovery process is required before public student registration is promoted.
