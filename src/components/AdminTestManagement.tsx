@@ -3,10 +3,10 @@ import { requireSupabase } from '../lib/supabase';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
-type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; marks: number };
+type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number };
 type TestRow = { id: string; title: Bilingual; class_level: string; subject: string; chapter: string; duration_minutes: number; total_marks: number; attempt_limit: number; is_published: boolean; questions: DraftQuestion[] };
 
-const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, marks: 1 });
+const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1 });
 
 export const AdminTestManagement: React.FC = () => {
   const [tests, setTests] = useState<TestRow[]>([]);
@@ -58,7 +58,7 @@ export const AdminTestManagement: React.FC = () => {
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
         duration_minutes: duration, total_marks: totalMarks, attempt_limit: attemptLimit,
-        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, marks: q.marks, type: 'mcq' }))
+        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, type: 'mcq' }))
       };
       const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-import', { body: { test, answer_key: answers } });
       if (invokeError) throw invokeError;
@@ -86,7 +86,7 @@ export const AdminTestManagement: React.FC = () => {
       setChapter(row.chapter);
       setDuration(row.duration_minutes);
       setAttemptLimit(row.attempt_limit);
-      setQuestions((row.questions || []).map(q => ({...q, marks: Number(q.marks || 1)})));
+      setQuestions((row.questions || []).map(q => ({...q, explanation: q.explanation || { en: '', hi: '' }, marks: Number(q.marks || 1)})));
       setAnswers(payload.answer_key);
       setNotice('Draft editing mode: बदलाव सेव करने पर Test दोबारा Draft होगा।');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -133,6 +133,10 @@ export const AdminTestManagement: React.FC = () => {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-slate-600">Question (English)<textarea value={q.question.en} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,en:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
             <label className="text-xs font-semibold text-slate-600">प्रश्न (हिंदी)<textarea value={q.question.hi} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,hi:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-slate-600">Explanation (English) · optional<textarea value={q.explanation.en} onChange={e=>updateQuestion(i,v=>({...v,explanation:{...v.explanation,en:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"/></label>
+            <label className="text-xs font-semibold text-slate-600">व्याख्या (हिंदी) · वैकल्पिक<textarea value={q.explanation.hi} onChange={e=>updateQuestion(i,v=>({...v,explanation:{...v.explanation,hi:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"/></label>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {q.options.en.map((opt,j)=><div key={j} className="rounded-lg border border-slate-200 bg-white p-3">
