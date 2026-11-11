@@ -22,6 +22,7 @@ export const AdminTestManagement: React.FC = () => {
   const [attemptLimit, setAttemptLimit] = useState(1);
   const [questions, setQuestions] = useState<DraftQuestion[]>([blankQuestion()]);
   const [answers, setAnswers] = useState<number[]>([0]);
+  const [editingTestId, setEditingTestId] = useState<string | null>(null);
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -53,7 +54,7 @@ export const AdminTestManagement: React.FC = () => {
       const totalMarks = questions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
       if (questions.some(q => !Number.isFinite(Number(q.marks)) || Number(q.marks) <= 0)) throw new Error('हर प्रश्न के अंक शून्य से अधिक होने चाहिए।');
       if (questions.some(q => !q.question.en.trim() || !q.question.hi.trim() || q.options.en.some(x => !x.trim()) || q.options.hi.some(x => !x.trim()))) throw new Error('हर प्रश्न और उसके सभी विकल्प Hindi तथा English में भरें।');
-      const id = 'test-' + Date.now().toString(36);
+      const id = editingTestId || ('test-' + Date.now().toString(36));
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
         duration_minutes: duration, total_marks: totalMarks, attempt_limit: attemptLimit,
@@ -63,10 +64,41 @@ export const AdminTestManagement: React.FC = () => {
       if (invokeError) throw invokeError;
       if (!data?.ok) throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई।');
       setNotice('Test Draft सुरक्षित रूप से सेव हो गया। Publish करने से पहले सूची में जाँचें।');
-      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([0]);
+      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([0]); setEditingTestId(null);
       await loadTests();
     } catch (e) { setError(e instanceof Error ? e.message : 'Test save नहीं हुआ।'); }
     finally { setSaving(false); }
+  };
+
+  const editDraft = async (test: TestRow) => {
+    setError(''); setNotice('');
+    try {
+      const { data, error: fetchError } = await requireSupabase()
+        .rpc('admin_get_test_for_edit', { p_test_id: test.id });
+      if (fetchError) throw fetchError;
+      const payload = data as { test: TestRow; answer_key: number[] } | null;
+      if (!payload?.test || !Array.isArray(payload.answer_key)) throw new Error('Draft और private answer key उपलब्ध नहीं हैं।');
+      const row = payload.test;
+      setEditingTestId(row.id);
+      setTitle(row.title);
+      setClassLevel(row.class_level);
+      setSubject(row.subject);
+      setChapter(row.chapter);
+      setDuration(row.duration_minutes);
+      setAttemptLimit(row.attempt_limit);
+      setQuestions((row.questions || []).map(q => ({...q, marks: Number(q.marks || 1)})));
+      setAnswers(payload.answer_key);
+      setNotice('Draft editing mode: बदलाव सेव करने पर Test दोबारा Draft होगा।');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Draft खोलना संभव नहीं हुआ।');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingTestId(null); setTitle({en:'',hi:''}); setChapter('');
+    setQuestions([blankQuestion()]); setAnswers([0]);
+    setNotice('Editing रद्द कर दी गई।');
   };
 
   const togglePublish = async (test: TestRow) => {
@@ -85,7 +117,7 @@ export const AdminTestManagement: React.FC = () => {
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h3 className="mb-4 flex items-center gap-2 font-extrabold text-slate-900"><Plus className="h-5 w-5 text-sky-700"/>Create New Test</h3>
+      <h3 className="mb-4 flex items-center gap-2 font-extrabold text-slate-900"><Plus className="h-5 w-5 text-sky-700"/>{editingTestId ? 'Edit Test Draft' : 'Create New Test'}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-xs font-semibold text-slate-600">Test Title (English)<input value={title.en} onChange={e=>setTitle(v=>({...v,en:e.target.value}))} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
         <label className="text-xs font-semibold text-slate-600">टेस्ट शीर्षक (हिंदी)<input value={title.hi} onChange={e=>setTitle(v=>({...v,hi:e.target.value}))} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
@@ -112,10 +144,10 @@ export const AdminTestManagement: React.FC = () => {
         </div>)}
         <button onClick={addQuestion} className="inline-flex items-center gap-2 rounded-lg border border-dashed border-sky-300 px-4 py-2.5 text-sm font-bold text-sky-800"><Plus className="h-4 w-4"/>Add Question</button>
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><p className="text-xs text-slate-500">{questions.length} questions · {questions.reduce((n,q)=>n+Number(q.marks||0),0)} marks · New saves are always Drafts</p><button disabled={saving} onClick={()=>void saveDraft()} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Saving…':'Save Draft'}</button></div>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><p className="text-xs text-slate-500">{questions.length} questions · {questions.reduce((n,q)=>n+Number(q.marks||0),0)} marks · Saves are always Drafts</p><div className="flex flex-wrap gap-2">{editingTestId && <button type="button" onClick={cancelEdit} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">Cancel Edit</button>}<button disabled={saving} onClick={()=>void saveDraft()} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Saving…':editingTestId?'Update Draft':'Save Draft'}</button></div></div>
     </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="mb-4 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-sky-800"/><h3 className="font-extrabold text-slate-900">Saved Tests</h3></div>
-      {loading?<p className="text-sm text-slate-500">Loading tests…</p>:tests.length===0?<p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">अभी कोई Test उपलब्ध नहीं है। ऊपर से पहला Draft बनाएँ।</p>:<div className="space-y-3">{tests.map(test=><div key={test.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4"><div className="min-w-0"><p className="font-bold text-slate-900">{test.title?.hi || test.title?.en || test.id}</p><p className="mt-1 text-xs text-slate-500">Class {test.class_level} · {test.subject} · {test.chapter} · {test.questions?.length||0} questions</p><span className={'mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold '+(test.is_published?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700')}>{test.is_published?'Published':'Draft'}</span></div><button disabled={saving} onClick={()=>void togglePublish(test)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{test.is_published?<><EyeOff className="h-4 w-4"/>Unpublish</>:<><Send className="h-4 w-4"/>Publish</>}</button></div>)}</div>}
+      {loading?<p className="text-sm text-slate-500">Loading tests…</p>:tests.length===0?<p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">अभी कोई Test उपलब्ध नहीं है। ऊपर से पहला Draft बनाएँ।</p>:<div className="space-y-3">{tests.map(test=><div key={test.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4"><div className="min-w-0"><p className="font-bold text-slate-900">{test.title?.hi || test.title?.en || test.id}</p><p className="mt-1 text-xs text-slate-500">Class {test.class_level} · {test.subject} · {test.chapter} · {test.questions?.length||0} questions</p><span className={'mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold '+(test.is_published?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700')}>{test.is_published?'Published':'Draft'}</span></div>{!test.is_published && <button disabled={saving} onClick={()=>void editDraft(test)} className="inline-flex items-center gap-2 rounded-lg border border-sky-300 px-3 py-2 text-xs font-bold text-sky-800 disabled:opacity-50">Edit Draft</button>}<button disabled={saving} onClick={()=>void togglePublish(test)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{test.is_published?<><EyeOff className="h-4 w-4"/>Unpublish</>:<><Send className="h-4 w-4"/>Publish</>}</button></div>)}</div>}
     </section>
     <p className="text-xs leading-5 text-slate-500">सुरक्षा: सही उत्तर अलग private answer-key table में सेव होता है; Student catalogue में सही उत्तर नहीं भेजा जाता। Publish केवल Admin action है। PDF/Google Drive OCR import अभी उपलब्ध नहीं है।</p>
   </div>;
