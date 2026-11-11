@@ -708,9 +708,9 @@ const MainApp: React.FC = () => {
                     {t('nav.materials')}
                   </button>
                   <button
-                    onClick={() => navigateTo('tests')}
+                    onClick={() => navigateTo('exams')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'tests' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
+                      activePage === 'exams' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
                     {language === 'en' ? 'All Exams' : 'सभी परीक्षाएं'}
