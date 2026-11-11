@@ -21,7 +21,7 @@ export const AdminTestManagement: React.FC = () => {
   const [duration, setDuration] = useState(40);
   const [attemptLimit, setAttemptLimit] = useState(1);
   const [questions, setQuestions] = useState<DraftQuestion[]>([blankQuestion()]);
-  const [answers, setAnswers] = useState<number[]>([0]);
+  const [answers, setAnswers] = useState<number[]>([-1]);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
 
   const loadTests = useCallback(async () => {
@@ -41,7 +41,7 @@ export const AdminTestManagement: React.FC = () => {
   const updateQuestion = (index: number, updater: (q: DraftQuestion) => DraftQuestion) =>
     setQuestions(current => current.map((q, i) => i === index ? updater(q) : q));
 
-  const addQuestion = () => { setQuestions(v => [...v, blankQuestion()]); setAnswers(v => [...v, 0]); };
+  const addQuestion = () => { setQuestions(v => [...v, blankQuestion()]); setAnswers(v => [...v, -1]); };
   const removeQuestion = (index: number) => {
     setQuestions(v => v.filter((_, i) => i !== index));
     setAnswers(v => v.filter((_, i) => i !== index));
@@ -51,6 +51,9 @@ export const AdminTestManagement: React.FC = () => {
     setSaving(true); setError(''); setNotice('');
     try {
       if (!title.en.trim() || !title.hi.trim() || !chapter.trim() || !questions.length) throw new Error('दोनों भाषाओं में शीर्षक, अध्याय और कम-से-कम एक प्रश्न आवश्यक है।');
+      if (!Number.isInteger(duration) || duration < 1 || duration > 600) throw new Error('टेस्ट अवधि 1 से 600 मिनट के बीच रखें।');
+      if (!Number.isInteger(attemptLimit) || attemptLimit < 1 || attemptLimit > 20) throw new Error('Attempt limit 1 से 20 के बीच रखें।');
+      if (answers.length !== questions.length || answers.some((answer, index) => !Number.isInteger(answer) || answer < 0 || answer >= questions[index].options.en.length)) throw new Error('हर प्रश्न के लिए सही उत्तर का विकल्प चुनना आवश्यक है।');
       const totalMarks = questions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
       if (questions.some(q => !Number.isFinite(Number(q.marks)) || Number(q.marks) <= 0)) throw new Error('हर प्रश्न के अंक शून्य से अधिक होने चाहिए।');
       if (questions.some(q => !q.question.en.trim() || !q.question.hi.trim() || q.options.en.some(x => !x.trim()) || q.options.hi.some(x => !x.trim()))) throw new Error('हर प्रश्न और उसके सभी विकल्प Hindi तथा English में भरें।');
@@ -65,7 +68,7 @@ export const AdminTestManagement: React.FC = () => {
       if (invokeError) throw invokeError;
       if (!data?.ok) throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई।');
       setNotice('Test Draft सुरक्षित रूप से सेव हो गया। Publish करने से पहले सूची में जाँचें।');
-      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([0]); setEditingTestId(null);
+      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null);
       await loadTests();
     } catch (e) { setError(e instanceof Error ? e.message : 'Test save नहीं हुआ।'); }
     finally { setSaving(false); }
@@ -98,7 +101,7 @@ export const AdminTestManagement: React.FC = () => {
 
   const cancelEdit = () => {
     setEditingTestId(null); setTitle({en:'',hi:''}); setChapter('');
-    setQuestions([blankQuestion()]); setAnswers([0]);
+    setQuestions([blankQuestion()]); setAnswers([-1]);
     setNotice('Editing रद्द कर दी गई।');
   };
 
