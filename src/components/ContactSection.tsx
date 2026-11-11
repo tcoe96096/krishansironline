@@ -69,8 +69,8 @@ export const ContactSection: React.FC = () => {
                 <div className="pt-3 border-t border-slate-100">
                   <div className="font-bold text-slate-900">Website Owner & Teacher:</div>
                   <div className="text-slate-700">Krishan Kumar (TGT Social Science)</div>
-                  <div className="text-slate-500 text-xs">Department of School Education, Haryana</div>
-                  <a href="mailto:krishansir.online@gmail.com" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-sky-800 hover:text-sky-950"><Mail className="w-4 h-4" /> krishansir.online@gmail.com</a>
+                  <div className="text-slate-500 text-xs">Independent Educational Learning Portal</div>
+                  <a href="tel:9812534934" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-sky-800 hover:text-sky-950"><Phone className="w-4 h-4" /> 9812534934</a>\n                  <a href="mailto:krishansir.online@gmail.com" className="mt-2 flex items-center gap-2 text-sm font-semibold text-sky-800 hover:text-sky-950"><Mail className="w-4 h-4" /> krishansir.online@gmail.com</a>
                 </div>
               </div>
 
