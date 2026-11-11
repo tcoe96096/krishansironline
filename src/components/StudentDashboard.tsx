@@ -23,7 +23,6 @@ export const StudentDashboard: React.FC = () => {
         return [] as StudentLearningProgress[];
       });
       setLearningProgress(progress);
-      await refreshProfile();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'डैशबोर्ड डेटा लोड नहीं हो सका।');
     } finally { setLoading(false); }
