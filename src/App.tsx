@@ -41,7 +41,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -54,6 +54,7 @@ const VALID_PAGES: PageId[] = [
   'results',
   'about',
   'contact',
+  'studentDashboard',
 ];
 
 interface HomeStudentSession {
@@ -169,12 +170,13 @@ const MainApp: React.FC = () => {
     '/results': 'results',
     '/about': 'about',
     '/contact': 'contact',
+    '/student-dashboard': 'studentDashboard',
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/',
+    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -469,6 +471,30 @@ const MainApp: React.FC = () => {
                 </button>
               </div>
             </section>
+          </div>
+        )}
+
+        {activePage === 'studentDashboard' && (
+          <div>
+            <PageHeaderBanner
+              titleEn="My Student Dashboard"
+              titleHi="मेरा विद्यार्थी डैशबोर्ड"
+              subtitleEn="Your profile, published tests, results and learning progress in one place."
+              subtitleHi="आपकी प्रोफाइल, प्रकाशित टेस्ट, परिणाम और अध्ययन प्रगति एक ही स्थान पर।"
+              badgeEn="Student Portal"
+              badgeHi="विद्यार्थी पोर्टल"
+              icon={GraduationCap}
+              onBackHome={() => navigateTo('home')}
+            />
+            {user && profile ? (
+              <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div>
+            ) : (
+              <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+                <h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2>
+                <p className="mt-2 text-sm text-slate-600">अपना Student Dashboard खोलने के लिए लॉगिन करें।</p>
+                <button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button>
+              </div>
+            )}
           </div>
         )}
 

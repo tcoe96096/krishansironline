@@ -17,6 +17,12 @@ type StudentRegistration = {
   studentClass: '6' | '7' | '8' | '9' | '10' | '11' | '12';
   rollNo: string;
   schoolName: string;
+  country: string;
+  state: string;
+  district: string;
+  areaType: 'village' | 'city' | 'town' | 'other';
+  localityName: string;
+  pinCode: string;
 };
 
 export type StudentProfile = {
@@ -25,6 +31,12 @@ export type StudentProfile = {
   class_level: string;
   roll_no: string;
   school_name: string;
+  country: string;
+  state: string | null;
+  district: string | null;
+  area_type: string | null;
+  locality_name: string | null;
+  pin_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -91,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await requireSupabase()
         .from('student_profiles')
-        .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+        .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at')
         .eq('user_id', session.user.id)
         .maybeSingle();
       if (error) throw error;
@@ -114,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = await requireSupabase()
           .from('student_profiles')
-          .select('user_id, student_name, class_level, roll_no, school_name, created_at, updated_at')
+          .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at')
           .eq('user_id', session.user.id)
           .maybeSingle();
         if (!active) return;
@@ -200,6 +212,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           student_class: details.studentClass,
           roll_no: details.rollNo.trim(),
           school_name: details.schoolName.trim(),
+          country: details.country.trim(),
+          state: details.state.trim(),
+          district: details.district.trim(),
+          area_type: details.areaType,
+          locality_name: details.localityName.trim(),
+          pin_code: details.pinCode.trim(),
           account_type: 'student',
           ...(mobile ? { mobile_number: mobile } : {}),
         },
