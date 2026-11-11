@@ -24,7 +24,7 @@ const generateSeoPages = () => ({
     const template = readFileSync(indexPath, 'utf8');
     for (const page of seoPages) {
       const canonical = `https://krishansir.online/${page.slug}/`;
-      const html = template
+      let html = template
         .replace(/<title>.*?<\/title>/, `<title>${page.title}</title>`)
         .replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${page.description}" />`)
         .replace(/<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${canonical}" />`)
