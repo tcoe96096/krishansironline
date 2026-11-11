@@ -274,11 +274,11 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
 
       {/* Chapter Reader Modal */}
       {activeChapter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[70] flex items-stretch justify-stretch bg-slate-950/80 backdrop-blur-sm p-0 overflow-hidden">
+          <div className="bg-white w-full h-[100dvh] max-w-none max-h-none rounded-none flex flex-col shadow-2xl border-0 overflow-hidden">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 flex items-start justify-between gap-4 bg-slate-50/80 rounded-t-2xl">
+            <div className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 flex items-center justify-between gap-4 bg-[#eef6fc]">
               <div>
                 <div className="flex items-center gap-2 text-xs font-mono text-sky-800 mb-1">
                   <span>Class {activeChapter.classLevel}</span>
@@ -310,7 +310,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             </div>
 
             {/* Modal Body */}
-            <div ref={readerRef} onScroll={saveReaderPosition} className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800">
+            <div ref={readerRef} onScroll={saveReaderPosition} className="min-h-0 flex-1 w-full max-w-5xl mx-auto px-4 py-5 sm:px-8 sm:py-7 overflow-y-auto space-y-6 text-slate-800">
               
               {/* Summary */}
               <div>
