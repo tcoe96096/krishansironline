@@ -33,7 +33,14 @@ export const StudentDashboard: React.FC = () => {
   const inProgress = attempts.filter(x => x.status === 'in_progress');
   const available = profile ? tests.filter(x => x.class_level === String(profile.class_level)) : [];
   const average = completed.length ? Math.round(completed.reduce((s,x) => s + Number(x.percentage || 0),0) / completed.length) : 0;
-  const attemptByTest = useMemo(() => new Map(attempts.map(x => [x.test_id,x])),[attempts]);
+  const attemptByTest = useMemo(() => {
+    // Attempts are returned newest-first; keep the latest status for each test.
+    const latest = new Map<string, TestAttempt>();
+    attempts.forEach((attempt) => {
+      if (!latest.has(attempt.test_id)) latest.set(attempt.test_id, attempt);
+    });
+    return latest;
+  }, [attempts]);
 
   return <section className="space-y-5" aria-label="Student dashboard">
     <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#082d65] via-[#104b83] to-[#087d9b] p-5 text-white shadow-lg sm:p-7">
