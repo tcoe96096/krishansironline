@@ -7,7 +7,7 @@ interface QuickAccessCardsProps { onNavigate: (section: string, filter?: string)
 export const QuickAccessCards: React.FC<QuickAccessCardsProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
   const cards = [
-    { id:'tests', title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएं', desc: language === 'en' ? 'Teaching, UGC NET, UPSC, HPSC & More' : 'शिक्षक भर्ती, UGC NET, UPSC, HPSC', Icon:ClipboardList, color:'from-indigo-600 to-blue-900' },
+    { id:'exams', title: language === 'en' ? 'All Exams' : 'सभी परीक्षाएं', desc: language === 'en' ? 'Teaching, UGC NET, UPSC, HPSC & More' : 'शिक्षक भर्ती, UGC NET, UPSC, HPSC', Icon:ClipboardList, color:'from-indigo-600 to-blue-900' },
     { id:'classes', title: language === 'en' ? 'Classes' : 'कक्षाएं', desc: language === 'en' ? 'Class-wise Study Resources' : 'कक्षावार अध्ययन सामग्री', Icon:BookOpen, color:'from-teal-500 to-emerald-800' },
     { id:'tests', title: language === 'en' ? 'Tests' : 'टेस्ट', desc: language === 'en' ? 'Online Practice & Mock Tests' : 'ऑनलाइन अभ्यास एवं मॉक टेस्ट', Icon:Laptop, color:'from-amber-500 to-orange-700' },
     { id:'affairs', title: language === 'en' ? 'Current Affairs' : 'करेंट अफेयर्स', desc: language === 'en' ? 'National & International Updates' : 'राष्ट्रीय एवं अंतरराष्ट्रीय अपडेट', Icon:Newspaper, color:'from-rose-500 to-pink-800' },
