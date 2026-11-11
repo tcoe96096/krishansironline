@@ -5,7 +5,7 @@ import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedT
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
 
 export const StudentDashboard: React.FC = () => {
-  const { profile, profileLoading, refreshProfile } = useAuth();
+  const { profile, profileLoading } = useAuth();
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [learningProgress, setLearningProgress] = useState<StudentLearningProgress[]>([]);
