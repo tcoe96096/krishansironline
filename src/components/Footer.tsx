@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { TEACHER_INFO } from '../data/portalData';
-import { BookOpen, ShieldCheck, ArrowUp, Mail, MapPin, GraduationCap } from 'lucide-react';
+import { BookOpen, ShieldCheck, ArrowUp, Mail, Phone, MapPin, GraduationCap } from 'lucide-react';
 
 interface FooterProps { onNavigate: (section: string) => void; }
 
@@ -27,7 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="text-amber-300 text-[11px]">{TEACHER_INFO.designation}</div>
             <div className="text-slate-400 text-xs leading-relaxed">{TEACHER_INFO.school}</div>
             <div className="inline-flex items-center gap-2 text-slate-400 text-[11px]"><MapPin className="w-3.5 h-3.5" />Fatehabad, Haryana, India</div>
-            <a href="mailto:krishansir.online@gmail.com" className="flex items-center gap-2 text-amber-300 hover:text-amber-200 text-[11px]"><Mail className="w-3.5 h-3.5" />krishansir.online@gmail.com</a>
+            <a href="tel:9812534934" className="flex items-center gap-2 text-cyan-200 hover:text-white text-[11px]"><Phone className="w-3.5 h-3.5" />9812534934</a>\n            <a href="mailto:krishansir.online@gmail.com" className="flex items-center gap-2 text-amber-300 hover:text-amber-200 text-[11px]"><Mail className="w-3.5 h-3.5" />krishansir.online@gmail.com</a>
           </div>
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Quick Gateways' : 'त्वरित लिंक'}</h4>
