@@ -802,18 +802,18 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         </div>
 
         {/* COMPACT ASSESSMENT HEADER */}
-        <div className="relative mb-4 sm:mb-5 overflow-hidden rounded-2xl bg-gradient-to-r from-sky-950 via-sky-900 to-indigo-950 px-4 py-4 sm:px-5 sm:py-5 text-white shadow-md">
+        <div className="relative mb-4 sm:mb-5 overflow-hidden rounded-2xl bg-gradient-to-r from-[#eef6ff] via-white to-[#eaf7f5] px-4 py-4 sm:px-5 sm:py-5 text-slate-900 border border-sky-200 shadow-sm">
           <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
           <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-bold tracking-wide text-amber-200">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-sky-800">
                 <Award className="h-3.5 w-3.5" />
                 <span>ONLINE CBT EXAMINATION</span>
               </div>
-              <h1 className="font-display text-xl font-extrabold leading-tight tracking-tight text-white sm:text-2xl">
+              <h1 className="font-display text-xl font-extrabold leading-tight tracking-tight text-[#12396f] sm:text-2xl">
                 Class {selectedTest.classLevel} {selectedTest.subject}
               </h1>
-              <p className="mt-1 text-sm font-semibold leading-relaxed text-sky-100 sm:text-base">{selectedTest.title.hi}</p>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-600 sm:text-base">{selectedTest.title.hi}</p>
             </div>
             <div className="relative z-10 flex flex-wrap items-center gap-2 sm:justify-end">
               {isAIStudio && (
@@ -855,14 +855,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
 
           {/* Essential information only; live countdown is shown in the sticky exam dashboard. */}
-          <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 border-t border-white/15 pt-3 text-center">
-            <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
+          <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 border-t border-slate-200 pt-3 text-center">
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <div className="text-[10px] font-semibold text-sky-200 sm:text-[11px]">कुल प्रश्न / Questions</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-white sm:text-xl">{totalQuestions} MCQs</div>
+              <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2">
               <div className="text-[10px] font-semibold text-sky-200 sm:text-[11px]">कुल अंक / Total Marks</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-300 sm:text-xl">{selectedTest.totalMarks}</div>
+              <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
             </div>
             {!studentDetails && (
               <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2">
@@ -1078,7 +1078,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               className="sticky top-[130px] z-30 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-lg shadow-slate-900/5 p-3 sm:p-4"
               aria-label="Live examination status"
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
                 {/* Countdown timer */}
                 <div
                   className={`col-span-2 sm:col-span-1 rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3 flex items-center gap-2.5 ${
@@ -1086,16 +1086,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       ? 'bg-red-50 border-red-200 text-red-900'
                       : timeLeftSeconds < 900
                       ? 'bg-amber-50 border-amber-200 text-amber-900'
-                      : 'bg-sky-950 border-sky-900 text-white'
+                      : 'bg-sky-50 border-sky-200 text-sky-950'
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    timeLeftSeconds < 300 ? 'bg-red-100' : timeLeftSeconds < 900 ? 'bg-amber-100' : 'bg-white/10'
+                    timeLeftSeconds < 300 ? 'bg-red-100' : timeLeftSeconds < 900 ? 'bg-amber-100' : 'bg-white'
                   }`}>
-                    <Clock className={`w-5 h-5 ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-amber-300'}`} />
+                    <Clock className={`w-5 h-5 ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-sky-800'}`} />
                   </div>
                   <div className="min-w-0">
-                    <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wide ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-sky-200'}`}>
+                    <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wide ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-slate-500'}`}>
                       शेष समय / Time Left
                     </div>
                     <div className="font-mono text-xl sm:text-2xl font-extrabold leading-tight tabular-nums" aria-live="polite">
@@ -1131,6 +1131,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
                   <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-slate-800">{unattemptedCount}</div>
                 </button>
+
+                {/* Total marks */}
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left">
+                  <div className="flex items-center gap-2 text-sky-800">
+                    <Award className="w-4 h-4 shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Total Marks</span>
+                  </div>
+                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-sky-950">{selectedTest.totalMarks}</div>
+                </div>
 
                 {/* Marked for review */}
                 <button
