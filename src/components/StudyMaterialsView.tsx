@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Class10PresentationPlayer } from './Class10PresentationPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { saveMyLearningProgress } from '../services/learningProgressService';
+import { getMyLearningProgressForMaterial, saveMyLearningProgress } from '../services/learningProgressService';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
 
 interface StudyMaterialsViewProps {
@@ -16,23 +16,50 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const { user } = useAuth();
   const readerRef = useRef<HTMLDivElement | null>(null);
   const lastSavedProgress = useRef(-1);
+  const openChapterRequest = useRef(0);
+  const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (restoreScrollTop === null || !readerRef.current) return;
+    readerRef.current.scrollTop = restoreScrollTop;
+    setRestoreScrollTop(null);
+  }, [activeChapter, restoreScrollTop]);
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const openChapter = (chapter: StudyChapter) => {
+    const requestId = ++openChapterRequest.current;
     setActiveChapter(chapter);
+    setRestoreScrollTop(null);
     lastSavedProgress.current = 0;
+
     if (user) {
-      void saveMyLearningProgress({
-        materialId: chapter.id,
-        classLevel: chapter.classLevel,
-        subject: chapter.subject,
-        chapterTitle: chapter.title.en,
-        progressPercent: 0,
-        lastPosition: { section: 'overview', scrollTop: 0 },
-      }).catch((error) => console.warn('Learning progress could not be saved:', error));
+      void getMyLearningProgressForMaterial(chapter.id)
+        .then((savedProgress) => {
+          // Ignore a late response if the student opened another chapter meanwhile.
+          if (requestId !== openChapterRequest.current) return;
+
+          if (savedProgress) {
+            lastSavedProgress.current = savedProgress.progress_percent;
+            const savedScrollTop = Number(savedProgress.last_position?.scrollTop ?? 0);
+            setRestoreScrollTop(Number.isFinite(savedScrollTop) ? Math.max(0, savedScrollTop) : 0);
+            return;
+          }
+
+          // Create the initial row only when no saved progress exists.
+          lastSavedProgress.current = 0;
+          void saveMyLearningProgress({
+            materialId: chapter.id,
+            classLevel: chapter.classLevel,
+            subject: chapter.subject,
+            chapterTitle: chapter.title.en,
+            progressPercent: 0,
+            lastPosition: { section: 'overview', scrollTop: 0 },
+          }).catch((error) => console.warn('Learning progress could not be saved:', error));
+        })
+        .catch((error) => console.warn('Saved learning progress could not be restored:', error));
     }
   };
 
@@ -116,7 +143,9 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                 onClick={() => {
                   setSelectedClass(lvl);
                   setSelectedSubject('all');
+                  openChapterRequest.current += 1;
                   setActiveChapter(null);
+                  setRestoreScrollTop(null);
                 }}
                 className={`px-4 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                   isSelected
@@ -281,7 +310,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   <span>Print</span>
                 </button>
                 <button
-                  onClick={() => setActiveChapter(null)}
+                  onClick={() => { openChapterRequest.current += 1; setActiveChapter(null); setRestoreScrollTop(null); }}
                   className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-bold"
                 >
                   ✕
