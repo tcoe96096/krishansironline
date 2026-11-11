@@ -33,7 +33,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Quick Gateways' : 'त्वरित लिंक'}</h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li><button onClick={() => onNavigate('classes')} className="hover:text-amber-300 transition-colors">{en ? 'Classes 6–12' : 'कक्षा 6–12'}</button></li>
-              <li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">{en ? 'Online Test Simulator' : 'ऑनलाइन टेस्ट'}</button></li>
+              <li><button onClick={() => onNavigate('exams')} className="hover:text-amber-300 transition-colors">{en ? 'All Competitive Exams' : 'सभी प्रतियोगी परीक्षाएँ'}</button></li>\n              <li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">{en ? 'Online Test Simulator' : 'ऑनलाइन टेस्ट'}</button></li>
               <li><button onClick={() => onNavigate('materials')} className="hover:text-amber-300 transition-colors">{en ? 'Chapter-Wise Study Notes' : 'अध्यायवार अध्ययन सामग्री'}</button></li>
               <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">{en ? 'Current Affairs' : 'करेंट अफेयर्स'}</button></li>
               <li><button onClick={() => onNavigate('polity')} className="hover:text-amber-300 transition-colors">{en ? 'Indian Constitution' : 'भारतीय संविधान'}</button></li>
