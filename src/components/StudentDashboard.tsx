@@ -15,8 +15,14 @@ export const StudentDashboard: React.FC = () => {
   const loadDashboard = async () => {
     setLoading(true); setError('');
     try {
-      const [history, catalogue, progress] = await Promise.all([getMyTestAttempts(), getPublishedTests(), getMyLearningProgress()]);
-      setAttempts(history); setTests(catalogue); setLearningProgress(progress); await refreshProfile();
+      const [history, catalogue] = await Promise.all([getMyTestAttempts(), getPublishedTests()]);
+      setAttempts(history); setTests(catalogue);
+      // Progress storage may not be deployed yet; never let it block test history/dashboard.
+      const progress = await getMyLearningProgress().catch((progressError) => {
+        console.warn('Learning progress is temporarily unavailable:', progressError);
+        return [] as StudentLearningProgress[];
+      });
+      setLearningProgress(progress); await refreshProfile();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'डैशबोर्ड डेटा लोड नहीं हो सका।');
     } finally { setLoading(false); }
