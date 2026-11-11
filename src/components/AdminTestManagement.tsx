@@ -54,6 +54,7 @@ export const AdminTestManagement: React.FC = () => {
       const totalMarks = questions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
       if (questions.some(q => !Number.isFinite(Number(q.marks)) || Number(q.marks) <= 0)) throw new Error('हर प्रश्न के अंक शून्य से अधिक होने चाहिए।');
       if (questions.some(q => !q.question.en.trim() || !q.question.hi.trim() || q.options.en.some(x => !x.trim()) || q.options.hi.some(x => !x.trim()))) throw new Error('हर प्रश्न और उसके सभी विकल्प Hindi तथा English में भरें।');
+      if (questions.some(q => (!!q.explanation.en.trim() !== !!q.explanation.hi.trim()))) throw new Error('व्याख्या भरने पर Hindi और English दोनों में भरें।');
       const id = editingTestId || ('test-' + Date.now().toString(36));
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
