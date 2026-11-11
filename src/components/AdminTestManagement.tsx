@@ -51,6 +51,7 @@ export const AdminTestManagement: React.FC = () => {
     try {
       if (!title.en.trim() || !title.hi.trim() || !chapter.trim() || !questions.length) throw new Error('दोनों भाषाओं में शीर्षक, अध्याय और कम-से-कम एक प्रश्न आवश्यक है।');
       const totalMarks = questions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
+      if (questions.some(q => !Number.isFinite(Number(q.marks)) || Number(q.marks) <= 0)) throw new Error('हर प्रश्न के अंक शून्य से अधिक होने चाहिए।');
       if (questions.some(q => !q.question.en.trim() || !q.question.hi.trim() || q.options.en.some(x => !x.trim()) || q.options.hi.some(x => !x.trim()))) throw new Error('हर प्रश्न और उसके सभी विकल्प Hindi तथा English में भरें।');
       const id = 'test-' + Date.now().toString(36);
       const test = {
@@ -96,7 +97,7 @@ export const AdminTestManagement: React.FC = () => {
       </div>
       <div className="mt-6 space-y-4">
         {questions.map((q,i)=><div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-3 flex items-center justify-between"><h4 className="text-sm font-extrabold text-slate-800">Question {i+1}</h4>{questions.length>1&&<button onClick={()=>removeQuestion(i)} className="text-xs font-semibold text-rose-600"><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Remove</button>}</div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h4 className="text-sm font-extrabold text-slate-800">Question {i+1}</h4><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600">Marks / अंक<input type="number" min="0.25" max="100" step="0.25" value={q.marks} onChange={e=>updateQuestion(i,v=>({...v,marks:Number(e.target.value)}))} className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"/></label>{questions.length>1&&<button onClick={()=>removeQuestion(i)} className="text-xs font-semibold text-rose-600"><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Remove</button>}</div></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-slate-600">Question (English)<textarea value={q.question.en} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,en:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
             <label className="text-xs font-semibold text-slate-600">प्रश्न (हिंदी)<textarea value={q.question.hi} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,hi:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
