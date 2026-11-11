@@ -17,6 +17,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const readerRef = useRef<HTMLDivElement | null>(null);
   const lastSavedProgress = useRef(-1);
   const openChapterRequest = useRef(0);
+  const progressLoadReady = useRef(true);
   const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
 
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
@@ -35,12 +36,14 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
     setActiveChapter(chapter);
     setRestoreScrollTop(null);
     lastSavedProgress.current = 0;
+    progressLoadReady.current = !user;
 
     if (user) {
       void getMyLearningProgressForMaterial(chapter.id)
         .then((savedProgress) => {
           // Ignore a late response if the student opened another chapter meanwhile.
           if (requestId !== openChapterRequest.current) return;
+          progressLoadReady.current = true;
 
           if (savedProgress) {
             lastSavedProgress.current = savedProgress.progress_percent;
@@ -60,13 +63,13 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             lastPosition: { section: 'overview', scrollTop: 0 },
           }).catch((error) => console.warn('Learning progress could not be saved:', error));
         })
-        .catch((error) => console.warn('Saved learning progress could not be restored:', error));
+        .catch((error) => console.warn('Saved learning progress could not be restored; saving is paused to protect existing progress:', error));
     }
   };
 
   const saveReaderPosition = () => {
     const element = readerRef.current;
-    if (!user || !activeChapter || !element) return;
+    if (!user || !progressLoadReady.current || !activeChapter || !element) return;
     const maxScroll = element.scrollHeight - element.clientHeight;
     const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 100;
     if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
@@ -145,6 +148,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   setSelectedClass(lvl);
                   setSelectedSubject('all');
                   openChapterRequest.current += 1;
+                  progressLoadReady.current = true;
                   setActiveChapter(null);
                   setRestoreScrollTop(null);
                 }}
@@ -311,7 +315,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   <span>Print</span>
                 </button>
                 <button
-                  onClick={() => { openChapterRequest.current += 1; setActiveChapter(null); setRestoreScrollTop(null); }}
+                  onClick={() => { openChapterRequest.current += 1; progressLoadReady.current = true; setActiveChapter(null); setRestoreScrollTop(null); }}
                   className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-bold"
                 >
                   ✕
