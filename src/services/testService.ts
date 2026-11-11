@@ -22,6 +22,7 @@ export interface PublishedTestQuestion {
   chapter: string;
   question: { en: string; hi: string };
   options: { en: string[]; hi: string[] };
+  explanation?: { en: string; hi: string };
   marks?: number;
   type?: 'mcq' | 'short' | 'long' | 'map';
 }
