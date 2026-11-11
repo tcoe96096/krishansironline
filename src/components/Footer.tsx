@@ -27,13 +27,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="text-amber-300 text-[11px]">{TEACHER_INFO.designation}</div>
             <div className="text-slate-400 text-xs leading-relaxed">{TEACHER_INFO.school}</div>
             <div className="inline-flex items-center gap-2 text-slate-400 text-[11px]"><MapPin className="w-3.5 h-3.5" />Fatehabad, Haryana, India</div>
-            <a href="tel:9812534934" className="flex items-center gap-2 text-cyan-200 hover:text-white text-[11px]"><Phone className="w-3.5 h-3.5" />9812534934</a>\n            <a href="mailto:krishansir.online@gmail.com" className="flex items-center gap-2 text-amber-300 hover:text-amber-200 text-[11px]"><Mail className="w-3.5 h-3.5" />krishansir.online@gmail.com</a>
+            <a href="tel:9812534934" className="flex items-center gap-2 text-cyan-200 hover:text-white text-[11px]"><Phone className="w-3.5 h-3.5" />9812534934</a>
+<a href="mailto:krishansir.online@gmail.com" className="flex items-center gap-2 text-amber-300 hover:text-amber-200 text-[11px]"><Mail className="w-3.5 h-3.5" />krishansir.online@gmail.com</a>
           </div>
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Quick Gateways' : 'त्वरित लिंक'}</h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li><button onClick={() => onNavigate('classes')} className="hover:text-amber-300 transition-colors">{en ? 'Classes 6–12' : 'कक्षा 6–12'}</button></li>
-              <li><button onClick={() => onNavigate('exams')} className="hover:text-amber-300 transition-colors">{en ? 'All Competitive Exams' : 'सभी प्रतियोगी परीक्षाएँ'}</button></li>\n              <li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">{en ? 'Online Test Simulator' : 'ऑनलाइन टेस्ट'}</button></li>
+              <li><button onClick={() => onNavigate('exams')} className="hover:text-amber-300 transition-colors">{en ? 'All Competitive Exams' : 'सभी प्रतियोगी परीक्षाएँ'}</button></li>
+<li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">{en ? 'Online Test Simulator' : 'ऑनलाइन टेस्ट'}</button></li>
               <li><button onClick={() => onNavigate('materials')} className="hover:text-amber-300 transition-colors">{en ? 'Chapter-Wise Study Notes' : 'अध्यायवार अध्ययन सामग्री'}</button></li>
               <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">{en ? 'Current Affairs' : 'करेंट अफेयर्स'}</button></li>
               <li><button onClick={() => onNavigate('polity')} className="hover:text-amber-300 transition-colors">{en ? 'Indian Constitution' : 'भारतीय संविधान'}</button></li>
