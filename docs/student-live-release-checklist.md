@@ -51,7 +51,7 @@ Read-only audit of the existing Production project found:
 
 ## Live-site content cleanup
 
-The current Production homepage still displays an announcement titled **“Dashboard Testing”** with detail **“TESTING”**. The Notice Board reads from a separate Google Apps Script announcements feed, not from the Supabase database. Remove or replace that test announcement in its source spreadsheet before public launch. No announcement data was changed during this audit.
+The current Production homepage still displays an announcement titled **“Dashboard Testing”** with detail **“TESTING”**. The Notice Board reads from a separate Google Apps Script announcements feed, not from the Supabase database. The Student Release Candidate now hides only this exact known placeholder pair from the public Notice Board, without filtering other announcements. Remove or replace the stale row in its source spreadsheet as a permanent data cleanup before public launch. No announcement data was changed during this audit.
 
 ## Final manual acceptance tests
 
