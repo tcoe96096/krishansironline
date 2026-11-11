@@ -10,7 +10,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
   const { user, profile, configured, signInWithMobile, registerStudent, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [mobile, setMobile] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [identifierType, setIdentifierType] = useState<'mobile' | 'email'>('mobile');
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentClass, setStudentClass] = useState<'6' | '7' | '8' | '9' | '10' | '11' | '12'>('10');
@@ -32,16 +33,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setBusy(true); setError(''); setMessage('');
     try {
       if (mode === 'login') {
-        await signInWithMobile(mobile, password);
+        await signInWithMobile(identifier, password);
         setMessage(en ? 'Login successful.' : 'लॉगिन सफल रहा।');
       } else {
         await registerStudent({
-          mobile, password, studentName, studentClass, rollNo,
+          identifier, identifierType, password, studentName, studentClass, rollNo,
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
         });
         setMessage(en
-          ? 'Registration successful. You can now sign in with your mobile number and password.'
-          : 'पंजीकरण सफल रहा। अब आप मोबाइल नंबर और पासवर्ड से लॉगिन कर सकते हैं।');
+          ? `Registration successful. You can now sign in with your ${identifierType === 'mobile' ? 'mobile number' : 'email ID'} and password.`
+          : `पंजीकरण सफल रहा। अब आप ${identifierType === 'mobile' ? 'मोबाइल नंबर' : 'ईमेल आईडी'} और पासवर्ड से लॉगिन कर सकते हैं।`);
         setMode('login');
       }
     } catch (cause) {
@@ -74,7 +75,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button type="button" onClick={() => {setMode('register');setError('');setMessage('');}} className={`rounded-md py-2 text-sm font-semibold ${mode === 'register' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Register' : 'पंजीकरण'}</button>
               </div>
             ) : (
-              <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">{en ? 'Self-registration is closed. New student accounts will be issued separately; sign in with the mobile number and password provided for your student account.' : 'स्वयं पंजीकरण बंद है। नए विद्यार्थी खाते अलग से जारी किए जाएंगे; अपने खाते के लिए दिए गए मोबाइल नंबर और पासवर्ड से लॉगिन करें।'}</p>
+              <p className="mb-4 rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs leading-relaxed text-sky-900">{en ? 'Choose either a mobile number or an email ID for your student account. Use the same identifier and password whenever you log in.' : 'विद्यार्थी खाता बनाने के लिए मोबाइल नंबर या ईमेल आईडी में से कोई एक चुनें। आगे लॉगिन के लिए वही पहचान और पासवर्ड उपयोग करें।'}</p>
             )}
             <p className="mb-3 text-xs text-slate-500">{en ? 'Admin access is provided through the separate Admin Portal.' : 'एडमिन प्रवेश अलग Admin Portal के माध्यम से उपलब्ध होगा।'}</p>
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -93,10 +94,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <select value={schoolName} onChange={e=>setSchoolName(e.target.value)} className={inputClass}><option value="Govt Girls High School, Dhanger">Govt Girls High School, Dhanger</option><option value="Other">{en ? 'Other school' : 'अन्य विद्यालय'}</option></select>
                 {schoolName === 'Other' && <input required value={otherSchool} onChange={e=>setOtherSchool(e.target.value)} placeholder={en ? 'Enter school name' : 'विद्यालय का नाम लिखें'} className={inputClass} />}
               </>}
-              <input required type="text" inputMode="text" autoComplete="username" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder={en ? '10-digit mobile number' : '10 अंकों का मोबाइल नंबर'} className={inputClass} />
+              {mode === 'register' && <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                <button type="button" onClick={() => { setIdentifierType('mobile'); setIdentifier(''); setError(''); }} className={`rounded-md py-2 text-xs font-semibold ${identifierType === 'mobile' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Mobile Number' : 'मोबाइल नंबर'}</button>
+                <button type="button" onClick={() => { setIdentifierType('email'); setIdentifier(''); setError(''); }} className={`rounded-md py-2 text-xs font-semibold ${identifierType === 'email' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-600'}`}>{en ? 'Email ID' : 'ईमेल आईडी'}</button>
+              </div>}
+              <input required type="text" inputMode={mode === 'register' && identifierType === 'email' ? 'email' : 'text'} autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)} placeholder={mode === 'login' ? (en ? 'Mobile number or Email ID' : 'मोबाइल नंबर या ईमेल आईडी') : identifierType === 'mobile' ? (en ? '10-digit mobile number' : '10 अंकों का मोबाइल नंबर') : (en ? 'Email ID' : 'ईमेल आईडी')} className={inputClass} />
               <input required type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={en ? 'Password (minimum 8 characters)' : 'पासवर्ड (कम-से-कम 8 अक्षर)'} className={inputClass} />
               {mode === 'login' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Forgot your password? SMS/email self-service reset is not available yet. Please contact your school administration for identity-verified assistance.' : 'पासवर्ड भूल गए? अभी SMS/ईमेल से स्वयं रीसेट की सुविधा उपलब्ध नहीं है। पहचान सत्यापन के बाद विद्यालय प्रशासन से सहायता लें।'}</p>}
-              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{en ? 'Use your Indian mobile number. SMS OTP is not used; keep your password safe.' : 'अपना भारतीय मोबाइल नंबर दर्ज करें। SMS OTP का उपयोग नहीं होगा; अपना पासवर्ड सुरक्षित रखें।'}</p>}
+              {mode === 'register' && <p className="text-xs leading-relaxed text-amber-800">{identifierType === 'mobile' ? (en ? 'Use your Indian mobile number. SMS OTP is not used; keep your password safe.' : 'अपना भारतीय मोबाइल नंबर दर्ज करें। SMS OTP का उपयोग नहीं होगा; अपना पासवर्ड सुरक्षित रखें।') : (en ? 'Use an email ID you can access. Keep your password safe.' : 'ऐसी ईमेल आईडी दर्ज करें जिसका उपयोग आप कर सकते हैं। अपना पासवर्ड सुरक्षित रखें।')}</p>}
               <button disabled={!configured || busy} className="w-full rounded-lg bg-sky-900 px-4 py-3 text-sm font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? (en ? 'Please wait…' : 'कृपया प्रतीक्षा करें…') : mode === 'login' ? (en ? 'Login securely' : 'सुरक्षित लॉगिन') : (en ? 'Create student account' : 'विद्यार्थी खाता बनाएँ')}</button>
             </form>
           </>
