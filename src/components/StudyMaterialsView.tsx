@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Class10PresentationPlayer } from './Class10PresentationPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { saveMyLearningProgress } from '../services/learningProgressService';
+import { getMyLearningProgressForMaterial, saveMyLearningProgress } from '../services/learningProgressService';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
 
 interface StudyMaterialsViewProps {
@@ -16,29 +16,49 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const { user } = useAuth();
   const readerRef = useRef<HTMLDivElement | null>(null);
   const lastSavedProgress = useRef(-1);
+  const isRestoringPosition = useRef(false);
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const openChapter = (chapter: StudyChapter) => {
+    lastSavedProgress.current = -1;
+    isRestoringPosition.current = Boolean(user);
     setActiveChapter(chapter);
-    lastSavedProgress.current = 0;
-    if (user) {
-      void saveMyLearningProgress({
-        materialId: chapter.id,
-        classLevel: chapter.classLevel,
-        subject: chapter.subject,
-        chapterTitle: chapter.title.en,
-        progressPercent: 0,
-        lastPosition: { section: 'overview', scrollTop: 0 },
-      }).catch((error) => console.warn('Learning progress could not be saved:', error));
-    }
   };
+
+  // Restore the last saved reader position before accepting new scroll progress.
+  useEffect(() => {
+    if (!activeChapter || !user) return;
+    let cancelled = false;
+    void getMyLearningProgressForMaterial(activeChapter.id)
+      .then((saved) => {
+        if (cancelled) return;
+        const savedPosition = Number(saved?.last_position?.scrollTop ?? 0);
+        lastSavedProgress.current = saved?.progress_percent ?? 0;
+        if (readerRef.current) readerRef.current.scrollTop = Number.isFinite(savedPosition) ? Math.max(0, savedPosition) : 0;
+        if (!saved) {
+          return saveMyLearningProgress({
+            materialId: activeChapter.id,
+            classLevel: activeChapter.classLevel,
+            subject: activeChapter.subject,
+            chapterTitle: activeChapter.title.en,
+            progressPercent: 0,
+            lastPosition: { section: 'overview', scrollTop: 0 },
+          });
+        }
+      })
+      .catch((error) => console.warn('Learning progress could not be restored:', error))
+      .finally(() => {
+        if (!cancelled) isRestoringPosition.current = false;
+      });
+    return () => { cancelled = true; };
+  }, [activeChapter, user]);
 
   const saveReaderPosition = () => {
     const element = readerRef.current;
-    if (!user || !activeChapter || !element) return;
+    if (isRestoringPosition.current || !user || !activeChapter || !element) return;
     const maxScroll = element.scrollHeight - element.clientHeight;
     const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 100;
     if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
