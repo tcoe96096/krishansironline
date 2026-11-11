@@ -62,9 +62,10 @@ Before Live release, complete these with an owner-approved student test account 
 4. Open a short chapter that does not scroll and confirm it is not marked complete automatically.
 5. Start a published test, answer and submit it, and verify the server result and attempt history.
 6. Refresh during an active test and confirm the same attempt resumes with the server deadline.
-7. Verify a student cannot see another student's profile, progress, or attempts.
-8. Verify answer keys and explanations are not present in public test responses.
-9. Check mobile layout, navigation, printing, and all required SEO entry pages.
+7. Let a test attempt expire and confirm the dashboard shows it as expired, the server marks it expired on the next start request, and the attempt limit remains enforced.
+8. Verify a student cannot see another student's profile, progress, or attempts.
+9. Verify answer keys and explanations are not present in public test responses.
+10. Check mobile layout, navigation, printing, and all required SEO entry pages.
 
 ## Release boundary
 
