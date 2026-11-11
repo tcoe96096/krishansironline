@@ -266,7 +266,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             question: question.question,
             options: question.options,
             correctAnswer: -1,
-            explanation: { en: '', hi: '' },
+            explanation: question.explanation || { en: '', hi: '' },
             chapter: question.chapter || test.chapter,
             marks: question.marks ?? 1,
             type: question.type ?? 'mcq',
