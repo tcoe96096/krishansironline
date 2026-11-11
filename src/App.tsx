@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
 import { AuthModal } from './components/AuthModal';
-import { FloatingStudentLogin } from './components/FloatingStudentLogin';
+import { StudentDashboard } from './components/StudentDashboard';
+import { useAuth } from './context/AuthContext';
 import { Hero } from './components/Hero';
 import { NoticeBoard } from './components/NoticeBoard';
 import { QuickAccessCards } from './components/QuickAccessCards';
@@ -15,8 +16,7 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
-import { StudentDashboard } from './components/StudentDashboard';
-import { useAuth } from './context/AuthContext';
+import { AdminDashboard } from './components/AdminDashboard';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -41,7 +41,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'admin' | 'adminPreview';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -55,6 +55,8 @@ const VALID_PAGES: PageId[] = [
   'about',
   'contact',
   'studentDashboard',
+  'admin',
+  'adminPreview',
 ];
 
 interface HomeStudentSession {
@@ -108,7 +110,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
               </div>
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                  {en ? 'Student Learning Hub' : 'विद्यार्थी लर्निंग हब'}
+                  {en ? 'Student Dashboard' : 'विद्यार्थी डैशबोर्ड'}
                 </div>
                 <h2 className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900">
                   {session
@@ -128,7 +130,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
                 {session ? (en ? 'Continue Tests' : 'टेस्ट जारी रखें') : (en ? 'Start Learning' : 'पढ़ाई शुरू करें')}
               </button>
               <button onClick={() => onNavigate('results')} className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-bold text-sky-900 hover:bg-sky-50 transition-colors">
-                {en ? 'View Results' : 'परिणाम देखें'}
+                {en ? 'My Results' : 'मेरे परिणाम'}
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>
@@ -145,7 +147,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
             </button>
           </div>
           <p className="mt-3 text-[11px] text-slate-500">
-            {en ? 'These shortcuts open public learning resources. Sign in to access your personal chapter progress and test history.' : 'ये शॉर्टकट सार्वजनिक अध्ययन सामग्री खोलते हैं। अपनी अध्याय-प्रगति और टेस्ट इतिहास देखने के लिए विद्यार्थी लॉगिन करें।'}
+            {en ? 'Dashboard shortcuts use the existing learning portal and locally saved test progress; they do not create a separate student account.' : 'डैशबोर्ड मौजूदा पोर्टल और इस डिवाइस पर सेव टेस्ट प्रगति का उपयोग करता है; यह अलग विद्यार्थी अकाउंट नहीं बनाता।'}
           </p>
         </div>
       </div>
@@ -155,7 +157,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
-  const { user, profile, profileLoading, loading: authLoading, isAdmin, adminLoading } = useAuth();
+  const { user, profile } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -171,12 +173,14 @@ const MainApp: React.FC = () => {
     '/about': 'about',
     '/contact': 'contact',
     '/student-dashboard': 'studentDashboard',
+    '/admin': 'admin',
+    '/admin-preview': 'adminPreview',
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/',
+    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/', admin: '/admin/', adminPreview: '/admin-preview/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -234,15 +238,18 @@ const MainApp: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       {/* Top Header with navigation to all pages */}
-      <Header
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <Header
         activeSection={activePage}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
-      />
+      />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
+        {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
+        {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
+        {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
         {/* ==================== PAGE 1: HOME ==================== */}
         {activePage === 'home' && (
           <div className="space-y-0">
@@ -254,8 +261,8 @@ const MainApp: React.FC = () => {
               <NoticeBoard onNavigate={navigateTo} />
             </div>
 
-            {/* Signed-in students get their secure dashboard; visitors keep the existing shortcuts. */}
-            {user && (authLoading || adminLoading || profileLoading) ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">आपका डैशबोर्ड लोड हो रहा है…</p></div></section> : user && !isAdmin && profile ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><StudentDashboard /></div></section> : <StudentDashboardHome onNavigate={navigateTo} language={language} />}
+            {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
+            <StudentDashboardHome onNavigate={navigateTo} language={language} />
 
             {/* 8 Quick Access Cards to Dedicated Pages */}
             <QuickAccessCards onNavigate={navigateTo} />
@@ -285,7 +292,7 @@ const MainApp: React.FC = () => {
                     { title: language === 'en' ? 'School Learning · Classes 6–12' : 'विद्यालयी शिक्षा · कक्षा 6–12', detail: language === 'en' ? 'Class-wise syllabus, chapter notes and learning resources.' : 'कक्षावार पाठ्यक्रम, अध्यायवार नोट्स और अध्ययन सामग्री।', icon: BookOpen, action: 'classes', tone: 'sky' },
                     { title: language === 'en' ? 'Social Science' : 'सामाजिक विज्ञान', detail: language === 'en' ? 'History, Geography, Political Science and Economics.' : 'इतिहास, भूगोल, राजनीति विज्ञान और अर्थशास्त्र।', icon: Landmark, action: 'materials', tone: 'teal' },
                     { title: language === 'en' ? 'Indian Constitution' : 'भारतीय संविधान', detail: language === 'en' ? 'Constitutional articles, rights, institutions and polity.' : 'संवैधानिक अनुच्छेद, अधिकार, संस्थाएँ और राजव्यवस्था।', icon: ShieldCheck, action: 'polity', tone: 'amber' },
-                    { title: language === 'en' ? 'Competitive Exams' : 'प्रतियोगी परीक्षाएँ', detail: language === 'en' ? 'UGC NET, HTET, CTET and teacher recruitment practice.' : 'UGC NET, HTET, CTET और शिक्षक भर्ती परीक्षा अभ्यास।', icon: GraduationCap, action: 'tests', tone: 'indigo' },
+                    { title: language === 'en' ? 'Competitive Exams' : 'प्रतियोगी परीक्षाएँ', detail: language === 'en' ? 'UGC NET, HTET, CTET and teacher recruitment practice.' : 'UGC NET, HTET, CTET और शिक्षक भर्ती परीक्षा अभ्यास।', icon: GraduationCap, action: 'exams', tone: 'indigo' },
                   ].map((course) => (
                     <button key={course.title} onClick={() => navigateTo(course.action)} className="group text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:-translate-y-1 hover:border-sky-300 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between gap-3">
@@ -471,30 +478,6 @@ const MainApp: React.FC = () => {
                 </button>
               </div>
             </section>
-          </div>
-        )}
-
-        {activePage === 'studentDashboard' && (
-          <div>
-            <PageHeaderBanner
-              titleEn="My Student Dashboard"
-              titleHi="मेरा विद्यार्थी डैशबोर्ड"
-              subtitleEn="Your profile, published tests, results and learning progress in one place."
-              subtitleHi="आपकी प्रोफाइल, प्रकाशित टेस्ट, परिणाम और अध्ययन प्रगति एक ही स्थान पर।"
-              badgeEn="Student Portal"
-              badgeHi="विद्यार्थी पोर्टल"
-              icon={GraduationCap}
-              onBackHome={() => navigateTo('home')}
-            />
-            {user && profile ? (
-              <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div>
-            ) : (
-              <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-                <h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2>
-                <p className="mt-2 text-sm text-slate-600">अपना Student Dashboard खोलने के लिए लॉगिन करें।</p>
-                <button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button>
-              </div>
-            )}
           </div>
         )}
 
@@ -685,7 +668,7 @@ const MainApp: React.FC = () => {
         )}
 
         {/* Explore Other Pages Bottom Ribbon (shown on all dedicated subpages) */}
-        {activePage !== 'home' && (
+        {activePage !== 'home' && activePage !== 'admin' && activePage !== 'adminPreview' && (
           <div className="py-8 bg-slate-100 border-t border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -724,9 +707,9 @@ const MainApp: React.FC = () => {
                     {t('nav.materials')}
                   </button>
                   <button
-                    onClick={() => navigateTo('tests')}
+                    onClick={() => navigateTo('exams')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      activePage === 'tests' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
+                      activePage === 'exams' ? 'bg-sky-900 text-white border-sky-900' : 'bg-white hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
                     {language === 'en' ? 'All Exams' : 'सभी परीक्षाएं'}
@@ -762,7 +745,7 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <Footer onNavigate={navigateTo} />
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <Footer onNavigate={navigateTo} />}
 
       {/* Global Search Modal */}
       <SearchModal
@@ -771,7 +754,6 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />
     </div>
   );
 };
