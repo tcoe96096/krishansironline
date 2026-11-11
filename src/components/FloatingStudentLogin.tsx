@@ -9,6 +9,7 @@ export const FloatingStudentLogin: React.FC<FloatingStudentLoginProps> = ({ onCl
   const { language } = useLanguage();
   const { user } = useAuth();
   const en = language === 'en';
+  if (user) return null;
   return (
     <button
       type="button"
