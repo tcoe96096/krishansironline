@@ -5,7 +5,7 @@ import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedT
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
 
 export const StudentDashboard: React.FC = () => {
-  const { profile, profileLoading, refreshProfile } = useAuth();
+  const { profile, profileLoading } = useAuth();
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [learningProgress, setLearningProgress] = useState<StudentLearningProgress[]>([]);
@@ -22,7 +22,7 @@ export const StudentDashboard: React.FC = () => {
         console.warn('Learning progress is temporarily unavailable:', progressError);
         return [] as StudentLearningProgress[];
       });
-      setLearningProgress(progress); await refreshProfile();
+      setLearningProgress(progress);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'डैशबोर्ड डेटा लोड नहीं हो सका।');
     } finally { setLoading(false); }
