@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { OnlineTest, Question, StudentLoginDetails, StudentTestSubmission } from '../types';
+import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
@@ -33,7 +33,6 @@ import {
   BarChart3,
   X
 } from 'lucide-react';
-} from '../utils/googleSheetsSync';
 
 
 const ACTIVE_TEST_SESSION_KEY = 'krishan_sir_active_test_session';
