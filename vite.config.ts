@@ -13,6 +13,7 @@ const seoPages = [
   { slug: 'current-affairs', title: 'Current Affairs & General Awareness | Krishan Sir', description: 'Read educational current affairs and general awareness updates for students and competitive exam learners.' },
   { slug: 'about', title: 'About Krishan Sir | Teacher Profile', description: 'Learn about Krishan Kumar, TGT Social Science, and the Krishan Sir Online Learning Portal.' },
   { slug: 'contact', title: 'Contact & Student Doubt Desk | Krishan Sir', description: 'Contact Krishan Sir and send an academic doubt or learning support request.' },
+  { slug: 'admin', title: 'Admin Control Center | Krishan Sir', description: 'Restricted administration portal for authorized website administrators.' },
 ];
 
 const generateSeoPages = () => ({
@@ -30,6 +31,7 @@ const generateSeoPages = () => ({
         .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${canonical}" />`)
         .replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${page.title}" />`)
         .replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${page.description}" />`);
+      if (page.slug === 'admin') html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\\n</head>');
       const directory = path.resolve(__dirname, 'dist', page.slug);
       mkdirSync(directory, { recursive: true });
       writeFileSync(path.join(directory, 'index.html'), html);
