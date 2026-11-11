@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AdminWebsiteManagement } from './AdminWebsiteManagement';
 import { AdminAcademicManagement } from './AdminAcademicManagement';
+import { AdminTestManagement } from './AdminTestManagement';
 import {
   Activity, ArrowLeft, Bell, BookOpen, BookMarked, ChevronDown, ChevronRight,
   ClipboardList, FileText, GraduationCap, Headphones, LayoutDashboard, LogOut,
