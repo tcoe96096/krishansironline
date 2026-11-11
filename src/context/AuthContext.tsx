@@ -11,7 +11,6 @@ import { normalizeIndianMobile, requireSupabase, studentLoginEmail } from '../li
 
 type StudentRegistration = {
   identifier: string;
-  identifierType: 'mobile' | 'email';
   password: string;
   studentName: string;
   studentClass: '6' | '7' | '8' | '9' | '10' | '11' | '12';
@@ -52,7 +51,7 @@ type AuthContextValue = {
   adminLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  signInWithMobile: (mobile: string, password: string) => Promise<void>;
+  signInWithMobile: (identifier: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -177,26 +176,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = useCallback(async () => {
     const { error } = await requireSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        // Preserve the exact Preview/Admin path so OAuth returns to the same interface.
+        redirectTo: new URL(window.location.pathname, window.location.origin).toString(),
+      },
     });
     if (error) throw error;
   }, []);
 
   const signInWithMobile = useCallback(async (identifierInput: string, password: string) => {
-    const value = identifierInput.trim();
-    const identifier = value.includes('@')
-      ? value.toLowerCase()
-      : studentLoginEmail(value);
-    const { error } = await requireSupabase().auth.signInWithPassword({ email: identifier, password });
+    const input = identifierInput.trim();
+    // Email accounts use their real email; legacy/new mobile accounts use a stable internal alias.
+    const email = input.includes('@') ? input.toLowerCase() : studentLoginEmail(input);
+    const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
     if (error) throw error;
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
-    const isEmail = details.identifierType === 'email';
-    const mobile = isEmail ? null : normalizeIndianMobile(details.identifier);
-    const email = isEmail
-      ? details.identifier.trim().toLowerCase()
-      : studentLoginEmail(details.identifier);
+    const input = details.identifier.trim();
+    const isEmail = input.includes('@');
+    const mobile = isEmail ? null : normalizeIndianMobile(input);
+    const email = isEmail ? input.toLowerCase() : studentLoginEmail(mobile as string);
     if (isEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error('कृपया वैध Email ID दर्ज करें।');
     }
@@ -219,7 +219,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           locality_name: details.localityName.trim(),
           pin_code: details.pinCode.trim(),
           account_type: 'student',
-          ...(mobile ? { mobile_number: mobile } : {}),
+          login_method: isEmail ? 'email' : 'mobile',
+          mobile_number: mobile,
         },
       },
     });

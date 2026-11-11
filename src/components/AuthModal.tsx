@@ -92,7 +92,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         onClose();
       } else {
         await registerStudent({
-          identifier, identifierType: identifier.includes('@') ? 'email' : 'mobile', password, studentName, studentClass, rollNo,
+          identifier, password, studentName, studentClass, rollNo,
           schoolName: schoolName === 'Other' ? otherSchool : schoolName,
           country, state, district, areaType, localityName, pinCode,
         });

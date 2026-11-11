@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ClipboardCheck, RefreshCw, UserRound, Trophy, PlayCircle, Clock3, GraduationCap } from 'lucide-react';
+import { BookOpen, ClipboardCheck, RefreshCw, UserRound, MapPin, Trophy, PlayCircle, Clock3, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
@@ -17,7 +17,7 @@ export const StudentDashboard: React.FC = () => {
     try {
       const [history, catalogue] = await Promise.all([getMyTestAttempts(), getPublishedTests()]);
       setAttempts(history); setTests(catalogue);
-      // Progress storage may not be deployed yet; never let it block test history/dashboard.
+      // Progress storage may not be deployed in Preview yet; keep tests and dashboard usable.
       const progress = await getMyLearningProgress().catch((progressError) => {
         console.warn('Learning progress is temporarily unavailable:', progressError);
         return [] as StudentLearningProgress[];
@@ -33,8 +33,8 @@ export const StudentDashboard: React.FC = () => {
   const inProgress = attempts.filter(x => x.status === 'in_progress');
   const available = profile ? tests.filter(x => x.class_level === String(profile.class_level)) : [];
   const average = completed.length ? Math.round(completed.reduce((s,x) => s + Number(x.percentage || 0),0) / completed.length) : 0;
+  // Attempts are fetched newest-first; retain the newest status for each test.
   const attemptByTest = useMemo(() => {
-    // Attempts are returned newest-first; keep the latest status for each test.
     const latest = new Map<string, TestAttempt>();
     attempts.forEach((attempt) => {
       if (!latest.has(attempt.test_id)) latest.set(attempt.test_id, attempt);
@@ -45,7 +45,8 @@ export const StudentDashboard: React.FC = () => {
   return <section className="space-y-5" aria-label="Student dashboard">
     <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#082d65] via-[#104b83] to-[#087d9b] p-5 text-white shadow-lg sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-cyan-100">KRISHAN SIR • STUDENT SPACE</p><h3 className="mt-2 text-2xl font-extrabold sm:text-3xl">नमस्ते, {profile?.student_name || 'विद्यार्थी'}!</h3><p className="mt-1 text-sm text-blue-100">आपकी पढ़ाई, टेस्ट और परिणाम—एक ही स्थान पर।</p></div><div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/20"><GraduationCap className="h-8 w-8"/></div></div>
-      {profile && <div className="mt-5 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-white/15 px-3 py-1.5">कक्षा {profile.class_level}</span><span className="rounded-full bg-white/15 px-3 py-1.5">रोल नं. {profile.roll_no}</span><span className="rounded-full bg-white/15 px-3 py-1.5">{profile.school_name}</span>{[profile.locality_name, profile.district, profile.state].filter(Boolean).length > 0 && <span className="rounded-full bg-white/15 px-3 py-1.5">{[profile.locality_name, profile.district, profile.state].filter(Boolean).join(', ')}</span>}</div>}
+      {profile && <div className="mt-5 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-white/15 px-3 py-1.5">कक्षा {profile.class_level}</span><span className="rounded-full bg-white/15 px-3 py-1.5">रोल नं. {profile.roll_no}</span><span className="rounded-full bg-white/15 px-3 py-1.5">{profile.school_name}</span></div>}
+      {profile && <p className="mt-3 flex items-center gap-1.5 text-xs text-cyan-100"><MapPin className="h-3.5 w-3.5"/>{[profile.locality_name,profile.district,profile.state].filter(Boolean).join(', ')}</p>}
     </div>
     {profileLoading && <p className="text-sm text-slate-500">प्रोफाइल लोड हो रही है…</p>}
     {!profile && !profileLoading && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">विद्यार्थी प्रोफाइल उपलब्ध नहीं है। Admin से संपर्क करें।</p>}
@@ -62,17 +63,10 @@ export const StudentDashboard: React.FC = () => {
     {loading ? <p className="text-sm text-slate-500">टेस्ट लोड हो रहे हैं…</p> : available.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">अभी आपकी कक्षा के लिए कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p> :
       <div className="grid gap-3 md:grid-cols-2">{available.map(test => {
         const attempt=attemptByTest.get(test.id); const title=test.title.hi || test.title.en;
-        const hasActiveAttempt = attempt?.status === 'in_progress' && new Date(attempt.expires_at).getTime() > Date.now();
-        const hasExpiredAttempt = attempt?.status === 'expired' || (attempt?.status === 'in_progress' && !hasActiveAttempt);
-        const attemptsUsed = attempts.filter((item) => item.test_id === test.id).length;
-        const attemptLimit = Math.max(1, Number(test.attempt_limit || 1));
-        const attemptLimitReached = attemptsUsed >= attemptLimit && !hasActiveAttempt;
         return <article key={test.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-2"><span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-800">कक्षा {test.class_level}</span>{attempt?.status==='submitted' && <span className="text-xs font-bold text-emerald-700">पूर्ण</span>}{hasExpiredAttempt && <span className="text-xs font-bold text-amber-700">समय समाप्त</span>}</div>
+          <div className="flex items-start justify-between gap-2"><span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-800">कक्षा {test.class_level}</span>{attempt?.status==='submitted' && <span className="text-xs font-bold text-emerald-700">पूर्ण</span>}</div>
           <h5 className="mt-3 font-extrabold text-slate-900">{title}</h5><p className="mt-1 text-xs text-slate-500">{test.subject} · {test.questions.length} प्रश्न · {test.total_marks} अंक · {test.duration_minutes} मिनट</p>
-          {attemptLimitReached
-            ? <span aria-disabled="true" className="mt-4 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-500">प्रयास सीमा पूरी</span>
-            : <a href={`${import.meta.env.BASE_URL}online-tests/?test=${encodeURIComponent(test.id)}`} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0b3979] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#124887]"><PlayCircle className="h-4 w-4"/>{hasActiveAttempt?'टेस्ट जारी रखें':'टेस्ट शुरू करें'}</a>}
+          <a href={`${import.meta.env.BASE_URL}online-tests/`} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0b3979] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#124887]"><PlayCircle className="h-4 w-4"/>{attempt?.status==='in_progress'?'टेस्ट जारी रखें':'टेस्ट शुरू करें'}</a>
         </article>;
       })}</div>}
     <div><div className="mb-3"><h4 className="text-lg font-extrabold text-slate-900">मेरी पढ़ाई की प्रगति</h4><p className="text-xs text-slate-500">अध्याय पढ़ते समय आपकी स्थिति अपने आप सेव होती है।</p></div>{loading?<p className="text-sm text-slate-500">प्रगति लोड हो रही है…</p>:learningProgress.length===0?<p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">अभी पढ़ाई की प्रगति उपलब्ध नहीं है। अध्ययन सामग्री खोलने पर आपकी प्रगति यहां दिखाई देगी।</p>:<div className="grid gap-3 md:grid-cols-2">{learningProgress.slice(0,6).map(item=><article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-bold text-slate-800">{item.chapter_title}</p><p className="mt-1 text-xs text-slate-500">कक्षा {item.class_level} · {item.subject}</p></div><span className="shrink-0 text-sm font-extrabold text-sky-800">{item.progress_percent}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-sky-700" style={{width:item.progress_percent+'%'}}/></div><p className="mt-2 text-[11px] text-slate-500">अंतिम बार खोला: {new Date(item.last_opened_at).toLocaleDateString('hi-IN')}</p></article>)}</div>}</div>

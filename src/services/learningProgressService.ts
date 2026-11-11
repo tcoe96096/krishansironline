@@ -24,7 +24,7 @@ export async function getMyLearningProgress(): Promise<StudentLearningProgress[]
   return (data ?? []) as StudentLearningProgress[];
 }
 
-/** Reads one chapter's saved position for the signed-in student. */
+/** Reads the signed-in student's saved position for one material. */
 export async function getMyLearningProgressForMaterial(materialId: string): Promise<StudentLearningProgress | null> {
   const { data, error } = await requireSupabase()
     .from('student_learning_progress')
