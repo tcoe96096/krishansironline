@@ -38,7 +38,7 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelectClassActio
           </div>
 
           {/* Interactive Filter Tabs (Segmented control) */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-lg self-start md:self-auto">
             <button
               onClick={() => setFilterStage('all')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
