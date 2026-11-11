@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
 import { AuthModal } from './components/AuthModal';
-import { FloatingStudentLogin } from './components/FloatingStudentLogin';
 import { StudentDashboard } from './components/StudentDashboard';
 import { useAuth } from './context/AuthContext';
 import { Hero } from './components/Hero';
@@ -755,10 +754,6 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => {
-        if (user && profile) navigateTo('studentDashboard');
-        else setIsAuthOpen(true);
-      }} />}
     </div>
   );
 };
