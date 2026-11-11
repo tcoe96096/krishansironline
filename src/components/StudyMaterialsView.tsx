@@ -255,7 +255,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                       </button>
 
                       <button
-                        onClick={() => setActiveChapter(chap)}
+                        onClick={() => openChapter(chap)}
                         className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-xs"
                         title="Print / Download PDF"
                       >
