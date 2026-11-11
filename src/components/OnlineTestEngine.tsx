@@ -799,10 +799,20 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               );
             })}
           </div>
+          {!catalogueLoading && filteredTests.length === 0 && (
+            <div className="mt-4 rounded-2xl border border-dashed border-sky-300 bg-gradient-to-br from-white to-sky-50 px-5 py-8 sm:px-8 sm:py-10 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-100 text-sky-800"><Laptop className="h-7 w-7" /></div>
+              <h3 className="mt-4 text-lg sm:text-xl font-extrabold text-slate-900">अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है</h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">इस पोर्टल पर टेस्ट प्रकाशित होते ही वे यहाँ दिखाई देंगे। कृपया बाद में पुनः देखें।</p>
+              {catalogueError && <p className="mt-3 text-xs font-semibold text-amber-700">Catalogue status: {catalogueError}</p>}
+            </div>
+          )}
         </div>
 
-        {/* COMPACT ASSESSMENT HEADER */}
-        <div className="relative mb-4 sm:mb-5 overflow-hidden rounded-2xl bg-gradient-to-r from-[#eef6ff] via-white to-[#eaf7f5] px-4 py-4 sm:px-5 sm:py-5 text-slate-900 border border-sky-200 shadow-sm">
+        {/* SELECTED TEST OVERVIEW — shown only for a real published test */}
+        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id ? '' : 'hidden'}`}>
+          <div className="h-2 w-full bg-gradient-to-r from-sky-800 via-cyan-500 to-emerald-400" />
+          <div className="p-4 sm:p-6">
           <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
           <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -855,8 +865,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </div>
 
           {/* Essential information only; live countdown is shown in the sticky exam dashboard. */}
-          <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 border-t border-slate-200 pt-3 text-center">
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-center">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल प्रश्न / Questions</div>
               <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
             </div>
@@ -865,11 +875,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
             </div>
             {!studentDetails && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
                 <div className="text-[10px] font-semibold text-amber-800 sm:text-[11px]">समय / Duration</div>
                 <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
               </div>
             )}
+          </div>
           </div>
         </div>
 
