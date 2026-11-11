@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Class10PresentationPlayer } from './Class10PresentationPlayer';
+import { StudyVideoPlayer } from './StudyVideoPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -321,6 +322,20 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   {language === 'hi' ? activeChapter.summary.hi : activeChapter.summary.en}
                 </p>
               </div>
+
+              {activeChapter.videoUrl && (
+                <StudyVideoPlayer src={activeChapter.videoUrl} title={activeChapter.videoTitle || (language === 'hi' ? activeChapter.title.hi : activeChapter.title.en)} />
+              )}
+
+              {activeChapter.pdfUrl && (
+                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-[#eef6fc] px-4 py-3">
+                    <h4 className="text-sm font-extrabold text-slate-900">{language === 'hi' ? 'PDF अध्ययन सामग्री' : 'PDF Study Material'}</h4>
+                    <a href={activeChapter.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">{language === 'hi' ? 'नई विंडो में खोलें' : 'Open in new tab'}</a>
+                  </div>
+                  <iframe title={language === 'hi' ? activeChapter.title.hi : activeChapter.title.en} src={activeChapter.pdfUrl} className="h-[70vh] min-h-[420px] w-full border-0 bg-slate-100" />
+                </section>
+              )}
 
               {/* Key Exam Points */}
               <div>
