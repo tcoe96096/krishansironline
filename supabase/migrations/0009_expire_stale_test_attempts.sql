@@ -7,7 +7,7 @@ create or replace function public.start_test_attempt(p_test_id text)
 returns public.test_attempts
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_test public.tests%rowtype;
