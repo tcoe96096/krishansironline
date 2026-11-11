@@ -73,7 +73,9 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
     const element = readerRef.current;
     if (!user || !progressLoadReady.current || !activeChapter || !element) return;
     const maxScroll = element.scrollHeight - element.clientHeight;
-    const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 100;
+    // A reader that fits entirely in the viewport has no measurable scroll progress.
+    // Keep it at 0% rather than incorrectly marking the chapter complete on open.
+    const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 0;
     if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
     lastSavedProgress.current = percent;
     void saveMyLearningProgress({
@@ -271,7 +273,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                       </button>
 
                       <button
-                        onClick={() => setActiveChapter(chap)}
+                        onClick={() => openChapter(chap)}
                         className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-xs"
                         title="Print / Download PDF"
                       >
