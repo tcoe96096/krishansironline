@@ -80,3 +80,13 @@
   .print-only { display: block !important; }
   body { background: white !important; color: black !important; }
 }
+
+@layer utilities {
+  /* Shared vertical rhythm for the main learning pages. */
+  #tests,
+  #materials,
+  #about,
+  #contact {
+    padding-block: clamp(1.75rem, 3.2vw, 2.75rem) !important;
+  }
+}
