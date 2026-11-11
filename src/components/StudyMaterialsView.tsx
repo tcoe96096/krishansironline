@@ -43,16 +43,16 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
         .then((savedProgress) => {
           // Ignore a late response if the student opened another chapter meanwhile.
           if (requestId !== openChapterRequest.current) return;
-          progressLoadReady.current = true;
-
           if (savedProgress) {
             lastSavedProgress.current = savedProgress.progress_percent;
             const savedScrollTop = Number(savedProgress.last_position?.scrollTop ?? 0);
             setRestoreScrollTop(Number.isFinite(savedScrollTop) ? Math.max(0, savedScrollTop) : 0);
+            progressLoadReady.current = true;
             return;
           }
 
-          // Create the initial row only when no saved progress exists.
+          // Create the initial row only when no saved progress exists. Keep scroll
+          // autosave paused until this write finishes to avoid out-of-order upserts.
           lastSavedProgress.current = 0;
           void saveMyLearningProgress({
             materialId: chapter.id,
@@ -61,7 +61,9 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             chapterTitle: chapter.title.en,
             progressPercent: 0,
             lastPosition: { section: 'overview', scrollTop: 0 },
-          }).catch((error) => console.warn('Learning progress could not be saved:', error));
+          }).then(() => {
+            if (requestId === openChapterRequest.current) progressLoadReady.current = true;
+          }).catch((error) => console.warn('Learning progress could not be saved; autosave remains paused:', error));
         })
         .catch((error) => console.warn('Saved learning progress could not be restored; saving is paused to protect existing progress:', error));
     }
