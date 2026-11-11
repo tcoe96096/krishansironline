@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Class10PresentationPlayer } from './Class10PresentationPlayer';
+import { StudyVideoPlayer } from './StudyVideoPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +20,6 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const openChapterRequest = useRef(0);
   const progressLoadReady = useRef(true);
   const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
-
   const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
@@ -41,7 +41,6 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
     if (user) {
       void getMyLearningProgressForMaterial(chapter.id)
         .then((savedProgress) => {
-          // Ignore a late response if the student opened another chapter meanwhile.
           if (requestId !== openChapterRequest.current) return;
           if (savedProgress) {
             lastSavedProgress.current = savedProgress.progress_percent;
@@ -51,9 +50,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             return;
           }
 
-          // Create the initial row only when no saved progress exists. Keep scroll
-          // autosave paused until this write finishes to avoid out-of-order upserts.
-          lastSavedProgress.current = 0;
+          // Finish the initial 0% write before allowing scroll autosave.
           void saveMyLearningProgress({
             materialId: chapter.id,
             classLevel: chapter.classLevel,
@@ -69,12 +66,18 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
     }
   };
 
+  const closeChapter = () => {
+    openChapterRequest.current += 1;
+    progressLoadReady.current = true;
+    setActiveChapter(null);
+    setRestoreScrollTop(null);
+  };
+
   const saveReaderPosition = () => {
     const element = readerRef.current;
     if (!user || !progressLoadReady.current || !activeChapter || !element) return;
     const maxScroll = element.scrollHeight - element.clientHeight;
-    // A reader that fits entirely in the viewport has no measurable scroll progress.
-    // Keep it at 0% rather than incorrectly marking the chapter complete on open.
+    // A chapter that fits in the viewport has no measurable scroll progress.
     const percent = maxScroll > 0 ? Math.min(100, Math.round((element.scrollTop / maxScroll) * 100)) : 0;
     if (percent < lastSavedProgress.current + 10 && percent !== 100) return;
     lastSavedProgress.current = percent;
@@ -151,10 +154,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                 onClick={() => {
                   setSelectedClass(lvl);
                   setSelectedSubject('all');
-                  openChapterRequest.current += 1;
-                  progressLoadReady.current = true;
-                  setActiveChapter(null);
-                  setRestoreScrollTop(null);
+                  closeChapter();
                 }}
                 className={`px-4 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                   isSelected
@@ -292,11 +292,11 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
 
       {/* Chapter Reader Modal */}
       {activeChapter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[70] flex items-stretch justify-stretch bg-slate-950/80 backdrop-blur-sm p-0 overflow-hidden">
+          <div className="bg-white w-full h-[100dvh] max-w-none max-h-none rounded-none flex flex-col shadow-2xl border-0 overflow-hidden">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 flex items-start justify-between gap-4 bg-slate-50/80 rounded-t-2xl">
+            <div className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 flex items-center justify-between gap-4 bg-[#eef6fc]">
               <div>
                 <div className="flex items-center gap-2 text-xs font-mono text-sky-800 mb-1">
                   <span>Class {activeChapter.classLevel}</span>
@@ -319,7 +319,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   <span>Print</span>
                 </button>
                 <button
-                  onClick={() => { openChapterRequest.current += 1; progressLoadReady.current = true; setActiveChapter(null); setRestoreScrollTop(null); }}
+                  onClick={closeChapter}
                   className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-bold"
                 >
                   ✕
@@ -328,7 +328,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             </div>
 
             {/* Modal Body */}
-            <div ref={readerRef} onScroll={saveReaderPosition} className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800">
+            <div ref={readerRef} onScroll={saveReaderPosition} className="min-h-0 flex-1 w-full max-w-5xl mx-auto px-4 py-5 sm:px-8 sm:py-7 overflow-y-auto space-y-6 text-slate-800">
               
               {/* Summary */}
               <div>
@@ -339,6 +339,20 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                   {language === 'hi' ? activeChapter.summary.hi : activeChapter.summary.en}
                 </p>
               </div>
+
+              {activeChapter.videoUrl && (
+                <StudyVideoPlayer src={activeChapter.videoUrl} title={activeChapter.videoTitle || (language === 'hi' ? activeChapter.title.hi : activeChapter.title.en)} />
+              )}
+
+              {activeChapter.pdfUrl && (
+                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-[#eef6fc] px-4 py-3">
+                    <h4 className="text-sm font-extrabold text-slate-900">{language === 'hi' ? 'PDF अध्ययन सामग्री' : 'PDF Study Material'}</h4>
+                    <a href={activeChapter.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">{language === 'hi' ? 'नई विंडो में खोलें' : 'Open in new tab'}</a>
+                  </div>
+                  <iframe title={language === 'hi' ? activeChapter.title.hi : activeChapter.title.en} src={activeChapter.pdfUrl} className="h-[70vh] min-h-[420px] w-full border-0 bg-slate-100" />
+                </section>
+              )}
 
               {/* Key Exam Points */}
               <div>
