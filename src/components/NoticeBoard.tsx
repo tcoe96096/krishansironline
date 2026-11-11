@@ -107,6 +107,14 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
     }
   };
 
+  // Suppress the known internal placeholder if it is still present in the
+  // legacy announcements feed. Real announcements remain untouched.
+  const visibleNotices = notices.filter((notice) => {
+    const title = localized(notice.title, 'en').trim().toLowerCase();
+    const details = localized(notice.details, 'en').trim().toLowerCase();
+    return !(title === 'dashboard testing' && details === 'testing');
+  });
+
   return (
     <section className="py-10 bg-white border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -150,15 +158,15 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
           </div>
         )}
 
-        {!loading && !error && notices.length === 0 && (
+        {!loading && !error && visibleNotices.length === 0 && (
           <p className="py-5 text-sm text-slate-500">
             {language === 'en' ? 'No announcements have been published yet.' : 'अभी कोई सूचना प्रकाशित नहीं हुई है।'}
           </p>
         )}
 
-        {!loading && !error && notices.length > 0 && (
+        {!loading && !error && visibleNotices.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {notices.map((notice, index) => {
+            {visibleNotices.map((notice, index) => {
               const title = localized(notice.title, language);
               const details = localized(notice.details, language);
               return (
