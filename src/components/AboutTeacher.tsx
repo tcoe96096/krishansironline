@@ -33,12 +33,12 @@ export const AboutTeacher: React.FC = () => {
             <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm">
               <div className="relative aspect-4/3 sm:aspect-square w-full rounded-xl overflow-hidden bg-slate-200 shadow-xs border border-slate-200 group">
                 <img
-                  src="/images/krishan-sir.png"
+                  src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
                   alt="Krishan Sir – TGT Social Science"
                   className="w-full h-full object-cover object-[24%_28%] group-hover:scale-105 transition-transform duration-300"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    e.currentTarget.src = '/assets/aistudio/Smiling_Educator_with_Study_Essentials_be80b46f.png';
+                    e.currentTarget.src = `${import.meta.env.BASE_URL}images/krishan-sir-logo.svg`;
                   }}
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/85 via-slate-900/50 to-transparent p-4 text-white">
@@ -154,12 +154,12 @@ export const AboutTeacher: React.FC = () => {
             </div>
 
             {/* Teaching Philosophy */}
-            <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200/90 text-slate-800 space-y-2.5">
-              <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
-                <Quote className="w-4 h-4 text-amber-700" />
+            <div className="relative overflow-hidden p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-[#edf6ff] via-white to-[#eaf7f5] border border-sky-200 text-slate-800 shadow-sm space-y-3">
+              <div className="flex items-center gap-2 text-sky-950 font-extrabold text-base">
+                <Quote className="w-4 h-4 text-teal-700" />
                 <span>Teaching Philosophy of Krishan Sir:</span>
               </div>
-              <p className="text-xs sm:text-sm leading-relaxed text-amber-950/90 italic">
+              <p className="text-xs sm:text-sm leading-relaxed text-slate-700 text-sm sm:text-base leading-relaxed italic">
                 "{language === 'hi' ? TEACHER_INFO.philosophy.hi : TEACHER_INFO.philosophy.en}"
               </p>
             </div>
@@ -173,7 +173,7 @@ export const AboutTeacher: React.FC = () => {
           <div className="bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
             <div className="relative aspect-16/9 sm:aspect-21/9 w-full">
               <img
-                src="/images/krishan-sir.png"
+                src={`${import.meta.env.BASE_URL}images/krishan-sir.png`}
                 alt="Krishan Sir with Study Essentials and Educational Resources"
                 className="w-full h-full object-cover object-center"
                 referrerPolicy="no-referrer"
