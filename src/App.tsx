@@ -154,7 +154,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, profile, profileLoading, loading: authLoading, isAdmin, adminLoading } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -253,7 +253,7 @@ const MainApp: React.FC = () => {
             </div>
 
             {/* Signed-in students get their secure dashboard; visitors keep the existing shortcuts. */}
-            {user ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><StudentDashboard /></div></section> : <StudentDashboardHome onNavigate={navigateTo} language={language} />}
+            {user && (authLoading || adminLoading || profileLoading) ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">आपका डैशबोर्ड लोड हो रहा है…</p></div></section> : user && !isAdmin && profile ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><StudentDashboard /></div></section> : <StudentDashboardHome onNavigate={navigateTo} language={language} />}
 
             {/* 8 Quick Access Cards to Dedicated Pages */}
             <QuickAccessCards onNavigate={navigateTo} />
