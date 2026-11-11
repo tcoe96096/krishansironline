@@ -15,6 +15,8 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
+import { StudentDashboard } from './components/StudentDashboard';
+import { useAuth } from './context/AuthContext';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -152,6 +154,7 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -249,8 +252,8 @@ const MainApp: React.FC = () => {
               <NoticeBoard onNavigate={navigateTo} />
             </div>
 
-            {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
-            <StudentDashboardHome onNavigate={navigateTo} language={language} />
+            {/* Signed-in students get their secure dashboard; visitors keep the existing shortcuts. */}
+            {user ? <section className="border-b border-slate-200 bg-slate-50 py-8 sm:py-10"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><StudentDashboard /></div></section> : <StudentDashboardHome onNavigate={navigateTo} language={language} />}
 
             {/* 8 Quick Access Cards to Dedicated Pages */}
             <QuickAccessCards onNavigate={navigateTo} />
