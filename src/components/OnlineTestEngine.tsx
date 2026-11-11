@@ -258,7 +258,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             question: question.question,
             options: question.options,
             correctAnswer: -1,
-            explanation: question.explanation || { en: '', hi: '' },
+            explanation: { en: '', hi: '' },
             chapter: question.chapter || test.chapter,
             marks: question.marks ?? 1,
             type: question.type ?? 'mcq',
@@ -1784,7 +1784,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                         <span className="font-bold text-slate-700 font-mono">Question {idx + 1} ({q.chapter})</span>
                         {isCorrect ? (
                           <span className="text-emerald-700 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-4 h-4" /> Correct (+{q.marks ?? marksPerQuestion})
+                            <CheckCircle2 className="w-4 h-4" /> Correct (+{marksPerQuestion})
                           </span>
                         ) : isSkipped ? (
                           <span className="text-slate-500 font-semibold flex items-center gap-1">
