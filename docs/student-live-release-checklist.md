@@ -63,7 +63,7 @@ Before Live release, complete these with an owner-approved student test account 
 2. Confirm the correct student profile, class, roll number, and school are displayed.
 3. Open a chapter, scroll, leave, reopen, and verify the saved position and progress.
 4. Open a short chapter that does not scroll and confirm it is not marked complete automatically.
-5. Start a published test, answer and submit it, and verify the server result and attempt history.
+5. Start a published test, answer and submit it, and verify the server result and attempt history. Confirm the scorecard denominator displays the configured total marks, not the question count.
 6. Refresh during an active test and confirm the same attempt resumes with the server deadline.
 7. Let a test attempt expire and confirm the dashboard shows it as expired, the server marks it expired on the next start request, and the attempt limit remains enforced.
 8. Verify a student cannot see another student's profile, progress, or attempts.
