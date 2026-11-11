@@ -19,15 +19,16 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const openChapterRequest = useRef(0);
   const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
 
+  const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
+  const [selectedSubject, setSelectedSubject] = useState<string>('all');
+  const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     if (restoreScrollTop === null || !readerRef.current) return;
     readerRef.current.scrollTop = restoreScrollTop;
     setRestoreScrollTop(null);
   }, [activeChapter, restoreScrollTop]);
-  const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
-  const [selectedSubject, setSelectedSubject] = useState<string>('all');
-  const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const openChapter = (chapter: StudyChapter) => {
     const requestId = ++openChapterRequest.current;
