@@ -43,7 +43,8 @@ Read-only audit of the existing Production project found:
 ## Authentication and identity limitations
 
 - Student login uses mobile number + password without SMS OTP. Mobile numbers are not verified.
-- Generated internal login identifiers are not real mailboxes, so email password-reset links cannot reach students.
+- Before public registration, re-check Supabase Auth settings: Email provider enabled, Confirm email disabled (the generated identifiers are not real mailboxes), and Phone provider disabled for the no-SMS design.
+- Generated internal login identifiers are not real mailboxes, so email confirmation and password-reset links cannot reach students.
 - Self-service password recovery is not available. School-record verification and an administrator-assisted recovery process must be in place before public student registration is promoted.
 - Supabase's leaked-password protection was reported disabled by the Production security advisor. Enable it in Supabase Auth settings before broad public registration.
 - Production currently has no administrator role row. Admin Website/OAuth setup remains a separate later phase; do not grant a role or enable Google OAuth as part of the Student release.
