@@ -258,7 +258,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             question: question.question,
             options: question.options,
             correctAnswer: -1,
-            explanation: { en: '', hi: '' },
+            explanation: question.explanation || { en: '', hi: '' },
             chapter: question.chapter || test.chapter,
             marks: question.marks ?? 1,
             type: question.type ?? 'mcq',
@@ -550,6 +550,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Scores are authoritative only after PostgreSQL server-side grading.
   const marksObtained = serverResult?.score ?? 0;
+  const scorecardTotalMarks = serverResult?.total_marks ?? selectedTest.totalMarks;
   const percentage = (serverResult?.percentage ?? 0).toFixed(2);
   const correctCount = serverResult?.correct_count ?? 0;
   const marksPerQuestion = selectedTest.totalMarks / Math.max(1, totalQuestions);
@@ -1677,7 +1678,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                   <div className="text-xs text-slate-500">कुल अंक (Score)</div>
                   <div className="text-3xl sm:text-4xl font-black text-sky-900 font-mono mt-1">
-                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {selectedTest.totalMarks}</span>
+                    {marksObtained} <span className="text-sm font-normal text-slate-400">/ {scorecardTotalMarks}</span>
                   </div>
                 </div>
 
@@ -1783,7 +1784,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                         <span className="font-bold text-slate-700 font-mono">Question {idx + 1} ({q.chapter})</span>
                         {isCorrect ? (
                           <span className="text-emerald-700 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-4 h-4" /> Correct (+{marksPerQuestion})
+                            <CheckCircle2 className="w-4 h-4" /> Correct (+{q.marks ?? marksPerQuestion})
                           </span>
                         ) : isSkipped ? (
                           <span className="text-slate-500 font-semibold flex items-center gap-1">
