@@ -117,7 +117,10 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
     setSaving(true);
     setNotice('');
     try {
-      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette, ...(visualEditorConfig ? { visualEditor: visualEditorConfig } : {}) });
+      const existingHistory = await getWebsiteConfigVersions();
+      const latestConfig = existingHistory.find((item) => item.status === 'draft') || existingHistory.find((item) => item.status === 'published');
+      const preservedVisualEditor = latestConfig?.config.visualEditor ?? visualEditorConfig;
+      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette, ...(preservedVisualEditor ? { visualEditor: preservedVisualEditor } : {}) });
       setDraftId(id);
       const history = await getWebsiteConfigVersions();
       setVersions(history);
