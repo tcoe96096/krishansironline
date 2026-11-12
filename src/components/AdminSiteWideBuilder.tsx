@@ -99,12 +99,18 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
   const filteredPages = useMemo(() => pages.filter(p => (p.labelEn+' '+p.labelHi+' '+p.path).toLowerCase().includes(pageSearch.toLowerCase())),[pages,pageSearch]);
 
   useEffect(() => {
+    setPreviewFrameReady(false);
+    setSelectedLiveElement(null);
+  }, [previewSource, selectedId]);
+
+  useEffect(() => {
     if (previewSource !== 'live' || !previewFrameReady || !livePage?.editable) return;
     const doc = livePreviewFrameRef.current?.contentDocument;
     if (!doc) return;
     const handleSelect = (event: MouseEvent) => {
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      const candidate = target?.closest<HTMLElement>('h1,h2,h3,h4,p,li');
+      const target = event.target as HTMLElement | null;
+      if (!target || typeof target.closest !== 'function') return;
+      const candidate = target.closest<HTMLElement>('h1,h2,h3,h4,p,li');
       if (!candidate || candidate.children.length > 0 || !candidate.textContent?.trim()) return;
       if (candidate.closest('form,button,a,[role="button"],[data-visual-editor-protected]')) return;
       event.preventDefault();
