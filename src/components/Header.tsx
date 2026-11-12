@@ -24,7 +24,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     const handleScroll = () => {
       const examActive = document.body.classList.contains('exam-mode-active') || document.documentElement.classList.contains('exam-mode-active');
       const currentY = Math.max(0, window.scrollY);
-      if (!examActive || currentY < 24) {
+      // Keep the desktop site header permanently visible; auto-hide is mobile/tablet only.
+      if (window.innerWidth >= 1024 || !examActive || currentY < 24) {
         setHeaderHiddenOnScroll(false);
         lastScrollY.current = currentY;
         return;
