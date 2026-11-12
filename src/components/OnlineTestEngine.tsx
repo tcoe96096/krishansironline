@@ -903,16 +903,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-center">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल प्रश्न / Questions</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
+              <div className="mt-0.5 font-mono text-xl font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल अंक / Total Marks</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
+              <div className="mt-0.5 font-mono text-xl font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
             </div>
             {!studentDetails && (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
                 <div className="text-[10px] font-semibold text-amber-800 sm:text-[11px]">समय / Duration</div>
-                <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
+                <div className="mt-0.5 font-mono text-xl font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
               </div>
             )}
           </div>
