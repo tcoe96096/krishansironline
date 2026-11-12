@@ -85,6 +85,7 @@ declare
   v_title jsonb;
   v_body jsonb;
   v_target_class text;
+  v_created_by uuid;
   v_published_at timestamptz;
 begin
   if tg_op = 'UPDATE' and old.is_published = true then
@@ -102,24 +103,29 @@ begin
       'hi', concat_ws(' · ', new.subject, new.chapter, 'नया ऑनलाइन टेस्ट प्रकाशित')
     );
     v_target_class := new.class_level;
+    v_created_by := null;
+    v_published_at := now();
   elsif tg_table_name = 'site_notices' then
     v_source_type := 'notice';
     v_title := new.title;
     v_body := new.details;
     v_target_class := null;
+    v_created_by := new.created_by;
+    v_published_at := coalesce(new.published_at, now());
   else
     v_source_type := case when new.section = 'materials' then 'material' else 'question' end;
     v_title := coalesce(nullif(new.title, '{}'::jsonb), new.question, '{}'::jsonb);
     v_body := coalesce(nullif(new.details, '{}'::jsonb), new.explanation, '{}'::jsonb);
     v_target_class := new.class_level;
+    v_created_by := new.created_by;
+    v_published_at := coalesce(new.published_at, now());
   end if;
 
-  v_published_at := coalesce(new.published_at, now());
   insert into public.student_notifications (
     title, body, target_class, source_type, source_id, created_by, published_at
   ) values (
     coalesce(v_title, '{}'::jsonb), coalesce(v_body, '{}'::jsonb),
-    v_target_class, v_source_type, new.id::text, new.created_by, v_published_at
+    v_target_class, v_source_type, new.id::text, v_created_by, v_published_at
   )
   on conflict (source_type, source_id) do nothing;
 
