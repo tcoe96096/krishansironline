@@ -89,3 +89,12 @@ For an existing Supabase project, first verify the function definitions, registe
 - The migration was applied to Preview project `zgpkmfqioqvincmgyfpi` and its policies and function grants were inspected. Draft-save and publish RPC logic was exercised inside a transaction and rolled back; no test configuration rows were retained.
 - The Admin Website Editor now saves drafts and publishes Hero text, palette, header/footer branding, and homepage section visibility. Public Hero, Header, Footer and homepage section rendering read the published configuration.
 - Production project `vsqwlkqqsxcehvdsdbna` has not received migration 0011. Do not apply it or deploy the associated code until the separate Production migration review and release approval.
+
+
+## Student notifications migration 0012 (Preview verified, Production pending)
+- `0012_student_notifications.sql` adds class-targeted student notifications and per-student read receipts.
+- Admins can send bilingual manual announcements to all classes or one selected class; the Admin Communication module displays notification history and read counts.
+- Publishing a test creates a notification for that test's class. Publishing a site notice creates an all-class notification. Publishing study material or a question-bank feed creates a notification for the selected class (or all classes when no class is specified).
+- Students can see only notifications targeted to all classes or their own class, expand an item to read it, and retain read/unread history in `student_notification_reads`.
+- The migration was applied to Preview project `zgpkmfqioqvincmgyfpi`. Trigger paths for tests, notices and study materials were exercised inside a transaction and rolled back; no test notifications or content rows were retained.
+- Production project `vsqwlkqqsxcehvdsdbna` has not received migration 0012. Apply only after a separate Production schema review and explicit release approval.
