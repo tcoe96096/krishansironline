@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Krishan Sir branding - Go to home page" className="min-w-0 cursor-pointer no-underline">
             <div className="min-w-0">
               <div className="text-[clamp(1.3rem,3.2vw,2rem)] leading-[1.02] font-extrabold tracking-[-.04em] text-[#102f63]">{siteHeader.brand || 'Krishan Sir'}</div>
-              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /"> {siteHeader.subBrand || 'Online Learning'}</div>
+              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /> {siteHeader.subBrand || 'Online Learning'}</div>
               <div className="mt-0.5 text-[6px] sm:text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">{siteHeader.footer || 'Learn • Practice • Improve • Succeed'}</div>
             </div>
             </a>
