@@ -222,159 +222,29 @@
 }
 
 
-/* Unified floating circular timer and compact exam status — mobile + desktop */
-.exam-live-topbar {
-  position: sticky;
-  top: .5rem;
-  z-index: 35;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 5.15rem;
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: .45rem .65rem;
-  padding: .55rem .65rem;
-  border: 1px solid rgba(202, 219, 233, .9);
-  border-radius: 1.1rem;
-  background: rgba(255,255,255,.94);
-  box-shadow: 0 8px 24px rgba(15, 45, 75, .075);
-  backdrop-filter: blur(16px);
-}
-.exam-live-metrics {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .35rem;
-  align-items: center;
-}
-.exam-live-metric {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: .08rem;
-  padding: .35rem .42rem;
-  border: 1px solid #e4edf4;
-  border-radius: .65rem;
-  background: #f8fbfd;
-  color: #29445d;
-  text-align: left;
-}
-.exam-live-metric span {
-  overflow: hidden;
-  max-width: 100%;
-  color: #64788b;
-  font-size: 9px;
-  font-weight: 750;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.exam-live-metric strong {
-  font-size: 1rem;
-  font-weight: 850;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-}
-.exam-live-metric strong small {
-  margin-left: 1px;
-  font-size: .65rem;
-  font-weight: 700;
-}
-.exam-live-metric-done { background: #effbf6; border-color: #c9f0df; color: #087653; }
-.exam-live-metric-review { background: #faf5ff; border-color: #ead9fa; color: #7434a5; }
-.exam-live-metric-marks { background: #eff8ff; border-color: #d3eaf8; }
-.exam-floating-watch {
-  --watch-progress-color: #0786a8;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  width: 5.05rem;
-  height: 5.05rem;
-  display: grid;
-  place-items: center;
-  justify-self: end;
-  border-radius: 50%;
-  padding: 4px;
-  box-shadow: 0 5px 15px rgba(6, 75, 105, .18);
-  transition: background .35s ease, box-shadow .25s ease;
-}
-.exam-floating-watch.is-warning { --watch-progress-color: #d97706; box-shadow: 0 5px 16px rgba(217,119,6,.2); }
-.exam-floating-watch.is-critical { --watch-progress-color: #dc2626; box-shadow: 0 5px 18px rgba(220,38,38,.25); animation: exam-watch-pulse 1.8s ease-in-out infinite; }
-.exam-floating-watch-face {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: .08rem;
-  border: 1px solid rgba(225,235,243,.9);
-  border-radius: 50%;
-  background: #fff;
-  color: #15516d;
-}
-.exam-floating-watch-face strong {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: .9rem;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.exam-floating-watch-face span {
-  color: #71869a;
-  font-size: 7px;
-  font-weight: 850;
-  letter-spacing: .06em;
-}
-.exam-live-progress { grid-column: 1; grid-row: 2; min-width: 0; }
-.exam-live-progress-label {
-  display: flex;
-  justify-content: space-between;
-  gap: .5rem;
-  margin-bottom: .22rem;
-  color: #60758a;
-  font-size: 9px;
-  font-weight: 750;
-}
-.exam-live-progress-track {
-  height: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e9f0f5;
-}
-.exam-live-progress-track > div {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg,#087a9e,#13b8a6);
-  transition: width .45s ease;
-}
-@keyframes exam-watch-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
-@media (min-width: 1024px) {
-  .exam-live-topbar {
-    top: .65rem;
-    grid-template-columns: minmax(0,1fr) 5.6rem;
-    gap: .55rem .9rem;
-    padding: .6rem .8rem;
-    border-radius: 1.25rem;
-  }
-  .exam-live-metrics { gap: .55rem; }
-  .exam-live-metric { padding: .4rem .65rem; }
-  .exam-live-metric span { font-size: 10px; }
-  .exam-live-metric strong { font-size: 1.05rem; }
-  .exam-floating-watch { width: 5.5rem; height: 5.5rem; }
-  .exam-floating-watch-face strong { font-size: 1rem; }
-}
-@media (max-width: 420px) {
-  .exam-live-topbar { grid-template-columns: minmax(0,1fr) 4.6rem; gap: .35rem .45rem; padding: .45rem; }
-  .exam-live-metrics { gap: .22rem; }
-  .exam-live-metric { padding: .32rem .28rem; border-radius: .55rem; }
-  .exam-live-metric span { font-size: 8px; }
-  .exam-live-metric strong { font-size: .9rem; }
-  .exam-floating-watch { width: 4.5rem; height: 4.5rem; padding: 3px; }
-  .exam-floating-watch-face strong { font-size: .82rem; }
-  .exam-floating-watch-face span { font-size: 6px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .exam-floating-watch.is-critical { animation: none; }
-  .exam-live-progress-track > div, .exam-floating-watch { transition: none; }
-}
+/* Premium Digital Glass timer — right-middle floating position */
+.exam-live-topbar{position:relative;display:block;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none}
+.exam-live-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;padding:.5rem;border:1px solid #dce7ef;border-radius:1rem;background:rgba(255,255,255,.94);box-shadow:0 4px 16px rgba(25,55,80,.055)}
+.exam-live-metric{min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:.08rem;padding:.38rem .5rem;border:1px solid #e4edf4;border-radius:.7rem;background:#f8fbfd;color:#29445d;text-align:left}
+.exam-live-metric span{overflow:hidden;max-width:100%;color:#64788b;font-size:9px;font-weight:750;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.exam-live-metric strong{font-size:1rem;font-weight:850;line-height:1.15;font-variant-numeric:tabular-nums}
+.exam-live-metric strong small{margin-left:1px;font-size:.65rem;font-weight:700}
+.exam-live-metric-done{background:#effbf6;border-color:#c9f0df;color:#087653}
+.exam-live-metric-review{background:#faf5ff;border-color:#ead9fa;color:#7434a5}
+.exam-live-metric-marks{background:#eff8ff;border-color:#d3eaf8}
+.exam-floating-watch{--watch-progress-color:#087e9e;position:fixed;z-index:45;right:max(14px,env(safe-area-inset-right));top:44%;transform:translateY(-50%);width:106px;height:106px;display:grid;place-items:center;padding:5px;border:1px solid #d9e7ef;border-radius:50%;box-shadow:0 12px 32px rgba(20,55,80,.16),0 2px 8px rgba(20,55,80,.08);transition:background .35s ease,box-shadow .25s ease}
+.exam-floating-watch.is-warning{--watch-progress-color:#d97706;box-shadow:0 12px 30px rgba(217,119,6,.17)}
+.exam-floating-watch.is-critical{--watch-progress-color:#dc2626;box-shadow:0 12px 30px rgba(220,38,38,.2);animation:exam-watch-pulse 1.8s ease-in-out infinite}
+.exam-floating-watch-face{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.12rem;border:1px solid #e0eaf1;border-radius:50%;background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(239,247,251,.98));color:#123653;box-shadow:inset 0 2px 8px rgba(255,255,255,.9)}
+.exam-floating-watch-face svg{color:#087e9e}
+.exam-floating-watch-face strong{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.12rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+.exam-floating-watch-face span{color:#60798c;font-size:8px;font-weight:850;letter-spacing:.08em}
+.exam-live-progress{min-width:0;margin:.45rem .15rem 0}
+.exam-live-progress-label{display:flex;justify-content:space-between;gap:.5rem;margin-bottom:.22rem;color:#60758a;font-size:9px;font-weight:750}
+.exam-live-progress-track{height:4px;overflow:hidden;border-radius:999px;background:#e9f0f5}
+.exam-live-progress-track>div{height:100%;border-radius:inherit;background:linear-gradient(90deg,#087a9e,#13b8a6);transition:width .45s ease}
+@keyframes exam-watch-pulse{0%,100%{box-shadow:0 12px 30px rgba(220,38,38,.18)}50%{box-shadow:0 12px 36px rgba(220,38,38,.34)}}
+@media(min-width:1024px){.exam-floating-watch{width:116px;height:116px;right:22px}.exam-floating-watch-face strong{font-size:1.22rem}.exam-live-topbar{padding-right:132px}}
+@media(max-width:1023px){.exam-floating-watch{width:92px;height:92px;right:10px;top:46%;padding:4px}.exam-floating-watch-face strong{font-size:.96rem}.exam-floating-watch-face span{font-size:7px}.exam-live-topbar{padding-right:0}.exam-live-metrics{margin-right:0}.exam-interface{padding-right:0}}
+@media(max-width:420px){.exam-floating-watch{width:82px;height:82px;right:8px;top:45%}.exam-floating-watch-face strong{font-size:.86rem}.exam-live-metrics{gap:.22rem;padding:.38rem}.exam-live-metric{padding:.3rem .28rem}.exam-live-metric span{font-size:8px}.exam-live-metric strong{font-size:.9rem}}
+@media(prefers-reduced-motion:reduce){.exam-floating-watch.is-critical{animation:none}.exam-live-progress-track>div,.exam-floating-watch{transition:none}}
