@@ -40,9 +40,18 @@ create policy "Students read targeted notifications"
     )
   );
 drop policy if exists "Admins manage student notifications" on public.student_notifications;
-create policy "Admins manage student notifications"
-  on public.student_notifications for all to authenticated
+drop policy if exists "Admins insert student notifications" on public.student_notifications;
+create policy "Admins insert student notifications"
+  on public.student_notifications for insert to authenticated
+  with check (public.is_admin());
+drop policy if exists "Admins update student notifications" on public.student_notifications;
+create policy "Admins update student notifications"
+  on public.student_notifications for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Admins delete student notifications" on public.student_notifications;
+create policy "Admins delete student notifications"
+  on public.student_notifications for delete to authenticated
+  using (public.is_admin());
 
 drop policy if exists "Students read own notification receipts" on public.student_notification_reads;
 create policy "Students read own notification receipts"
@@ -65,10 +74,6 @@ create policy "Students update own notification receipts"
   on public.student_notification_reads for update to authenticated
   using (student_id = auth.uid())
   with check (student_id = auth.uid());
-drop policy if exists "Admins read notification receipts" on public.student_notification_reads;
-create policy "Admins read notification receipts"
-  on public.student_notification_reads for select to authenticated
-  using (public.is_admin());
 
 grant select on public.student_notifications to authenticated;
 grant insert, update, delete on public.student_notifications to authenticated;
