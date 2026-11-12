@@ -18,14 +18,44 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const [headerHiddenOnScroll, setHeaderHiddenOnScroll] = useState(false);
   const lastScrollY = useRef(0);
 
-  // In an active exam, keep the header visible at first; hide it as the student
-  // scrolls down through questions, and reveal it when they scroll back up.
+  // Auto-hide the site header in an active exam on both mobile and desktop.
+  // Scrolling down hides it; scrolling up reveals it. The floating exam watch
+  // reads the measured header height and follows this visibility state.
+  const headerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const updateHeaderHeight = () => {
+      root.style.setProperty('--exam-header-visible-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    };
+    updateHeaderHeight();
+    const resizeObserver = new ResizeObserver(updateHeaderHeight);
+    resizeObserver.observe(header);
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+      root.style.removeProperty('--exam-header-visible-height');
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.toggle('exam-header-hidden', headerHiddenOnScroll);
+    body.classList.toggle('exam-header-hidden', headerHiddenOnScroll);
+    return () => {
+      root.classList.remove('exam-header-hidden');
+      body.classList.remove('exam-header-hidden');
+    };
+  }, [headerHiddenOnScroll]);
+
   useEffect(() => {
     const handleScroll = () => {
       const examActive = document.body.classList.contains('exam-mode-active') || document.documentElement.classList.contains('exam-mode-active');
       const currentY = Math.max(0, window.scrollY);
-      // Keep the desktop site header permanently visible; auto-hide is mobile/tablet only.
-      if (window.innerWidth >= 1024 || !examActive || currentY < 24) {
+      if (!examActive || currentY < 24) {
         setHeaderHiddenOnScroll(false);
         lastScrollY.current = currentY;
         return;
@@ -58,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   ];
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
   return (
-    <header className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ease-out ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
+    <header ref={headerRef} className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ease-out will-change-transform ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
       <div className="bg-[#090d14] text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
