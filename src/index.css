@@ -156,14 +156,33 @@
   min-height: 2.15rem;
 }
 @media (min-width: 1024px) {
+  /* Desktop only: keep the status dashboard in one shallow row so it never crowds the question and palette. */
   .exam-interface .mobile-exam-status {
-    position: relative;
-    top: auto;
-    z-index: 1;
-    padding: 1rem;
+    padding: .45rem .6rem !important;
+    border-radius: .85rem;
+    box-shadow: 0 3px 12px rgba(12, 45, 85, .055);
   }
   .exam-interface .mobile-exam-status > div:nth-child(2) {
-    gap: .75rem;
+    gap: .45rem;
+  }
+  .exam-interface .mobile-exam-status > div:nth-child(2) > * {
+    min-width: 0;
+    padding: .35rem .55rem;
+    border-radius: .65rem;
+  }
+  .exam-interface .mobile-exam-status > div:nth-child(2) > * > div:last-child {
+    line-height: 1.15;
+  }
+  .exam-interface .mobile-exam-status > div:nth-child(3) {
+    margin-top: .35rem !important;
+  }
+  .exam-interface .mobile-exam-status > div:nth-child(3) > div:first-child {
+    margin-bottom: .2rem !important;
+    font-size: 9px !important;
+    line-height: 1.2;
+  }
+  .exam-interface .mobile-exam-status > div:nth-child(3) > div:last-child {
+    height: 4px;
   }
   .exam-interface .exam-question-card {
     padding: clamp(1.5rem, 2.2vw, 2.25rem);

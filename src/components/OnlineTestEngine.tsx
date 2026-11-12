@@ -903,16 +903,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-center">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल प्रश्न / Questions</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
+              <div className="mt-0.5 font-mono text-xl font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल अंक / Total Marks</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
+              <div className="mt-0.5 font-mono text-xl font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
             </div>
             {!studentDetails && (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
                 <div className="text-[10px] font-semibold text-amber-800 sm:text-[11px]">समय / Duration</div>
-                <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
+                <div className="mt-0.5 font-mono text-xl font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
               </div>
             )}
           </div>
@@ -1129,13 +1129,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">DONE</div><div className="font-mono text-sm font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="font-mono text-sm font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
-              <div className="hidden lg:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-xl font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{unattemptedCount}</div></button>
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TOTAL MARKS</div><div className="font-mono text-xl font-extrabold">{selectedTest.totalMarks}</div></div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-xl font-extrabold">{reviewCount}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
+              <div className="hidden lg:grid grid-cols-6 gap-2">
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5"><div className="text-[9px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-lg font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-lg font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-lg font-extrabold">{unattemptedCount}</div></button>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5"><div className="text-[9px] font-bold text-sky-800">TOTAL MARKS</div><div className="font-mono text-lg font-extrabold">{selectedTest.totalMarks}</div></div>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-lg font-extrabold">{reviewCount}</div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-lg font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
               </div>
               <div className="mt-1.5 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[9px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
             </div>
