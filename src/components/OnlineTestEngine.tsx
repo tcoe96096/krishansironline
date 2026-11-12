@@ -1119,25 +1119,40 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
         {studentDetails && activeAttempt && !isSubmitted && (
           <div className="exam-interface space-y-3 pb-24 sm:space-y-5 sm:pb-0">
-            {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
-            <div className="mobile-exam-status sticky top-0 z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2.5 sm:p-4 lg:static lg:shadow-sm" aria-label="Live examination status">
-              <div className="flex items-center justify-between gap-2 lg:hidden">
-                <div className={"flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
-                  <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय</div>
-                  <div className="font-mono text-base font-extrabold leading-tight tabular-nums" aria-live="polite">{formatTimer(timeLeftSeconds)}</div>
+            {/* UNIFIED EXAM TOPBAR: compact live stats + floating circular timer */}
+            <div className="exam-live-topbar" aria-label="Live examination status">
+              <div className="exam-live-metrics">
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="exam-live-metric exam-live-metric-done">
+                  <span>हल किए</span><strong>{attemptedCount}<small>/{totalQuestions}</small></strong>
+                </button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="exam-live-metric">
+                  <span>शेष</span><strong>{unattemptedCount}</strong>
+                </button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="exam-live-metric exam-live-metric-review">
+                  <span>Review</span><strong>{reviewCount}</strong>
+                </button>
+                <div className="exam-live-metric exam-live-metric-marks">
+                  <span>कुल अंक</span><strong>{selectedTest.totalMarks}</strong>
                 </div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">DONE</div><div className="font-mono text-sm font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="font-mono text-sm font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
-              <div className="hidden lg:grid grid-cols-6 gap-2">
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5"><div className="text-[9px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-lg font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-lg font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-lg font-extrabold">{unattemptedCount}</div></button>
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5"><div className="text-[9px] font-bold text-sky-800">TOTAL MARKS</div><div className="font-mono text-lg font-extrabold">{selectedTest.totalMarks}</div></div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-lg font-extrabold">{reviewCount}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-1.5 text-left"><div className="text-[9px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-lg font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
+              <div className={"exam-floating-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
+                role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
+                style={{ background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #e7eef5 0)` }}>
+                <div className="exam-floating-watch-face">
+                  <Clock className="h-4 w-4" />
+                  <strong>{formatTimer(timeLeftSeconds)}</strong>
+                  <span>TIME LEFT</span>
+                </div>
               </div>
-              <div className="mt-1.5 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[9px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
+              <div className="exam-live-progress" aria-label="Exam progress">
+                <div className="exam-live-progress-label">
+                  <span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions}</span>
+                  <span>{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}% पूरा</span>
+                </div>
+                <div className="exam-live-progress-track">
+                  <div style={{ width: `${(attemptedCount / Math.max(1, totalQuestions)) * 100}%` }} />
+                </div>
+              </div>
             </div>
             {/* MOBILE QUESTION PALETTE: compact collapsible navigation */}
             <div className="lg:hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
