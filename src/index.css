@@ -484,3 +484,39 @@
   .exam-glass-watch-label { font-size: 6px; }
   .exam-glass-watch-state { font-size: 5px; }
 }
+
+
+/* Final selection: Sample 1 Neo Digital Ring, medium, right aligned */
+.exam-live-topbar { grid-template-columns:minmax(0,1fr) 5.25rem !important; padding:.55rem .65rem !important; }
+.exam-live-metrics { grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:.35rem !important; }
+.exam-live-metric { min-height:0 !important; flex-direction:column !important; align-items:flex-start !important; padding:.35rem .42rem !important; }
+.exam-floating-watch.exam-glass-watch,
+.exam-floating-watch {
+  --watch-progress-color:#18d6c0;
+  width:5.1rem !important; height:5.1rem !important; padding:4px !important;
+  border-radius:50%; justify-self:end; align-self:center;
+  background-color:#0d2438;
+  box-shadow:0 0 0 1px #24465c,0 5px 18px rgba(6,75,105,.22),inset 0 0 14px rgba(24,214,192,.12);
+}
+.exam-floating-watch.is-warning { --watch-progress-color:#f5ad42; }
+.exam-floating-watch.is-critical { --watch-progress-color:#ff5b68; }
+.exam-floating-watch-face,
+.exam-glass-watch-face {
+  border:1px solid rgba(104,157,183,.35) !important;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,#15364b 0%,#0a1c2c 72%) !important;
+  color:#fff !important; gap:.13rem !important;
+}
+.exam-watch-live { display:flex; align-items:center; gap:4px; color:#8fb4c9; font-size:7px; font-weight:850; letter-spacing:.1em; }
+.exam-watch-live i { width:5px; height:5px; border-radius:50%; background:#18d6c0; box-shadow:0 0 6px #18d6c0; }
+.exam-floating-watch-face strong,
+.exam-glass-watch-face strong { color:#fff !important; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:1rem !important; font-weight:900; line-height:1; letter-spacing:-.04em; text-shadow:0 0 12px rgba(24,214,192,.25); }
+.exam-floating-watch-face span:last-child { color:#18d6c0 !important; font-size:7px; font-weight:850; letter-spacing:.12em; }
+@media(min-width:1024px) {
+ .exam-live-topbar { grid-template-columns:minmax(0,1fr) 5.35rem !important; }
+ .exam-floating-watch.exam-glass-watch,.exam-floating-watch { width:5.2rem !important; height:5.2rem !important; }
+}
+@media(max-width:420px) {
+ .exam-live-topbar { grid-template-columns:minmax(0,1fr) 4.7rem !important; }
+ .exam-floating-watch.exam-glass-watch,.exam-floating-watch { width:4.55rem !important; height:4.55rem !important; padding:3px !important; }
+}
