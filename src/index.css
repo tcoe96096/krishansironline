@@ -378,3 +378,109 @@
   .exam-floating-watch.is-critical { animation: none; }
   .exam-live-progress-track > div, .exam-floating-watch { transition: none; }
 }
+
+
+/* Sample 3 — Premium Digital Glass watch, medium size, right-middle of status panel */
+.exam-live-topbar {
+  grid-template-columns: minmax(0, 1fr) 7rem;
+  grid-template-rows: auto auto;
+  align-items: center;
+  padding: .7rem .8rem;
+  border: 1px solid #d9e5f0;
+  border-radius: 1.15rem;
+  background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(242,248,252,.96));
+  box-shadow: 0 8px 24px rgba(22,55,85,.08);
+}
+.exam-live-metrics {
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: .45rem;
+}
+.exam-live-metric {
+  min-height: 2.55rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem;
+  padding: .42rem .6rem;
+  border-color: #e2eaf1;
+  background: rgba(255,255,255,.82);
+}
+.exam-live-metric span { font-size: 9px; }
+.exam-live-metric strong { font-size: 1rem; }
+.exam-live-metric-done { background: #f0fbf7; border-color: #d2eee2; }
+.exam-live-metric-review { background: #faf6ff; border-color: #eadff5; }
+.exam-live-metric-marks { background: #f1f8fd; border-color: #dcebf5; }
+.exam-floating-watch.exam-glass-watch {
+  --watch-progress-color: #087e9e;
+  width: 6.5rem;
+  height: 6.5rem;
+  padding: 4px;
+  border-radius: 50%;
+  background-color: #dce9f0;
+  box-shadow: 0 7px 20px rgba(15,70,105,.14);
+  justify-self: end;
+  align-self: center;
+}
+.exam-floating-watch.exam-glass-watch.is-warning { --watch-progress-color: #d97706; }
+.exam-floating-watch.exam-glass-watch.is-critical { --watch-progress-color: #dc2626; }
+.exam-glass-watch-face {
+  border: 1px solid rgba(217,229,240,.95);
+  background: linear-gradient(145deg,#ffffff,#f4f8fb);
+  color: #123653;
+  gap: .25rem;
+}
+.exam-glass-watch-label {
+  color: #73879a;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.exam-glass-watch-face strong {
+  color: #123653;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.12rem;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+.exam-glass-watch-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #168c83;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: .035em;
+}
+.exam-glass-watch-state i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #19a985;
+  box-shadow: 0 0 0 2px rgba(25,169,133,.12);
+}
+.exam-floating-watch.is-warning .exam-glass-watch-state { color: #b66b0a; }
+.exam-floating-watch.is-critical .exam-glass-watch-state { color: #c52c2c; }
+.exam-floating-watch.is-warning .exam-glass-watch-state i { background: #d97706; }
+.exam-floating-watch.is-critical .exam-glass-watch-state i { background: #dc2626; }
+.exam-live-progress { grid-column: 1; grid-row: 2; }
+@media (min-width: 1024px) {
+  .exam-live-topbar {
+    grid-template-columns: minmax(0,1fr) 7.5rem;
+    padding: .8rem 1rem;
+  }
+  .exam-live-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); gap: .5rem; }
+  .exam-live-metric { min-height: 2.8rem; padding: .45rem .65rem; }
+  .exam-floating-watch.exam-glass-watch { width: 7rem; height: 7rem; }
+  .exam-glass-watch-face strong { font-size: 1.2rem; }
+}
+@media (max-width: 420px) {
+  .exam-live-topbar { grid-template-columns: minmax(0,1fr) 5.9rem; padding: .5rem; gap: .35rem .45rem; }
+  .exam-live-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: .3rem; }
+  .exam-live-metric { min-height: 2.2rem; padding: .3rem .4rem; }
+  .exam-live-metric span { font-size: 8px; }
+  .exam-live-metric strong { font-size: .9rem; }
+  .exam-floating-watch.exam-glass-watch { width: 5.6rem; height: 5.6rem; padding: 3px; }
+  .exam-glass-watch-face strong { font-size: .96rem; }
+  .exam-glass-watch-label { font-size: 6px; }
+  .exam-glass-watch-state { font-size: 5px; }
+}
