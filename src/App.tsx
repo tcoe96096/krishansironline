@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Header } from './components/Header';
+import { FloatingStudentLogin } from './components/FloatingStudentLogin';
 import { AuthModal } from './components/AuthModal';
 import { StudentDashboard } from './components/StudentDashboard';
 import { useAuth } from './context/AuthContext';
@@ -266,6 +267,8 @@ const MainApp: React.FC = () => {
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
       />}
+
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
