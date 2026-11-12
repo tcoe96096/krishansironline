@@ -36,6 +36,17 @@ export async function getPublishedWebsiteConfig(): Promise<WebsiteConfig | null>
   return (data?.config ?? null) as WebsiteConfig | null;
 }
 
+export function subscribeToWebsiteConfigChanges(onChange: () => void): () => void {
+  const client = requireSupabase();
+  const channel = client
+    .channel('published-website-config-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'site_config_versions' }, onChange)
+    .subscribe();
+  return () => {
+    void client.removeChannel(channel);
+  };
+}
+
 export async function saveWebsiteConfigDraft(config: WebsiteConfig): Promise<string> {
   const { data, error } = await requireSupabase().rpc('admin_save_site_config', { p_config: config });
   if (error) throw error;

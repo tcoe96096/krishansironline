@@ -21,7 +21,7 @@ import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
 import { TEACHER_INFO } from './data/portalData';
-import { getPublishedWebsiteConfig } from './services/siteConfigService';
+import { getPublishedWebsiteConfig, subscribeToWebsiteConfigChanges } from './services/siteConfigService';
 import {
   BookOpen,
   LayoutDashboard,
@@ -162,10 +162,22 @@ const MainApp: React.FC = () => {
   const [homeSections, setHomeSections] = useState<Record<string, boolean>>({});
   useEffect(() => {
     let active = true;
-    void getPublishedWebsiteConfig().then((config) => {
-      if (active && config?.sections) setHomeSections(config.sections);
-    }).catch((error) => console.warn('Published homepage section settings unavailable:', error));
-    return () => { active = false; };
+    const refreshPublishedSections = () => {
+      void getPublishedWebsiteConfig().then((config) => {
+        if (active && config?.sections) setHomeSections(config.sections);
+      }).catch((error) => console.warn('Published homepage section settings unavailable:', error));
+    };
+    refreshPublishedSections();
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToWebsiteConfigChanges(refreshPublishedSections);
+    } catch (error) {
+      console.warn('Homepage configuration realtime subscription unavailable:', error);
+    }
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
