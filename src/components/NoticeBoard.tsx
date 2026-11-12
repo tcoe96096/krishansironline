@@ -43,12 +43,10 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
           .select('id,title,details,category,link,published_at,display_order,is_pinned,starts_at,expires_at,show_on_homepage')
           .eq('is_published', true)
           .eq('show_on_homepage', true)
-          .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
-          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
           .order('is_pinned', { ascending: false })
           .order('display_order', { ascending: true })
           .order('published_at', { ascending: false })
-          .limit(8);
+          .limit(200);
         if (queryError) throw queryError;
         if (!active) return;
         setNotices((data ?? []).map((row: any) => ({
@@ -112,6 +110,15 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
     return () => window.clearTimeout(timer);
   }, [notices]);
 
+  const visibleNotices = notices
+    .filter((notice) => {
+      const now = Date.now();
+      const hasStarted = !notice.startsAt || new Date(notice.startsAt).getTime() <= now;
+      const hasNotExpired = !notice.expiresAt || new Date(notice.expiresAt).getTime() > now;
+      return hasStarted && hasNotExpired;
+    })
+    .slice(0, 8);
+
   const openNoticeLink = (link?: string | null) => {
     if (!link) return;
     if (link.startsWith('#')) {
@@ -161,12 +168,12 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
             {language === 'en' ? 'Announcements could not be loaded. Please try Refresh updates.' : 'सूचनाएँ लोड नहीं हो सकीं। कृपया रिफ्रेश करें।'}
           </div>
         )}
-        {!loading && !error && notices.length === 0 && (
+        {!loading && !error && visibleNotices.length === 0 && (
           <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'No announcements have been published yet.' : 'अभी कोई सूचना प्रकाशित नहीं हुई है।'}</p>
         )}
-        {!loading && !error && notices.length > 0 && (
+        {!loading && !error && visibleNotices.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {notices.map((notice) => {
+            {visibleNotices.map((notice) => {
               const title = localized(notice.title, language);
               const details = localized(notice.details, language);
               return (
