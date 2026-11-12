@@ -378,3 +378,27 @@
   .exam-floating-watch.is-critical { animation: none; }
   .exam-live-progress-track > div, .exam-floating-watch { transition: none; }
 }
+/* Sample 1 — Neo Digital Ring Watch, medium size, right position */
+.exam-floating-watch.exam-neon-watch {
+  --watch-progress-color: #18d6c0;
+  width: 5.25rem; height: 5.25rem; padding: 4px;
+  background-color: #25445a;
+  box-shadow: 0 0 0 1px rgba(24,214,192,.2), 0 0 18px rgba(24,214,192,.2), 0 7px 18px rgba(7,24,39,.22);
+}
+.exam-floating-watch.exam-neon-watch.is-warning { --watch-progress-color:#f5b942; box-shadow:0 0 18px rgba(245,185,66,.25),0 7px 18px rgba(7,24,39,.2); }
+.exam-floating-watch.exam-neon-watch.is-critical { --watch-progress-color:#ff5364; box-shadow:0 0 20px rgba(255,83,100,.3),0 7px 18px rgba(7,24,39,.2); }
+.exam-neon-watch .exam-floating-watch-face {
+  border:1px solid rgba(68,116,143,.55);
+  background:radial-gradient(circle at 35% 25%,#173b52 0%,#0b2032 58%,#071827 100%);
+  color:#f4ffff; box-shadow:inset 0 0 16px rgba(24,214,192,.12); gap:.12rem;
+}
+.exam-neon-watch .exam-floating-watch-face strong {
+  color:#f2ffff; font-size:1rem; font-weight:950; letter-spacing:-.045em;
+  text-shadow:0 0 12px rgba(24,214,192,.34);
+}
+.exam-neon-label { color:#8db5c8; font-size:7px; font-weight:850; letter-spacing:.16em; }
+.exam-neon-unit { color:#21d9c5; font-size:6px; font-weight:850; letter-spacing:.12em; }
+.exam-neon-live { display:flex; align-items:center; gap:3px; color:#8db5c8; font-size:6px; font-weight:800; letter-spacing:.08em; }
+.exam-neon-live i { width:4px; height:4px; border-radius:50%; background:#18d6c0; box-shadow:0 0 7px #18d6c0; }
+@media (min-width:1024px) { .exam-floating-watch.exam-neon-watch { width:5.5rem; height:5.5rem; } }
+@media (max-width:420px) { .exam-floating-watch.exam-neon-watch { width:4.5rem; height:4.5rem; } }
