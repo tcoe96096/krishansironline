@@ -61,7 +61,10 @@ const defaultInspectorStyle: InspectorStyle = {
 };
 type VisualOverride = { selector: string; text: string; style: InspectorStyle };
 type VisualEditorDraft = { version: 1; pages: Record<string, Record<string, VisualOverride>> };
-const isSafeSelector = (selector: string) => {\n  const parts = selector.split(' > ');\n  return parts[0] === 'body' && parts.slice(1).length > 0 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\\([1-9]\\d*\\)$/i.test(part));\n};
+const isSafeSelector = (selector: string) => {
+  const parts = selector.split(' > ');
+  return parts[0] === 'body' && parts.slice(1).length > 0 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\([1-9]\d*\)$/i.test(part));
+};
 const buildSafeSelector = (element: HTMLElement): string => {
   const parts: string[] = [];
   let current: HTMLElement | null = element;
