@@ -481,6 +481,27 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setLoginError('');
   }, [user, profile, authLoading, profileLoading]);
 
+  const getReadableErrorMessage = (error: unknown): string => {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object') {
+      const value = error as Record<string, unknown>;
+      for (const key of ['message', 'error_description', 'details', 'hint', 'error']) {
+        const candidate = value[key];
+        if (typeof candidate === 'string' && candidate.trim()) return candidate;
+        if (candidate && typeof candidate === 'object' && 'message' in candidate) {
+          const nested = (candidate as { message?: unknown }).message;
+          if (typeof nested === 'string' && nested.trim()) return nested;
+        }
+      }
+      try {
+        const serialized = JSON.stringify(error);
+        if (serialized && serialized !== '{}') return serialized;
+      } catch { /* use the safe fallback below */ }
+    }
+    return 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।';
+  };
+
   const handleStudentLogin = async () => {
     setLoginError('');
     if (!user || !studentDetails) {
@@ -538,14 +559,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
-      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+      const errorMessage = getReadableErrorMessage(error);
       const errorDetails = (() => {
         try { return JSON.stringify(error); } catch { return errorMessage; }
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setLoginError(isAttemptLimitReached
         ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
-        : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
+        : errorMessage);
     }
   };
 
