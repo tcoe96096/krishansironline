@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { requireSupabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Bell, BookOpen, ClipboardList, Edit3, ExternalLink, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
+import { Bell, BookOpen, ClipboardList, Edit3, Loader2, RefreshCw, Save, Trash2, X } from 'lucide-react';
 
 type Tab = 'notices' | 'materials' | 'questions';
 type Row = Record<string, any> & { id: string };
@@ -200,8 +200,8 @@ export const AdminCommunicationManagement: React.FC = () => {
           <label><span className={labelClass}>{isQuestion ? 'प्रश्न का शीर्षक (वैकल्पिक)' : 'शीर्षक · English'}</span><input className={inputClass} value={title.en} onChange={(e) => setTitle((v) => ({ ...v, en: e.target.value }))} placeholder="English title"/></label>
           <label><span className={labelClass}>{isQuestion ? 'प्रश्न का शीर्षक (वैकल्पिक)' : 'शीर्षक · हिन्दी'}</span><input className={inputClass} value={title.hi} onChange={(e) => setTitle((v) => ({ ...v, hi: e.target.value }))} placeholder="हिन्दी शीर्षक"/></label>
           {isQuestion ? <>
-            <label className="md:col-span-2"><span className={labelClass}>प्रश्न · English</span><textarea required={!question.hi.trim()} className={inputClass} rows={2} value={question.en} onChange={(e) => setQuestion((v) => ({ ...v, en: e.target.value }))}/></label>
-            <label className="md:col-span-2"><span className={labelClass}>प्रश्न · हिन्दी</span><textarea required={!question.en.trim()} className={inputClass} rows={2} value={question.hi} onChange={(e) => setQuestion((v) => ({ ...v, hi: e.target.value }))}/></label>
+            <label className="md:col-span-2"><span className={labelClass}>प्रश्न · English</span><textarea className={inputClass} rows={2} value={question.en} onChange={(e) => setQuestion((v) => ({ ...v, en: e.target.value }))}/></label>
+            <label className="md:col-span-2"><span className={labelClass}>प्रश्न · हिन्दी</span><textarea className={inputClass} rows={2} value={question.hi} onChange={(e) => setQuestion((v) => ({ ...v, hi: e.target.value }))}/></label>
             <label><span className={labelClass}>विकल्प English · प्रत्येक नई लाइन में</span><textarea className={inputClass} rows={4} value={optionsEn} onChange={(e) => setOptionsEn(e.target.value)} placeholder={'Option A\nOption B\nOption C\nOption D'}/></label>
             <label><span className={labelClass}>विकल्प हिन्दी · प्रत्येक नई लाइन में</span><textarea className={inputClass} rows={4} value={optionsHi} onChange={(e) => setOptionsHi(e.target.value)} placeholder={'विकल्प A\nविकल्प B\nविकल्प C\nविकल्प D'}/></label>
             <label><span className={labelClass}>व्याख्या English</span><textarea className={inputClass} rows={2} value={explanation.en} onChange={(e) => setExplanation((v) => ({ ...v, en: e.target.value }))}/></label>
