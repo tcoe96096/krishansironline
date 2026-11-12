@@ -6,6 +6,8 @@ import { Bell, BookOpen, ClipboardList, Edit3, Loader2, RefreshCw, Save, Trash2,
 type Tab = 'notices' | 'materials' | 'questions';
 type Row = Record<string, any> & { id: string };
 type Localized = { en: string; hi: string };
+type AnnouncementSourceTest = { id: string; title: Localized; class_level: string; subject: string; chapter: string; duration_minutes: number; total_marks: number; is_published: boolean; questions?: unknown[] };
+type AnnouncementSourceMaterial = { id: string; title: Localized; details: Localized; category: string; class_level: string | null; subject: string | null; chapter: string | null; file_url: string | null; is_published: boolean };
 
 const emptyLocalized = (): Localized => ({ en: '', hi: '' });
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
@@ -69,8 +71,59 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [schedulePreset, setSchedulePreset] = useState('now');
   const [expiryPreset, setExpiryPreset] = useState('never');
+  const [sourceKind, setSourceKind] = useState<'test' | 'material'>('test');
+  const [sourceTests, setSourceTests] = useState<AnnouncementSourceTest[]>([]);
+  const [sourceMaterials, setSourceMaterials] = useState<AnnouncementSourceMaterial[]>([]);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [selectedSourceId, setSelectedSourceId] = useState('');
 
   const table = tab === 'notices' ? 'site_notices' : 'admin_content_items';
+
+  const applySelectedAnnouncementSource = (sourceId: string, kind: 'test' | 'material') => {
+    setSelectedSourceId(sourceId);
+    setSourceKind(kind);
+    if (!sourceId) return;
+    if (kind === 'test') {
+      const source = sourceTests.find((item) => item.id === sourceId);
+      if (!source) return;
+      const sourceTitle = localizedText(source.title);
+      const classLabel = source.class_level ? `Class ${source.class_level}` : 'Online test';
+      const chapterLabel = source.chapter ? ` · ${source.chapter}` : '';
+      const questionCount = Array.isArray(source.questions) ? source.questions.length : 0;
+      setTitle({
+        en: `New Test Published: ${sourceTitle.en || sourceTitle.hi}`,
+        hi: `नई टेस्ट प्रकाशित: ${sourceTitle.hi || sourceTitle.en}`,
+      });
+      setDetails({
+        en: `${classLabel} · ${source.subject || 'Social Science'}${chapterLabel}. The test is now available on the website. It includes ${questionCount || 'multiple'} questions, ${source.total_marks || '—'} marks and a ${source.duration_minutes || '—'} minute duration. Visit the Online Tests section to attempt it.`,
+        hi: `कक्षा ${source.class_level || '—'} · ${source.subject || 'सामाजिक विज्ञान'}${chapterLabel ? ` · ${source.chapter}` : ''}। यह ऑनलाइन टेस्ट वेबसाइट पर उपलब्ध है। इसमें ${questionCount || 'कई'} प्रश्न, ${source.total_marks || '—'} अंक तथा ${source.duration_minutes || '—'} मिनट का समय है। टेस्ट देने के लिए Online Tests सेक्शन में जाएँ।`,
+      });
+      setCategory('Test Update');
+      setClassLevel(source.class_level || '');
+      setSubject(source.subject || '');
+      setChapter(source.chapter || '');
+      setLink('');
+    } else {
+      const source = sourceMaterials.find((item) => item.id === sourceId);
+      if (!source) return;
+      const sourceTitle = localizedText(source.title);
+      const sourceDetails = localizedText(source.details);
+      const contextEn = [source.class_level ? `Class ${source.class_level}` : '', source.subject || '', source.chapter || ''].filter(Boolean).join(' · ');
+      const contextHi = [source.class_level ? `कक्षा ${source.class_level}` : '', source.subject || '', source.chapter || ''].filter(Boolean).join(' · ');
+      setTitle({ en: `New Study Material: ${sourceTitle.en || sourceTitle.hi}`, hi: `नई अध्ययन सामग्री: ${sourceTitle.hi || sourceTitle.en}` });
+      setDetails({
+        en: [contextEn, sourceDetails.en || sourceDetails.hi, 'New study material is now available. Open Study Materials to view it.'].filter(Boolean).join('. '),
+        hi: [contextHi, sourceDetails.hi || sourceDetails.en, 'नई अध्ययन सामग्री उपलब्ध है। इसे देखने के लिए Study Materials सेक्शन खोलें।'].filter(Boolean).join('। '),
+      });
+      setCategory(source.category || 'Study Material');
+      setClassLevel(source.class_level || '');
+      setSubject(source.subject || '');
+      setChapter(source.chapter || '');
+      setLink(source.file_url || '');
+    }
+    setMessage('चुनी गई सामग्री के आधार पर Announcement अपने आप भर दिया गया है।');
+    setError('');
+  };
 
   const applyAnnouncementTemplate = (templateId: string) => {
     const template = announcementTemplates.find((item) => item.id === templateId);
@@ -122,6 +175,30 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
 
   useEffect(() => { void loadRows(); }, [loadRows]);
 
+  useEffect(() => {
+    if (demoMode || tab !== 'notices') return;
+    let active = true;
+    const loadAnnouncementSources = async () => {
+      setSourceLoading(true);
+      try {
+        const client = requireSupabase();
+        const [testsResult, materialsResult] = await Promise.all([
+          client.from('tests').select('id,title,class_level,subject,chapter,duration_minutes,total_marks,is_published,questions').eq('is_published', true).order('updated_at', { ascending: false }),
+          client.from('admin_content_items').select('id,title,details,category,class_level,subject,chapter,file_url,is_published').eq('section', 'materials').eq('is_published', true).order('updated_at', { ascending: false }),
+        ]);
+        if (!active) return;
+        if (!testsResult.error) setSourceTests((testsResult.data ?? []) as AnnouncementSourceTest[]);
+        if (!materialsResult.error) setSourceMaterials((materialsResult.data ?? []) as AnnouncementSourceMaterial[]);
+      } catch {
+        if (active) { setSourceTests([]); setSourceMaterials([]); }
+      } finally {
+        if (active) setSourceLoading(false);
+      }
+    };
+    void loadAnnouncementSources();
+    return () => { active = false; };
+  }, [demoMode, tab]);
+
   const resetForm = () => {
     setEditingId(null);
     setTitle(emptyLocalized());
@@ -146,6 +223,8 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     setSelectedTemplate('');
     setSchedulePreset('now');
     setExpiryPreset('never');
+    setSelectedSourceId('');
+    setSourceKind('test');
     setError('');
     setMessage('');
   };
@@ -307,6 +386,15 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
 
       <form onSubmit={saveRow} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between"><h3 className="font-extrabold text-slate-900">{editingId ? 'रिकॉर्ड संपादित करें' : 'नई सामग्री जोड़ें'}</h3>{editingId && <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><X className="h-4 w-4"/>Cancel</button>}</div>
+        {isNotice && <section className="mb-5 space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+          <div><p className="text-sm font-extrabold text-slate-900">Create Announcement from Existing Content</p><p className="mt-1 text-xs text-slate-500">अब Heading या Subject दोबारा टाइप न करें। पहले प्रकाशित Test या Study Material चुनें; उसका विवरण Announcement में अपने आप भर जाएगा।</p></div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { setSourceKind('test'); setSelectedSourceId(''); }} className={`rounded-lg px-3 py-2 text-xs font-bold ${sourceKind === 'test' ? 'bg-sky-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>Select Published Test</button>
+            <button type="button" onClick={() => { setSourceKind('material'); setSelectedSourceId(''); }} className={`rounded-lg px-3 py-2 text-xs font-bold ${sourceKind === 'material' ? 'bg-sky-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>Select Study Material</button>
+          </div>
+          <label className="block"><span className={labelClass}>{sourceKind === 'test' ? 'Choose a published test' : 'Choose published study material'}</span><select className={inputClass} value={selectedSourceId} onChange={(e) => applySelectedAnnouncementSource(e.target.value, sourceKind)} disabled={sourceLoading}><option value="">{sourceLoading ? 'Loading available content…' : sourceKind === 'test' ? '— Select test —' : '— Select study material —'}</option>{(sourceKind === 'test' ? sourceTests : sourceMaterials).map((item) => <option key={item.id} value={item.id}>{sourceKind === 'test' ? `Class ${(item as AnnouncementSourceTest).class_level} · ${(item as AnnouncementSourceTest).subject} · ${localizedText(item.title).en || localizedText(item.title).hi} · ${(item as AnnouncementSourceTest).chapter}` : `Class ${(item as AnnouncementSourceMaterial).class_level || '—'} · ${localizedText(item.title).en || localizedText(item.title).hi}`}</option>)}</select><span className="mt-1 block text-[10px] text-slate-500">{sourceKind === 'test' ? `${sourceTests.length} published tests available` : `${sourceMaterials.length} published study materials available`} · चयन करते ही Title, Description और Category भरेंगे।</span></label>
+          {selectedSourceId && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2"><span className="text-xs font-semibold text-emerald-800">Announcement details auto-filled</span><button type="button" onClick={() => { setSelectedSourceId(''); setTitle(emptyLocalized()); setDetails(emptyLocalized()); setCategory('Notice'); setLink(''); }} className="text-xs font-bold text-slate-500 hover:text-rose-600">Clear selection</button></div>}
+        </section>}
         {isNotice && <section className="mb-5 space-y-3 rounded-xl border border-sky-100 bg-sky-50/50 p-3">
           <div><p className="text-sm font-extrabold text-slate-900">Quick Start · Click to Use a Template</p><p className="mt-1 text-xs text-slate-500">किसी विकल्प पर क्लिक करें; Title, Description और Category अपने आप भर जाएँगे। बाद में आप इन्हें बदल भी सकते हैं।</p></div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
