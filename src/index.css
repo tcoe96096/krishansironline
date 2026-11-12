@@ -94,3 +94,41 @@
     padding-block: clamp(1.75rem, 3.2vw, 2.75rem) !important;
   }
 }
+
+
+/* Focused mobile examination mode: reclaim the viewport after a test starts. */
+@media (max-width: 639px) {
+  body header.sticky {
+    max-height: 500px;
+    transition: max-height .32s ease, opacity .22s ease, transform .32s ease;
+  }
+}
+@media (max-width: 639px) {
+  body.exam-mode-active header.sticky {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    transform: translateY(-100%);
+    overflow: hidden !important;
+    pointer-events: none !important;
+    transition: max-height .32s ease, opacity .22s ease, transform .32s ease;
+  }
+  body.exam-mode-active #tests {
+    padding-top: .35rem !important;
+    padding-bottom: .35rem !important;
+    scroll-margin-top: 0 !important;
+  }
+  body.exam-mode-active #tests > div {
+    padding-left: .5rem !important;
+    padding-right: .5rem !important;
+  }
+  body.exam-mode-active .mobile-exam-status {
+    border-radius: .75rem;
+    box-shadow: 0 3px 12px rgba(15, 45, 75, .08);
+  }
+  body.exam-mode-active #cbt-test-workspace {
+    scroll-margin-top: 4.5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.exam-mode-active header.sticky { transition: none !important; }
+}
