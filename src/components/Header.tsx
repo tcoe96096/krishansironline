@@ -18,14 +18,14 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const [headerHiddenOnScroll, setHeaderHiddenOnScroll] = useState(false);
   const lastScrollY = useRef(0);
 
-  // In an active exam, keep the header visible at first; hide it as the student
-  // scrolls down through questions, and reveal it when they scroll back up.
+  // In an active exam on every screen size, hide the global header while scrolling
+  // down through questions and reveal it when the student scrolls back up.
   useEffect(() => {
     const handleScroll = () => {
       const examActive = document.body.classList.contains('exam-mode-active') || document.documentElement.classList.contains('exam-mode-active');
       const currentY = Math.max(0, window.scrollY);
-      // Keep the desktop site header permanently visible; auto-hide is mobile/tablet only.
-      if (window.innerWidth >= 1024 || !examActive || currentY < 24) {
+      // Use the same exam-focus behavior on desktop, tablet and mobile.
+      if (!examActive || currentY < 24) {
         setHeaderHiddenOnScroll(false);
         lastScrollY.current = currentY;
         return;
