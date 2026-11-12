@@ -57,7 +57,6 @@ export interface OnlineTest {
   totalMarks: number;
   attemptLimit?: number;
   questions: Question[];
-  googleFormUrl?: string;
   instructions: {
     en: string[];
     hi: string[];

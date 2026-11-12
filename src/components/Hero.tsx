@@ -1,40 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { CheckCircle2, Award, BookOpen, ArrowUpRight, Sparkles } from 'lucide-react';
+import { getPublishedWebsiteConfig, type WebsiteConfig } from '../services/siteConfigService';
 
 interface HeroProps { onNavigate: (section: string) => void; }
 
 export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
   const en = language === 'en';
+  const [siteConfig, setSiteConfig] = useState<WebsiteConfig | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getPublishedWebsiteConfig().then((config) => { if (active && config) setSiteConfig(config); }).catch((error) => console.warn('Published website configuration unavailable:', error));
+    return () => { active = false; };
+  }, []);
+  const custom = siteConfig?.hero || {};
+  const copy = (key: string, fallback: string) => custom[key] || fallback;
+  const palette = siteConfig?.palette === 'blue' ? { primary: '#164e9b', accent: '#3b82f6', soft: '#eff6ff' } : siteConfig?.palette === 'teal' ? { primary: '#075b62', accent: '#0d9488', soft: '#ecfdf5' } : { primary: '#0b3979', accent: '#078a8d', soft: '#eff6fb' };
   const benefits = en ? ['Study Materials', 'Online Tests', 'Practice Questions', 'Revision Notes'] : ['अध्ययन सामग्री', 'ऑनलाइन टेस्ट', 'अभ्यास प्रश्न', 'रिवीजन नोट्स'];
   const shortQualifications = en
     ? ['M.A. Political Science', 'M.Phil.', 'UGC NET – Political Science (2×)', 'UGC NET – Education', 'B.Ed. • M.Ed.', 'CTET (Both Levels) • HTET']
     : ['एम.ए. राजनीति विज्ञान', 'एम.फिल.', 'UGC NET – राजनीति विज्ञान (2 बार)', 'UGC NET – शिक्षा', 'बी.एड. • एम.एड.', 'CTET (दोनों स्तर) • HTET'];
   const heroButtons = [
-    { label: en ? 'Explore Tests' : 'टेस्ट देखें', section: 'tests', hint: en ? 'Practice & assess' : 'अभ्यास और मूल्यांकन' },
-    { label: en ? 'Study Materials' : 'अध्ययन सामग्री', section: 'materials', hint: en ? 'Notes, MCQs & PDFs' : 'नोट्स, MCQs और PDF' },
+    { label: copy(en ? 'primaryCtaEn' : 'primaryCtaHi', en ? 'Explore Tests' : 'टेस्ट देखें'), section: 'tests', hint: en ? 'Practice & assess' : 'अभ्यास और मूल्यांकन' },
+    { label: copy(en ? 'secondaryCtaEn' : 'secondaryCtaHi', en ? 'Study Materials' : 'अध्ययन सामग्री'), section: 'materials', hint: en ? 'Notes, MCQs & PDFs' : 'नोट्स, MCQs और PDF' },
     { label: en ? 'About Teacher' : 'शिक्षक परिचय', section: 'about', hint: en ? 'Meet your educator' : 'शिक्षक से परिचय' },
   ];
 
   return (
-    <section className="relative isolate overflow-hidden bg-[#f2f7fc] border-b border-[#dce7f2]">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#f7fbff] via-white to-[#e8f3fa]" />
+    <section className="relative isolate overflow-hidden border-b border-[#dce7f2]" style={{ backgroundColor: palette.soft }}>
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white via-white to-slate-100" />
       <div className="absolute inset-y-0 right-0 -z-10 w-full lg:w-[52%] opacity-55 bg-no-repeat bg-right bg-contain pointer-events-none" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-background.webp)` }} aria-hidden="true" />
       <div className="absolute -top-24 -right-20 -z-10 h-72 w-72 rounded-full bg-cyan-200/30 blur-3xl" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-[10px] sm:py-[14px] lg:py-[18px] grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
         <div className="lg:col-span-7 relative z-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#c9dced] bg-white/80 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-[#17477e] shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#c9dced] bg-white/80 px-3 py-1.5 text-[11px] sm:text-xs font-bold shadow-sm" style={{ color: palette.primary }}>
             <Sparkles className="w-4 h-4 text-amber-500" />
-            {en ? 'FREE ONLINE LEARNING' : 'निःशुल्क ऑनलाइन शिक्षा'}
+            {copy(en ? 'eyebrowEn' : 'eyebrowHi', en ? 'FREE ONLINE LEARNING' : 'निःशुल्क ऑनलाइन शिक्षा')}
           </div>
-          <p className="mt-5 text-lg sm:text-2xl font-extrabold text-[#12396f]">{en ? 'Welcome to' : 'आपका स्वागत है'}</p>
-          <h1 className="mt-1 text-[clamp(1.65rem,3.7vw,3.1rem)] leading-[1.15] font-bold tracking-[-.03em] text-[#12396f]">{en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>}</h1>
-          <div className="mt-4 h-1.5 w-44 rounded-full bg-gradient-to-r from-amber-400 via-cyan-500 to-blue-900" />
+          <p className="mt-5 text-lg sm:text-2xl font-extrabold" style={{ color: palette.primary }}>{copy(en ? 'welcomeEn' : 'welcomeHi', en ? 'Welcome to' : 'आपका स्वागत है')}</p>
+          <h1 className="mt-1 text-[clamp(1.65rem,3.7vw,3.1rem)] leading-[1.15] font-bold tracking-[-.03em]" style={{ color: palette.primary }}>{custom[en ? 'titleEn' : 'titleHi'] ? copy(en ? 'titleEn' : 'titleHi', '') : (en ? <>Krishan Sir <span className="text-[#078a8d]">Online Learning</span></> : <>कृष्ण सर <span className="text-[#078a8d]">ऑनलाइन लर्निंग</span></>)}</h1>
+          <div className="mt-4 h-1.5 w-44 rounded-full" style={{ backgroundColor: palette.accent }} />
           <div className="mt-5 max-w-2xl space-y-2 text-[13px] sm:text-[15px] lg:text-base leading-7 font-normal tracking-[0.005em] text-slate-700">
-            <p>{en ? <>A dedicated digital learning platform designed to make quality education <span className="font-semibold text-[#24466f]">accessible, engaging and meaningful</span> for every learner.</> : <>प्रत्येक विद्यार्थी तक गुणवत्तापूर्ण शिक्षा को <span className="font-semibold text-[#24466f]">सरल, रोचक और प्रभावी</span> रूप में पहुँचाने के उद्देश्य से विकसित एक समर्पित डिजिटल शिक्षण मंच।</>}</p>
-            <p>{en ? <>Explore bilingual study resources for Classes 6–12, Social Science, NCERT and HBSE, along with online tests, practice questions, current affairs and competitive exam preparation.</> : <>यहाँ कक्षा 6–12, सामाजिक विज्ञान, NCERT एवं HBSE के लिए द्विभाषी अध्ययन सामग्री के साथ ऑनलाइन टेस्ट, अभ्यास प्रश्न, समसामयिक घटनाएँ और प्रतियोगी परीक्षाओं की तैयारी हेतु उपयोगी संसाधन उपलब्ध हैं।</>}</p>
-            <p className="pt-1 text-[12px] sm:text-sm font-semibold text-[#17477e]">{en ? 'Learn with Confidence. Prepare with Purpose. Achieve with Excellence.' : 'आत्मविश्वास से सीखें। उद्देश्य के साथ तैयारी करें। उत्कृष्टता के साथ सफलता पाएँ।'}</p>
+            <p>{copy(en ? 'descriptionEn' : 'descriptionHi', en ? 'A dedicated digital learning platform designed to make quality education accessible, engaging and meaningful for every learner.' : 'प्रत्येक विद्यार्थी तक गुणवत्तापूर्ण शिक्षा को सरल, रोचक और प्रभावी रूप में पहुँचाने के उद्देश्य से विकसित एक समर्पित डिजिटल शिक्षण मंच।')}</p>
+            <p>{copy(en ? 'secondaryEn' : 'secondaryHi', en ? 'Explore bilingual study resources for Classes 6–12, Social Science, NCERT and HBSE, along with online tests, practice questions, current affairs and competitive exam preparation.' : 'यहाँ कक्षा 6–12, सामाजिक विज्ञान, NCERT एवं HBSE के लिए द्विभाषी अध्ययन सामग्री के साथ ऑनलाइन टेस्ट, अभ्यास प्रश्न, समसामयिक घटनाएँ और प्रतियोगी परीक्षाओं की तैयारी हेतु उपयोगी संसाधन उपलब्ध हैं।')}</p>
+            <p className="pt-1 text-[12px] sm:text-sm font-semibold text-[#17477e]">{copy(en ? 'taglineEn' : 'taglineHi', en ? 'Learn with Confidence. Prepare with Purpose. Achieve with Excellence.' : 'आत्मविश्वास से सीखें। उद्देश्य के साथ तैयारी करें। उत्कृष्टता के साथ सफलता पाएँ।')}</p>
           </div>
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">{benefits.map((item) => <span key={item} className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700"><CheckCircle2 className="w-4 h-4 text-emerald-600" />{item}</span>)}</div>
           <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">

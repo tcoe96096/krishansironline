@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
+import { getWebsiteConfigVersions, publishWebsiteConfig, saveWebsiteConfigDraft, type WebsiteConfigVersion } from '../services/siteConfigService';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
   LayoutTemplate, Type, Palette, History, LockKeyhole, CheckCircle2,
@@ -29,7 +30,7 @@ const palettes = {
 
 type PaletteKey = keyof typeof palettes;
 
-export const AdminWebsiteManagement: React.FC = () => {
+export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
   const [tab, setTab] = useState<EditorTab>('hero');
   const [language, setLanguage] = useState<LanguageTab>('en');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -38,6 +39,11 @@ export const AdminWebsiteManagement: React.FC = () => {
   const [draftLabel, setDraftLabel] = useState('Unsaved UI changes');
   const [palette, setPalette] = useState<PaletteKey>('navy');
   const [siteWideBuilderOpen, setSiteWideBuilderOpen] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [versions, setVersions] = useState<WebsiteConfigVersion[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [backendReady, setBackendReady] = useState(false);
   const [hero, setHero] = useState({
     eyebrowEn: 'FREE ONLINE LEARNING',
     eyebrowHi: 'निःशुल्क ऑनलाइन शिक्षा',
@@ -66,6 +72,80 @@ export const AdminWebsiteManagement: React.FC = () => {
     notices: true, studentDashboard: true, quickAccess: true, pathways: true,
     classes: true, learningHubs: true, teacher: true, doubtDesk: true,
   });
+
+  useEffect(() => {
+    if (demoMode) return;
+    let active = true;
+    void (async () => {
+      try {
+        const history = await getWebsiteConfigVersions();
+        if (!active) return;
+        setVersions(history);
+        const draft = history.find((item) => item.status === 'draft');
+        const published = history.find((item) => item.status === 'published');
+        const latest = draft || published;
+        if (latest?.config) {
+          const config = latest.config;
+          if (config.hero) setHero((current) => ({ ...current, ...config.hero }));
+          if (config.header) setHeader((current) => ({ ...current, ...config.header }));
+          if (config.sections) setSections((current) => ({ ...current, ...config.sections }));
+          if (config.palette && config.palette in palettes) setPalette(config.palette as PaletteKey);
+          if (draft) {
+            setDraftId(draft.id);
+            setDraftLabel('Saved draft · Version ' + draft.version_number);
+          } else {
+            setDraftLabel(published ? 'Published · Version ' + published.version_number : 'No saved version yet');
+          }
+        }
+        setBackendReady(true);
+      } catch (error) {
+        if (active) {
+          setBackendReady(false);
+          setNotice(error instanceof Error ? error.message : 'Website configuration load नहीं हो सका।');
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [demoMode]);
+
+  const saveDraft = async () => {
+    if (demoMode) return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette });
+      setDraftId(id);
+      const history = await getWebsiteConfigVersions();
+      setVersions(history);
+      const draft = history.find((item) => item.status === 'draft');
+      setDraftLabel(draft ? 'Saved draft · Version ' + draft.version_number : 'Draft saved');
+      setNotice('Website configuration का Draft Supabase में सुरक्षित सेव हो गया है। अभी Live website नहीं बदली।');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Draft save नहीं हो सका।');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishDraft = async () => {
+    if (demoMode || !draftId) return;
+    if (!window.confirm('यह वेबसाइट configuration Live website पर प्रकाशित करेगा। क्या आप आगे बढ़ना चाहते हैं?')) return;
+    setPublishing(true);
+    setNotice('');
+    try {
+      const version = await publishWebsiteConfig(draftId);
+      setDraftId(null);
+      const history = await getWebsiteConfigVersions();
+      setVersions(history);
+      setDraftLabel('Published · Version ' + version);
+      setNotice('Version ' + version + ' प्रकाशित हो गया। Live Hero section अगली load पर नया content दिखाएगा।');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Publish नहीं हो सका।');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const currentPalette = palettes[palette];
   const title = language === 'en' ? hero.titleEn : hero.titleHi;
   const desc = language === 'en' ? hero.descriptionEn : hero.descriptionHi;
@@ -73,16 +153,19 @@ export const AdminWebsiteManagement: React.FC = () => {
 
   const updateHero = (key: keyof typeof hero, value: string) => {
     setHero((current) => ({ ...current, [key]: value }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
   const updateHeader = (key: keyof typeof header, value: string) => {
     setHeader((current) => ({ ...current, [key]: value }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
   const toggleSection = (key: SectionKey) => {
     setSections((current) => ({ ...current, [key]: !current[key] }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
@@ -103,6 +186,7 @@ export const AdminWebsiteManagement: React.FC = () => {
     setHeader({ ticker: 'FREE Online Learning • Classes 6–12 • Competitive Exams', brand: 'Krishan Sir', subBrand: 'Online Learning', footer: 'Learn • Practice • Improve • Succeed' });
     setSections({ notices: true, studentDashboard: true, quickAccess: true, pathways: true, classes: true, learningHubs: true, teacher: true, doubtDesk: true });
     setPalette('navy');
+    setDraftId(null);
     setDraftLabel('Reset to current website content');
     setNotice('Editor को मौजूदा वेबसाइट के उपलब्ध content पर reset किया गया है। कोई Live बदलाव नहीं हुआ।');
   };
@@ -131,11 +215,11 @@ export const AdminWebsiteManagement: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.16em] text-sky-700"><Globe className="h-3.5 w-3.5" />Website Management</div>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Website Content Editor</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage, hero, announcements, teacher profile, header/footer और design settings का प्रबंधन। बदलाव अभी केवल इस Preview screen में दिखाई देंगे।</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage Hero का bilingual content और colour framework edit करें। Hero, header/footer branding और homepage section visibility को Draft में सेव करके पुष्टि के बाद Live publish किया जा सकता है।</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-800"><Info className="h-3.5 w-3.5" />Preview only · Not connected</span>
+          <span className={'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold ' + (demoMode || !backendReady ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800')}><Info className="h-3.5 w-3.5" />{demoMode ? 'Demo · Read only' : backendReady ? 'Supabase connected' : 'Connecting…'}</span>
           <button onClick={() => { setShowPreview((value) => !value); setNotice(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{showPreview ? 'Hide Preview' : 'Show Preview'}</button>
         </div>
       </div>
@@ -169,7 +253,7 @@ export const AdminWebsiteManagement: React.FC = () => {
             </>}
 
             {tab === 'header' && <>
-              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Branding preview only. Logo/image file replacement और actual header navigation अभी connect नहीं हैं।</div>
+              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Announcement bar, website name, subtitle और footer tagline Publish के बाद Live website पर लागू होंगे।</div>
               {field('Announcement Bar', header.ticker, (value) => updateHeader('ticker', value))}
               {field('Website Name', header.brand, (value) => updateHeader('brand', value))}
               {field('Brand Subtitle', header.subBrand, (value) => updateHeader('subBrand', value))}
@@ -179,13 +263,13 @@ export const AdminWebsiteManagement: React.FC = () => {
 
             {tab === 'sections' && <>
               <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2"><span className="text-xs font-bold text-sky-900">Homepage sections</span><span className="text-xs font-extrabold text-sky-900">{sectionCount} / {initialSections.length} visible</span></div>
-              <p className="text-xs leading-5 text-slate-500">यहाँ section visibility बदलने से केवल साथ का local Preview बदलेगा। कोई section Live website से हटाया नहीं जाएगा।</p>
+              <p className="text-xs leading-5 text-slate-500">Publish करने पर चुने गए homepage sections Live website पर दिखेंगे या छिपेंगे।</p>
               <div className="space-y-2">{initialSections.map((item) => <label key={item.key} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-3 hover:bg-slate-50"><span><span className="block text-xs font-bold text-slate-800">{item.title}</span><span className="mt-0.5 block text-[10px] text-slate-500">{item.description}</span></span><input type="checkbox" checked={sections[item.key]} onChange={() => toggleSection(item.key)} className="h-4 w-4 accent-sky-800" /></label>)}</div>
             </>}
 
             {tab === 'design' && <>
               <div><h4 className="text-xs font-bold text-slate-800">Colour Framework</h4><p className="mt-1 text-xs text-slate-500">एक palette चुनें; दाईं ओर preview में रंग बदलेंगे।</p></div>
-              <div className="grid gap-3 sm:grid-cols-3">{(Object.keys(palettes) as PaletteKey[]).map((key) => <button key={key} onClick={() => { setPalette(key); setDraftLabel('Unsaved UI changes'); setNotice(''); }} className={`rounded-xl border p-3 text-left transition ${palette === key ? 'border-sky-700 bg-sky-50 ring-2 ring-sky-100' : 'border-slate-200 hover:bg-slate-50'}`}><span className="mb-2 flex gap-1"><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].primary }} /><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].accent }} /><span className="h-5 w-5 rounded-full border border-slate-200" style={{ background: palettes[key].soft }} /></span><span className="block text-xs font-bold text-slate-800">{palettes[key].label}</span></button>)}</div>
+              <div className="grid gap-3 sm:grid-cols-3">{(Object.keys(palettes) as PaletteKey[]).map((key) => <button key={key} onClick={() => { setPalette(key); setDraftId(null); setDraftLabel('Unsaved UI changes'); setNotice(''); }} className={`rounded-xl border p-3 text-left transition ${palette === key ? 'border-sky-700 bg-sky-50 ring-2 ring-sky-100' : 'border-slate-200 hover:bg-slate-50'}`}><span className="mb-2 flex gap-1"><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].primary }} /><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].accent }} /><span className="h-5 w-5 rounded-full border border-slate-200" style={{ background: palettes[key].soft }} /></span><span className="block text-xs font-bold text-slate-800">{palettes[key].label}</span></button>)}</div>
               <div className="rounded-xl border border-slate-200 p-4"><div className="flex items-center gap-2 text-xs font-bold text-slate-800"><Palette className="h-4 w-4" />Typography & Layout</div><p className="mt-1 text-xs leading-5 text-slate-500">Readable fonts, responsive spacing and mobile-first layout मौजूदा framework के अनुसार सुरक्षित रखे गए हैं। Advanced font upload और custom layout controls बाद के चरण में जुड़ेंगे।</p></div>
             </>}
           </div>
@@ -194,15 +278,15 @@ export const AdminWebsiteManagement: React.FC = () => {
             <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500"><span className="h-2 w-2 rounded-full bg-amber-500" />{draftLabel}</div>
             <div className="flex flex-wrap gap-2">
               <button onClick={resetEditor} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
-              <button onClick={() => { setDraftLabel('Preview snapshot prepared · Not saved'); setNotice('यह केवल current preview session का snapshot है। Draft Database में save नहीं हुआ है और refresh पर reset हो जाएगा।'); }} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Save className="h-3.5 w-3.5" />Save Draft Preview</button>
-              <button disabled title="Approval workflow backend अभी connect नहीं है" className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-200 px-3 py-2.5 text-xs font-bold text-slate-500"><Send className="h-3.5 w-3.5" />Submit for Approval</button>
+              <button onClick={() => void saveDraft()} disabled={saving || demoMode || !backendReady} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-3.5 w-3.5" />{saving ? 'Saving…' : 'Save Draft'}</button>
+              <button onClick={() => void publishDraft()} disabled={publishing || !draftId || demoMode} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-3.5 w-3.5" />{publishing ? 'Publishing…' : 'Publish Live'}</button>
             </div>
           </div>
           {notice && <p role="status" className="border-t border-sky-100 bg-sky-50 px-5 py-3 text-xs leading-5 text-sky-900">{notice}</p>}
         </section>
 
         {showPreview && <section className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Live Website Preview</h3><p className="mt-1 text-[11px] text-slate-500">यह preview editor की current values दिखाता है, Live website नहीं बदलता।</p></div><div className="inline-flex rounded-xl border border-slate-200 bg-white p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-lg p-2 ${previewMode === 'desktop' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Desktop preview"><Monitor className="h-4 w-4" /></button><button onClick={() => setPreviewMode('mobile')} className={`rounded-lg p-2 ${previewMode === 'mobile' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Mobile preview"><Smartphone className="h-4 w-4" /></button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Website Preview</h3><p className="mt-1 text-[11px] text-slate-500">यह preview editor की current values दिखाता है, Live website नहीं बदलता।</p></div><div className="inline-flex rounded-xl border border-slate-200 bg-white p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-lg p-2 ${previewMode === 'desktop' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Desktop preview"><Monitor className="h-4 w-4" /></button><button onClick={() => setPreviewMode('mobile')} className={`rounded-lg p-2 ${previewMode === 'mobile' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Mobile preview"><Smartphone className="h-4 w-4" /></button></div></div>
           <div className={`mx-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${previewMode === 'mobile' ? 'max-w-[390px]' : 'w-full'}`}>
             <div className="px-3 py-2 text-center text-[9px] font-bold text-amber-300" style={{ background: '#0b0f18' }}>{header.ticker}</div>
             <div className="flex items-center justify-between gap-2 border-b px-4 py-3" style={{ background: currentPalette.soft, borderColor: '#dce7f2' }}><div><p className="text-sm font-extrabold" style={{ color: currentPalette.primary }}>{header.brand}</p><p className="text-[9px] font-bold" style={{ color: currentPalette.accent }}>{header.subBrand}</p></div><span className="rounded-full bg-white px-3 py-1 text-[9px] font-bold text-slate-600">Home · Classes · Tests</span></div>
@@ -222,8 +306,8 @@ export const AdminWebsiteManagement: React.FC = () => {
             <div className="space-y-2 bg-white p-4"><div className="flex items-center justify-between"><h5 className="text-xs font-extrabold text-slate-900">Homepage Sections</h5><span className="text-[9px] font-semibold text-slate-400">{sectionCount} visible</span></div>{initialSections.filter((item) => sections[item.key]).map((item) => <div key={item.key} className="flex items-center gap-2 rounded-lg border border-slate-100 px-3 py-2"><span className="h-2 w-2 rounded-full" style={{ background: currentPalette.accent }} /><span className="text-[10px] font-semibold text-slate-700">{item.title}</span><ChevronRight className="ml-auto h-3 w-3 text-slate-300" /></div>)}</div>
             <div className="px-4 py-3 text-center text-[9px] font-semibold text-white" style={{ background: currentPalette.primary }}>{header.footer}</div>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex items-center gap-2 text-[11px] font-extrabold text-amber-900"><LockKeyhole className="h-3.5 w-3.5" />Publishing is locked</div><p className="mt-1 text-[10px] leading-5 text-amber-900/80">Live website पर बदलाव भेजने, Version History लिखने या approval submit करने की सुविधा अभी connect नहीं है।</p></div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-2 text-xs font-extrabold text-slate-800"><History className="h-4 w-4 text-slate-500" />Version History</div><p className="mt-1 text-[11px] leading-5 text-slate-500">अभी कोई version record उपलब्ध नहीं है। यह panel backend approval और versioning integration के बाद सक्रिय होगा।</p><div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-slate-400"><CheckCircle2 className="h-3.5 w-3.5" />No existing version was changed</div></div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex items-center gap-2 text-[11px] font-extrabold text-amber-900"><LockKeyhole className="h-3.5 w-3.5" />Publishing is locked</div><p className="mt-1 text-[10px] leading-5 text-amber-900/80">Hero text, colour palette और header/footer branding के लिए Supabase Publish उपलब्ध है। Homepage section visibility का live connection अगले चरण में जोड़ा जाएगा।</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-2 text-xs font-extrabold text-slate-800"><History className="h-4 w-4 text-slate-500" />Version History</div>{versions.length === 0 ? <p className="mt-2 text-[11px] text-slate-500">अभी कोई saved version नहीं है।</p> : <div className="mt-3 space-y-2">{versions.map((version) => <div key={version.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"><div><p className="text-[11px] font-bold text-slate-700">Version {version.version_number}</p><p className="text-[10px] text-slate-400">{new Date(version.created_at).toLocaleString()}</p></div><span className={'rounded-full px-2 py-1 text-[9px] font-extrabold ' + (version.status === 'published' ? 'bg-emerald-100 text-emerald-800' : version.status === 'draft' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600')}>{version.status.toUpperCase()}</span></div>)}</div>}<div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-slate-400"><CheckCircle2 className="h-3.5 w-3.5" />Published versions remain available for history</div></div>
         </section>}
       </div>
     </div>

@@ -3,6 +3,7 @@ import { BookOpen, ClipboardCheck, RefreshCw, UserRound, MapPin, Trophy, PlayCir
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
+import { StudentNotificationCenter } from './StudentNotificationCenter';
 
 export const StudentDashboard: React.FC = () => {
   const { profile, profileLoading } = useAuth();
@@ -50,6 +51,7 @@ export const StudentDashboard: React.FC = () => {
     </div>
     {profileLoading && <p className="text-sm text-slate-500">प्रोफाइल लोड हो रही है…</p>}
     {!profile && !profileLoading && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">विद्यार्थी प्रोफाइल उपलब्ध नहीं है। Admin से संपर्क करें।</p>}
+    <StudentNotificationCenter />
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {[
         {label:'उपलब्ध टेस्ट',value:available.length,icon:BookOpen,tone:'text-sky-700 bg-sky-50'},

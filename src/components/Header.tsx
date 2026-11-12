@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, UserRound, GraduationCap, ChevronDown, FileText, Globe } from 'lucide-react';
+import { getPublishedWebsiteConfig } from '../services/siteConfigService';
 
 interface HeaderProps {
   activeSection: string;
@@ -14,6 +15,12 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const { language, toggleLanguage } = useLanguage();
   const { user, profile, profileLoading, signOut } = useAuth();
   const studentDisplayName = profile?.student_name || user?.user_metadata?.full_name || user?.user_metadata?.name || (profileLoading ? (language === 'en' ? 'Loading…' : 'लोड हो रहा है…') : (language === 'en' ? 'Student' : 'विद्यार्थी'));
+  const [siteHeader, setSiteHeader] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let active = true;
+    void getPublishedWebsiteConfig().then((config) => { if (active && config?.header) setSiteHeader(config.header); }).catch((error) => console.warn('Published header configuration unavailable:', error));
+    return () => { active = false; };
+  }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [accountMenuError, setAccountMenuError] = useState('');
@@ -34,8 +41,8 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
             <span className="text-amber-300">✦ {language === 'en' ? 'WELCOME' : 'स्वागत है'}</span>
-            <span><span className="text-amber-400 font-extrabold animate-pulse">{language === 'en' ? 'FREE Online Learning' : 'फ्री ऑनलाइन लर्निंग'}</span><span> • {language === 'en' ? 'Classes 6–12 • Competitive Exams' : 'कक्षा 6–12 • प्रतियोगी परीक्षाएँ'}</span></span>
-            <span className="hidden sm:inline text-cyan-300">| {language === 'en' ? 'Learn • Practice • Succeed' : 'सीखें • अभ्यास करें • सफल हों'}</span>
+            <span className="text-amber-400 font-extrabold animate-pulse">{siteHeader.ticker || (language === 'en' ? 'FREE Online Learning • Classes 6–12 • Competitive Exams' : 'फ्री ऑनलाइन लर्निंग • कक्षा 6–12 • प्रतियोगी परीक्षाएँ')}</span>
+            <span className="hidden sm:inline text-cyan-300">| {siteHeader.footer || (language === 'en' ? 'Learn • Practice • Succeed' : 'सीखें • अभ्यास करें • सफल हों')}</span>
           </div>
         </div>
       </div>
@@ -50,9 +57,9 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </a>
             <a href={import.meta.env.BASE_URL} onClick={(e) => { e.preventDefault(); handleNavClick('home'); }} aria-label="Krishan Sir branding - Go to home page" className="min-w-0 cursor-pointer no-underline">
             <div className="min-w-0">
-              <div className="text-[clamp(1.3rem,3.2vw,2rem)] leading-[1.02] font-extrabold tracking-[-.04em] text-[#102f63]">Krishan Sir</div>
-              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /> Online Learning</div>
-              <div className="mt-0.5 text-[6px] sm:text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">Learn <span className="text-amber-500">•</span> Practice <span className="text-amber-500">•</span> Improve <span className="text-amber-500">•</span> Succeed</div>
+              <div className="text-[clamp(1.3rem,3.2vw,2rem)] leading-[1.02] font-extrabold tracking-[-.04em] text-[#102f63]">{siteHeader.brand || 'Krishan Sir'}</div>
+              <div className="mt-0.5 inline-flex items-center gap-1.5 rounded-md bg-[#087d9b] px-2.5 sm:px-3 py-0.5 text-white text-[11px] sm:text-xs font-bold tracking-wide shadow-sm"><GraduationCap className="w-3 h-3" /> {siteHeader.subBrand || 'Online Learning'}</div>
+              <div className="mt-0.5 text-[6px] sm:text-[7px] font-semibold tracking-[.08em] uppercase text-[#24466f]">{siteHeader.footer || 'Learn • Practice • Improve • Succeed'}</div>
             </div>
             </a>
           </div>

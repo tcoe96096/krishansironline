@@ -52,22 +52,15 @@ In Authentication → Providers → Google:
 
 The Google OAuth Client Secret must never be committed to GitHub or shared in chat.
 
-## Google Sheets bridge
-Deploy `google-apps-script/Code.gs` as a Web App executing as the owner.
-Set Script Properties:
-- `PORTAL_SHARED_SECRET`: a long random secret.
-- `RESULTS_SHEET_ID`: the spreadsheet ID.
-
-The script is intended to be called only by a trusted server-side Edge Function. Do not call it directly from browser code or expose the shared secret.
 
 ## Current implementation boundaries
 - Student Supabase Auth UI and database profile provisioning are present.
 - Google OAuth sign-in and database role lookup are present; actual provider setup and admin bootstrap are manual. Production currently has no administrator role row; complete this in the separate Admin release phase.
 - The Student Release Candidate hides public self-registration by default using `VITE_STUDENT_REGISTRATION_ENABLED`, but this is only a UI gate. Until school identity verification/approval exists, disable new sign-ups in Supabase Auth as well (existing users must still be able to sign in), or implement a trusted invitation flow. The current signup trigger trusts submitted student metadata, and direct Auth API requests can bypass the UI.
 - Authenticated students load published test content from Supabase and submit attempts through protected PostgreSQL RPCs. The browser sends answer indexes only; authoritative grading is performed by PostgreSQL. Production test question JSON has been checked for answer-key and explanation fields, and none were found.
-- The legacy `ONLINE_TESTS` array remains bundled in browser code and includes client-side answers/explanations, which are publicly inspectable. Treat it as public practice content only; never use that local array for confidential or scored assessments. Use the Supabase-published test catalogue for authenticated student attempts.
+- Legacy bundled study chapters, static tests and dated current-affairs datasets have been cleared from the frontend; add new approved content through the new content workflow.
 - The Student Dashboard learning-progress feature requires migration `0008_student_learning_progress_and_profile_location.sql`. Migration `0009_expire_stale_test_attempts.sql` updates timed-out in-progress attempts to expired when the student next starts that test. Neither migration is applied to Production as part of this preparation.
-- The Apps Script results bridge is present but has not been deployed or connected to a trusted Edge Function. The public Notice Board uses a separate Apps Script announcements feed.
+- Google Sheets and Apps Script are not used by the website. Public Notice Board and Live Admin Content now read from Supabase in the Preview implementation; Production cutover remains gated on schema and Admin CRUD verification.
 - Do not merge/deploy until the Production schema baseline is reconciled, the reviewed pending migrations are applied with approval, authentication/recovery limitations are accepted, the secure test flow is manually verified, and the release checklist is complete.
 
 ## Later student release migrations
@@ -78,11 +71,30 @@ The script is intended to be called only by a trusted server-side Edge Function.
 For the existing Production project, do not replay migrations `0001`–`0007`. The earlier student-system schema exists, but its migration history is not a complete numeric record. Reconcile the live schema and backup first; apply only reviewed pending migrations after explicit release approval. Do not copy Preview-only migrations into Production without a separate review.
 
 
-## Seed the Class 8 and Class 9 test catalogue
-After migrations `0001` through `0004` have been applied, run `supabase/migrations/0005_seed_secure_test_catalogue.sql` once in Supabase SQL Editor. This seed contains only three tests: Class 9 History (60 questions), Class 9 Constitution Quiz (4 questions), and Class 8 NMMS History (40 questions). Public question JSON excludes correct answers and explanations; answer indexes are stored separately in `test_answer_keys`. Re-running the migration updates these three test IDs only; it does not delete other tests or student attempt history.
+## Legacy test seed migration
+The historical seed migration is retained only as migration history. Do not run or replay it: its old test catalogue has been cleared and the owner will provide new test data.
 
 
 ## Trigger-function privilege hardening (migration 0006)
 `supabase/migrations/0006_restrict_trigger_function_execute.sql` removes direct EXECUTE grants from the API roles for the custom trigger-only functions `handle_new_user()`, `prevent_role_escalation()`, `set_student_profile_updated_at()`, and the DDL event-trigger function `rls_auto_enable()`, when present. It intentionally leaves `is_admin()` unchanged because RLS policies call it directly, and it restricts direct API invocation of the project's custom DDL event-trigger function `rls_auto_enable()` while leaving PostgreSQL's registered event-trigger execution intact. PostgreSQL fires registered triggers as part of the table operation; the API caller does not need direct EXECUTE permission on the trigger function.
 
 For an existing Supabase project, first verify the function definitions, registered triggers, backup status, and migration baseline. This migration is a proposed hardening step; do not run it until that review is complete.
+
+
+## Website configuration migration 0011 (Preview verified, Production pending)
+- `0011_versioned_website_configuration.sql` creates the versioned `site_config_versions` table.
+- The table stores one editable draft and one currently published configuration, while retaining archived versions for history.
+- Public/anonymous users can read only the published configuration. Admin reads and writes are restricted by the database `is_admin()` role check.
+- `admin_save_site_config(jsonb)` creates or updates the single draft. `admin_publish_site_config(uuid)` atomically archives the previous published version and publishes the selected draft.
+- The migration was applied to Preview project `zgpkmfqioqvincmgyfpi` and its policies and function grants were inspected. Draft-save and publish RPC logic was exercised inside a transaction and rolled back; no test configuration rows were retained.
+- The Admin Website Editor now saves drafts and publishes Hero text, palette, header/footer branding, and homepage section visibility. Public Hero, Header, Footer and homepage section rendering read the published configuration.
+- Production project `vsqwlkqqsxcehvdsdbna` has not received migration 0011. Do not apply it or deploy the associated code until the separate Production migration review and release approval.
+
+
+## Student notifications migration 0012 (Preview verified, Production pending)
+- `0012_student_notifications.sql` adds class-targeted student notifications and per-student read receipts.
+- Admins can send bilingual manual announcements to all classes or one selected class; the Admin Communication module displays notification history and read counts.
+- Publishing a test creates a notification for that test's class. Publishing a site notice creates an all-class notification. Publishing study material or a question-bank feed creates a notification for the selected class (or all classes when no class is specified).
+- Students can see only notifications targeted to all classes or their own class, expand an item to read it, and retain read/unread history in `student_notification_reads`.
+- The migration was applied to Preview project `zgpkmfqioqvincmgyfpi`. Trigger paths for tests, notices and study materials were exercised inside a transaction and rolled back; no test notifications or content rows were retained.
+- Production project `vsqwlkqqsxcehvdsdbna` has not received migration 0012. Apply only after a separate Production schema review and explicit release approval.

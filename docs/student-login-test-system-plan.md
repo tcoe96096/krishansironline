@@ -38,7 +38,7 @@
 - Session: Supabase JS client with `persistSession: true`, `autoRefreshToken: true`, and local device persistence. Do not use an indefinite custom auth flag.
 - Data security: Row Level Security (RLS) on every student-facing table; student rows are scoped to `auth.uid()`; admin role is checked server-side.
 - Scoring: private answer keys and a database RPC; never send correct answers to the browser.
-- Google Sheets: optional export/backup only after central database write succeeds. Do not treat no-cors POST as proof of success.
+- Google Sheets and Apps Script: retired; Supabase is the only structured-data and test-result system.
 
 ## Planned repository changes
 
@@ -107,7 +107,7 @@ This branch prepares the backend schema and implementation contract. The live au
 
 ## Updated integration decisions (user confirmed 5 Nov 2026)
 
-- Google Sheets access: **both read and write**.
+- Google Sheets / Apps Script: **not used**.
 - Admin sign-in: **Google Account OAuth**.
 - Student sign-in is mobile number + password only; SMS OTP is not used.
 - Device persistence remains Supabase Auth refreshable session.
@@ -123,58 +123,18 @@ Use Supabase Auth Google OAuth as the admin identity provider:
 5. Admin dashboard and every admin operation must verify role on the server / through RLS. Hiding a button is not authorization.
 6. Admin logout calls Supabase signOut and clears the local persisted session.
 
-## Google Sheets + Apps Script — bidirectional integration
-
-The user has selected both read and write. Google Sheets is an authorized reporting / administration integration, while PostgreSQL remains the canonical secure database.
-
-### Write path (student submissions)
-Browser -> Supabase Auth -> server-side submit RPC -> PostgreSQL result -> trusted server integration -> Apps Script Web App -> private Google Sheet.
-
-- Never call the Apps Script endpoint directly from student browser code.
-- Never expose an Apps Script shared secret, service-role key, Google OAuth client secret, or service-account private key in the frontend or repository.
-- Backend sends a shared integration secret to Apps Script; keep it in Supabase Edge Function secrets and Apps Script Script Properties.
-- Apps Script validates the secret, validates the action and required fields, deduplicates by submission/attempt ID, then appends or updates the matching row.
-- Treat the database commit as authoritative. If Sheets sync fails, mark it pending and retry; do not tell the student the result was lost or unverified.
-- Do not send answer keys or unnecessary student personal data to the sheet. Store only fields required for teacher assessment and reporting.
-
-### Read path (admin dashboard)
-Admin dashboard -> Supabase Auth session -> server-side admin role check -> trusted backend -> Apps Script -> Google Sheet -> validated response -> Admin UI.
-
-- Admin can view/search/filter records, fetch sheet-backed rows, and initiate authorized updates.
-- Only the backend may call the Apps Script endpoint.
-- The Apps Script integration endpoint must not be a public unauthenticated read API.
-- Admin updates to test configuration / attempt limits should update PostgreSQL first, then sync a sheet audit/report row. Do not make Google Sheets the authority for attempt enforcement.
-- Add an audit log for admin actions and sheet sync outcomes.
-- Sheet sharing stays restricted to the teacher/admin Google accounts; never publish a sheet containing student mobile numbers.
-
-### Apps Script contract
-
-The repository now includes a starter `google-apps-script/Code.gs` that supports authenticated POST actions:
-- `health`
-- `listResults` (bounded, paginated read)
-- `upsertResult` (deduplicated write)
-- `updateResultStatus` (admin-side status / note update)
-
-Deployment must be configured to execute as the script owner. Set `PORTAL_SHARED_SECRET` and `RESULTS_SHEET_ID` in Apps Script Script Properties. The script URL and secret must be configured only in the trusted backend, not in public Vite variables.
 
 ## Required external configuration / owner actions
 
-1. Create or select the Supabase project; enable Phone Auth with password sign-in and disable phone confirmation to avoid OTP SMS.
-2. Configure Google OAuth consent screen and OAuth client; enable Google provider in Supabase.
-3. Set the allowed administrator identity through the out-of-band role bootstrap after first successful Google OAuth sign-in.
-4. Create/choose a private Google Sheet; copy its spreadsheet ID into Apps Script Script Properties.
-5. Paste `google-apps-script/Code.gs` into the Apps Script project; set Script Properties; deploy as Web App (execute as owner). Copy the /exec URL to backend secret configuration.
-6. Configure Supabase Edge Function secrets for Apps Script URL and shared secret.
-7. Run read/write integration tests with a non-production sheet before connecting production student data.
+1. Configure Supabase Auth providers and password-based student login as approved.
+2. Configure the Google OAuth provider in Supabase only for the protected Admin login.
+3. Bootstrap the approved Admin identity through the server-side role table. Google sign-in alone never grants Admin access.
+4. Google Drive, Google Sheets and Apps Script are not part of the current website workflow. Any future file-storage use requires a separate owner-approved design.
 
 ## New planned/required implementation files
 
-- `google-apps-script/Code.gs`: trusted bidirectional Sheet adapter.
-- `supabase/functions/sheets-bridge/index.ts`: server-side bridge; validates Supabase JWT and admin role for reads/updates, and invokes Apps Script with secret. Student result writes are triggered only after trusted grading.
-- `supabase/functions/sheets-sync/index.ts`: retryable outbox worker for committed test results.
 - `src/components/AdminGoogleLogin.tsx`: Google OAuth sign-in UI.
 - `src/components/AdminDashboard.tsx`: admin-only test settings and Sheet-backed results view.
-- `src/services/sheetsService.ts`: browser calls only authenticated backend endpoints; never calls Apps Script directly.
 
 ## Important deployment gates
 
@@ -200,7 +160,6 @@ The repository does not contain a verified Sheet ID, Apps Script deployment URL/
 
 ### Still gated before final live acceptance
 - Admin test-management panel is now implemented for publication status, per-test attempt limits and recent student attempts. Bulk question-bank/answer-key entry remains pending the approved test dataset.
-- Complete the secure Google Sheets bridge and retryable sync path. The current Apps Script code is present, but the preview project has no deployed Edge Functions and the required Sheet ID, Apps Script URL/secret and admin OAuth allowlist are not configured.
 - Run the browser-level student journey on the actual preview deployment, including registration/login, start, refresh/resume, submit, result history and logout.
 - Run the repository TypeScript/build checks and then review the preview deployment. No live deployment or production database changes were made as part of this branch work.
 
@@ -223,5 +182,16 @@ The following status supersedes earlier preparation notes where they conflict wi
 - Production scoring currently distributes `total_marks` equally across the question count. Per-question weighted scoring exists in the reviewed Preview implementation but is not yet applied to Production.
 - Preview contains Admin test-management RPCs (`admin_save_test`, `admin_get_test_for_edit`, `admin_set_test_published`) that were not found in Production during the 11 Nov schema review. Do not assume Admin test publishing is production-ready until the Production migration is reviewed and tested.
 - Production `public.is_admin()` checks `auth.uid()` against `public.user_roles`. This is the authorization basis to preserve; never trust a client-supplied role or metadata flag.
-- The legacy Notice Board and Live Admin Content Apps Script feeds remain active until replacement publishing/read paths pass Preview and Production acceptance. See `docs/content-feed-migration-plan.md`.
+- Preview implementation replaces the legacy Notice Board and Live Admin Content Apps Script feeds with Supabase reads. Production cutover remains gated on schema, Admin CRUD and full smoke-test verification. See `docs/content-feed-migration-plan.md`.
 - The Production database has not been changed by this documentation/workflow update. No new question data has been seeded.
+
+
+---
+
+## Owner decision update — 12 November 2026
+
+- Google Sheets and Apps Script code are retired from the website branch.
+- Google Drive is currently not used by the website. Future file storage for PDF, PPT, image and video assets requires a separate approved design.
+- Google OAuth is intentionally retained only for the protected Admin sign-in flow; removing it would break the current Admin authentication method. The database Admin role remains authoritative.
+- Legacy bundled study chapters, static tests, old question banks and dated current-affairs datasets have been cleared from the frontend. New content will be supplied and added through the approved Supabase workflow.
+- Supabase student authentication, test-attempt RPCs, scoring and result history are retained.
