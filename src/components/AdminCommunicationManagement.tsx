@@ -147,8 +147,8 @@ export const AdminCommunicationManagement: React.FC = () => {
         ? await client.from(table).update(payload).eq('id', editingId)
         : await client.from(table).insert(payload);
       if (result.error) throw result.error;
-      setMessage(published ? 'सामग्री सफलतापूर्वक प्रकाशित हुई।' : 'Draft सफलतापूर्वक सेव हुआ।');
       resetForm();
+      setMessage(published ? 'सामग्री सफलतापूर्वक प्रकाशित हुई।' : 'Draft सफलतापूर्वक सेव हुआ।');
       await loadRows();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'सेव नहीं हो सका।');
