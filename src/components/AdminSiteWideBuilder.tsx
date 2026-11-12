@@ -61,7 +61,7 @@ const defaultInspectorStyle: InspectorStyle = {
 };
 type VisualOverride = { selector: string; text: string; style: InspectorStyle };
 type VisualEditorDraft = { version: 1; pages: Record<string, Record<string, VisualOverride>> };
-const isSafeSelector = (selector: string) => selector.split(' > ').every(part => /^[a-z][a-z0-9-]*:nth-of-type\\([1-9]\\d*\\)$/i.test(part));
+const isSafeSelector = (selector: string) => {\n  const parts = selector.split(' > ');\n  return parts[0] === 'body' && parts.slice(1).length > 0 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\\([1-9]\\d*\\)$/i.test(part));\n};
 const buildSafeSelector = (element: HTMLElement): string => {
   const parts: string[] = [];
   let current: HTMLElement | null = element;
@@ -73,7 +73,7 @@ const buildSafeSelector = (element: HTMLElement): string => {
     parts.unshift(`${tag}:nth-of-type(${index})`);
     current = parent;
   }
-  return parts.join(' > ');
+  return ['body', ...parts].join(' > ');
 };
 const isEditableLeaf = (element: Element) => ['H1','H2','H3','H4','P','LI'].includes(element.tagName) && element.children.length === 0 && !element.closest('form,button,a,[role=button],[data-visual-editor-protected]');
 
