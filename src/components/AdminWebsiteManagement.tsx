@@ -215,7 +215,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
         <div>
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.16em] text-sky-700"><Globe className="h-3.5 w-3.5" />Website Management</div>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Website Content Editor</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage Hero का bilingual content और colour framework edit करें। Header/footer तथा section visibility settings अभी configuration में सुरक्षित होंगी; उनका live rendering अगले चरण में जोड़ा जाएगा।</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage Hero का bilingual content और colour framework edit करें। Hero, header/footer branding और homepage section visibility को Draft में सेव करके पुष्टि के बाद Live publish किया जा सकता है।</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
@@ -253,7 +253,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
             </>}
 
             {tab === 'header' && <>
-              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Branding settings अभी configuration में save होंगी; live header/footer connection अगले चरण में जोड़ा जाएगा।</div>
+              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Announcement bar, website name, subtitle और footer tagline Publish के बाद Live website पर लागू होंगे।</div>
               {field('Announcement Bar', header.ticker, (value) => updateHeader('ticker', value))}
               {field('Website Name', header.brand, (value) => updateHeader('brand', value))}
               {field('Brand Subtitle', header.subBrand, (value) => updateHeader('subBrand', value))}
@@ -263,7 +263,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
 
             {tab === 'sections' && <>
               <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2"><span className="text-xs font-bold text-sky-900">Homepage sections</span><span className="text-xs font-extrabold text-sky-900">{sectionCount} / {initialSections.length} visible</span></div>
-              <p className="text-xs leading-5 text-slate-500">Section visibility अभी saved configuration में रखी जाएगी; live homepage sections से इसका connection अगले चरण में जोड़ा जाएगा।</p>
+              <p className="text-xs leading-5 text-slate-500">Publish करने पर चुने गए homepage sections Live website पर दिखेंगे या छिपेंगे।</p>
               <div className="space-y-2">{initialSections.map((item) => <label key={item.key} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-3 hover:bg-slate-50"><span><span className="block text-xs font-bold text-slate-800">{item.title}</span><span className="mt-0.5 block text-[10px] text-slate-500">{item.description}</span></span><input type="checkbox" checked={sections[item.key]} onChange={() => toggleSection(item.key)} className="h-4 w-4 accent-sky-800" /></label>)}</div>
             </>}
 
