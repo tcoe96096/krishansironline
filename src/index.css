@@ -94,3 +94,19 @@
     padding-block: clamp(1.75rem, 3.2vw, 2.75rem) !important;
   }
 }
+
+
+/* Exam focus: auto-hide the global header on downward scroll on all devices.
+   Keep the live exam status/timer strip visible while scrolling questions. */
+html.exam-mode-active header.sticky,
+body.exam-mode-active header.sticky {
+  transition: transform .3s ease-out !important;
+  will-change: transform;
+}
+@media (min-width: 1024px) {
+  .sticky[aria-label="Live examination status"] {
+    position: sticky !important;
+    top: .65rem !important;
+    z-index: 36 !important;
+  }
+}
