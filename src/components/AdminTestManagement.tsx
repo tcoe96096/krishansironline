@@ -3,10 +3,10 @@ import { requireSupabase } from '../lib/supabase';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
-type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number };
+type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number; category: 'factual' | 'conceptual' };
 type TestRow = { id: string; title: Bilingual; class_level: string; subject: string; chapter: string; duration_minutes: number; total_marks: number; attempt_limit: number; is_published: boolean; questions: DraftQuestion[] };
 
-const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1 });
+const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1, category: 'factual' });
 
 export const AdminTestManagement: React.FC = () => {
   const [tests, setTests] = useState<TestRow[]>([]);
@@ -23,6 +23,7 @@ export const AdminTestManagement: React.FC = () => {
   const [questions, setQuestions] = useState<DraftQuestion[]>([blankQuestion()]);
   const [answers, setAnswers] = useState<number[]>([-1]);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
+  const [bulkJson, setBulkJson] = useState('');
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -37,6 +38,24 @@ export const AdminTestManagement: React.FC = () => {
   }, []);
 
   useEffect(() => { void loadTests(); }, [loadTests]);
+
+  const importBulkJson = () => {
+    setError(''); setNotice('');
+    try {
+      const payload = JSON.parse(bulkJson);
+      if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length !== 40) throw new Error('Bilingual title, chapter और ठीक 40 questions आवश्यक हैं।');
+      const factual = payload.questions.filter((q: any) => q.category === 'factual').length;
+      const conceptual = payload.questions.filter((q: any) => q.category === 'conceptual').length;
+      if (factual !== 28 || conceptual !== 12) throw new Error('वितरण 28 factual + 12 conceptual होना चाहिए।');
+      const mapped = payload.questions.map((q: any, i: number) => {
+        if (!q.question?.en?.trim() || !q.question?.hi?.trim() || !Array.isArray(q.options?.en) || !Array.isArray(q.options?.hi) || q.options.en.length !== 4 || q.options.hi.length !== 4 || q.options.en.some((x: string) => !x?.trim()) || q.options.hi.some((x: string) => !x?.trim()) || !q.explanation?.en?.trim() || !q.explanation?.hi?.trim() || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) throw new Error('प्रश्न ' + (i + 1) + ': bilingual प्रश्न, चार विकल्प, दोनों भाषाओं में विवरण और सही उत्तर आवश्यक हैं।');
+        return { question: q.question, options: q.options, explanation: q.explanation, marks: Number(q.marks || 1), category: q.category as 'factual' | 'conceptual' };
+      });
+      setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index));
+      setNotice('40 प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Bulk JSON import असफल।'); }
+  };
+
 
   const updateQuestion = (index: number, updater: (q: DraftQuestion) => DraftQuestion) =>
     setQuestions(current => current.map((q, i) => i === index ? updater(q) : q));
@@ -62,7 +81,7 @@ export const AdminTestManagement: React.FC = () => {
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
         duration_minutes: duration, total_marks: totalMarks, attempt_limit: attemptLimit,
-        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, type: 'mcq' }))
+        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, category: q.category, type: 'mcq' }))
       };
       const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-import', { body: { test, answer_key: answers } });
       if (invokeError) throw invokeError;
@@ -90,7 +109,7 @@ export const AdminTestManagement: React.FC = () => {
       setChapter(row.chapter);
       setDuration(row.duration_minutes);
       setAttemptLimit(row.attempt_limit);
-      setQuestions((row.questions || []).map(q => ({...q, explanation: q.explanation || { en: '', hi: '' }, marks: Number(q.marks || 1)})));
+      setQuestions((row.questions || []).map(q => ({...q, explanation: q.explanation || { en: '', hi: '' }, marks: Number(q.marks || 1), category: q.category === 'conceptual' ? 'conceptual' : 'factual'})));
       setAnswers(payload.answer_key);
       setNotice('Draft editing mode: बदलाव सेव करने पर Test दोबारा Draft होगा।');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -120,6 +139,12 @@ export const AdminTestManagement: React.FC = () => {
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Online Test Builder</h2><p className="mt-1 text-sm text-slate-500">Bilingual MCQ बनाएं, Draft सेव करें और जाँच के बाद Publish करें।</p></div><button onClick={() => void loadTests()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"><RefreshCw className="h-4 w-4"/>Refresh</button></div>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
+      <h3 className="font-extrabold text-slate-900">Bulk Import · 40 MCQ JSON</h3>
+      <p className="mt-1 text-sm text-slate-600">40 bilingual प्रश्न एक साथ लोड करें। 28 factual + 12 conceptual अनिवार्य हैं।</p>
+      <textarea value={bulkJson} onChange={e=>setBulkJson(e.target.value)} placeholder='{"title":{"en":"Minerals and Energy Resources","hi":"खनिज तथा ऊर्जा संसाधन"},"chapter":"खनिज तथा ऊर्जा संसाधन","questions":[...]}' className="mt-3 min-h-36 w-full rounded-xl border border-sky-200 bg-white p-3 font-mono text-xs"/>
+      <button type="button" onClick={importBulkJson} className="mt-3 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white">Load 40 Questions</button>
+    </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <h3 className="mb-4 flex items-center gap-2 font-extrabold text-slate-900"><Plus className="h-5 w-5 text-sky-700"/>{editingTestId ? 'Edit Test Draft' : 'Create New Test'}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
