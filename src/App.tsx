@@ -21,6 +21,7 @@ import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
 import { TEACHER_INFO } from './data/portalData';
+import { getPublishedWebsiteConfig } from './services/siteConfigService';
 import {
   BookOpen,
   LayoutDashboard,
@@ -158,6 +159,15 @@ const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; langu
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
   const { user, profile } = useAuth();
+  const [homeSections, setHomeSections] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let active = true;
+    void getPublishedWebsiteConfig().then((config) => {
+      if (active && config?.sections) setHomeSections(config.sections);
+    }).catch((error) => console.warn('Published homepage section settings unavailable:', error));
+    return () => { active = false; };
+  }, []);
+
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   // Support clean SEO URLs and legacy hash links.
@@ -257,17 +267,30 @@ const MainApp: React.FC = () => {
             <Hero onNavigate={navigateTo} />
 
             {/* Latest Announcements & Notice Board */}
+{homeSections.notices !== false && (
             <div id="notices">
               <NoticeBoard onNavigate={navigateTo} />
             </div>
 
-            {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
+
+            )}
+
+                        {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
+{homeSections.studentDashboard !== false && (
             <StudentDashboardHome onNavigate={navigateTo} language={language} />
 
-            {/* 8 Quick Access Cards to Dedicated Pages */}
+
+            )}
+
+                        {/* 8 Quick Access Cards to Dedicated Pages */}
+{homeSections.quickAccess !== false && (
             <QuickAccessCards onNavigate={navigateTo} />
 
-            {/* Courses showcase: subject and exam pathways */}
+
+            )}
+
+                        {/* Courses showcase: subject and exam pathways */}
+{homeSections.pathways !== false && (
             <section className="py-12 bg-slate-50 border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-7">
@@ -312,7 +335,11 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            {/* Home Showcase: Classes 6 to 12 Quick Jump */}
+
+            )}
+
+                        {/* Home Showcase: Classes 6 to 12 Quick Jump */}
+{homeSections.classes !== false && (
             <section className="py-12 bg-white border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -378,7 +405,11 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            {/* Special Learning Hubs */}
+
+            )}
+
+                        {/* Special Learning Hubs */}
+{homeSections.learningHubs !== false && (
             <section className="py-12 bg-slate-100/70 border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center max-w-3xl mx-auto mb-8">
@@ -403,7 +434,11 @@ const MainApp: React.FC = () => {
               </div>
             </section>
 
-            {/* Meet Your Teacher: compact homepage introduction; full profile remains on About page */}
+
+            )}
+
+                        {/* Meet Your Teacher: compact homepage introduction; full profile remains on About page */}
+{homeSections.teacher !== false && (
             <section className="py-12 bg-white border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-sky-50/70 to-white p-5 sm:p-7 shadow-sm">
@@ -453,7 +488,11 @@ const MainApp: React.FC = () => {
             </section>
 
 
-            {/* Home Doubts CTA Banner */}
+
+            )}
+
+                        {/* Home Doubts CTA Banner */}
+{homeSections.doubtDesk !== false && (
             <section className="py-10 bg-sky-900 text-white">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
@@ -478,7 +517,10 @@ const MainApp: React.FC = () => {
                 </button>
               </div>
             </section>
-          </div>
+
+            )}
+
+                      </div>
         )}
 
         {/* ==================== PAGE 2: CLASSES (कक्षा 6 से 12) ==================== */}
