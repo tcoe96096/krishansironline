@@ -5,6 +5,8 @@ export type WebsiteConfig = {
   header: Record<string, string>;
   sections: Record<string, boolean>;
   palette: string;
+  /** Safe, versioned Visual Editor data; unknown keys are preserved by existing editors. */
+  visualEditor?: Record<string, unknown>;
 };
 
 export type WebsiteConfigVersion = {
