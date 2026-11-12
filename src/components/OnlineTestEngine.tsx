@@ -1095,7 +1095,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           <div className="space-y-2 pb-24 sm:space-y-4 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
             <div className="mobile-exam-status sticky top-0 z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
-              <div className="flex items-center justify-between gap-2 sm:hidden">
+              <div className="flex items-center justify-between gap-2 md:hidden">
                 <div className={"flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
                   <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय</div>
                   <div className="font-mono text-base font-extrabold leading-tight tabular-nums" aria-live="polite">{formatTimer(timeLeftSeconds)}</div>
@@ -1103,7 +1103,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">DONE</div><div className="font-mono text-sm font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="font-mono text-sm font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
-              <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+              <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
                 <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-xl font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{unattemptedCount}</div></button>
