@@ -124,29 +124,35 @@ export const AdminCommunicationManagement: React.FC = () => {
         published_at: published ? now : null,
         updated_at: now,
       };
-      const payload = tab === 'notices'
-        ? { ...common, link: link.trim() || null, created_by: user?.id ?? null }
-        : {
-            ...common,
-            section: tab,
-            class_level: classLevel || null,
-            subject: subject.trim() || null,
-            chapter: chapter.trim() || null,
-            file_url: tab === 'materials' ? fileUrl.trim() || null : null,
-            external_url: externalUrl.trim() || null,
-            question: tab === 'questions' ? { en: question.en.trim(), hi: question.hi.trim() } : null,
-            options: tab === 'questions' ? {
-              en: optionsEn.split('\n').map((value) => value.trim()).filter(Boolean),
-              hi: optionsHi.split('\n').map((value) => value.trim()).filter(Boolean),
-            } : null,
-            explanation: tab === 'questions' ? { en: explanation.en.trim(), hi: explanation.hi.trim() } : null,
-            created_by: user?.id ?? null,
-          };
       const client = requireSupabase();
-      const result = editingId
-        ? await client.from(table).update(payload).eq('id', editingId)
-        : await client.from(table).insert(payload);
-      if (result.error) throw result.error;
+      if (tab === 'notices') {
+        const noticePayload = { ...common, link: link.trim() || null, created_by: user?.id ?? null };
+        const result = editingId
+          ? await client.from('site_notices').update(noticePayload).eq('id', editingId)
+          : await client.from('site_notices').insert(noticePayload);
+        if (result.error) throw result.error;
+      } else {
+        const contentPayload = {
+          ...common,
+          section: tab,
+          class_level: classLevel || null,
+          subject: subject.trim() || null,
+          chapter: chapter.trim() || null,
+          file_url: tab === 'materials' ? fileUrl.trim() || null : null,
+          external_url: externalUrl.trim() || null,
+          question: tab === 'questions' ? { en: question.en.trim(), hi: question.hi.trim() } : null,
+          options: tab === 'questions' ? {
+            en: optionsEn.split('\\n').map((value) => value.trim()).filter(Boolean),
+            hi: optionsHi.split('\\n').map((value) => value.trim()).filter(Boolean),
+          } : null,
+          explanation: tab === 'questions' ? { en: explanation.en.trim(), hi: explanation.hi.trim() } : null,
+          created_by: user?.id ?? null,
+        };
+        const result = editingId
+          ? await client.from('admin_content_items').update(contentPayload).eq('id', editingId)
+          : await client.from('admin_content_items').insert(contentPayload);
+        if (result.error) throw result.error;
+      }
       resetForm();
       setMessage(published ? 'सामग्री सफलतापूर्वक प्रकाशित हुई।' : 'Draft सफलतापूर्वक सेव हुआ।');
       await loadRows();
