@@ -79,3 +79,13 @@ The historical seed migration is retained only as migration history. Do not run 
 `supabase/migrations/0006_restrict_trigger_function_execute.sql` removes direct EXECUTE grants from the API roles for the custom trigger-only functions `handle_new_user()`, `prevent_role_escalation()`, `set_student_profile_updated_at()`, and the DDL event-trigger function `rls_auto_enable()`, when present. It intentionally leaves `is_admin()` unchanged because RLS policies call it directly, and it restricts direct API invocation of the project's custom DDL event-trigger function `rls_auto_enable()` while leaving PostgreSQL's registered event-trigger execution intact. PostgreSQL fires registered triggers as part of the table operation; the API caller does not need direct EXECUTE permission on the trigger function.
 
 For an existing Supabase project, first verify the function definitions, registered triggers, backup status, and migration baseline. This migration is a proposed hardening step; do not run it until that review is complete.
+
+
+## Website configuration migration 0011 (Preview verified, Production pending)
+- `0011_versioned_website_configuration.sql` creates the versioned `site_config_versions` table.
+- The table stores one editable draft and one currently published configuration, while retaining archived versions for history.
+- Public/anonymous users can read only the published configuration. Admin reads and writes are restricted by the database `is_admin()` role check.
+- `admin_save_site_config(jsonb)` creates or updates the single draft. `admin_publish_site_config(uuid)` atomically archives the previous published version and publishes the selected draft.
+- The migration was applied to Preview project `zgpkmfqioqvincmgyfpi` and its policies and function grants were inspected. Draft-save and publish RPC logic was exercised inside a transaction and rolled back; no test configuration rows were retained.
+- The Admin Website Editor now saves drafts and publishes Hero text, palette, header/footer branding, and homepage section visibility. Public Hero, Header, Footer and homepage section rendering read the published configuration.
+- Production project `vsqwlkqqsxcehvdsdbna` has not received migration 0011. Do not apply it or deploy the associated code until the separate Production migration review and release approval.
