@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, Menu, X, Home, Layers, BookOpen, Laptop, Newspaper, Info, Phone, Shield, UserRound, GraduationCap, ChevronDown, FileText, Globe } from 'lucide-react';
@@ -15,6 +15,34 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const { user, profile, profileLoading, signOut } = useAuth();
   const studentDisplayName = profile?.student_name || user?.user_metadata?.full_name || user?.user_metadata?.name || (profileLoading ? (language === 'en' ? 'Loading…' : 'लोड हो रहा है…') : (language === 'en' ? 'Student' : 'विद्यार्थी'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [headerHiddenOnScroll, setHeaderHiddenOnScroll] = useState(false);
+  const lastScrollY = useRef(0);
+
+  // In an active exam, keep the header visible at first; hide it as the student
+  // scrolls down through questions, and reveal it when they scroll back up.
+  useEffect(() => {
+    const handleScroll = () => {
+      const examActive = document.body.classList.contains('exam-mode-active') || document.documentElement.classList.contains('exam-mode-active');
+      const currentY = Math.max(0, window.scrollY);
+      if (!examActive || currentY < 24) {
+        setHeaderHiddenOnScroll(false);
+        lastScrollY.current = currentY;
+        return;
+      }
+      const delta = currentY - lastScrollY.current;
+      if (delta > 5) setHeaderHiddenOnScroll(true);
+      else if (delta < -5) setHeaderHiddenOnScroll(false);
+      lastScrollY.current = currentY;
+    };
+    lastScrollY.current = Math.max(0, window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    const observer = new MutationObserver(handleScroll);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
+  }, []);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [accountMenuError, setAccountMenuError] = useState('');
   const navLinks = [
@@ -29,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   ];
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
   return (
-    <header className="sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl">
+    <header className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ease-out ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
       <div className="bg-[#090d14] text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
