@@ -89,7 +89,7 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
   const [previewSource,setPreviewSource] = useState<'draft'|'live'>('draft');
   const selected = pages.find((page) => page.id === selectedId) ?? pages[0];
   const livePage = getVisualEditorPage(selected.id);
-  const livePreviewPath = livePage ? (livePage.path === '/' ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}${livePage.path.replace(/^\\/+/, '')}`) : '';
+  const livePreviewPath = livePage ? (livePage.path === '/' ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}${livePage.path.slice(1)}`) : '';
   const [pageSearch,setPageSearch] = useState('');
   const filteredPages = useMemo(() => pages.filter(p => (p.labelEn+' '+p.labelHi+' '+p.path).toLowerCase().includes(pageSearch.toLowerCase())),[pages,pageSearch]);
 
