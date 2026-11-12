@@ -14,6 +14,9 @@ interface PublicNotice {
   category: string;
   date?: string;
   link?: string | null;
+  isPinned?: boolean;
+  startsAt?: string | null;
+  expiresAt?: string | null;
 }
 
 function localized(value: PublicNotice['title'] | PublicNotice['details'], language: string): string {
@@ -37,10 +40,15 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
       try {
         const { data, error: queryError } = await requireSupabase()
           .from('site_notices')
-          .select('id,title,details,category,link,published_at,display_order')
+          .select('id,title,details,category,link,published_at,display_order,is_pinned,starts_at,expires_at,show_on_homepage')
           .eq('is_published', true)
+          .eq('show_on_homepage', true)
+          .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+          .order('is_pinned', { ascending: false })
           .order('display_order', { ascending: true })
-          .order('published_at', { ascending: false });
+          .order('published_at', { ascending: false })
+          .limit(8);
         if (queryError) throw queryError;
         if (!active) return;
         setNotices((data ?? []).map((row: any) => ({
@@ -48,8 +56,11 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
           title: row.title ?? {},
           details: row.details ?? {},
           category: row.category ?? 'Notice',
-          date: row.published_at ? new Date(row.published_at).toLocaleDateString() : undefined,
+          date: row.published_at ? new Date(row.published_at).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN') : undefined,
           link: row.link,
+          isPinned: Boolean(row.is_pinned),
+          startsAt: row.starts_at,
+          expiresAt: row.expires_at,
         })));
       } catch (err) {
         console.error('Unable to load published notices from Supabase:', err);
@@ -59,7 +70,47 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
       }
     })();
     return () => { active = false; };
-  }, [refreshKey]);
+  }, [refreshKey, language]);
+
+  // Subscribe to Admin changes so publish, unpublish, edit and delete appear automatically.
+  useEffect(() => {
+    let client;
+    try {
+      client = requireSupabase();
+    } catch {
+      return;
+    }
+    const channel = client
+      .channel('homepage-site-notices-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_notices' }, () => {
+        setRefreshKey((key) => key + 1);
+      })
+      .subscribe();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') setRefreshKey((key) => key + 1);
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      void client.removeChannel(channel);
+    };
+  }, []);
+
+  // Refresh exactly when a scheduled announcement starts or expires.
+  useEffect(() => {
+    const nextBoundary = notices
+      .flatMap((notice) => [notice.startsAt, notice.expiresAt])
+      .filter((value): value is string => Boolean(value))
+      .map((value) => new Date(value).getTime())
+      .filter((time) => Number.isFinite(time) && time > Date.now())
+      .sort((a, b) => a - b)[0];
+    if (!nextBoundary) return;
+    const delay = Math.min(Math.max(0, nextBoundary - Date.now() + 1000), 2147483000);
+    const timer = window.setTimeout(() => setRefreshKey((key) => key + 1), delay);
+    return () => window.clearTimeout(timer);
+  }, [notices]);
 
   const openNoticeLink = (link?: string | null) => {
     if (!link) return;
@@ -122,6 +173,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
                 <article key={notice.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition-shadow hover:shadow-sm">
                   <div className="flex items-center gap-2 text-xs mb-2">
                     <span className={`px-2 py-0.5 rounded-sm font-semibold border text-[11px] ${categoryClass(notice.category)}`}>{notice.category}</span>
+                    {notice.isPinned && <span className="rounded-sm border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">{language === 'en' ? 'FEATURED' : 'प्रमुख सूचना'}</span>}
                     {notice.date && <span className="text-slate-400 font-mono text-[11px] inline-flex items-center gap-1"><Calendar className="w-3 h-3" />{notice.date}</span>}
                   </div>
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{title || (language === 'en' ? 'Announcement' : 'सूचना')}</h3>
