@@ -19,7 +19,7 @@ const localizedText = (value: unknown): Localized => {
   return { en: typeof value === 'string' ? value : '', hi: '' };
 };
 
-export const AdminCommunicationManagement: React.FC = () => {
+export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('notices');
   const [rows, setRows] = useState<Row[]>([]);
@@ -46,6 +46,7 @@ export const AdminCommunicationManagement: React.FC = () => {
   const table = tab === 'notices' ? 'site_notices' : 'admin_content_items';
 
   const loadRows = useCallback(async () => {
+    if (demoMode) { setRows([]); setLoading(false); return; }
     setLoading(true);
     setError('');
     try {
@@ -61,7 +62,7 @@ export const AdminCommunicationManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [tab, demoMode]);
 
   useEffect(() => { void loadRows(); }, [loadRows]);
 
@@ -190,6 +191,8 @@ export const AdminCommunicationManagement: React.FC = () => {
   ];
   const isNotice = tab === 'notices';
   const isQuestion = tab === 'questions';
+
+  if (demoMode) return <section className="rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-lg font-extrabold text-slate-900">Communication · Preview</h2><p className="mt-2 text-sm leading-6 text-slate-600">यह Demo Preview है। वास्तविक Database से कोई डेटा नहीं पढ़ा या बदला जाएगा। Supabase CRUD केवल अधिकृत Admin session में उपलब्ध है।</p><span className="mt-4 inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold text-amber-800">Read-only demo</span></section>;
 
   return (
     <div className="space-y-5">
