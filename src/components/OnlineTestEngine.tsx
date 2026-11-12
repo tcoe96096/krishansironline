@@ -1118,9 +1118,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
         {studentDetails && activeAttempt && !isSubmitted && (
-          <div className="space-y-2 pb-24 sm:space-y-4 sm:pb-0">
+          <div className="exam-interface space-y-3 pb-24 sm:space-y-5 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
-            <div className="mobile-exam-status sticky top-0 z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
+            <div className="mobile-exam-status sticky top-0 z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2.5 sm:p-4 lg:static lg:shadow-sm" aria-label="Live examination status">
               <div className="flex items-center justify-between gap-2 lg:hidden">
                 <div className={"flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
                   <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय</div>
@@ -1223,17 +1223,17 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               )}
             </div>
 
-            <div id="cbt-test-workspace" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div id="cbt-test-workspace" className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5 xl:gap-6 items-start">
 
             {/* LEFT AREA: CURRENT QUESTION (OR ALL QUESTIONS LIST) - 8 COLS */}
-            <div className="lg:col-span-8 space-y-2 sm:space-y-4">
+            <div className="lg:col-span-8 min-w-0 space-y-3 sm:space-y-5">
 
               {viewLayout === 'cbt' ? (
                 /* Single Question Interactive CBT Card */
-                <div className="bg-white rounded-xl sm:rounded-3xl border border-slate-200 shadow-sm p-3 sm:p-8 transition-all">
+                <div className="exam-question-card bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm sm:shadow-md p-3.5 sm:p-6 xl:p-8 transition-all">
                   
                   {/* Question Meta Strip */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-3 sm:gap-3 sm:pb-4 sm:mb-4 border-b border-slate-100 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 sm:gap-3 sm:pb-4 sm:mb-5 border-b border-slate-100 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sky-900 bg-sky-50 border border-sky-200 px-3 py-1 rounded-lg">
                         {currentQ.chapter}
@@ -1271,7 +1271,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                         <label
                           key={optIdx}
                           onClick={() => handleSelectOption(currentQuestionIndex, optIdx)}
-                          className={`flex items-start gap-3 p-3 sm:gap-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
+                          className={`exam-option flex items-start gap-3 p-3.5 sm:gap-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
                             isOptionChosen
                               ? 'bg-sky-50/90 border-sky-600 text-sky-950 font-semibold shadow-xs ring-1 ring-sky-600'
                               : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
@@ -1429,10 +1429,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
             {/* RIGHT SIDEBAR: QUESTION PALETTE & SUBMISSION - 4 COLS */}
-            <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[270px]">
+            <div className="hidden lg:block lg:col-span-4 min-w-0 space-y-4 lg:sticky lg:top-6 self-start">
 
               {/* 3. QUESTION PALETTE BOXES */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+              <div className="exam-palette-card bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3 text-xs">
                   <span className="font-bold text-slate-800 uppercase tracking-wider">
                     Question Palette (प्रश्न 1-{totalQuestions})
