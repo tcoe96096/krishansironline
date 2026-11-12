@@ -184,15 +184,6 @@
   .exam-interface .mobile-exam-status > div:nth-child(3) > div:last-child {
     height: 4px;
   }
-
-    position: relative;
-    top: auto;
-    z-index: 1;
-    padding: 1rem;
-  }
-  .exam-interface .mobile-exam-status > div:nth-child(2) {
-    gap: .75rem;
-  }
   .exam-interface .exam-question-card {
     padding: clamp(1.5rem, 2.2vw, 2.25rem);
   }
