@@ -72,28 +72,27 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
 
   // Subscribe to Admin changes so publish, unpublish, edit and delete appear automatically.
   useEffect(() => {
-    let client;
     try {
-      client = requireSupabase();
+      const client = requireSupabase();
+      const channel = client
+        .channel('homepage-site-notices-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'site_notices' }, () => {
+          setRefreshKey((key) => key + 1);
+        })
+        .subscribe();
+      const refreshWhenVisible = () => {
+        if (document.visibilityState === 'visible') setRefreshKey((key) => key + 1);
+      };
+      window.addEventListener('focus', refreshWhenVisible);
+      document.addEventListener('visibilitychange', refreshWhenVisible);
+      return () => {
+        window.removeEventListener('focus', refreshWhenVisible);
+        document.removeEventListener('visibilitychange', refreshWhenVisible);
+        void client.removeChannel(channel);
+      };
     } catch {
       return;
     }
-    const channel = client
-      .channel('homepage-site-notices-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_notices' }, () => {
-        setRefreshKey((key) => key + 1);
-      })
-      .subscribe();
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') setRefreshKey((key) => key + 1);
-    };
-    window.addEventListener('focus', refreshWhenVisible);
-    document.addEventListener('visibilitychange', refreshWhenVisible);
-    return () => {
-      window.removeEventListener('focus', refreshWhenVisible);
-      document.removeEventListener('visibilitychange', refreshWhenVisible);
-      void client.removeChannel(channel);
-    };
   }, []);
 
   // Refresh exactly when a scheduled announcement starts or expires.
