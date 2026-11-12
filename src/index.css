@@ -98,15 +98,6 @@
 
 /* Exam focus mode: cover phones, tablets and narrow browser layout viewports. */
 @media (max-width: 1023px) {
-  html.exam-mode-active header.sticky,
-  body.exam-mode-active header.sticky {
-    max-height: 0 !important;
-    opacity: 0 !important;
-    transform: translateY(-100%) !important;
-    overflow: hidden !important;
-    pointer-events: none !important;
-    transition: max-height .32s ease, opacity .22s ease, transform .32s ease;
-  }
   html.exam-mode-active #tests,
   body.exam-mode-active #tests {
     padding-top: .25rem !important;
@@ -128,8 +119,4 @@
   body.exam-mode-active #cbt-test-workspace {
     scroll-margin-top: .5rem;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  html.exam-mode-active header.sticky,
-  body.exam-mode-active header.sticky { transition: none !important; }
 }
