@@ -614,7 +614,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* AVAILABLE TESTS SELECTOR */}
-        <div className="mb-6 rounded-2xl sm:rounded-3xl border border-sky-200 bg-white p-3.5 sm:p-6 shadow-sm">
+        <div className={"mb-6 rounded-2xl sm:rounded-3xl border border-sky-200 bg-white p-3.5 sm:p-6 shadow-sm " + (isTestActive ? "hidden" : "")}>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
@@ -717,7 +717,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         </div>
 
         {/* SELECTED TEST OVERVIEW — shown only for a real published test */}
-        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id ? '' : 'hidden'}`}>
+        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id && !isTestActive ? '' : 'hidden'}`}>
           <div className="h-2 w-full bg-gradient-to-r from-sky-800 via-cyan-500 to-emerald-400" />
           <div className="p-4 sm:p-6">
           <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
@@ -799,121 +799,27 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
         {studentDetails && activeAttempt && !isSubmitted && (
-          <div className="space-y-4">
-            {/* PROFESSIONAL FIXED EXAM STATUS BAR */}
-            <div
-              className="sticky top-[130px] z-30 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-lg shadow-slate-900/5 p-3 sm:p-4"
-              aria-label="Live examination status"
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
-                {/* Countdown timer */}
-                <div
-                  className={`col-span-2 sm:col-span-1 rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3 flex items-center gap-2.5 ${
-                    timeLeftSeconds < 300
-                      ? 'bg-red-50 border-red-200 text-red-900'
-                      : timeLeftSeconds < 900
-                      ? 'bg-amber-50 border-amber-200 text-amber-900'
-                      : 'bg-sky-50 border-sky-200 text-sky-950'
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    timeLeftSeconds < 300 ? 'bg-red-100' : timeLeftSeconds < 900 ? 'bg-amber-100' : 'bg-white'
-                  }`}>
-                    <Clock className={`w-5 h-5 ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-sky-800'}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wide ${timeLeftSeconds < 300 ? 'text-red-700' : timeLeftSeconds < 900 ? 'text-amber-700' : 'text-slate-500'}`}>
-                      शेष समय / Time Left
-                    </div>
-                    <div className="font-mono text-xl sm:text-2xl font-extrabold leading-tight tabular-nums" aria-live="polite">
-                      {formatTimer(timeLeftSeconds)}
-                    </div>
-                  </div>
+          <div className="space-y-4 pb-24 sm:pb-0">
+            {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
+            <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
+              <div className="grid grid-cols-3 gap-1.5 sm:hidden">
+                <div className={"rounded-lg border px-2 py-2 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
+                  <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय शेष</div>
+                  <div className="mt-0.5 font-mono text-lg font-extrabold leading-tight tabular-nums" aria-live="polite">{formatTimer(timeLeftSeconds)}</div>
                 </div>
-
-                {/* Answered */}
-                <button
-                  type="button"
-                  onClick={() => setShowAttemptSummaryModal(true)}
-                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                  aria-label={`${attemptedCount} answered questions. Open attempt details.`}
-                >
-                  <div className="flex items-center gap-2 text-emerald-800">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Attempted</span>
-                  </div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-emerald-900">{attemptedCount}<span className="ml-1 text-xs font-semibold text-emerald-700">/ {totalQuestions}</span></div>
-                </button>
-
-                {/* Not answered */}
-                <button
-                  type="button"
-                  onClick={() => setShowAttemptSummaryModal(true)}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-colors"
-                  aria-label={`${unattemptedCount} unanswered questions. Open attempt details.`}
-                >
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Not Attempted</span>
-                  </div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-slate-800">{unattemptedCount}</div>
-                </button>
-
-                {/* Total marks */}
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left">
-                  <div className="flex items-center gap-2 text-sky-800">
-                    <Award className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Total Marks</span>
-                  </div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-sky-950">{selectedTest.totalMarks}</div>
-                </div>
-
-                {/* Marked for review */}
-                <button
-                  type="button"
-                  onClick={() => setShowAttemptSummaryModal(true)}
-                  className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
-                  aria-label={`${reviewCount} questions marked for review. Open attempt details.`}
-                >
-                  <div className="flex items-center gap-2 text-purple-800">
-                    <Bookmark className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Review</span>
-                  </div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-purple-900">{reviewCount}</div>
-                </button>
-
-                {/* Exam progress */}
-                <button
-                  type="button"
-                  onClick={() => setShowAttemptSummaryModal(true)}
-                  className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-left hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
-                  aria-label="Open detailed examination progress"
-                >
-                  <div className="flex items-center justify-between gap-2 text-sky-800">
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">Progress</span>
-                    <BarChart3 className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold font-mono tabular-nums text-sky-950">
-                    {Math.round((attemptedCount / totalQuestions) * 100)}%
-                  </div>
-                </button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-emerald-800">ANSWERED</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
-
-              <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-600">
-                  <span>परीक्षा प्रगति / Exam Progress</span>
-                  <span className="font-mono tabular-nums text-slate-800">{attemptedCount} of {totalQuestions} answered</span>
-                </div>
-                <div className="h-2.5 w-full sm:max-w-sm overflow-hidden rounded-full bg-slate-100 border border-slate-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all duration-300"
-                    style={{ width: `${(attemptedCount / totalQuestions) * 100}%` }}
-                  />
-                </div>
+              <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-xl font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{unattemptedCount}</div></button>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TOTAL MARKS</div><div className="font-mono text-xl font-extrabold">{selectedTest.totalMarks}</div></div>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-xl font-extrabold">{reviewCount}</div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
               </div>
+              <div className="mt-2 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[10px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
             </div>
-
-
             {/* MOBILE QUESTION PALETTE: compact collapsible navigation */}
             <div className="lg:hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center gap-2 p-2.5">
@@ -996,7 +902,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
               {viewLayout === 'cbt' ? (
                 /* Single Question Interactive CBT Card */
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 transition-all">
+                <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-8 transition-all">
                   
                   {/* Question Meta Strip */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 text-xs">
@@ -1018,7 +924,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
                   {/* Question Text */}
                   <div className="mb-6">
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-relaxed tracking-normal">
+                    <h3 className="break-words text-lg sm:text-xl font-bold text-slate-900 leading-relaxed tracking-normal">
                       {currentQuestionIndex + 1}. {questionLang === 'hi' ? currentQ.question.hi : currentQ.question.en}
                     </h3>
                     {questionLang === 'hi' && currentQ.question.en && (
@@ -1063,7 +969,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
 
                   {/* Navigation & Question Action Buttons */}
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                  <div className="hidden sm:flex pt-4 border-t border-slate-100 flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -1185,6 +1091,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
             </div>
 
+            {/* MOBILE FIXED CONTROLS: always reachable while answering */}
+            <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur">
+              <div className="mx-auto flex max-w-xl items-center gap-2">
+                <button type="button" onClick={() => { const next = Math.max(0, currentQuestionIndex - 1); setCurrentQuestionIndex(next); if (viewLayout === "all") setTimeout(() => document.getElementById(`q-${next}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }} disabled={currentQuestionIndex === 0} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 disabled:opacity-35" aria-label="Previous question"><ChevronLeft className="h-5 w-5" /></button>
+                <button type="button" onClick={() => handleToggleReview(currentQuestionIndex)} className={"flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl border px-2 text-[11px] font-bold " + (markedForReview[currentQuestionIndex] ? "border-purple-600 bg-purple-600 text-white" : "border-purple-200 bg-purple-50 text-purple-800")}><Bookmark className="h-4 w-4 shrink-0" /><span>Review</span></button>
+                {currentQuestionIndex < totalQuestions - 1 ? <button type="button" onClick={() => { const next = Math.min(totalQuestions - 1, currentQuestionIndex + 1); setCurrentQuestionIndex(next); if (viewLayout === "all") setTimeout(() => document.getElementById(`q-${next}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }} className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl bg-sky-900 px-2 text-[11px] font-bold text-white"><span>Next</span><ChevronRight className="h-4 w-4" /></button> : <button type="button" onClick={() => handleSubmitQuiz()} disabled={submissionStatus.loading} className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl bg-emerald-600 px-2 text-[11px] font-bold text-white disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /><span>Submit Test</span></button>}
+                <button type="button" onClick={() => handleSubmitQuiz()} disabled={submissionStatus.loading} className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-[11px] font-bold text-emerald-800 disabled:opacity-50">Submit</button>
+              </div>
+            </div>
             {/* RIGHT SIDEBAR: QUESTION PALETTE & SUBMISSION - 4 COLS */}
             <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[270px]">
 
