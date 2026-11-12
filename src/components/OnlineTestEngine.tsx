@@ -405,6 +405,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     isSubmitted,
   ]);
 
+  // Mobile exam focus mode: collapse the global site header while an attempt is active.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.classList.toggle('exam-mode-active', isTestActive && !isSubmitted);
+    return () => document.body.classList.remove('exam-mode-active');
+  }, [isTestActive, isSubmitted]);
+
   // Countdown timer for the selected assessment
   useEffect(() => {
     if (!isTestActive || isSubmitted) return;
@@ -705,7 +712,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const currentQ = questionsList[currentQuestionIndex] || questionsList[0];
 
   return (
-    <section id="tests" className="py-10 bg-slate-50 border-b border-slate-200">
+    <section id="tests" className="py-10 bg-slate-50 border-b border-slate-200 exam-test-section">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* AVAILABLE TESTS SELECTOR */}
@@ -1048,7 +1055,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* COMPACT CANDIDATE STRIP */}
         {studentDetails && (
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className={`mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4 ${isTestActive ? 'hidden sm:flex' : 'flex'}`}>
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-900 text-sm font-extrabold text-white">
                 {studentDetails.studentName.charAt(0).toUpperCase()}
@@ -1085,16 +1092,16 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
         {studentDetails && activeAttempt && !isSubmitted && (
-          <div className="space-y-4 pb-24 sm:pb-0">
+          <div className="space-y-2 pb-24 sm:space-y-4 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
-            <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
-              <div className="grid grid-cols-3 gap-1.5 sm:hidden">
-                <div className={"rounded-lg border px-2 py-2 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
-                  <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय शेष</div>
-                  <div className="mt-0.5 font-mono text-lg font-extrabold leading-tight tabular-nums" aria-live="polite">{formatTimer(timeLeftSeconds)}</div>
+            <div className="mobile-exam-status sticky top-0 z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
+              <div className="flex items-center justify-between gap-2 sm:hidden">
+                <div className={"flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
+                  <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय</div>
+                  <div className="font-mono text-base font-extrabold leading-tight tabular-nums" aria-live="polite">{formatTimer(timeLeftSeconds)}</div>
                 </div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-emerald-800">ANSWERED</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-emerald-800">DONE</div><div className="font-mono text-sm font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
+                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="font-mono text-sm font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
               <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
                 <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TIME LEFT</div><div className="font-mono text-xl font-extrabold">{formatTimer(timeLeftSeconds)}</div></div>
@@ -1104,7 +1111,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-xl font-extrabold">{reviewCount}</div></button>
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
               </div>
-              <div className="mt-2 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[10px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
+              <div className="mt-1.5 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[9px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
             </div>
             {/* MOBILE QUESTION PALETTE: compact collapsible navigation */}
             <div className="lg:hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -1184,14 +1191,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             <div id="cbt-test-workspace" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             {/* LEFT AREA: CURRENT QUESTION (OR ALL QUESTIONS LIST) - 8 COLS */}
-            <div className="lg:col-span-8 space-y-4">
+            <div className="lg:col-span-8 space-y-2 sm:space-y-4">
 
               {viewLayout === 'cbt' ? (
                 /* Single Question Interactive CBT Card */
-                <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-8 transition-all">
+                <div className="bg-white rounded-xl sm:rounded-3xl border border-slate-200 shadow-sm p-3 sm:p-8 transition-all">
                   
                   {/* Question Meta Strip */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-3 sm:gap-3 sm:pb-4 sm:mb-4 border-b border-slate-100 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sky-900 bg-sky-50 border border-sky-200 px-3 py-1 rounded-lg">
                         {currentQ.chapter}
@@ -1209,7 +1216,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
 
                   {/* Question Text */}
-                  <div className="mb-6">
+                  <div className="mb-3 sm:mb-6">
                     <h3 className="break-words text-lg sm:text-xl font-bold text-slate-900 leading-relaxed tracking-normal">
                       {currentQuestionIndex + 1}. {questionLang === 'hi' ? currentQ.question.hi : currentQ.question.en}
                     </h3>
@@ -1221,7 +1228,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
 
                   {/* Options */}
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-6">
                     {(questionLang === 'hi' ? currentQ.options.hi : currentQ.options.en).map((opt, optIdx) => {
                       const isOptionChosen = selectedAnswers[currentQuestionIndex] === optIdx;
 
@@ -1229,7 +1236,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                         <label
                           key={optIdx}
                           onClick={() => handleSelectOption(currentQuestionIndex, optIdx)}
-                          className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
+                          className={`flex items-start gap-3 p-3 sm:gap-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
                             isOptionChosen
                               ? 'bg-sky-50/90 border-sky-600 text-sky-950 font-semibold shadow-xs ring-1 ring-sky-600'
                               : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
