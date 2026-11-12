@@ -1204,6 +1204,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       );
                     })}
                   </div>
+                  <div className="mt-3" role="progressbar" aria-label="Answered questions progress" aria-valuemin={0} aria-valuemax={totalQuestions} aria-valuenow={attemptedCount}>
+                    <div className="mb-1 flex items-center justify-between text-[10px] font-semibold text-slate-500">
+                      <span>प्रश्न पूर्णता / Completion</span>
+                      <span className="font-mono text-sky-800">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-sky-700 via-cyan-500 to-emerald-500 transition-[width] duration-500 ease-out" style={{ width: `${(attemptedCount / Math.max(1, totalQuestions)) * 100}%` }} />
+                    </div>
+                  </div>
                   <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
                     <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-600" /> Answered</span>
                     <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-slate-200" /> Unanswered</span>
@@ -1471,6 +1480,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-3" role="progressbar" aria-label="Answered questions progress" aria-valuemin={0} aria-valuemax={totalQuestions} aria-valuenow={attemptedCount}>
+                  <div className="mb-1 flex items-center justify-between text-[10px] font-semibold text-slate-500">
+                    <span>प्रश्न पूर्णता / Completion</span>
+                    <span className="font-mono text-sky-800">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-gradient-to-r from-sky-700 via-cyan-500 to-emerald-500 transition-[width] duration-500 ease-out" style={{ width: `${(attemptedCount / Math.max(1, totalQuestions)) * 100}%` }} />
+                  </div>
                 </div>
 
                 {/* Palette Legend */}
