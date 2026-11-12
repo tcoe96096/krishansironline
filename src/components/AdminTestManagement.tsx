@@ -3,10 +3,10 @@ import { requireSupabase } from '../lib/supabase';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
-type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number };
+type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number; category: 'factual' | 'conceptual' };
 type TestRow = { id: string; title: Bilingual; class_level: string; subject: string; chapter: string; duration_minutes: number; total_marks: number; attempt_limit: number; is_published: boolean; questions: DraftQuestion[] };
 
-const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1 });
+const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1, category: 'factual' });
 
 export const AdminTestManagement: React.FC = () => {
   const [tests, setTests] = useState<TestRow[]>([]);
@@ -50,7 +50,7 @@ export const AdminTestManagement: React.FC = () => {
       if (factual !== 28 || conceptual !== 12) throw new Error('वितरण 28 factual + 12 conceptual होना चाहिए।');
       const mapped = payload.questions.map((q: any, i: number) => {
         if (!q.question?.en?.trim() || !q.question?.hi?.trim() || !Array.isArray(q.options?.en) || !Array.isArray(q.options?.hi) || q.options.en.length !== 4 || q.options.hi.length !== 4 || q.options.en.some((x: string) => !x?.trim()) || q.options.hi.some((x: string) => !x?.trim()) || !q.explanation?.en?.trim() || !q.explanation?.hi?.trim() || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) throw new Error('प्रश्न ' + (i + 1) + ': bilingual प्रश्न, चार विकल्प, दोनों भाषाओं में विवरण और सही उत्तर आवश्यक हैं।');
-        return { question: q.question, options: q.options, explanation: q.explanation, marks: Number(q.marks || 1) };
+        return { question: q.question, options: q.options, explanation: q.explanation, marks: Number(q.marks || 1), category: q.category as 'factual' | 'conceptual' };
       });
       setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index));
       setNotice('40 प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
@@ -81,7 +81,7 @@ export const AdminTestManagement: React.FC = () => {
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
         duration_minutes: duration, total_marks: totalMarks, attempt_limit: attemptLimit,
-        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, type: 'mcq' }))
+        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, category: q.category, type: 'mcq' }))
       };
       const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-import', { body: { test, answer_key: answers } });
       if (invokeError) throw invokeError;
@@ -109,7 +109,7 @@ export const AdminTestManagement: React.FC = () => {
       setChapter(row.chapter);
       setDuration(row.duration_minutes);
       setAttemptLimit(row.attempt_limit);
-      setQuestions((row.questions || []).map(q => ({...q, explanation: q.explanation || { en: '', hi: '' }, marks: Number(q.marks || 1)})));
+      setQuestions((row.questions || []).map(q => ({...q, explanation: q.explanation || { en: '', hi: '' }, marks: Number(q.marks || 1), category: q.category === 'conceptual' ? 'conceptual' : 'factual'})));
       setAnswers(payload.answer_key);
       setNotice('Draft editing mode: बदलाव सेव करने पर Test दोबारा Draft होगा।');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -159,7 +159,7 @@ export const AdminTestManagement: React.FC = () => {
       </div>
       <div className="mt-6 space-y-4">
         {questions.map((q,i)=><div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h4 className="text-sm font-extrabold text-slate-800">Question {i+1}</h4><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600">Marks / अंक<input type="number" min="0.25" max="100" step="0.25" value={q.marks} onChange={e=>updateQuestion(i,v=>({...v,marks:Number(e.target.value)}))} className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"/></label>{questions.length>1&&<button onClick={()=>removeQuestion(i)} className="text-xs font-semibold text-rose-600"><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Remove</button>}</div></div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h4 className="text-sm font-extrabold text-slate-800">Question {i+1}</h4><label className="text-xs font-semibold text-slate-600">Question Type<select value={q.category} onChange={e=>updateQuestion(i,v=>({...v,category:e.target.value as 'factual' | 'conceptual'}))} className="ml-2 rounded-lg border border-slate-300 bg-white px-2 py-1.5"><option value="factual">Factual</option><option value="conceptual">Conceptual</option></select></label><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600">Marks / अंक<input type="number" min="0.25" max="100" step="0.25" value={q.marks} onChange={e=>updateQuestion(i,v=>({...v,marks:Number(e.target.value)}))} className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"/></label>{questions.length>1&&<button onClick={()=>removeQuestion(i)} className="text-xs font-semibold text-rose-600"><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Remove</button>}</div></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-slate-600">Question (English)<textarea value={q.question.en} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,en:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
             <label className="text-xs font-semibold text-slate-600">प्रश्न (हिंदी)<textarea value={q.question.hi} onChange={e=>updateQuestion(i,v=>({...v,question:{...v.question,hi:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 p-2 text-sm"/></label>
