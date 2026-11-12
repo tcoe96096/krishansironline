@@ -17,6 +17,38 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [headerHiddenOnScroll, setHeaderHiddenOnScroll] = useState(false);
   const lastScrollY = useRef(0);
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  // Measure the real responsive header height so the floating exam watch
+  // follows it smoothly instead of relying on a hard-coded offset.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const updateHeaderHeight = () => {
+      root.style.setProperty('--exam-header-visible-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    };
+    updateHeaderHeight();
+    const resizeObserver = new ResizeObserver(updateHeaderHeight);
+    resizeObserver.observe(header);
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+      root.style.removeProperty('--exam-header-visible-height');
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.toggle('exam-header-hidden', headerHiddenOnScroll);
+    body.classList.toggle('exam-header-hidden', headerHiddenOnScroll);
+    return () => {
+      root.classList.remove('exam-header-hidden');
+      body.classList.remove('exam-header-hidden');
+    };
+  }, [headerHiddenOnScroll]);
 
   // In an active exam on every screen size, hide the global header while scrolling
   // down through questions and reveal it when the student scrolls back up.
@@ -58,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   ];
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
   return (
-    <header className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ease-out ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
+    <header ref={headerRef} className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ease-out will-change-transform ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
       <div className="bg-[#090d14] text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
@@ -124,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
               <button type="button" onClick={() => { if (language === 'en') toggleLanguage(); }} aria-pressed={language !== 'en'} aria-label="हिन्दी" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language !== 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>HI</button>
               <button type="button" onClick={() => { if (language !== 'en') toggleLanguage(); }} aria-pressed={language === 'en'} aria-label="English" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language === 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>EN</button>
             </div>
-            <button type="button" onClick={() => onOpenAuth()} aria-label={user ? "Open student dashboard" : "Student Login"} title={user ? studentDisplayName : "Student Login"} className="h-10 min-w-10 max-w-[150px] shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#17477e]/20 bg-[#123c70] px-2 text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4 shrink-0" /><span className="max-w-[92px] truncate text-[11px] font-bold">{user ? studentDisplayName : (language === "en" ? "Login" : "लॉगिन")}</span></button>
+            <button type="button" onClick={() => { if (user) handleNavClick('studentDashboard'); else onOpenAuth(); }} aria-label={user ? "Open student dashboard" : "Student Login"} title={user ? studentDisplayName : "Student Login"} className="h-10 min-w-10 max-w-[150px] shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#17477e]/20 bg-[#123c70] px-2 text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4 shrink-0" /><span className="max-w-[92px] truncate text-[11px] font-bold">{user ? studentDisplayName : (language === "en" ? "Login" : "लॉगिन")}</span></button>
           </div>
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1">
             {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs sm:text-sm font-extrabold transition-all ${activeSection === id ? 'bg-[#d4e5f3] text-[#092c60] shadow-sm ring-1 ring-[#b7cde1]' : 'text-[#24466f] hover:bg-[#dce8f3] hover:text-[#092c60]'}`}><Icon className="w-4 h-4" />{label}</button>)}
