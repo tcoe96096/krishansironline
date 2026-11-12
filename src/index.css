@@ -96,38 +96,40 @@
 }
 
 
-/* Focused mobile examination mode: apply to phones and compact tablets (up to 767px). */
-@media (max-width: 767px) {
-  body header.sticky {
-    max-height: 500px;
-    transition: max-height .32s ease, opacity .22s ease, transform .32s ease;
-  }
+/* Exam focus mode: cover phones, tablets and narrow browser layout viewports. */
+@media (max-width: 1023px) {
+  html.exam-mode-active header.sticky,
   body.exam-mode-active header.sticky {
     max-height: 0 !important;
     opacity: 0 !important;
-    transform: translateY(-100%);
+    transform: translateY(-100%) !important;
     overflow: hidden !important;
     pointer-events: none !important;
     transition: max-height .32s ease, opacity .22s ease, transform .32s ease;
   }
+  html.exam-mode-active #tests,
   body.exam-mode-active #tests {
-    padding-top: .35rem !important;
-    padding-bottom: .35rem !important;
+    padding-top: .25rem !important;
+    padding-bottom: .25rem !important;
     scroll-margin-top: 0 !important;
   }
+  html.exam-mode-active #tests > div,
   body.exam-mode-active #tests > div {
     padding-left: .5rem !important;
     padding-right: .5rem !important;
   }
+  html.exam-mode-active .mobile-exam-status,
   body.exam-mode-active .mobile-exam-status {
     border-radius: .75rem;
     box-shadow: 0 3px 12px rgba(15, 45, 75, .08);
     padding: .5rem !important;
   }
+  html.exam-mode-active #cbt-test-workspace,
   body.exam-mode-active #cbt-test-workspace {
     scroll-margin-top: .5rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  html.exam-mode-active header.sticky,
   body.exam-mode-active header.sticky { transition: none !important; }
 }
