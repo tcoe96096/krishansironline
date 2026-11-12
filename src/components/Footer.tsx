@@ -53,7 +53,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Learning Promise' : 'हमारा उद्देश्य'}</h4>
             <p className="text-slate-400 text-xs leading-relaxed">{en ? 'Free educational resources to encourage regular practice, independent learning and academic improvement.' : 'नियमित अभ्यास, स्वतंत्र अध्ययन और शैक्षणिक सुधार को प्रोत्साहित करने के लिए निःशुल्क शैक्षणिक संसाधन।'}</p>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-slate-300 flex items-start gap-2"><ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /><span>{en ? 'Educational resources designed for responsible learning.' : 'जिम्मेदार और गुणवत्तापूर्ण शिक्षा के लिए तैयार संसाधन।'}</span></div>
-            <div className="inline-flex items-center gap-2 text-[11px] text-cyan-200"><GraduationCap className="w-4 h-4" />{en ? '{siteHeader.footer || (en ? 'Learn • Practice • Improve • Succeed' : 'सीखें • अभ्यास करें • सुधारें • सफल हों')}' : 'सीखें • अभ्यास करें • सुधारें • सफल हों'}</div>
+            <div className="inline-flex items-center gap-2 text-[11px] text-cyan-200"><GraduationCap className="w-4 h-4" />{siteHeader.footer || (en ? 'Learn • Practice • Improve • Succeed' : 'सीखें • अभ्यास करें • सुधारें • सफल हों')}</div>
           </div>
         </div>
       </div>
