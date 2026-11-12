@@ -533,3 +533,48 @@
 .exam-neon-live i { width:4px; height:4px; border-radius:50%; background:#18d6c0; box-shadow:0 0 7px #18d6c0; }
 @media (min-width:1024px) { .exam-floating-watch.exam-neon-watch { width:5.5rem; height:5.5rem; } }
 @media (max-width:420px) { .exam-floating-watch.exam-neon-watch { width:4.5rem; height:4.5rem; } }
+
+
+/* Final exam focus behavior: header auto-hides on every viewport and the
+   selected Neo Digital Ring watch floats at the upper-right edge. */
+.exam-live-topbar {
+  position: relative !important;
+  top: auto !important;
+  z-index: 1 !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.exam-floating-watch.exam-neon-watch {
+  position: fixed !important;
+  z-index: 60 !important;
+  top: calc(var(--exam-header-visible-height, 0px) + 10px);
+  right: max(10px, calc((100vw - 1280px) / 2 + 12px));
+  grid-column: auto !important;
+  grid-row: auto !important;
+  justify-self: auto !important;
+  align-self: auto !important;
+  margin: 0 !important;
+  pointer-events: none;
+  transition: top .3s ease, box-shadow .25s ease, background .3s ease;
+}
+html.exam-header-hidden .exam-floating-watch.exam-neon-watch,
+body.exam-header-hidden .exam-floating-watch.exam-neon-watch {
+  top: 10px;
+}
+.exam-interface .exam-question-card,
+.exam-interface .exam-palette-card,
+.exam-interface #cbt-test-workspace {
+  scroll-margin-top: 6.5rem;
+}
+@media (max-width: 640px) {
+  .exam-floating-watch.exam-neon-watch {
+    right: 8px;
+    top: calc(var(--exam-header-visible-height, 0px) + 8px);
+  }
+  html.exam-header-hidden .exam-floating-watch.exam-neon-watch,
+  body.exam-header-hidden .exam-floating-watch.exam-neon-watch {
+    top: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exam-floating-watch.exam-neon-watch { transition: none; }
+}
