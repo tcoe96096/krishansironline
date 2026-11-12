@@ -142,8 +142,8 @@ export const AdminCommunicationManagement: React.FC = () => {
           external_url: externalUrl.trim() || null,
           question: tab === 'questions' ? { en: question.en.trim(), hi: question.hi.trim() } : null,
           options: tab === 'questions' ? {
-            en: optionsEn.split('\\n').map((value) => value.trim()).filter(Boolean),
-            hi: optionsHi.split('\\n').map((value) => value.trim()).filter(Boolean),
+            en: optionsEn.split(String.fromCharCode(10)).map((value) => value.trim()).filter(Boolean),
+            hi: optionsHi.split(String.fromCharCode(10)).map((value) => value.trim()).filter(Boolean),
           } : null,
           explanation: tab === 'questions' ? { en: explanation.en.trim(), hi: explanation.hi.trim() } : null,
           created_by: user?.id ?? null,
