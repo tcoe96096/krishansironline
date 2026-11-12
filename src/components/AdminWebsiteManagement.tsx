@@ -44,6 +44,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
+  const [visualEditorConfig, setVisualEditorConfig] = useState<Record<string, unknown> | null>(null);
   const [hero, setHero] = useState({
     eyebrowEn: 'FREE ONLINE LEARNING',
     eyebrowHi: 'निःशुल्क ऑनलाइन शिक्षा',
@@ -90,6 +91,9 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
           if (config.header) setHeader((current) => ({ ...current, ...config.header }));
           if (config.sections) setSections((current) => ({ ...current, ...config.sections }));
           if (config.palette && config.palette in palettes) setPalette(config.palette as PaletteKey);
+          if (config.visualEditor && typeof config.visualEditor === 'object' && !Array.isArray(config.visualEditor)) {
+            setVisualEditorConfig(config.visualEditor);
+          }
           if (draft) {
             setDraftId(draft.id);
             setDraftLabel('Saved draft · Version ' + draft.version_number);
@@ -113,7 +117,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
     setSaving(true);
     setNotice('');
     try {
-      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette });
+      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette, ...(visualEditorConfig ? { visualEditor: visualEditorConfig } : {}) });
       setDraftId(id);
       const history = await getWebsiteConfigVersions();
       setVersions(history);
