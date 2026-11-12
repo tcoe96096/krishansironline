@@ -153,16 +153,19 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
 
   const updateHero = (key: keyof typeof hero, value: string) => {
     setHero((current) => ({ ...current, [key]: value }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
   const updateHeader = (key: keyof typeof header, value: string) => {
     setHeader((current) => ({ ...current, [key]: value }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
   const toggleSection = (key: SectionKey) => {
     setSections((current) => ({ ...current, [key]: !current[key] }));
+    setDraftId(null);
     setDraftLabel('Unsaved UI changes');
     setNotice('');
   };
@@ -183,6 +186,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
     setHeader({ ticker: 'FREE Online Learning • Classes 6–12 • Competitive Exams', brand: 'Krishan Sir', subBrand: 'Online Learning', footer: 'Learn • Practice • Improve • Succeed' });
     setSections({ notices: true, studentDashboard: true, quickAccess: true, pathways: true, classes: true, learningHubs: true, teacher: true, doubtDesk: true });
     setPalette('navy');
+    setDraftId(null);
     setDraftLabel('Reset to current website content');
     setNotice('Editor को मौजूदा वेबसाइट के उपलब्ध content पर reset किया गया है। कोई Live बदलाव नहीं हुआ।');
   };
@@ -215,7 +219,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-800"><Info className="h-3.5 w-3.5" />Preview only · Not connected</span>
+          <span className={'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold ' + (demoMode || !backendReady ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800')}><Info className="h-3.5 w-3.5" />{demoMode ? 'Demo · Read only' : backendReady ? 'Supabase connected' : 'Connecting…'}</span>
           <button onClick={() => { setShowPreview((value) => !value); setNotice(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{showPreview ? 'Hide Preview' : 'Show Preview'}</button>
         </div>
       </div>
@@ -274,8 +278,8 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
             <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500"><span className="h-2 w-2 rounded-full bg-amber-500" />{draftLabel}</div>
             <div className="flex flex-wrap gap-2">
               <button onClick={resetEditor} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100"><RotateCcw className="h-3.5 w-3.5" />Reset</button>
-              <button onClick={() => { setDraftLabel('Preview snapshot prepared · Not saved'); setNotice('यह केवल current preview session का snapshot है। Draft Database में save नहीं हुआ है और refresh पर reset हो जाएगा।'); }} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Save className="h-3.5 w-3.5" />Save Draft Preview</button>
-              <button disabled title="Approval workflow backend अभी connect नहीं है" className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-200 px-3 py-2.5 text-xs font-bold text-slate-500"><Send className="h-3.5 w-3.5" />Submit for Approval</button>
+              <button onClick={() => void saveDraft()} disabled={saving || demoMode || !backendReady} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-3.5 w-3.5" />{saving ? 'Saving…' : 'Save Draft'}</button>
+              <button onClick={() => void publishDraft()} disabled={publishing || !draftId || demoMode} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-3.5 w-3.5" />{publishing ? 'Publishing…' : 'Publish Live'}</button>
             </div>
           </div>
           {notice && <p role="status" className="border-t border-sky-100 bg-sky-50 px-5 py-3 text-xs leading-5 text-sky-900">{notice}</p>}
@@ -303,7 +307,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
             <div className="px-4 py-3 text-center text-[9px] font-semibold text-white" style={{ background: currentPalette.primary }}>{header.footer}</div>
           </div>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex items-center gap-2 text-[11px] font-extrabold text-amber-900"><LockKeyhole className="h-3.5 w-3.5" />Publishing is locked</div><p className="mt-1 text-[10px] leading-5 text-amber-900/80">Live website पर बदलाव भेजने, Version History लिखने या approval submit करने की सुविधा अभी connect नहीं है।</p></div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-2 text-xs font-extrabold text-slate-800"><History className="h-4 w-4 text-slate-500" />Version History</div><p className="mt-1 text-[11px] leading-5 text-slate-500">अभी कोई version record उपलब्ध नहीं है। यह panel backend approval और versioning integration के बाद सक्रिय होगा।</p><div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-slate-400"><CheckCircle2 className="h-3.5 w-3.5" />No existing version was changed</div></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-2 text-xs font-extrabold text-slate-800"><History className="h-4 w-4 text-slate-500" />Version History</div>{versions.length === 0 ? <p className="mt-2 text-[11px] text-slate-500">अभी कोई saved version नहीं है।</p> : <div className="mt-3 space-y-2">{versions.map((version) => <div key={version.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"><div><p className="text-[11px] font-bold text-slate-700">Version {version.version_number}</p><p className="text-[10px] text-slate-400">{new Date(version.created_at).toLocaleString()}</p></div><span className={'rounded-full px-2 py-1 text-[9px] font-extrabold ' + (version.status === 'published' ? 'bg-emerald-100 text-emerald-800' : version.status === 'draft' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600')}>{version.status.toUpperCase()}</span></div>)}</div>}<div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-slate-400"><CheckCircle2 className="h-3.5 w-3.5" />Published versions remain available for history</div></div>
         </section>}
       </div>
     </div>
