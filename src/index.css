@@ -378,3 +378,85 @@
   .exam-floating-watch.is-critical { animation: none; }
   .exam-live-progress-track > div, .exam-floating-watch { transition: none; }
 }
+
+
+/* Sample 3 — Premium Digital Glass Watch, right-middle floating position */
+.exam-live-topbar {
+  position: relative;
+  top: auto;
+}
+.exam-floating-watch-glass {
+  position: fixed;
+  z-index: 46;
+  right: max(14px, env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6.5rem;
+  height: 6.5rem;
+  padding: 5px;
+  border: 1px solid #d6e5ef;
+  border-radius: 50%;
+  background: conic-gradient(#087e9e 0deg, #087e9e 259deg, #d9e8ef 259deg, #d9e8ef 360deg) !important;
+  box-shadow: 0 12px 32px rgba(20, 65, 95, .2), 0 3px 8px rgba(20,65,95,.08);
+  transition: background .35s ease, box-shadow .25s ease;
+}
+.exam-floating-watch-glass .exam-floating-watch-glass-face {
+  width: 100%;
+  height: 100%;
+  border: 3px solid rgba(255,255,255,.95);
+  background: linear-gradient(145deg,#ffffff 0%,#f4f9fc 60%,#eaf3f8 100%);
+  color: #123653;
+  box-shadow: inset 0 2px 8px rgba(38,91,122,.08);
+  gap: .22rem;
+}
+.exam-watch-caption {
+  color: #71879a;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .11em;
+}
+.exam-floating-watch-glass-face strong {
+  color: #123653;
+  font-size: 1.3rem;
+  letter-spacing: -.045em;
+  text-shadow: 0 1px 0 #fff;
+}
+.exam-watch-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #168878;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .07em;
+}
+.exam-watch-live i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #19a88a;
+  box-shadow: 0 0 0 3px rgba(25,168,138,.12);
+}
+.exam-floating-watch-glass.is-warning {
+  background: conic-gradient(#d99020 0deg, #d99020 259deg, #f2e7d3 259deg, #f2e7d3 360deg) !important;
+  box-shadow: 0 12px 32px rgba(157,105,28,.18);
+}
+.exam-floating-watch-glass.is-critical {
+  background: conic-gradient(#d94b4b 0deg, #d94b4b 259deg, #f3dddd 259deg, #f3dddd 360deg) !important;
+  box-shadow: 0 12px 32px rgba(180,48,48,.2);
+  animation: exam-watch-pulse 1.8s ease-in-out infinite;
+}
+@media (max-width: 767px) {
+  .exam-floating-watch-glass {
+    right: max(10px, env(safe-area-inset-right));
+    width: 5.4rem;
+    height: 5.4rem;
+    padding: 4px;
+  }
+  .exam-floating-watch-glass-face strong { font-size: 1.05rem; }
+  .exam-watch-caption { font-size: 7px; }
+  .exam-watch-live { font-size: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exam-floating-watch-glass.is-critical { animation: none; }
+}
