@@ -210,12 +210,12 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
     Object.values(pageOverrides).forEach(override => {
       if (!isSafeSelector(override.selector)) return;
       const element = doc.querySelector(override.selector);
-      if (!element || !isEditableLeaf(element)) return;
-      element.textContent = override.text;
+      if (!element || !isEditableLeaf(element) || !override || typeof override.text !== 'string' || !override.style) return;
+      element.textContent = override.text.slice(0, 2000);
       const style = override.style;
       const target = element as HTMLElement;
-      target.style.color = style.color;
-      target.style.backgroundColor = style.backgroundColor;
+      target.style.color = /^#[0-9a-f]{6}$/i.test(style.color) ? style.color : '#18263b';
+      target.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(style.backgroundColor) ? style.backgroundColor : '#ffffff';
       target.style.fontSize = `${Math.min(48, Math.max(8, style.fontSize))}px`;
       target.style.fontWeight = ['400','500','600','700','800'].includes(style.fontWeight) ? style.fontWeight : '400';
       target.style.textAlign = ['left','center','right','justify'].includes(style.textAlign) ? style.textAlign : 'left';
