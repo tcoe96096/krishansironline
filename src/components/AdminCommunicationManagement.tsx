@@ -65,7 +65,7 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     try {
       const client = requireSupabase();
       const query = tab === 'notices'
-        ? client.from('site_notices').select('*').order('display_order', { ascending: true }).order('created_at', { ascending: false })
+        ? client.from('site_notices').select('*').order('is_pinned', { ascending: false }).order('display_order', { ascending: true }).order('created_at', { ascending: false })
         : client.from('admin_content_items').select('*').eq('section', tab).order('display_order', { ascending: true }).order('created_at', { ascending: false });
       const result = await query;
       if (result.error) throw result.error;
@@ -214,6 +214,22 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     else { setMessage(next ? 'प्रकाशित कर दिया गया।' : 'Unpublish कर दिया गया।'); await loadRows(); }
   };
 
+  const toggleNoticeFlag = async (row: Row, field: 'show_on_homepage' | 'is_pinned') => {
+    setError('');
+    setMessage('');
+    const current = field === 'show_on_homepage' ? row.show_on_homepage !== false : Boolean(row.is_pinned);
+    const next = !current;
+    const result = await requireSupabase().from('site_notices').update({
+      [field]: next,
+      updated_at: new Date().toISOString(),
+    }).eq('id', row.id);
+    if (result.error) setError(result.error.message);
+    else {
+      setMessage(field === 'show_on_homepage' ? (next ? 'Homepage पर दिखाना चालू किया गया।' : 'Homepage से छिपा दिया गया।') : (next ? 'सूचना सबसे ऊपर Pin कर दी गई।' : 'सूचना Unpin कर दी गई।'));
+      await loadRows();
+    }
+  };
+
   const deleteRow = async (row: Row) => {
     if (!window.confirm('क्या आप इस रिकॉर्ड को स्थायी रूप से हटाना चाहते हैं?')) return;
     const result = await requireSupabase().from(table).delete().eq('id', row.id);
@@ -298,7 +314,7 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
           const statusClass = status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : status === 'SCHEDULED' ? 'bg-sky-50 text-sky-700' : status === 'EXPIRED' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700';
           return <article key={row.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-bold text-slate-800">{heading}</p><span className={`rounded-full px-2 py-1 text-[9px] font-extrabold ${statusClass}`}>{status}</span>{row.is_pinned && <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-extrabold text-amber-700">PINNED</span>}</div><p className="mt-1 text-[11px] text-slate-500">{[row.class_level && 'Class '+row.class_level,row.subject,row.chapter,row.category,`Priority ${row.display_order ?? 0}`,row.show_on_homepage === false ? 'Homepage OFF' : 'Homepage ON'].filter(Boolean).join(' · ') || 'Website announcement'}</p></div>
-            <div className="flex shrink-0 flex-wrap gap-2"><button type="button" onClick={() => void togglePublish(row)} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600">{row.is_published ? 'Unpublish' : 'Publish'}</button><button type="button" onClick={() => editRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600"><Edit3 className="h-3 w-3"/>Edit</button><button type="button" onClick={() => void deleteRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-rose-100 px-3 py-2 text-[10px] font-bold text-rose-600"><Trash2 className="h-3 w-3"/>Delete</button></div>
+            <div className="flex shrink-0 flex-wrap gap-2"><button type="button" onClick={() => void togglePublish(row)} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600">{row.is_published ? 'Unpublish' : 'Publish'}</button>{tab === 'notices' && <button type="button" onClick={() => void toggleNoticeFlag(row, 'show_on_homepage')} className="rounded-lg border border-sky-100 px-3 py-2 text-[10px] font-bold text-sky-800">{row.show_on_homepage === false ? 'Show on Home' : 'Hide from Home'}</button>}{tab === 'notices' && <button type="button" onClick={() => void toggleNoticeFlag(row, 'is_pinned')} className="rounded-lg border border-amber-100 px-3 py-2 text-[10px] font-bold text-amber-800">{row.is_pinned ? 'Unpin' : 'Pin to Top'}</button>}<button type="button" onClick={() => editRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600"><Edit3 className="h-3 w-3"/>Edit</button><button type="button" onClick={() => void deleteRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-rose-100 px-3 py-2 text-[10px] font-bold text-rose-600"><Trash2 className="h-3 w-3"/>Delete</button></div>
           </article>;
         })}</div>}
       </section>
