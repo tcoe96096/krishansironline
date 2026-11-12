@@ -59,7 +59,7 @@ const defaultInspectorStyle: InspectorStyle = {
   textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0,
 };
 const colorToHex = (value: string): string => {
-  const match = value.match(/^rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/i);
+  const match = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
   if (!match) return /^#[0-9a-f]{6}$/i.test(value) ? value : '#ffffff';
   return '#' + match.slice(1,4).map(part => Number(part).toString(16).padStart(2,'0')).join('');
 };
@@ -104,7 +104,7 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
   const [previewFrameReady,setPreviewFrameReady] = useState(false);
   const [selectedLiveElement,setSelectedLiveElement] = useState<{ tag: string; text: string } | null>(null);
   const [inspectorStyle,setInspectorStyle] = useState<InspectorStyle>(defaultInspectorStyle);
-  const originalInspectorStyleRef = useRef<CSSStyleDeclaration | null>(null);
+  const originalInspectorStyleRef = useRef<string | null>(null);
   const livePreviewFrameRef = useRef<HTMLIFrameElement>(null);
   const selectedLiveElementRef = useRef<HTMLElement | null>(null);
   const previousOutlineRef = useRef('');
@@ -150,7 +150,7 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
           borderRadius: Number.parseFloat(computed.borderRadius) || 0,
         });
       }
-      originalInspectorStyleRef.current = candidate.style;
+      originalInspectorStyleRef.current = candidate.getAttribute('style');
       setSelectedLiveElement({ tag: candidate.tagName.toLowerCase(), text: candidate.textContent ?? '' });
     };
     doc.addEventListener('click', handleSelect, true);
@@ -178,8 +178,9 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
   const resetInspectorStyle = () => {
     const element = selectedLiveElementRef.current;
     if (!element) return;
-    element.removeAttribute('style');
-    setDraftMessage('Selected element inline styling reset in preview only.');
+    if (originalInspectorStyleRef.current === null) element.removeAttribute('style');
+    else element.setAttribute('style', originalInspectorStyleRef.current);
+    setDraftMessage('Selected element original inline styling restored in preview only.');
   };
 
   const updatePage = (key: keyof SitePage, value: string | boolean) => {
