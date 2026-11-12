@@ -215,7 +215,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
         <div>
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.16em] text-sky-700"><Globe className="h-3.5 w-3.5" />Website Management</div>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Website Content Editor</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage, hero, announcements, teacher profile, header/footer और design settings का प्रबंधन। बदलाव अभी केवल इस Preview screen में दिखाई देंगे।</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage Hero का bilingual content और colour framework edit करें। Header/footer तथा section visibility settings अभी configuration में सुरक्षित होंगी; उनका live rendering अगले चरण में जोड़ा जाएगा।</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
@@ -253,7 +253,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
             </>}
 
             {tab === 'header' && <>
-              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Branding preview only. Logo/image file replacement और actual header navigation अभी connect नहीं हैं।</div>
+              <div className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">Branding settings अभी configuration में save होंगी; live header/footer connection अगले चरण में जोड़ा जाएगा।</div>
               {field('Announcement Bar', header.ticker, (value) => updateHeader('ticker', value))}
               {field('Website Name', header.brand, (value) => updateHeader('brand', value))}
               {field('Brand Subtitle', header.subBrand, (value) => updateHeader('subBrand', value))}
@@ -263,13 +263,13 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
 
             {tab === 'sections' && <>
               <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2"><span className="text-xs font-bold text-sky-900">Homepage sections</span><span className="text-xs font-extrabold text-sky-900">{sectionCount} / {initialSections.length} visible</span></div>
-              <p className="text-xs leading-5 text-slate-500">यहाँ section visibility बदलने से केवल साथ का local Preview बदलेगा। कोई section Live website से हटाया नहीं जाएगा।</p>
+              <p className="text-xs leading-5 text-slate-500">Section visibility अभी saved configuration में रखी जाएगी; live homepage sections से इसका connection अगले चरण में जोड़ा जाएगा।</p>
               <div className="space-y-2">{initialSections.map((item) => <label key={item.key} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-3 hover:bg-slate-50"><span><span className="block text-xs font-bold text-slate-800">{item.title}</span><span className="mt-0.5 block text-[10px] text-slate-500">{item.description}</span></span><input type="checkbox" checked={sections[item.key]} onChange={() => toggleSection(item.key)} className="h-4 w-4 accent-sky-800" /></label>)}</div>
             </>}
 
             {tab === 'design' && <>
               <div><h4 className="text-xs font-bold text-slate-800">Colour Framework</h4><p className="mt-1 text-xs text-slate-500">एक palette चुनें; दाईं ओर preview में रंग बदलेंगे।</p></div>
-              <div className="grid gap-3 sm:grid-cols-3">{(Object.keys(palettes) as PaletteKey[]).map((key) => <button key={key} onClick={() => { setPalette(key); setDraftLabel('Unsaved UI changes'); setNotice(''); }} className={`rounded-xl border p-3 text-left transition ${palette === key ? 'border-sky-700 bg-sky-50 ring-2 ring-sky-100' : 'border-slate-200 hover:bg-slate-50'}`}><span className="mb-2 flex gap-1"><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].primary }} /><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].accent }} /><span className="h-5 w-5 rounded-full border border-slate-200" style={{ background: palettes[key].soft }} /></span><span className="block text-xs font-bold text-slate-800">{palettes[key].label}</span></button>)}</div>
+              <div className="grid gap-3 sm:grid-cols-3">{(Object.keys(palettes) as PaletteKey[]).map((key) => <button key={key} onClick={() => { setPalette(key); setDraftId(null); setDraftLabel('Unsaved UI changes'); setNotice(''); }} className={`rounded-xl border p-3 text-left transition ${palette === key ? 'border-sky-700 bg-sky-50 ring-2 ring-sky-100' : 'border-slate-200 hover:bg-slate-50'}`}><span className="mb-2 flex gap-1"><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].primary }} /><span className="h-5 w-5 rounded-full" style={{ background: palettes[key].accent }} /><span className="h-5 w-5 rounded-full border border-slate-200" style={{ background: palettes[key].soft }} /></span><span className="block text-xs font-bold text-slate-800">{palettes[key].label}</span></button>)}</div>
               <div className="rounded-xl border border-slate-200 p-4"><div className="flex items-center gap-2 text-xs font-bold text-slate-800"><Palette className="h-4 w-4" />Typography & Layout</div><p className="mt-1 text-xs leading-5 text-slate-500">Readable fonts, responsive spacing and mobile-first layout मौजूदा framework के अनुसार सुरक्षित रखे गए हैं। Advanced font upload और custom layout controls बाद के चरण में जुड़ेंगे।</p></div>
             </>}
           </div>
@@ -286,7 +286,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
         </section>
 
         {showPreview && <section className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Live Website Preview</h3><p className="mt-1 text-[11px] text-slate-500">यह preview editor की current values दिखाता है, Live website नहीं बदलता।</p></div><div className="inline-flex rounded-xl border border-slate-200 bg-white p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-lg p-2 ${previewMode === 'desktop' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Desktop preview"><Monitor className="h-4 w-4" /></button><button onClick={() => setPreviewMode('mobile')} className={`rounded-lg p-2 ${previewMode === 'mobile' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Mobile preview"><Smartphone className="h-4 w-4" /></button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Website Preview</h3><p className="mt-1 text-[11px] text-slate-500">यह preview editor की current values दिखाता है, Live website नहीं बदलता।</p></div><div className="inline-flex rounded-xl border border-slate-200 bg-white p-1"><button onClick={() => setPreviewMode('desktop')} className={`rounded-lg p-2 ${previewMode === 'desktop' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Desktop preview"><Monitor className="h-4 w-4" /></button><button onClick={() => setPreviewMode('mobile')} className={`rounded-lg p-2 ${previewMode === 'mobile' ? 'bg-sky-900 text-white' : 'text-slate-500'}`} title="Mobile preview"><Smartphone className="h-4 w-4" /></button></div></div>
           <div className={`mx-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${previewMode === 'mobile' ? 'max-w-[390px]' : 'w-full'}`}>
             <div className="px-3 py-2 text-center text-[9px] font-bold text-amber-300" style={{ background: '#0b0f18' }}>{header.ticker}</div>
             <div className="flex items-center justify-between gap-2 border-b px-4 py-3" style={{ background: currentPalette.soft, borderColor: '#dce7f2' }}><div><p className="text-sm font-extrabold" style={{ color: currentPalette.primary }}>{header.brand}</p><p className="text-[9px] font-bold" style={{ color: currentPalette.accent }}>{header.subBrand}</p></div><span className="rounded-full bg-white px-3 py-1 text-[9px] font-bold text-slate-600">Home · Classes · Tests</span></div>
