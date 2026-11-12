@@ -11,6 +11,14 @@ const emptyLocalized = (): Localized => ({ en: '', hi: '' });
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
 const labelClass = 'mb-1.5 block text-xs font-bold text-slate-600';
 
+const toLocalDateTimeInput = (value: unknown): string => {
+  if (typeof value !== 'string' || !value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
 const localizedText = (value: unknown): Localized => {
   if (value && typeof value === 'object') {
     const item = value as Record<string, unknown>;
@@ -42,6 +50,11 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
   const [optionsHi, setOptionsHi] = useState('');
   const [explanation, setExplanation] = useState<Localized>(emptyLocalized);
   const [published, setPublished] = useState(false);
+  const [showOnHomepage, setShowOnHomepage] = useState(true);
+  const [pinned, setPinned] = useState(false);
+  const [displayOrder, setDisplayOrder] = useState('0');
+  const [startsAt, setStartsAt] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
 
   const table = tab === 'notices' ? 'site_notices' : 'admin_content_items';
 
@@ -82,6 +95,11 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     setOptionsHi('');
     setExplanation(emptyLocalized());
     setPublished(false);
+    setShowOnHomepage(true);
+    setPinned(false);
+    setDisplayOrder('0');
+    setStartsAt('');
+    setExpiresAt('');
     setError('');
     setMessage('');
   };
@@ -103,6 +121,11 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     setOptionsHi(Array.isArray(options.hi) ? options.hi.join('\n') : '');
     setExplanation(localizedText(row.explanation));
     setPublished(Boolean(row.is_published));
+    setShowOnHomepage(row.show_on_homepage !== false);
+    setPinned(Boolean(row.is_pinned));
+    setDisplayOrder(String(row.display_order ?? 0));
+    setStartsAt(toLocalDateTimeInput(row.starts_at));
+    setExpiresAt(toLocalDateTimeInput(row.expires_at));
     setMessage('');
     setError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -116,6 +139,11 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     try {
       if (!title.en.trim() && !title.hi.trim() && tab !== 'questions') throw new Error('शीर्षक दर्ज करें।');
       if (tab === 'questions' && !question.en.trim() && !question.hi.trim()) throw new Error('प्रश्न दर्ज करें।');
+      if (tab === 'notices' && startsAt && expiresAt && new Date(expiresAt).getTime() <= new Date(startsAt).getTime()) {
+        throw new Error('समाप्ति समय, प्रकाशन शुरू होने के समय से बाद का होना चाहिए।');
+      }
+      const orderValue = Number(displayOrder || 0);
+      if (tab === 'notices' && (!Number.isInteger(orderValue) || orderValue < 0)) throw new Error('Display Priority में 0 या उससे बड़ी पूर्ण संख्या दर्ज करें।');
       const now = new Date().toISOString();
       const common = {
         title: { en: title.en.trim(), hi: title.hi.trim() },
@@ -127,7 +155,16 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
       };
       const client = requireSupabase();
       if (tab === 'notices') {
-        const noticePayload = { ...common, link: link.trim() || null, created_by: user?.id ?? null };
+        const noticePayload = {
+          ...common,
+          link: link.trim() || null,
+          show_on_homepage: showOnHomepage,
+          is_pinned: pinned,
+          display_order: orderValue,
+          starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+          created_by: user?.id ?? null,
+        };
         const result = editingId
           ? await client.from('site_notices').update(noticePayload).eq('id', editingId)
           : await client.from('site_notices').insert(noticePayload);
@@ -224,6 +261,21 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
           {!isNotice && <label><span className={labelClass}>विषय</span><input className={inputClass} value={subject} onChange={(e) => setSubject(e.target.value)}/></label>}
           {!isNotice && <label><span className={labelClass}>अध्याय</span><input className={inputClass} value={chapter} onChange={(e) => setChapter(e.target.value)}/></label>}
           {isNotice && <label className="md:col-span-2"><span className={labelClass}>Link (वैकल्पिक)</span><input className={inputClass} type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…"/></label>}
+          {isNotice && <>
+            <div className="md:col-span-2 rounded-xl border border-sky-100 bg-sky-50/70 p-3">
+              <p className="text-xs font-extrabold text-sky-950">Homepage Display Controls</p>
+              <p className="mt-1 text-[11px] leading-5 text-sky-800">यहाँ की सेटिंग से तय होगा कि सूचना Homepage पर कब और किस क्रम में दिखाई देगी।</p>
+            </div>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">
+              <input type="checkbox" checked={showOnHomepage} onChange={(e) => setShowOnHomepage(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Homepage पर दिखाएँ
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">
+              <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> सबसे ऊपर Pin करें
+            </label>
+            <label><span className={labelClass}>Display Priority (कम संख्या पहले)</span><input className={inputClass} type="number" min="0" step="1" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} /></label>
+            <label><span className={labelClass}>सूचना दिखाना शुरू करें</span><input className={inputClass} type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /><span className="mt-1 block text-[10px] text-slate-400">खाली छोड़ें तो Publish के बाद तुरंत दिखेगी।</span></label>
+            <label><span className={labelClass}>सूचना अपने आप हटाएँ</span><input className={inputClass} type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} /><span className="mt-1 block text-[10px] text-slate-400">खाली छोड़ें तो Admin के Unpublish करने तक रहेगी।</span></label>
+          </>}
           {tab === 'materials' && <label className="md:col-span-2"><span className={labelClass}>File URL (PDF/PPT/Video)</span><input className={inputClass} type="url" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://…"/></label>}
           {!isNotice && <label className="md:col-span-2"><span className={labelClass}>External URL (वैकल्पिक)</span><input className={inputClass} type="url" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…"/></label>}
         </div>
@@ -239,8 +291,13 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
           const rowTitle = localizedText(row.title);
           const rowQuestion = localizedText(row.question);
           const heading = rowTitle.en || rowTitle.hi || rowQuestion.en || rowQuestion.hi || 'Untitled';
+          const now = Date.now();
+          const isExpired = Boolean(row.expires_at && new Date(row.expires_at).getTime() <= now);
+          const isScheduled = Boolean(row.is_published && row.starts_at && new Date(row.starts_at).getTime() > now);
+          const status = !row.is_published ? 'DRAFT' : isExpired ? 'EXPIRED' : isScheduled ? 'SCHEDULED' : 'PUBLISHED';
+          const statusClass = status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : status === 'SCHEDULED' ? 'bg-sky-50 text-sky-700' : status === 'EXPIRED' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700';
           return <article key={row.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-bold text-slate-800">{heading}</p><span className={`rounded-full px-2 py-1 text-[9px] font-extrabold ${row.is_published ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{row.is_published ? 'PUBLISHED' : 'DRAFT'}</span></div><p className="mt-1 text-[11px] text-slate-500">{[row.class_level && 'Class '+row.class_level,row.subject,row.chapter,row.category].filter(Boolean).join(' · ') || 'Website announcement'}</p></div>
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-bold text-slate-800">{heading}</p><span className={`rounded-full px-2 py-1 text-[9px] font-extrabold ${statusClass}`}>{status}</span>{row.is_pinned && <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-extrabold text-amber-700">PINNED</span>}</div><p className="mt-1 text-[11px] text-slate-500">{[row.class_level && 'Class '+row.class_level,row.subject,row.chapter,row.category,`Priority ${row.display_order ?? 0}`,row.show_on_homepage === false ? 'Homepage OFF' : 'Homepage ON'].filter(Boolean).join(' · ') || 'Website announcement'}</p></div>
             <div className="flex shrink-0 flex-wrap gap-2"><button type="button" onClick={() => void togglePublish(row)} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600">{row.is_published ? 'Unpublish' : 'Publish'}</button><button type="button" onClick={() => editRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600"><Edit3 className="h-3 w-3"/>Edit</button><button type="button" onClick={() => void deleteRow(row)} className="inline-flex items-center gap-1 rounded-lg border border-rose-100 px-3 py-2 text-[10px] font-bold text-rose-600"><Trash2 className="h-3 w-3"/>Delete</button></div>
           </article>;
         })}</div>}
