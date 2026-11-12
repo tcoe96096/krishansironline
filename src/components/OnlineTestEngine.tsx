@@ -802,6 +802,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           <div className="space-y-4 pb-24 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
             <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
+              <div className="mb-2 flex items-center justify-end gap-2">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">भाषा / Language</span>
+                <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1 text-[11px] font-bold shadow-sm" role="group" aria-label="Select test language">
+                  <button type="button" onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>हिंदी</button>
+                  <button type="button" onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>English</button>
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-1.5 sm:hidden">
                 <div className={"exam-floating-watch exam-neon-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
                   role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
