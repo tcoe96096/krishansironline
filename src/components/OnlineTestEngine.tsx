@@ -717,7 +717,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         </div>
 
         {/* SELECTED TEST OVERVIEW — shown only for a real published test */}
-        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id ? '' : 'hidden'}`}>
+        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id && !isTestActive ? '' : 'hidden'}`}>
           <div className="h-2 w-full bg-gradient-to-r from-sky-800 via-cyan-500 to-emerald-400" />
           <div className="p-4 sm:p-6">
           <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
