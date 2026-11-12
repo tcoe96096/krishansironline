@@ -10,6 +10,17 @@ type Localized = { en: string; hi: string };
 const emptyLocalized = (): Localized => ({ en: '', hi: '' });
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
 const labelClass = 'mb-1.5 block text-xs font-bold text-slate-600';
+const announcementTemplates = [
+  { id: 'general', label: 'General Notice', category: 'Notice', title: { en: 'Important Website Announcement', hi: 'महत्वपूर्ण वेबसाइट सूचना' }, details: { en: 'Please read this important update from the website administration.', hi: 'कृपया वेबसाइट प्रशासन द्वारा जारी इस महत्वपूर्ण सूचना को पढ़ें।' } },
+  { id: 'test', label: 'New Test Published', category: 'Test Update', title: { en: 'New Online Test Published', hi: 'नई ऑनलाइन टेस्ट प्रकाशित' }, details: { en: 'A new online test is now available. Visit the Tests section to participate.', hi: 'नई ऑनलाइन टेस्ट उपलब्ध है। भाग लेने के लिए टेस्ट सेक्शन में जाएँ।' } },
+  { id: 'material', label: 'Study Material Added', category: 'Study Material', title: { en: 'New Study Material Available', hi: 'नई अध्ययन सामग्री उपलब्ध' }, details: { en: 'New study material has been added. Open Study Materials to view it.', hi: 'नई अध्ययन सामग्री जोड़ दी गई है। इसे देखने के लिए अध्ययन सामग्री सेक्शन खोलें।' } },
+  { id: 'exam', label: 'Exam Update', category: 'Exam Update', title: { en: 'Important Exam Update', hi: 'महत्वपूर्ण परीक्षा सूचना' }, details: { en: 'Please check the latest examination update and follow the instructions.', hi: 'कृपया परीक्षा से संबंधित नवीनतम सूचना देखें और निर्देशों का पालन करें।' } },
+  { id: 'event', label: 'School Event', category: 'Event', title: { en: 'Upcoming School Activity', hi: 'आगामी विद्यालय गतिविधि' }, details: { en: 'An upcoming school activity has been scheduled. Please check the details.', hi: 'विद्यालय की आगामी गतिविधि निर्धारित की गई है। कृपया विवरण देखें।' } },
+];
+const toDateTimeInput = (date: Date): string => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
 
 const toLocalDateTimeInput = (value: unknown): string => {
   if (typeof value !== 'string' || !value) return '';
@@ -55,8 +66,40 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
   const [displayOrder, setDisplayOrder] = useState('0');
   const [startsAt, setStartsAt] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [schedulePreset, setSchedulePreset] = useState('now');
+  const [expiryPreset, setExpiryPreset] = useState('never');
 
   const table = tab === 'notices' ? 'site_notices' : 'admin_content_items';
+
+  const applyAnnouncementTemplate = (templateId: string) => {
+    const template = announcementTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    setSelectedTemplate(templateId);
+    setTitle(template.title);
+    setDetails(template.details);
+    setCategory(template.category);
+  };
+
+  const applySchedulePreset = (value: string) => {
+    setSchedulePreset(value);
+    if (value === 'now') setStartsAt('');
+    else if (value === 'in1hour') setStartsAt(toDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)));
+    else if (value === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+      setStartsAt(toDateTimeInput(tomorrow));
+    }
+  };
+
+  const applyExpiryPreset = (value: string) => {
+    setExpiryPreset(value);
+    if (value === 'never') setExpiresAt('');
+    else if (value === '1day') setExpiresAt(toDateTimeInput(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+    else if (value === '7days') setExpiresAt(toDateTimeInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)));
+    else if (value === '30days') setExpiresAt(toDateTimeInput(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)));
+  };
 
   const loadRows = useCallback(async () => {
     if (demoMode) { setRows([]); setLoading(false); return; }
@@ -100,6 +143,9 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     setDisplayOrder('0');
     setStartsAt('');
     setExpiresAt('');
+    setSelectedTemplate('');
+    setSchedulePreset('now');
+    setExpiryPreset('never');
     setError('');
     setMessage('');
   };
@@ -126,6 +172,9 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
     setDisplayOrder(String(row.display_order ?? 0));
     setStartsAt(toLocalDateTimeInput(row.starts_at));
     setExpiresAt(toLocalDateTimeInput(row.expires_at));
+    setSelectedTemplate('');
+    setSchedulePreset(row.starts_at ? 'custom' : 'now');
+    setExpiryPreset(row.expires_at ? 'custom' : 'never');
     setMessage('');
     setError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -258,6 +307,12 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
 
       <form onSubmit={saveRow} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between"><h3 className="font-extrabold text-slate-900">{editingId ? 'रिकॉर्ड संपादित करें' : 'नई सामग्री जोड़ें'}</h3>{editingId && <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><X className="h-4 w-4"/>Cancel</button>}</div>
+        {isNotice && <section className="mb-5 space-y-3 rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+          <div><p className="text-sm font-extrabold text-slate-900">Quick Start · Click to Use a Template</p><p className="mt-1 text-xs text-slate-500">किसी विकल्प पर क्लिक करें; Title, Description और Category अपने आप भर जाएँगे। बाद में आप इन्हें बदल भी सकते हैं।</p></div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {announcementTemplates.map((template) => <button key={template.id} type="button" onClick={() => applyAnnouncementTemplate(template.id)} className={`rounded-xl border px-3 py-3 text-left text-xs font-bold transition ${selectedTemplate === template.id ? 'border-sky-700 bg-sky-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50'}`}>{template.label}<span className={`mt-1 block text-[10px] font-medium ${selectedTemplate === template.id ? 'text-sky-100' : 'text-slate-400'}`}>Click to fill form</span></button>)}
+          </div>
+        </section>}
         <div className="grid gap-3 md:grid-cols-2">
           <label><span className={labelClass}>{isQuestion ? 'प्रश्न का शीर्षक (वैकल्पिक)' : 'शीर्षक · English'}</span><input className={inputClass} value={title.en} onChange={(e) => setTitle((v) => ({ ...v, en: e.target.value }))} placeholder="English title"/></label>
           <label><span className={labelClass}>{isQuestion ? 'प्रश्न का शीर्षक (वैकल्पिक)' : 'शीर्षक · हिन्दी'}</span><input className={inputClass} value={title.hi} onChange={(e) => setTitle((v) => ({ ...v, hi: e.target.value }))} placeholder="हिन्दी शीर्षक"/></label>
@@ -282,15 +337,12 @@ export const AdminCommunicationManagement: React.FC<{ demoMode?: boolean }> = ({
               <p className="text-xs font-extrabold text-sky-950">Homepage Display Controls</p>
               <p className="mt-1 text-[11px] leading-5 text-sky-800">यहाँ की सेटिंग से तय होगा कि सूचना Homepage पर कब और किस क्रम में दिखाई देगी।</p>
             </div>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">
-              <input type="checkbox" checked={showOnHomepage} onChange={(e) => setShowOnHomepage(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Homepage पर दिखाएँ
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">
-              <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> सबसे ऊपर Pin करें
-            </label>
+            <div className="rounded-xl border border-slate-200 p-3"><p className={labelClass}>Homepage Visibility · Click to Select</p><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setShowOnHomepage(true)} className={`rounded-lg px-3 py-2 text-xs font-bold ${showOnHomepage ? 'bg-emerald-600 text-white' : 'border border-slate-200 text-slate-600'}`}>Show on Homepage</button><button type="button" onClick={() => setShowOnHomepage(false)} className={`rounded-lg px-3 py-2 text-xs font-bold ${!showOnHomepage ? 'bg-slate-700 text-white' : 'border border-slate-200 text-slate-600'}`}>Hide from Homepage</button></div><label className="mt-3 flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={showOnHomepage} onChange={(e) => setShowOnHomepage(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Keep checkbox control</label></div>
+            <div className="rounded-xl border border-slate-200 p-3"><p className={labelClass}>Homepage Position · Click to Select</p><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setPinned(true)} className={`rounded-lg px-3 py-2 text-xs font-bold ${pinned ? 'bg-amber-500 text-white' : 'border border-slate-200 text-slate-600'}`}>Pin to Top</button><button type="button" onClick={() => setPinned(false)} className={`rounded-lg px-3 py-2 text-xs font-bold ${!pinned ? 'bg-sky-900 text-white' : 'border border-slate-200 text-slate-600'}`}>Normal</button></div><label className="mt-3 flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Keep checkbox control</label></div>
+            <div className="md:col-span-2 rounded-xl border border-slate-200 p-3"><p className={labelClass}>Display Priority · Quick Select</p><div className="flex flex-wrap gap-2">{[{value:'0',label:'0 · Highest'},{value:'1',label:'1 · High'},{value:'2',label:'2 · Normal'},{value:'3',label:'3 · Low'}].map((item) => <button key={item.value} type="button" onClick={() => setDisplayOrder(item.value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${displayOrder === item.value ? 'bg-sky-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>{item.label}</button>)}</div></div>
             <label><span className={labelClass}>Display Priority (कम संख्या पहले)</span><input className={inputClass} type="number" min="0" step="1" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} /></label>
-            <label><span className={labelClass}>सूचना दिखाना शुरू करें</span><input className={inputClass} type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /><span className="mt-1 block text-[10px] text-slate-400">खाली छोड़ें तो Publish के बाद तुरंत दिखेगी।</span></label>
-            <label><span className={labelClass}>सूचना अपने आप हटाएँ</span><input className={inputClass} type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} /><span className="mt-1 block text-[10px] text-slate-400">खाली छोड़ें तो Admin के Unpublish करने तक रहेगी।</span></label>
+            <div><label><span className={labelClass}>Quick Schedule · Select an Option</span><select className={inputClass} value={schedulePreset} onChange={(e) => applySchedulePreset(e.target.value)}><option value="now">Publish Immediately</option><option value="in1hour">Start in 1 Hour</option><option value="tomorrow">Tomorrow · 9:00 AM</option><option value="custom">Custom Date & Time</option></select></label><label className="mt-2 block"><span className={labelClass}>Start Date & Time</span><input className={inputClass} type="datetime-local" value={startsAt} onChange={(e) => { setStartsAt(e.target.value); setSchedulePreset(e.target.value ? 'custom' : 'now'); }} /></label></div>
+            <div><label><span className={labelClass}>Quick Expiry · Select an Option</span><select className={inputClass} value={expiryPreset} onChange={(e) => applyExpiryPreset(e.target.value)}><option value="never">No Automatic Expiry</option><option value="1day">Expire After 1 Day</option><option value="7days">Expire After 7 Days</option><option value="30days">Expire After 30 Days</option><option value="custom">Custom Date & Time</option></select></label><label className="mt-2 block"><span className={labelClass}>Expiry Date & Time</span><input className={inputClass} type="datetime-local" value={expiresAt} onChange={(e) => { setExpiresAt(e.target.value); setExpiryPreset(e.target.value ? 'custom' : 'never'); }} /></label></div>
           </>}
           {tab === 'materials' && <label className="md:col-span-2"><span className={labelClass}>File URL (PDF/PPT/Video)</span><input className={inputClass} type="url" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://…"/></label>}
           {!isNotice && <label className="md:col-span-2"><span className={labelClass}>External URL (वैकल्पिक)</span><input className={inputClass} type="url" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…"/></label>}
