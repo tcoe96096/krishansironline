@@ -533,3 +533,26 @@
 .exam-neon-live i { width:4px; height:4px; border-radius:50%; background:#18d6c0; box-shadow:0 0 7px #18d6c0; }
 @media (min-width:1024px) { .exam-floating-watch.exam-neon-watch { width:5.5rem; height:5.5rem; } }
 @media (max-width:420px) { .exam-floating-watch.exam-neon-watch { width:4.5rem; height:4.5rem; } }
+
+
+/* Desktop exam focus parity: hide the site header on downward scroll and keep
+   the countdown watch in view while the student moves through the questions. */
+@media (min-width: 1024px) {
+  html.exam-mode-active header.sticky,
+  body.exam-mode-active header.sticky {
+    transition: transform .3s ease-out !important;
+    will-change: transform;
+  }
+  .exam-interface .exam-live-topbar {
+    position: sticky !important;
+    top: .65rem !important;
+    z-index: 36 !important;
+    align-self: start;
+  }
+  .exam-interface .exam-floating-watch.exam-neon-watch {
+    position: sticky !important;
+    top: .85rem !important;
+    z-index: 37 !important;
+    align-self: start !important;
+  }
+}
