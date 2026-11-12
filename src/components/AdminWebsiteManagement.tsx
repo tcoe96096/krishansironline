@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
+import { getWebsiteConfigVersions, publishWebsiteConfig, saveWebsiteConfigDraft, type WebsiteConfigVersion } from '../services/siteConfigService';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
   LayoutTemplate, Type, Palette, History, LockKeyhole, CheckCircle2,
@@ -29,7 +30,7 @@ const palettes = {
 
 type PaletteKey = keyof typeof palettes;
 
-export const AdminWebsiteManagement: React.FC = () => {
+export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
   const [tab, setTab] = useState<EditorTab>('hero');
   const [language, setLanguage] = useState<LanguageTab>('en');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -38,6 +39,11 @@ export const AdminWebsiteManagement: React.FC = () => {
   const [draftLabel, setDraftLabel] = useState('Unsaved UI changes');
   const [palette, setPalette] = useState<PaletteKey>('navy');
   const [siteWideBuilderOpen, setSiteWideBuilderOpen] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [versions, setVersions] = useState<WebsiteConfigVersion[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [backendReady, setBackendReady] = useState(false);
   const [hero, setHero] = useState({
     eyebrowEn: 'FREE ONLINE LEARNING',
     eyebrowHi: 'निःशुल्क ऑनलाइन शिक्षा',
@@ -66,6 +72,80 @@ export const AdminWebsiteManagement: React.FC = () => {
     notices: true, studentDashboard: true, quickAccess: true, pathways: true,
     classes: true, learningHubs: true, teacher: true, doubtDesk: true,
   });
+
+  useEffect(() => {
+    if (demoMode) return;
+    let active = true;
+    void (async () => {
+      try {
+        const history = await getWebsiteConfigVersions();
+        if (!active) return;
+        setVersions(history);
+        const draft = history.find((item) => item.status === 'draft');
+        const published = history.find((item) => item.status === 'published');
+        const latest = draft || published;
+        if (latest?.config) {
+          const config = latest.config;
+          if (config.hero) setHero((current) => ({ ...current, ...config.hero }));
+          if (config.header) setHeader((current) => ({ ...current, ...config.header }));
+          if (config.sections) setSections((current) => ({ ...current, ...config.sections }));
+          if (config.palette && config.palette in palettes) setPalette(config.palette as PaletteKey);
+          if (draft) {
+            setDraftId(draft.id);
+            setDraftLabel('Saved draft · Version ' + draft.version_number);
+          } else {
+            setDraftLabel(published ? 'Published · Version ' + published.version_number : 'No saved version yet');
+          }
+        }
+        setBackendReady(true);
+      } catch (error) {
+        if (active) {
+          setBackendReady(false);
+          setNotice(error instanceof Error ? error.message : 'Website configuration load नहीं हो सका।');
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [demoMode]);
+
+  const saveDraft = async () => {
+    if (demoMode) return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const id = await saveWebsiteConfigDraft({ hero, header, sections, palette });
+      setDraftId(id);
+      const history = await getWebsiteConfigVersions();
+      setVersions(history);
+      const draft = history.find((item) => item.status === 'draft');
+      setDraftLabel(draft ? 'Saved draft · Version ' + draft.version_number : 'Draft saved');
+      setNotice('Website configuration का Draft Supabase में सुरक्षित सेव हो गया है। अभी Live website नहीं बदली।');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Draft save नहीं हो सका।');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishDraft = async () => {
+    if (demoMode || !draftId) return;
+    if (!window.confirm('यह वेबसाइट configuration Live website पर प्रकाशित करेगा। क्या आप आगे बढ़ना चाहते हैं?')) return;
+    setPublishing(true);
+    setNotice('');
+    try {
+      const version = await publishWebsiteConfig(draftId);
+      setDraftId(null);
+      const history = await getWebsiteConfigVersions();
+      setVersions(history);
+      setDraftLabel('Published · Version ' + version);
+      setNotice('Version ' + version + ' प्रकाशित हो गया। Live Hero section अगली load पर नया content दिखाएगा।');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Publish नहीं हो सका।');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const currentPalette = palettes[palette];
   const title = language === 'en' ? hero.titleEn : hero.titleHi;
   const desc = language === 'en' ? hero.descriptionEn : hero.descriptionHi;
