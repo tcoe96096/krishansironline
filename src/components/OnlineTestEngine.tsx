@@ -801,7 +801,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         {studentDetails && activeAttempt && !isSubmitted && (
           <div className="space-y-4 pb-24 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
-            <div className="sticky top-[72px] sm:top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
+            <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
               <div className="grid grid-cols-3 gap-1.5 sm:hidden">
                 <div className={"rounded-lg border px-2 py-2 " + (timeLeftSeconds < 300 ? "bg-red-50 border-red-200 text-red-900" : timeLeftSeconds < 900 ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-sky-50 border-sky-200 text-sky-950")}>
                   <div className="flex items-center gap-1 text-[9px] font-bold uppercase"><Clock className="h-3.5 w-3.5" /> समय शेष</div>
