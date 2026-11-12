@@ -1135,13 +1135,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   <span>कुल अंक</span><strong>{selectedTest.totalMarks}</strong>
                 </div>
               </div>
-              <div className={"exam-floating-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
+              <div className={"exam-floating-watch exam-floating-watch-glass " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
                 role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
                 style={{ background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #e7eef5 0)` }}>
-                <div className="exam-floating-watch-face">
-                  <Clock className="h-4 w-4" />
+                <div className="exam-floating-watch-face exam-floating-watch-glass-face">
+                  <span className="exam-watch-caption">TIME LEFT</span>
                   <strong>{formatTimer(timeLeftSeconds)}</strong>
-                  <span>TIME LEFT</span>
+                  <span className="exam-watch-live"><i /> LIVE EXAM</span>
                 </div>
               </div>
               <div className="exam-live-progress" aria-label="Exam progress">
