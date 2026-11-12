@@ -23,6 +23,7 @@ export const AdminTestManagement: React.FC = () => {
   const [questions, setQuestions] = useState<DraftQuestion[]>([blankQuestion()]);
   const [answers, setAnswers] = useState<number[]>([-1]);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
+  const [bulkJson, setBulkJson] = useState('');
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -37,6 +38,24 @@ export const AdminTestManagement: React.FC = () => {
   }, []);
 
   useEffect(() => { void loadTests(); }, [loadTests]);
+
+
+  const importBulkJson = () => {
+    setError(''); setNotice('');
+    try {
+      const payload = JSON.parse(bulkJson);
+      if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length !== 40) throw new Error('Bilingual title, chapter और ठीक 40 questions आवश्यक हैं।');
+      const factual = payload.questions.filter((q: any) => q.category === 'factual').length;
+      const conceptual = payload.questions.filter((q: any) => q.category === 'conceptual').length;
+      if (factual !== 28 || conceptual !== 12) throw new Error('वितरण 28 factual + 12 conceptual होना चाहिए।');
+      const mapped = payload.questions.map((q: any, i: number) => {
+        if (!q.question?.en?.trim() || !q.question?.hi?.trim() || !Array.isArray(q.options?.en) || !Array.isArray(q.options?.hi) || q.options.en.length !== 4 || q.options.hi.length !== 4 || q.options.en.some((x: string) => !x?.trim()) || q.options.hi.some((x: string) => !x?.trim()) || !q.explanation?.en?.trim() || !q.explanation?.hi?.trim() || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) throw new Error('प्रश्न ' + (i + 1) + ': bilingual प्रश्न, चार विकल्प, दोनों भाषाओं में विवरण और सही उत्तर आवश्यक हैं।');
+        return { question: q.question, options: q.options, explanation: q.explanation, marks: Number(q.marks || 1) };
+      });
+      setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index));
+      setNotice('40 प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Bulk JSON import असफल।'); }
+  };
 
   const updateQuestion = (index: number, updater: (q: DraftQuestion) => DraftQuestion) =>
     setQuestions(current => current.map((q, i) => i === index ? updater(q) : q));
@@ -120,6 +139,13 @@ export const AdminTestManagement: React.FC = () => {
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Online Test Builder</h2><p className="mt-1 text-sm text-slate-500">Bilingual MCQ बनाएं, Draft सेव करें और जाँच के बाद Publish करें।</p></div><button onClick={() => void loadTests()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"><RefreshCw className="h-4 w-4"/>Refresh</button></div>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+
+    <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
+      <h3 className="font-extrabold text-slate-900">Bulk Import · 40 MCQ JSON</h3>
+      <p className="mt-1 text-sm text-slate-600">40 bilingual प्रश्न एक साथ लोड करें। 28 factual + 12 conceptual अनिवार्य हैं।</p>
+      <textarea value={bulkJson} onChange={e=>setBulkJson(e.target.value)} placeholder='{"title":{"en":"Minerals and Energy Resources","hi":"खनिज तथा ऊर्जा संसाधन"},"chapter":"खनिज तथा ऊर्जा संसाधन","questions":[...]}' className="mt-3 min-h-36 w-full rounded-xl border border-sky-200 bg-white p-3 font-mono text-xs"/>
+      <button type="button" onClick={importBulkJson} className="mt-3 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white">Load 40 Questions</button>
+    </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <h3 className="mb-4 flex items-center gap-2 font-extrabold text-slate-900"><Plus className="h-5 w-5 text-sky-700"/>{editingTestId ? 'Edit Test Draft' : 'Create New Test'}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -157,6 +183,6 @@ export const AdminTestManagement: React.FC = () => {
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="mb-4 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-sky-800"/><h3 className="font-extrabold text-slate-900">Saved Tests</h3></div>
       {loading?<p className="text-sm text-slate-500">Loading tests…</p>:tests.length===0?<p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">अभी कोई Test उपलब्ध नहीं है। ऊपर से पहला Draft बनाएँ।</p>:<div className="space-y-3">{tests.map(test=><div key={test.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4"><div className="min-w-0"><p className="font-bold text-slate-900">{test.title?.hi || test.title?.en || test.id}</p><p className="mt-1 text-xs text-slate-500">Class {test.class_level} · {test.subject} · {test.chapter} · {test.questions?.length||0} questions</p><span className={'mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold '+(test.is_published?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700')}>{test.is_published?'Published':'Draft'}</span></div>{!test.is_published && <button disabled={saving} onClick={()=>void editDraft(test)} className="inline-flex items-center gap-2 rounded-lg border border-sky-300 px-3 py-2 text-xs font-bold text-sky-800 disabled:opacity-50">Edit Draft</button>}<button disabled={saving} onClick={()=>void togglePublish(test)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{test.is_published?<><EyeOff className="h-4 w-4"/>Unpublish</>:<><Send className="h-4 w-4"/>Publish</>}</button></div>)}</div>}
     </section>
-    <p className="text-xs leading-5 text-slate-500">सुरक्षा: सही उत्तर अलग private answer-key table में सेव होता है; Student catalogue में सही उत्तर नहीं भेजा जाता। Publish केवल Admin action है। PDF/Google Drive OCR import अभी उपलब्ध नहीं है।</p>
+    <p className="text-xs leading-5 text-slate-500">सुरक्षा: सही उत्तर अलग private answer-key table में सेव होता है; Student catalogue में सही उत्तर नहीं भेजा जाता। Publish केवल Admin action है। Bulk JSON import उपलब्ध है; OCR output सत्यापित करके ही लोड करें।</p>
   </div>;
 };
