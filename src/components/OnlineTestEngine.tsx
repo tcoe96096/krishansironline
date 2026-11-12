@@ -1139,9 +1139,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
                 style={{ background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #e7eef5 0)` }}>
                 <div className="exam-floating-watch-face">
-                  <Clock className="h-4 w-4" />
+                  <span className="exam-watch-live"><i /> LIVE EXAM</span>
                   <strong>{formatTimer(timeLeftSeconds)}</strong>
-                  <span>TIME LEFT</span>
+                  <span>MIN : SEC</span>
                 </div>
               </div>
               <div className="exam-live-progress" aria-label="Exam progress">
