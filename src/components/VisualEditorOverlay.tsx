@@ -62,14 +62,15 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         const node=document.querySelector('[data-vs-key="'+CSS.escape(key)+'"]') as HTMLElement|null;
         if(node)Object.entries(style).forEach(([name,value])=>{(node.style as any)[name]=value;});
       }
-      draft.hidden.forEach(key=>{const node=document.querySelector('[data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node)node.style.display='none';});
       const container=getContainer();
       if(container){
         sectionContainer=container;
         Array.from(container.children).forEach((child,index)=>{
           const node=child as HTMLElement;
           if(!node.getAttribute('data-vs-section-key')) node.setAttribute('data-vs-section-key',node.getAttribute('data-vs-key')||'vs-section-'+index);
+          if(editing)node.draggable=true;
         });
+        draft.hidden.forEach(key=>{const node=container.querySelector(':scope > [data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node)node.style.display='none';});
         if(draft.order.length){
           const children=Array.from(container.children) as HTMLElement[];
           const byKey=new Map(children.map(child=>[child.getAttribute('data-vs-section-key')||'',child]));
@@ -123,7 +124,8 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         fontSize:parseFloat(style.fontSize)||16,
         textAlign:style.textAlign,
         pageTitle:document.title,
-        sectionText:(section?.textContent||'').trim().slice(0,100)
+        sectionText:(section?.textContent||'').trim().slice(0,100),
+      hidden:section?.style.display==='none'
       });
     };
     const onClick=(event:MouseEvent)=>{
@@ -153,7 +155,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       target.contentEditable='false';delete target.dataset.vsEditing;
       const key=target.getAttribute('data-vs-key')||'';
       if(key)draft.texts[key]=target.textContent||'';
-      persist();send('vs:select',{key,text:target.textContent||''});
+      persist();send('vs:select',{key,text:target.textContent||'',hidden:false});
     };
     let dragKey='';
     const onDragStart=(event:DragEvent)=>{
@@ -171,7 +173,10 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(getSection(event.target as HTMLElement)?.parentElement===sectionContainer)event.preventDefault();
     };
     const onDrop=(event:DragEvent)=>{
-      if(!editing||!dragKey||!sectionContainer)return;
+      if(!editing||!sectionContainer)return;
+      const componentKind=event.dataTransfer?.getData('application/krishan-block');
+      if(componentKind){event.preventDefault();event.stopPropagation();const id='vs-added-'+Math.random().toString(36).slice(2,10);const node=createBlock(componentKind,'');node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);node.setAttribute('data-vs-section-key',id);const target=getSection(event.target as HTMLElement);if(target)sectionContainer.insertBefore(node,target.nextSibling);else sectionContainer.appendChild(node);draft.added.push({id,kind:componentKind,text:''});select(node);persist();dragKey='';return;}
+      if(!dragKey)return;
       const target=event.target as HTMLElement|null;const targetSection=target?getSection(target):null;
       const moving=sectionContainer.querySelector('[data-vs-section-key="'+CSS.escape(dragKey)+'"]') as HTMLElement|null;
       if(!targetSection||!moving||targetSection===moving)return;
@@ -190,7 +195,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(type==='vs:style'&&selected){const property=String(event.data.property||'');const value=String(event.data.value??'');if(['color','backgroundColor','fontSize','textAlign','padding','margin','display'].includes(property)){(selected.style as any)[property]=value;const key=selected.getAttribute('data-vs-key')||'';if(key){draft.styles[key]={...(draft.styles[key]||{}),[property]:value};if(property==='display'&&value==='none'&&!draft.hidden.includes(key))draft.hidden.push(key);if(property==='display'&&value!=='none')draft.hidden=draft.hidden.filter(id=>id!==key);}persist();}}
       if(type==='vs:move'&&selected){const section=getSection(selected);const direction=Number(event.data.direction);if(section&&sectionContainer&&direction!==0){const sibling=direction<0?section.previousElementSibling:section.nextElementSibling;if(sibling)sectionContainer.insertBefore(section,direction<0?sibling: sibling.nextElementSibling);draft.order=Array.from(sectionContainer.children).map(child=>(child as HTMLElement).getAttribute('data-vs-section-key')||'').filter(Boolean);persist();}}
       if(type==='vs:hide'){const key=String(event.data.sectionKey||'');const node=document.querySelector('[data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node){const hidden=Boolean(event.data.hidden);node.style.display=hidden?'none':'';draft.hidden=hidden?[...new Set([...draft.hidden,key])]:draft.hidden.filter(id=>id!==key);persist();}}
-      if(type==='vs:add'){const kind=String(event.data.kind||'text');const text=String(event.data.text||({heading:'New heading',text:'Write your text here',button:'Button label',card:'New content card'} as Record<string,string>)[kind]||'');const imageUrl=String(event.data.url||'');const id='vs-added-'+Math.random().toString(36).slice(2,10);const container=getContainer();if(container){const node=createBlock(kind,text,imageUrl||undefined);node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);const section=selected?getSection(selected):null;if(section?.parentElement===container)container.insertBefore(node,section.nextSibling);else container.appendChild(node);draft.added.push({id,kind,text,url:imageUrl} as any);select(node);persist();}}
+      if(type==='vs:add'){const kind=String(event.data.kind||'text');const text=String(event.data.text||({heading:'New heading',text:'Write your text here',button:'Button label',card:'New content card'} as Record<string,string>)[kind]||'');const imageUrl=String(event.data.url||'');const id='vs-added-'+Math.random().toString(36).slice(2,10);const container=getContainer();if(container){const node=createBlock(kind,text,imageUrl||undefined);node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);node.setAttribute('data-vs-section-key',id);const section=selected?getSection(selected):null;if(section?.parentElement===container)container.insertBefore(node,section.nextSibling);else container.appendChild(node);draft.added.push({id,kind,text,url:imageUrl} as any);select(node);persist();}}
     };
     let applying=false;
     const mo=new MutationObserver(()=>{if(applying)return;applying=true;window.requestAnimationFrame(()=>{apply();applying=false;});});
