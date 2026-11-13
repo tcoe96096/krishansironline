@@ -204,7 +204,7 @@ export const AdminVisualStudio: React.FC = () => {
               <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#173d70]"><span>Home</span><span>Classes</span><span>Online Tests</span><span>Study Materials</span><span>Current Affairs</span><span>About</span></nav>
             </div>
           </div>
-          <div onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,blocks.length)}} className="min-h-[720px] bg-white" style={{maxWidth:canvasWidth}}>
+          <div onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,blocks.length)}} className="min-h-[280px] bg-white" style={{maxWidth:canvasWidth}}>
             <div className="mx-auto max-w-7xl">{blocks.map(renderBlock)}</div>
             {!previewMode&&<div className="mx-auto mt-6 max-w-7xl border-2 border-dashed border-sky-200 bg-sky-50/50 px-5 py-6 text-center text-xs font-medium text-sky-700">+ Add next content section</div>}
           </div>
