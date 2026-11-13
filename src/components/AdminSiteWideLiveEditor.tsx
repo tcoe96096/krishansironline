@@ -33,9 +33,9 @@ const selectorFor = (element: HTMLElement) => {
   const parts: string[] = [];
   let current: HTMLElement | null = element;
   while (current && current.tagName.toLowerCase() !== 'body') {
-    const parent = current.parentElement;
-    if (!parent) break;
-    const siblings = Array.from(parent.children) as HTMLElement[];
+    const parentElement: HTMLElement | null = current.parentElement;
+    if (!parentElement) break;
+    const siblings = Array.from(parentElement.children) as HTMLElement[];
     const index = siblings.filter(item => item.tagName === current!.tagName).indexOf(current) + 1;
     parts.unshift(current.tagName.toLowerCase() + ':nth-of-type(' + index + ')');
     current = parent;
@@ -255,14 +255,15 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   };
 
   const loadMedia = async () => {
-    if (!supabase || !user || !isAdmin) return;
+    const client = supabase;
+    if (!client || !user || !isAdmin) return;
     setMediaLoading(true); setMediaError('');
     try {
-      const { data, error } = await supabase.storage.from('visual-studio-media').list(user.id, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+      const { data, error } = await client.storage.from('visual-studio-media').list(user.id, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
       if (error) throw error;
       const assets = await Promise.all((data || []).filter(item => item.name && !item.name.startsWith('.')).map(async item => {
         const path = user.id + '/' + item.name;
-        const { data: signed, error: signedError } = await supabase.storage.from('visual-studio-media').createSignedUrl(path, 3600);
+        const { data: signed, error: signedError } = await client.storage.from('visual-studio-media').createSignedUrl(path, 3600);
         if (signedError || !signed?.signedUrl) return null;
         const mime = item.metadata?.mimetype || '';
         return { name: item.name, path, type: mime.startsWith('video/') ? 'video' as const : 'image' as const, url: signed.signedUrl };
@@ -273,7 +274,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   };
 
   const uploadMedia = async (file: File) => {
-    if (!supabase || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
+    const client = supabase;
+    if (!client || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
     const allowed = ['image/jpeg','image/png','image/webp','image/gif','image/avif','video/mp4','video/webm'];
     if (!allowed.includes(file.type)) { setMediaError('केवल JPG, PNG, WEBP, GIF, AVIF, MP4 और WEBM फाइलें स्वीकार हैं।'); return; }
     if (file.size > 50 * 1024 * 1024) { setMediaError('फाइल का आकार 50 MB से कम होना चाहिए।'); return; }
@@ -281,7 +283,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     try {
       const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
       const path = user.id + '/' + crypto.randomUUID() + '.' + extension;
-      const { error } = await supabase.storage.from('visual-studio-media').upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false, metadata: { altText: mediaAlt.trim() } });
+      const { error } = await client.storage.from('visual-studio-media').upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false, metadata: { altText: mediaAlt.trim() } });
       if (error) throw error;
       setMediaAlt(''); await loadMedia();
     } catch (error) { setMediaError(error instanceof Error ? error.message : 'Upload विफल रहा।'); }
