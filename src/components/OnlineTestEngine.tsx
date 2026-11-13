@@ -98,10 +98,11 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
 
 interface OnlineTestEngineProps {
   initialClassFilter?: string;
+  initialTestId?: string;
   onRequestLogin: () => void;
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
@@ -241,6 +242,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setSelectedTest(availableTests[0]);
     }
   }, [catalogueLoading, user?.id, profile?.class_level, databaseTests, selectedTest.id]);
+
+  // Deep links from Student Dashboard / Mock Test Series select the requested published test.
+  // Authenticated students are still restricted to their profile class via availableTests.
+  useEffect(() => {
+    if (!initialTestId || catalogueLoading) return;
+    const match = availableTests.find((test) => test.id === initialTestId);
+    if (match && selectedTest.id !== match.id) setSelectedTest(match);
+  }, [initialTestId, catalogueLoading, availableTests, selectedTest.id]);
 
   // Select the first published database test for visitors when no class filter is supplied.
   useEffect(() => {
