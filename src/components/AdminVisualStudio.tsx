@@ -158,8 +158,12 @@ export const AdminVisualStudio: React.FC = () => {
     finally { setMediaBusy(false); }
   };
   const insertMedia = (asset:MediaAsset) => {
+    if(canvasMode==='site'){
+      sendToPage('vs:add',{kind:asset.type==='video'?'video':'image',text:mediaAlt||asset.name,url:asset.url});
+      setNotice('Media added to '+selectedPageInfo.label+' draft');return;
+    }
     const block:Block = {id:uid(),kind:asset.type==='video'?'video':'image',text:asset.name,mediaPath:asset.path,imageUrl:asset.url,altText:mediaAlt||asset.name,fit:'contain',background:'#f8fafc'};
-    setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(current=>[...current,block]); setSelected(block.id); if(canvasMode==='site'){setHomepageCustomBlockIds(ids=>{const next=[...ids,block.id];try{localStorage.setItem('krishan.visual-studio.home-blocks.v1',JSON.stringify(next));}catch{}return next;});} setNotice(canvasMode==='site'?'Media added to homepage draft':'Media added to draft canvas');
+    setHistory(h=>[...h,blocks]);setFuture([]);setBlocks(current=>[...current,block]);setSelected(block.id);setNotice('Media added to draft canvas');
   };
 
   useEffect(() => {
@@ -241,24 +245,16 @@ export const AdminVisualStudio: React.FC = () => {
         <button onClick={()=>setPreviewMode(v=>!v)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Eye className="h-4 w-4"/>{previewMode?'Exit Preview':'Preview'}</button>
       </div>
     </header>
-    <main className="relative min-h-[calc(100vh-190px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {canvasMode==='site' ? <AdminHomepageCanvas
-        editable={!previewMode}
-        onNavigate={handlePreviewNavigate}
-        sectionOrder={homepageOrder}
-        hiddenSections={hiddenHomepageSections}
-        selectedSection={selectedHomepageSection}
-        onSelectSection={setSelectedHomepageSection}
-        onReorderSections={reorderHomepageSections}
-        onAddComponent={(kind)=>{if(palette.some(item=>item.kind===kind)){add(kind as Kind);setComponentsOpen(false);}}}
-        customContent={homepageCustomBlockIds.map(id=>blocks.find(block=>block.id===id)).filter((block):block is Block=>Boolean(block)).map(renderBlock)}
-      /> : <div className="mx-auto w-full overflow-hidden bg-white" style={{maxWidth:canvasWidth}}>
+    <main className="relative min-h-[calc(100vh-185px)] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+      {canvasMode==='site' ? <div className="flex min-h-[calc(100vh-185px)] w-full justify-center overflow-auto">
+        <iframe key={selectedPage+'-'+(previewMode?'preview':'edit')} ref={iframeRef} title={selectedPageInfo.label+' live website visual editor'} src={frameSrc} onLoad={()=>{setFrameReady(true);try{const path=iframeRef.current?.contentWindow?.location.pathname||'/';const match=visualPages.find(item=>item.path.replace(/\\/$/,'')===(path.replace(/\\/$/,'')||'/'));if(match)setSelectedPage(match.id);}catch{}}} className="block shrink-0 border-0 bg-white" style={{width:frameWidth,maxWidth:device==='desktop'?'100%':frameWidth,height:'calc(100vh - 185px)',minHeight:620}} />
+      </div> : <div className="mx-auto w-full overflow-hidden bg-white" style={{maxWidth:canvasWidth}}>
         <div className="mb-3 flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{previewMode?'Read-only draft preview':'Editable draft canvas'}</p><p className="text-xs font-bold text-slate-800">Draft page · {device}</p></div><span className="rounded-full bg-white px-3 py-1 text-[10px] text-slate-500">Not published</span></div>
         <div className="bg-[#090d14] px-3 py-1.5 text-center text-[9px] font-semibold tracking-wide text-slate-200">✦ WELCOME · FREE Online Learning · Classes 6–12 · Competitive Exams</div>
         <div className="border-b border-slate-200 bg-[#f2f7fc]"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6"><div className="flex items-center gap-3"><img src="/images/krishan-sir-logo.svg" alt="Krishan Sir Online" className="h-11 w-11 rounded-full border-2 border-white bg-white object-contain shadow" onError={e=>{e.currentTarget.style.display='none'}}/><div><div className="text-xl font-extrabold leading-none tracking-tight text-[#102f63]">Krishan Sir</div><div className="mt-1 inline-flex rounded bg-[#087d9b] px-2 py-0.5 text-[10px] font-bold text-white">Online Learning</div><div className="mt-0.5 text-[8px] font-semibold uppercase tracking-wider text-[#24466f]">Learn · Practice · Improve · Succeed</div></div></div><nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#173d70]"><span>Home</span><span>Classes</span><span>Online Tests</span><span>Study Materials</span><span>Current Affairs</span><span>About</span></nav></div></div>
         <div onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,blocks.length)}} className="min-h-[280px] bg-white px-5 py-8 sm:px-8" style={{maxWidth:canvasWidth}}><div className="mx-auto max-w-7xl">{blocks.map(renderBlock)}</div>{!previewMode&&<div className="mx-auto mt-6 max-w-7xl border-2 border-dashed border-sky-200 bg-sky-50/50 px-5 py-6 text-center text-xs font-medium text-sky-700">+ Add next content section</div>}</div>
         <footer className="border-t-[3px] border-cyan-500 bg-[#071b38] px-5 py-8 text-slate-300"><div className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4"><div><div className="text-lg font-extrabold text-white">Krishan Sir</div><div className="text-xs font-bold text-amber-300">Online Learning</div><p className="mt-2 text-[11px] leading-5 text-slate-400">A bilingual digital learning platform for school students, teachers and competitive exam aspirants.</p></div><div><div className="text-xs font-extrabold uppercase tracking-wider text-white">Educator</div><p className="mt-2 text-[11px] leading-5">Krishan Kumar · TGT Social Science</p></div><div><div className="text-xs font-extrabold uppercase tracking-wider text-white">Quick Gateways</div><p className="mt-2 text-[11px] leading-5">Classes 6–12 · Online Tests · Study Materials · Constitution</p></div><div><div className="text-xs font-extrabold uppercase tracking-wider text-white">Learning Promise</div><p className="mt-2 text-[11px] leading-5 text-slate-400">Learn · Practice · Improve · Succeed</p></div></div></footer>
-      </div> }
+      </div>}
     </main>
     {!previewMode&&<div className="fixed bottom-5 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-1.5 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_12px_40px_rgba(15,23,42,0.20)] backdrop-blur">
       <button ref={componentButtonRef} type="button" aria-expanded={componentsOpen} aria-controls="visual-studio-component-menu" onClick={()=>setComponentsOpen(v=>!v)} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-900 px-3 py-2.5 text-[11px] font-bold text-white hover:bg-sky-800"><Plus className="h-4 w-4"/>Components <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px]">{palette.length}</span></button>
