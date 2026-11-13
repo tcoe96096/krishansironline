@@ -227,8 +227,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await requireSupabase().auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Preserve the exact Preview/Admin path so OAuth returns to the same interface.
-        redirectTo: new URL(window.location.pathname, window.location.origin).toString(),
+        // Always return to the Admin route after Google OAuth. Preserve a hosting
+        // subpath (for example GitHub Pages) while avoiding an accidental homepage return.
+        redirectTo: (() => {
+          const pathSegments = window.location.pathname.split('/').filter(Boolean);
+          if (pathSegments[pathSegments.length - 1] === 'admin') pathSegments.pop();
+          const adminPath = `/${pathSegments.concat('admin').join('/')}/`;
+          return new URL(adminPath, window.location.origin).toString();
+        })(),
       },
     });
     if (error) throw error;

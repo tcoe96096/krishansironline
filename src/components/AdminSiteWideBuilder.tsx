@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getVisualEditorPage } from '../visual-editor/registry';
+import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } from '../services/siteConfigService';
 import {
   FilePlus2, FileText, Globe, Image as ImageIcon, Palette, Type, PanelsTopLeft,
   Smartphone, Monitor, Eye, CheckCircle2, Info, Plus, ChevronRight,
@@ -48,6 +50,43 @@ const starterPages: SitePage[] = [
 
 type BuilderTab = 'pages' | 'content' | 'branding' | 'theme' | 'frames';
 type Language = 'en' | 'hi';
+type InspectorStyle = {
+  color: string; backgroundColor: string; fontSize: number; fontWeight: string;
+  textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number;
+  marginBottom: number; padding: number; borderRadius: number;
+};
+const defaultInspectorStyle: InspectorStyle = {
+  color: '#18263b', backgroundColor: '#ffffff', fontSize: 16, fontWeight: '400',
+  textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0,
+};
+type VisualOverride = { selector: string; text: string; style: InspectorStyle };
+type VisualEditorDraft = { version: 1; pages: Record<string, Record<string, VisualOverride>> };
+const isSafeSelector = (selector: string) => {
+  const parts = selector.split(' > ');
+  return parts[0] === 'body' && parts.slice(1).length > 0 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\([1-9]\d*\)$/i.test(part));
+};
+const buildSafeSelector = (element: HTMLElement): string => {
+  const parts: string[] = [];
+  let current: HTMLElement | null = element;
+  while (current && current.tagName.toLowerCase() !== 'body') {
+    const tag = current.tagName.toLowerCase();
+    const parentElement: HTMLElement | null = current.parentElement;
+    if (!parentElement) break;
+    const currentTagName: string = current.tagName;
+    const siblings = Array.from(parentElement.children) as HTMLElement[];
+    const index = siblings.filter((child: HTMLElement) => child.tagName === currentTagName).indexOf(current) + 1;
+    parts.unshift(`${tag}:nth-of-type(${index})`);
+    current = parentElement;
+  }
+  return ['body', ...parts].join(' > ');
+};
+const isEditableLeaf = (element: Element) => ['H1','H2','H3','H4','P','LI'].includes(element.tagName) && element.children.length === 0 && !element.closest('form,button,a,[role=button],[data-visual-editor-protected]');
+
+const colorToHex = (value: string): string => {
+  const match = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return /^#[0-9a-f]{6}$/i.test(value) ? value : '#ffffff';
+  return '#' + match.slice(1,4).map(part => Number(part).toString(16).padStart(2,'0')).join('');
+};
 
 const readImage = (file: File): Promise<string> => new Promise((resolve, reject) => {
   if (!file.type.startsWith('image/')) { reject(new Error('कृपया image file चुनें।')); return; }
@@ -85,9 +124,166 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
   const [borderWidth,setBorderWidth] = useState(initialDraft?.borderWidth ?? 1);
   const [shadow,setShadow] = useState(initialDraft?.shadow ?? true);
   const [previewMode,setPreviewMode] = useState<'desktop'|'mobile'>('desktop');
+  const [previewSource,setPreviewSource] = useState<'draft'|'live'>('draft');
+  const [previewFrameReady,setPreviewFrameReady] = useState(false);
+  const [selectedLiveElement,setSelectedLiveElement] = useState<{ tag: string; text: string; selector: string } | null>(null);
+  const [cloudOverrides,setCloudOverrides] = useState<VisualEditorDraft>({ version: 1, pages: {} });
+  const [cloudSaving,setCloudSaving] = useState(false);
+  const [cloudStatus,setCloudStatus] = useState('Cloud Draft load हो रहा है…');
+  const [inspectorStyle,setInspectorStyle] = useState<InspectorStyle>(defaultInspectorStyle);
+  const originalInspectorStyleRef = useRef<string | null>(null);
+  const livePreviewFrameRef = useRef<HTMLIFrameElement>(null);
+  const selectedLiveElementRef = useRef<HTMLElement | null>(null);
+  const previousOutlineRef = useRef('');
   const selected = pages.find((page) => page.id === selectedId) ?? pages[0];
+  const livePage = getVisualEditorPage(selected.id);
+  const livePreviewPath = livePage ? (livePage.path === '/' ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}${livePage.path.slice(1)}`) : '';
   const [pageSearch,setPageSearch] = useState('');
   const filteredPages = useMemo(() => pages.filter(p => (p.labelEn+' '+p.labelHi+' '+p.path).toLowerCase().includes(pageSearch.toLowerCase())),[pages,pageSearch]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const history = await getWebsiteConfigVersions();
+        if (!active) return;
+        const latest = history.find(item => item.status === 'draft') || history.find(item => item.status === 'published');
+        const saved = latest?.config.visualEditor as VisualEditorDraft | undefined;
+        if (saved?.version === 1 && saved.pages && typeof saved.pages === 'object') setCloudOverrides(saved);
+        setCloudStatus(latest ? `Cloud config · Version ${latest.version_number}` : 'Cloud config अभी खाली है');
+      } catch (error) {
+        if (active) setCloudStatus(error instanceof Error ? error.message : 'Cloud Draft load नहीं हुआ');
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    setPreviewFrameReady(false);
+    setSelectedLiveElement(null);
+  }, [previewSource, selectedId]);
+
+  useEffect(() => {
+    if (previewSource !== 'live' || !previewFrameReady || !livePage?.editable) return;
+    const doc = livePreviewFrameRef.current?.contentDocument;
+    if (!doc) return;
+    const handleSelect = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || typeof target.closest !== 'function') return;
+      const candidate = target.closest<HTMLElement>('h1,h2,h3,h4,p,li');
+      if (!candidate || !isEditableLeaf(candidate) || !candidate.textContent?.trim()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      if (selectedLiveElementRef.current) selectedLiveElementRef.current.style.outline = previousOutlineRef.current;
+      previousOutlineRef.current = candidate.style.outline;
+      candidate.style.outline = '2px solid #f59e0b';
+      selectedLiveElementRef.current = candidate;
+      const computed = doc.defaultView?.getComputedStyle(candidate);
+      if (computed) {
+        setInspectorStyle({
+          color: colorToHex(computed.color),
+          backgroundColor: colorToHex(computed.backgroundColor),
+          fontSize: Number.parseFloat(computed.fontSize) || 16,
+          fontWeight: computed.fontWeight,
+          textAlign: (['left','center','right','justify'].includes(computed.textAlign) ? computed.textAlign : 'left') as InspectorStyle['textAlign'],
+          marginTop: Number.parseFloat(computed.marginTop) || 0,
+          marginBottom: Number.parseFloat(computed.marginBottom) || 0,
+          padding: Number.parseFloat(computed.paddingTop) || 0,
+          borderRadius: Number.parseFloat(computed.borderRadius) || 0,
+        });
+      }
+      originalInspectorStyleRef.current = candidate.getAttribute('style');
+      setSelectedLiveElement({ tag: candidate.tagName.toLowerCase(), text: candidate.textContent ?? '', selector: buildSafeSelector(candidate) });
+    };
+    doc.addEventListener('click', handleSelect, true);
+    return () => {
+      doc.removeEventListener('click', handleSelect, true);
+      if (selectedLiveElementRef.current) selectedLiveElementRef.current.style.outline = previousOutlineRef.current;
+      selectedLiveElementRef.current = null;
+    };
+  }, [previewSource, previewFrameReady, livePage?.editable, selectedId]);
+
+  useEffect(() => {
+    if (previewSource !== 'live' || !previewFrameReady || !livePage?.editable) return;
+    const doc = livePreviewFrameRef.current?.contentDocument;
+    const pageOverrides = cloudOverrides.pages[selectedId];
+    if (!doc || !pageOverrides) return;
+    Object.values(pageOverrides).forEach(override => {
+      if (!isSafeSelector(override.selector)) return;
+      const element = doc.querySelector(override.selector);
+      if (!element || !isEditableLeaf(element) || !override || typeof override.text !== 'string' || !override.style) return;
+      element.textContent = override.text.slice(0, 2000);
+      const style = override.style;
+      const target = element as HTMLElement;
+      target.style.color = /^#[0-9a-f]{6}$/i.test(style.color) ? style.color : '#18263b';
+      target.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(style.backgroundColor) ? style.backgroundColor : '#ffffff';
+      target.style.fontSize = `${Math.min(48, Math.max(8, style.fontSize))}px`;
+      target.style.fontWeight = ['400','500','600','700','800'].includes(style.fontWeight) ? style.fontWeight : '400';
+      target.style.textAlign = ['left','center','right','justify'].includes(style.textAlign) ? style.textAlign : 'left';
+      target.style.marginTop = `${Math.min(80, Math.max(0, style.marginTop))}px`;
+      target.style.marginBottom = `${Math.min(80, Math.max(0, style.marginBottom))}px`;
+      target.style.padding = `${Math.min(40, Math.max(0, style.padding))}px`;
+      target.style.borderRadius = `${Math.min(32, Math.max(0, style.borderRadius))}px`;
+    });
+  }, [previewSource, previewFrameReady, livePage?.editable, selectedId, cloudOverrides]);
+
+  const applyInspectorStyle = () => {
+    const element = selectedLiveElementRef.current;
+    if (!element) return;
+    element.style.color = inspectorStyle.color;
+    element.style.backgroundColor = inspectorStyle.backgroundColor;
+    element.style.fontSize = `${Math.min(72, Math.max(8, inspectorStyle.fontSize))}px`;
+    element.style.fontWeight = inspectorStyle.fontWeight;
+    element.style.textAlign = inspectorStyle.textAlign;
+    element.style.marginTop = `${Math.min(120, Math.max(0, inspectorStyle.marginTop))}px`;
+    element.style.marginBottom = `${Math.min(120, Math.max(0, inspectorStyle.marginBottom))}px`;
+    element.style.padding = `${Math.min(80, Math.max(0, inspectorStyle.padding))}px`;
+    element.style.borderRadius = `${Math.min(48, Math.max(0, inspectorStyle.borderRadius))}px`;
+    setDraftMessage('Design properties applied to this preview element only · अभी saved draft या live website नहीं बदली।');
+  };
+  const saveSelectedCloudDraft = async () => {
+    if (!selectedLiveElement || !livePage?.editable || !isSafeSelector(selectedLiveElement.selector)) return;
+    setCloudSaving(true);
+    setCloudStatus('Cloud Draft सेव हो रहा है…');
+    try {
+      const history = await getWebsiteConfigVersions();
+      const latest = history.find(item => item.status === 'draft') || history.find(item => item.status === 'published');
+      const base: WebsiteConfig = latest?.config ?? { hero: {}, header: {}, sections: {}, palette: 'navy' };
+      const next: VisualEditorDraft = {
+        version: 1,
+        pages: {
+          ...cloudOverrides.pages,
+          [selectedId]: {
+            ...(cloudOverrides.pages[selectedId] ?? {}),
+            [selectedLiveElement.selector]: {
+              selector: selectedLiveElement.selector,
+              text: selectedLiveElement.text.slice(0, 2000),
+              style: { ...inspectorStyle },
+            },
+          },
+        },
+      };
+      await saveWebsiteConfigDraft({ ...base, visualEditor: next });
+      setCloudOverrides(next);
+      const refreshed = await getWebsiteConfigVersions();
+      const savedDraft = refreshed.find(item => item.status === 'draft');
+      setCloudStatus(savedDraft ? `Cloud Draft सेव · Version ${savedDraft.version_number}` : 'Cloud Draft सेव हो गया');
+      setDraftMessage('Selected element का Cloud Draft Supabase में सेव हुआ। Live website अभी नहीं बदली।');
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Cloud Draft सेव नहीं हुआ');
+    } finally {
+      setCloudSaving(false);
+    }
+  };
+
+  const resetInspectorStyle = () => {
+    const element = selectedLiveElementRef.current;
+    if (!element) return;
+    if (originalInspectorStyleRef.current === null) element.removeAttribute('style');
+    else element.setAttribute('style', originalInspectorStyleRef.current);
+    setDraftMessage('Selected element original inline styling restored in preview only.');
+  };
 
   const updatePage = (key: keyof SitePage, value: string | boolean) => {
     setPages(current => current.map(p => p.id === selectedId ? { ...p, [key]: value } : p));
@@ -247,8 +443,18 @@ export const AdminSiteWideBuilder: React.FC<{ onBack?: () => void }> = ({ onBack
         </section>
 
         <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Website Design Preview</h3><p className="mt-1 text-[11px] text-slate-500">Selected page · Theme and frames apply instantly to this sample.</p></div><div className="inline-flex rounded-lg border border-slate-200 bg-white p-1"><button onClick={()=>setPreviewMode('desktop')} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${previewMode==='desktop'?'bg-sky-900 text-white':'text-slate-500'}`}><Monitor className="h-3.5 w-3.5"/>Desktop</button><button onClick={()=>setPreviewMode('mobile')} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${previewMode==='mobile'?'bg-sky-900 text-white':'text-slate-500'}`}><Smartphone className="h-3.5 w-3.5"/>Mobile</button></div></div>
-          <div style={{background:theme.background,fontFamily:headingFont,maxWidth:previewMode==='mobile'?'390px':'100%',marginInline:'auto',border:`${borderWidth}px solid ${cardFrame==='border'?theme.accent:'#dbe3ef'}`,borderRadius:cornerRadius,boxShadow:shadow&&cardFrame==='shadow'?frameStyle:'none'}} className="overflow-hidden"><div className="flex items-center justify-between gap-3 px-4 py-3" style={{background:theme.surface,borderBottom:`1px solid ${theme.accent}44`}}><div className="flex items-center gap-2"><img src={logo||`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Brand logo" className="h-9 w-9 object-contain" style={{borderRadius:imageRadius,border:imageBorder}}/><div><div className="text-sm font-extrabold" style={{color:theme.primary}}>Krishan Sir</div><div className="text-[9px]" style={{color:theme.accent}}>Online Learning</div></div></div><span className="rounded-full px-2 py-1 text-[9px] font-bold" style={{background:theme.background,color:theme.primary}}>HI · EN</span></div>{pageImage && <img src={pageImage} alt="Selected page banner" className="h-28 w-full object-cover" style={{borderRadius:imageRadius,border:imageBorder}}/>}<div className="p-4 sm:p-5"><div className="mb-3 inline-flex rounded-full px-3 py-1 text-[9px] font-bold text-white" style={{background:theme.accent}}>{lang==='en'?selected.badgeEn:selected.badgeHi}</div><h4 className="font-extrabold leading-tight" style={{color:theme.primary,fontSize:headingScale}}>{pageTitle}</h4><p className="mt-3 text-xs leading-6" style={{color:theme.text}}>{pageSubtitle}</p><div className="mt-4 flex items-center gap-3"><img src={teacherPhoto||`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt="Teacher" className="h-16 w-16 object-cover" style={{borderRadius:imageRadius,border:imageBorder}}/><div><div className="text-xs font-extrabold" style={{color:theme.primary}}>Krishan Kumar</div><div className="text-[10px]" style={{color:theme.text}}>TGT Social Science</div></div></div><div className="mt-4 p-3" style={{background:textBoxStyle,border:`${borderWidth}px solid ${theme.accent}55`,borderRadius:cornerRadius,boxShadow:shadow?frameStyle:'none'}}><h5 className="text-sm font-extrabold" style={{color:theme.primary}}>{lang==='en'?selected.sectionTitleEn:selected.sectionTitleHi}</h5><p className="mt-2 text-xs leading-5" style={{color:theme.text}}>{lang==='en'?selected.sectionTextEn:selected.sectionTextHi}</p></div>{blocksForPage(selected).map(block=><div key={block.id} className="mt-3 p-3" style={{background:textBoxStyle,border:`${borderWidth}px solid ${theme.accent}55`,borderRadius:cornerRadius,boxShadow:shadow?frameStyle:'none'}}><h5 className="text-sm font-extrabold" style={{color:theme.primary}}>{lang==='en'?block.titleEn:block.titleHi}</h5><p className="mt-2 text-xs leading-5" style={{color:theme.text}}>{lang==='en'?block.textEn:block.textHi}</p></div>)}</div><div className="px-4 py-3 text-center text-[9px] font-semibold text-white" style={{background:theme.primary}}>Learn · Practice · Improve · Succeed</div></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-extrabold text-slate-900">Website Design Preview</h3><p className="mt-1 text-[11px] text-slate-500">{previewSource==='live'?'Actual website route · Read-only preview':'Draft design sample · Local changes only'}</p></div><div className="flex flex-wrap items-center gap-2"><div className="inline-flex rounded-lg border border-slate-200 bg-white p-1"><button onClick={()=>setPreviewSource('draft')} className={`rounded px-2 py-1 text-[10px] font-bold ${previewSource==='draft'?'bg-sky-900 text-white':'text-slate-500'}`}>Draft</button><button onClick={()=>setPreviewSource('live')} disabled={!livePage} className={`rounded px-2 py-1 text-[10px] font-bold ${previewSource==='live'?'bg-sky-900 text-white':'text-slate-500'} disabled:opacity-40`}>Live Site</button></div><div className="inline-flex rounded-lg border border-slate-200 bg-white p-1"><button onClick={()=>setPreviewMode('desktop')} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${previewMode==='desktop'?'bg-sky-900 text-white':'text-slate-500'}`}><Monitor className="h-3.5 w-3.5"/>Desktop</button><button onClick={()=>setPreviewMode('mobile')} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${previewMode==='mobile'?'bg-sky-900 text-white':'text-slate-500'}`}><Smartphone className="h-3.5 w-3.5"/>Mobile</button></div></div></div>
+          {previewSource==='live' ? <div className="space-y-2"><div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[10px] leading-5 text-sky-950"><Eye className="mt-0.5 h-3.5 w-3.5 shrink-0"/><span><strong>Actual rendered page:</strong> {livePage?.label}. यह केवल वास्तविक वेबसाइट का read-only preview है; यहाँ किए गए local draft edits अभी live page में लागू नहीं होते। {livePage?.editable ? 'यह page Visual Editor में editable scope में है।' : 'यह route protected है; इसकी operational functionality editor से नहीं बदली जाएगी।'}</span></div><div style={{maxWidth:previewMode==='mobile'?'390px':'100%',height:previewMode==='mobile'?'700px':'760px',marginInline:'auto'}} className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"><iframe key={selected.id} ref={livePreviewFrameRef} title={`Actual website preview: ${livePage?.label ?? selected.labelEn}`} src={livePreviewPath} onLoad={() => { setPreviewFrameReady(true); setSelectedLiveElement(null); }} className="h-full w-full border-0" loading="lazy" /></div>{livePage?.editable && <div className="rounded-xl border border-slate-200 bg-white p-3"><div className="flex items-center justify-between gap-2"><span className="text-[11px] font-extrabold text-slate-800">Click-to-Select Inspector</span><span className="text-[9px] text-slate-500">{cloudStatus}</span></div>{selectedLiveElement ? <><p className="mt-2 text-[10px] font-semibold text-sky-800">Selected: &lt;{selectedLiveElement.tag}&gt;</p><textarea rows={2} value={selectedLiveElement.text} onChange={e=>setSelectedLiveElement(current=>current?{...current,text:e.target.value}:current)} className="mt-2 w-full rounded-lg border border-slate-200 p-2 text-xs" aria-label="Selected text"/><div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-[10px] font-semibold text-slate-600">Text Colour<input type="color" value={inspectorStyle.color} onChange={e=>setInspectorStyle(s=>({...s,color:e.target.value}))} className="mt-1 h-9 w-full rounded border border-slate-200"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Background<input type="color" value={inspectorStyle.backgroundColor} onChange={e=>setInspectorStyle(s=>({...s,backgroundColor:e.target.value}))} className="mt-1 h-9 w-full rounded border border-slate-200"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Font Size · {inspectorStyle.fontSize}px<input type="range" min="8" max="48" value={inspectorStyle.fontSize} onChange={e=>setInspectorStyle(s=>({...s,fontSize:Number(e.target.value)}))} className="mt-2 w-full"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Font Weight<select value={inspectorStyle.fontWeight} onChange={e=>setInspectorStyle(s=>({...s,fontWeight:e.target.value}))} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2"><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-bold</option><option value="700">Bold</option><option value="800">Extra bold</option></select></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Text Alignment<select value={inspectorStyle.textAlign} onChange={e=>setInspectorStyle(s=>({...s,textAlign:e.target.value as InspectorStyle['textAlign']}))} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Padding · {inspectorStyle.padding}px<input type="range" min="0" max="40" value={inspectorStyle.padding} onChange={e=>setInspectorStyle(s=>({...s,padding:Number(e.target.value)}))} className="mt-2 w-full"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Top Spacing · {inspectorStyle.marginTop}px<input type="range" min="0" max="80" value={inspectorStyle.marginTop} onChange={e=>setInspectorStyle(s=>({...s,marginTop:Number(e.target.value)}))} className="mt-2 w-full"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Bottom Spacing · {inspectorStyle.marginBottom}px<input type="range" min="0" max="80" value={inspectorStyle.marginBottom} onChange={e=>setInspectorStyle(s=>({...s,marginBottom:Number(e.target.value)}))} className="mt-2 w-full"/></label>
+                    <label className="text-[10px] font-semibold text-slate-600">Corner Radius · {inspectorStyle.borderRadius}px<input type="range" min="0" max="32" value={inspectorStyle.borderRadius} onChange={e=>setInspectorStyle(s=>({...s,borderRadius:Number(e.target.value)}))} className="mt-2 w-full"/></label>
+                  </div><div className="mt-3 flex flex-wrap gap-2"><button onClick={()=>{if(selectedLiveElementRef.current){selectedLiveElementRef.current.textContent=selectedLiveElement.text;applyInspectorStyle();}}} className="rounded-lg bg-sky-900 px-3 py-2 text-[10px] font-bold text-white">Apply to Preview</button><button onClick={resetInspectorStyle} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600">Reset Style</button><button onClick={()=>void saveSelectedCloudDraft()} disabled={cloudSaving || !selectedLiveElement.selector} className="rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">{cloudSaving?'Saving…':'Save Cloud Draft'}</button></div><p className="mt-2 text-[9px] leading-4 text-slate-500">Save Cloud Draft से चयनित text और सुरक्षित style इसी versioned Supabase Draft में सेव होंगे। Live publish अलग अनुमति के बिना नहीं होगा।</p></> : <p className="mt-2 text-[10px] leading-5 text-slate-500">वास्तविक page में किसी साधारण heading, paragraph या list text पर click करके उसे select करें। Buttons, forms और protected interactive elements select नहीं होंगे।</p>}</div>} </div> : <div style={{background:theme.background,fontFamily:headingFont,maxWidth:previewMode==='mobile'?'390px':'100%',marginInline:'auto',border:`${borderWidth}px solid ${cardFrame==='border'?theme.accent:'#dbe3ef'}`,borderRadius:cornerRadius,boxShadow:shadow&&cardFrame==='shadow'?frameStyle:'none'}} className="overflow-hidden"><div className="flex items-center justify-between gap-3 px-4 py-3" style={{background:theme.surface,borderBottom:`1px solid ${theme.accent}44`}}><div className="flex items-center gap-2"><img src={logo||`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="Brand logo" className="h-9 w-9 object-contain" style={{borderRadius:imageRadius,border:imageBorder}}/><div><div className="text-sm font-extrabold" style={{color:theme.primary}}>Krishan Sir</div><div className="text-[9px]" style={{color:theme.accent}}>Online Learning</div></div></div><span className="rounded-full px-2 py-1 text-[9px] font-bold" style={{background:theme.background,color:theme.primary}}>HI · EN</span></div>{pageImage && <img src={pageImage} alt="Selected page banner" className="h-28 w-full object-cover" style={{borderRadius:imageRadius,border:imageBorder}}/>}<div className="p-4 sm:p-5"><div className="mb-3 inline-flex rounded-full px-3 py-1 text-[9px] font-bold text-white" style={{background:theme.accent}}>{lang==='en'?selected.badgeEn:selected.badgeHi}</div><h4 className="font-extrabold leading-tight" style={{color:theme.primary,fontSize:headingScale}}>{pageTitle}</h4><p className="mt-3 text-xs leading-6" style={{color:theme.text}}>{pageSubtitle}</p><div className="mt-4 flex items-center gap-3"><img src={teacherPhoto||`${import.meta.env.BASE_URL}images/krishan-sir.png`} alt="Teacher" className="h-16 w-16 object-cover" style={{borderRadius:imageRadius,border:imageBorder}}/><div><div className="text-xs font-extrabold" style={{color:theme.primary}}>Krishan Kumar</div><div className="text-[10px]" style={{color:theme.text}}>TGT Social Science</div></div></div><div className="mt-4 p-3" style={{background:textBoxStyle,border:`${borderWidth}px solid ${theme.accent}55`,borderRadius:cornerRadius,boxShadow:shadow?frameStyle:'none'}}><h5 className="text-sm font-extrabold" style={{color:theme.primary}}>{lang==='en'?selected.sectionTitleEn:selected.sectionTitleHi}</h5><p className="mt-2 text-xs leading-5" style={{color:theme.text}}>{lang==='en'?selected.sectionTextEn:selected.sectionTextHi}</p></div>{blocksForPage(selected).map(block=><div key={block.id} className="mt-3 p-3" style={{background:textBoxStyle,border:`${borderWidth}px solid ${theme.accent}55`,borderRadius:cornerRadius,boxShadow:shadow?frameStyle:'none'}}><h5 className="text-sm font-extrabold" style={{color:theme.primary}}>{lang==='en'?block.titleEn:block.titleHi}</h5><p className="mt-2 text-xs leading-5" style={{color:theme.text}}>{lang==='en'?block.textEn:block.textHi}</p></div>)}</div><div className="px-4 py-3 text-center text-[9px] font-semibold text-white" style={{background:theme.primary}}>Learn · Practice · Improve · Succeed</div></div>}
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex items-center gap-2 text-[11px] font-extrabold text-amber-900"><LockKeyhole className="h-3.5 w-3.5"/>Safe Draft Mode</div><p className="mt-1 text-[10px] leading-5 text-amber-900/80">Text, page blocks और theme settings इस browser में Local Draft के रूप में save हो सकते हैं। Logo/Photo केवल current session में preview होते हैं। कोई Database write, cloud upload, website route change या Live publish नहीं होता।</p></div>
           <div className="rounded-xl border border-slate-200 bg-white p-3 text-[10px] leading-5 text-slate-500"><Eye className="mr-1 inline h-3.5 w-3.5"/>यह selected page के editable fields और content blocks का visual mockup है। Existing interactive areas (जैसे test engine, chapter lists, result checks) अपनी मौजूदा functionality में सुरक्षित हैं और अभी इस editor से replace नहीं होते।</div>
         </section>
