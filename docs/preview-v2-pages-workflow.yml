@@ -44,9 +44,11 @@ jobs:
 
       - name: Record exact source commit
         working-directory: source
+        env:
+          PREVIEW_SOURCE_REF: ${{ inputs.source_ref }}
         run: |
           git rev-parse HEAD | tee PREVIEW_SOURCE_COMMIT.txt
-          printf '%s\n' "${{ inputs.source_ref }}" > PREVIEW_SOURCE_REF.txt
+          printf '%s\n' "$PREVIEW_SOURCE_REF" > PREVIEW_SOURCE_REF.txt
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
