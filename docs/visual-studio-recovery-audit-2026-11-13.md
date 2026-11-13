@@ -50,3 +50,21 @@
 - Decide and verify which Supabase project the current production deployment actually uses by inspecting deployment environment configuration (without exposing secret values).
 - If production uses `krishan-sir-lms`, prepare a reviewed migration and storage-policy plan for the legacy builder only if that feature is intended to persist drafts/media in production. Do not apply it automatically.
 - Continue isolated preview build verification; the recovery documentation commit's Vercel check is pending, while the current main commit's Vercel status reports failure with a build-rate-limit upgrade URL. Neither result is a successful build confirmation.
+
+
+## Verified isolated GitHub Actions build (2026-11-13)
+- Added the `recovery/**` branch pattern to the **recovery branch copy only** of `.github/workflows/preview-build.yml`. The `main` workflow was not modified.
+- GitHub Actions run: https://github.com/tcoe96096/krishansironline/actions/runs/43428146168
+- Run result: `success` on `recovery/visual-studio-audit-2026-11-13`, commit `58c421e0e713d5d6f3a91c49cf5702b8848650d5`.
+- Confirmed successful steps: checkout, Node 22 setup, dependency install, TypeScript/lint (`npm run lint`), Vite build (`npm run build`), and artifact upload.
+- Artifact `krishansir-preview-58c421e0e713d5d6f3a91c49cf5702b8848650d5` was created (6,292,942 bytes, not expired at time of audit).
+- This workflow uploads a build artifact only. It does not deploy GitHub Pages or Production.
+- Recovery branch comparison against `main`: 4 commits ahead, 0 behind. The only changed paths are the recovery audit document and the recovery-branch-only preview workflow.
+
+## Production-safe V2 draft backend verification (read-only)
+- Both Preview and Production Supabase projects have `public.site_config_versions`, the `admin_save_site_config(p_config jsonb)` RPC, and the `admin_publish_site_config(p_version_id uuid)` RPC.
+- Both RPCs are SECURITY DEFINER and explicitly check `auth.uid()` plus `public.is_admin()`.
+- The `site_config_versions` table has an authenticated Admin-only management policy and a public read policy restricted to published rows (admins may also read rows).
+- Therefore, the V2 Real Page Editor's cloud-draft save path has its required table/RPC/security-policy objects in both environments. Saving creates/updates a **draft**; publishing is a separate RPC and is not invoked by this editor's Save Cloud Draft button.
+- The legacy Canvas Builder's separate `visual_studio_drafts` table and `visual-studio-media` bucket remain configured in Preview but absent from the Production Supabase project. Its cloud draft/media persistence is therefore not ready in Production; browser-local draft behavior remains separate.
+- All Supabase inspections in this section were SELECT-only. No schema, policies, functions, buckets or data were changed.
