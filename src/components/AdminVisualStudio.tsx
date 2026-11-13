@@ -116,7 +116,8 @@ export const AdminVisualStudio: React.FC = () => {
       <div className="flex flex-wrap items-center gap-2">
         {!previewMode&&<><button onClick={undo} disabled={!history.length} className="rounded-lg border p-2 disabled:opacity-40" title="Undo"><Undo2 className="h-4 w-4"/></button><button onClick={redo} disabled={!future.length} className="rounded-lg border p-2 disabled:opacity-40" title="Redo"><Redo2 className="h-4 w-4"/></button>
         <div className="flex rounded-lg border p-1"><button onClick={()=>setDevice('desktop')} className={`rounded p-2 ${device==='desktop'?'bg-sky-800 text-white':''}`} title="Desktop"><Monitor className="h-4 w-4"/></button><button onClick={()=>setDevice('tablet')} className={`rounded p-2 ${device==='tablet'?'bg-sky-800 text-white':''}`} title="Tablet"><Tablet className="h-4 w-4"/></button><button onClick={()=>setDevice('mobile')} className={`rounded p-2 ${device==='mobile'?'bg-sky-800 text-white':''}`} title="Mobile"><Smartphone className="h-4 w-4"/></button></div>
-        <button onClick={()=>setPreviewMode(v=>!v)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Eye className="h-4 w-4"/>{previewMode?'Exit Preview':'Preview'}</button><button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white"><Save className="h-4 w-4"/>Save Draft</button></>}
+        <button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white"><Save className="h-4 w-4"/>Save Draft</button></>}
+        <button onClick={()=>setPreviewMode(v=>!v)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Eye className="h-4 w-4"/>{previewMode?'Exit Preview':'Preview'}</button>
       </div>
     </header>
     <div className={`grid gap-4 ${previewMode?'grid-cols-1':'xl:grid-cols-[220px_minmax(0,1fr)_270px]'}`}>
@@ -127,7 +128,7 @@ export const AdminVisualStudio: React.FC = () => {
       </aside>}
       <main className={`min-w-0 rounded-2xl border p-3 sm:p-5 ${previewMode?'border-transparent bg-transparent':'border-slate-200 bg-slate-100'}`}>
         <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-extrabold text-slate-800">{previewMode?'Preview Canvas':'Website Canvas'}</h3><span className="text-[10px] text-slate-500">{previewMode?'Read-only preview':'Click to select · Edit text inline'}</span></div>
-        <div onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,blocks.length)}} className="mx-auto min-h-[620px] rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={{maxWidth:canvasWidth}}>{blocks.map(renderBlock)}<div className="mt-4 rounded-lg border-2 border-dashed border-slate-200 p-5 text-center text-xs text-slate-400">Drop a component here to add a new section</div></div>
+        <div onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,blocks.length)}} className="mx-auto min-h-[620px] rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={{maxWidth:canvasWidth}}>{blocks.map(renderBlock)}{!previewMode&&<div className="mt-4 rounded-lg border-2 border-dashed border-slate-200 p-5 text-center text-xs text-slate-400">Drop a component here to add a new section</div>}</div>
       </main>
       {!previewMode&&<aside className="rounded-2xl border border-slate-200 bg-white p-3">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold"><Settings2 className="h-4 w-4"/>Inspector</h3>
