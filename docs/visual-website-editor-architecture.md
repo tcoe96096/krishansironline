@@ -41,7 +41,7 @@ Provide an Admin-only visual editing workspace launched from Website Management.
 
 ## Proposed implementation phases
 ### Phase 0 — audit and design
-Map public routes, component ownership, existing website config, storage availability, RLS, preview routing and current deployment pipeline. Confirm editable/protected component registry.
+Map public routes, component ownership, existing website config, storage availability, RLS, GitHub Pages preview routing and GitHub Actions deployment pipeline. Confirm editable/protected component registry.
 
 ### Phase 1 — editor shell and safe real-page preview
 Admin-only visual editor shell, route selector, real preview frame, selection/highlight overlay, selected-element inspector and protected-element handling. No live writes.
@@ -59,7 +59,7 @@ Add desktop/tablet/mobile settings and media replacement using existing free inf
 Integrate with existing versioned Supabase config and admin-only RPCs; add autosave drafts, restore and explicit publish workflow.
 
 ### Phase 6 — coverage and regression testing
-Test every eligible public page, mobile/desktop layouts, permissions, existing student/admin workflows, test timer/submission, accessibility, build/lint and preview deployment.
+Test every eligible public page, mobile/desktop layouts, permissions, existing student/admin workflows, test timer/submission, accessibility, GitHub Actions build/lint and GitHub Pages Preview deployment.
 
 ## Acceptance criteria
 - Editing is performed against the real page preview, not a static mockup.

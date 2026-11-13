@@ -54,7 +54,6 @@ export const AdminVisualStudio: React.FC = () => {
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
   const [realPageMode,setRealPageMode] = useState(false);
-  if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
   const loadMedia = async () => {
     const client = supabase;
@@ -201,6 +200,7 @@ export const AdminVisualStudio: React.FC = () => {
     :b.kind==='divider'?<hr className="border-slate-300"/>
     :<div className="h-10 rounded bg-slate-100"/>}
   </div>; };
+  if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
   return <div className="min-h-[80vh] space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3">
       <div><p className="text-sm font-extrabold text-slate-900">Visual Website Studio</p><p className="text-xs text-slate-600">Canvas Builder और वास्तविक वेबसाइट पेज एडिटर एक ही Studio में</p></div>
