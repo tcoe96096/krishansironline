@@ -290,10 +290,10 @@ export const AdminStudentManagement: React.FC = () => {
         <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[.18em] text-cyan-100">
-              <GraduationCap className="h-3.5 w-3.5" /> People & Academic Intelligence
+              <GraduationCap className="h-3.5 w-3.5" /> PRO STUDENT INTELLIGENCE
             </div>
-            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Student Management</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100">विद्यार्थियों की प्रोफाइल, परीक्षा प्रदर्शन और अध्ययन प्रगति — एक ही जगह।</p>
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Pro Student Management</h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100">विद्यार्थियों की प्रोफाइल, कक्षा-वार आँकड़े, परीक्षा प्रदर्शन और अध्ययन प्रगति — एकीकृत Pro Workspace में।</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { void loadStudents(0); void loadInsights(); }} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/20 disabled:opacity-50">
@@ -324,7 +324,7 @@ export const AdminStudentManagement: React.FC = () => {
       <div className="grid gap-4 xl:grid-cols-[1.4fr_.8fr]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-3">
-            <div><h3 className="text-sm font-extrabold text-slate-900">Class Distribution</h3><p className="mt-1 text-xs text-slate-500">लोड किए गए रिकॉर्ड के अनुसार कक्षा-वार संख्या</p></div>
+            <div><h3 className="text-sm font-extrabold text-slate-900">Class Intelligence</h3><p className="mt-1 text-xs text-slate-500">लोड किए गए रिकॉर्ड के अनुसार कक्षा-वार संख्या</p></div>
             <GraduationCap className="h-5 w-5 text-sky-800" />
           </div>
           <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
@@ -334,7 +334,7 @@ export const AdminStudentManagement: React.FC = () => {
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-sky-800" /><h3 className="text-sm font-extrabold text-slate-900">Location Coverage</h3></div>
+          <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-sky-800" /><h3 className="text-sm font-extrabold text-slate-900">Student Location Insights</h3></div>
           <p className="mt-1 text-xs text-slate-500">विद्यार्थियों के उपलब्ध पते के अनुसार</p>
           <div className="mt-4 flex items-end justify-between"><div><p className="text-2xl font-extrabold text-slate-900">{districts.filter(d => d !== 'Not provided').length}</p><p className="text-[10px] text-slate-500">Districts represented in loaded records</p></div><div className="rounded-xl bg-sky-50 p-3 text-sky-900"><MapPin className="h-5 w-5" /></div></div>
         </div>
@@ -344,7 +344,7 @@ export const AdminStudentManagement: React.FC = () => {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-          <div><h3 className="text-sm font-extrabold text-slate-900">Registered Students</h3><p className="mt-1 text-xs text-slate-500">Profile खोलने के लिए View Details चुनें।</p></div>
+          <div><h3 className="text-sm font-extrabold text-slate-900">Student Directory</h3><p className="mt-1 text-xs text-slate-500">प्रोफाइल, टेस्ट प्रदर्शन और अध्ययन प्रगति देखने के लिए View Details चुनें।</p></div>
           <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500"><span className="rounded-lg bg-slate-100 px-3 py-2">{filteredStudents.length} shown</span><span className="rounded-lg bg-slate-100 px-3 py-2">{students.length} loaded / {totalStudents} total</span></div>
         </div>
         <div className="mt-4 grid gap-2 md:grid-cols-[1fr_170px_190px]">
