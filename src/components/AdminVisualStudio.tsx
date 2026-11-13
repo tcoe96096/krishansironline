@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { AdminVisualEditorV2 } from './AdminVisualEditorV2';
 import {
   Type, AlignLeft, MousePointerClick, Image as ImageIcon, Square, Minus,
   Columns2, MoveVertical, Video, Trash2, Copy, ChevronUp, ChevronDown,
@@ -52,6 +53,8 @@ export const AdminVisualStudio: React.FC = () => {
   const [future,setFuture] = useState<Block[][]>([]);
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
+  const [realPageMode,setRealPageMode] = useState(false);
+  if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
   const loadMedia = async () => {
     if (!supabase || !user || !isAdmin) return;
@@ -195,6 +198,11 @@ export const AdminVisualStudio: React.FC = () => {
     :b.kind==='divider'?<hr className="border-slate-300"/>
     :<div className="h-10 rounded bg-slate-100"/>}
   </div>; };
+  return <div className="space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3">
+      <div><p className="text-sm font-extrabold text-slate-900">Visual Website Studio</p><p className="text-xs text-slate-600">Canvas Builder और वास्तविक वेबसाइट पेज एडिटर एक ही Studio में</p></div>
+      <button type="button" onClick={() => setRealPageMode(true)} className="rounded-lg bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800">वास्तविक वेबसाइट पेज Edit करें</button>
+    </div>
   return <div className="min-h-[80vh] space-y-4">
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Drag & Drop Website Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Separate development preview</p></div>
@@ -250,5 +258,6 @@ export const AdminVisualStudio: React.FC = () => {
       </aside>}
     </div>
     {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Integration safety:</strong> यह अलग Visual Studio prototype है। Autosave और manual Draft अभी इसी browser में काम करते हैं; Templates, Preview, Duplicate और Undo/Redo उपलब्ध हैं। वास्तविक Live website, Online Test Engine या Production Database पर कोई बदलाव नहीं होता। Production integration approval और mapping tests के बाद होगी।</div>}
+  </div>;
   </div>;
 };
