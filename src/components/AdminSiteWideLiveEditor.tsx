@@ -51,7 +51,7 @@ const hex = (value: string, fallback: string) => {
   return match ? '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('') : fallback;
 };
 
-export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pageLabel: string }> = ({ src, pageId, pageLabel }) => {
+export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pageLabel: string; mobile?: boolean }> = ({ src, pageId, pageLabel, mobile = false }) => {
   const { user, isAdmin } = useAuth();
   const iframe = useRef<HTMLIFrameElement>(null);
   const targetRef = useRef<HTMLElement | null>(null);
@@ -335,7 +335,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
         <span><strong>Interactive Live Page Preview:</strong> {pageLabel}. किसी text, image, card या section पर click करें। नीले corner handle से size बदलें। सभी edits Draft-only हैं।</span>
         <span className="font-semibold text-sky-800">{status}</span>
       </div>
-      <div className="mx-auto overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 560 }}>
+      <div className="mx-auto overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 560, maxWidth: mobile ? '390px' : '100%' }}>
         <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} onLoad={() => setReady(true)} className="h-full w-full border-0" />
       </div>
       {createPortal(<>
