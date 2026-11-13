@@ -12,7 +12,7 @@ function selectorFor(node: HTMLElement): string {
   const parts: string[] = [];
   let current: HTMLElement | null = node;
   while (current && current.tagName !== 'BODY') {
-    const parent = current.parentElement;
+    const parent: HTMLElement | null = current.parentElement;
     if (!parent) return '';
     const index = (Array.from(parent.children) as HTMLElement[]).filter(sibling => sibling.tagName === current!.tagName).indexOf(current) + 1;
     if (index < 1) return '';
