@@ -29,7 +29,7 @@ export const AdminVisualEditorV2: React.FC<{ onBack?: () => void }> = ({ onBack 
   const [notice, setNotice] = useState('पहले Preview में किसी सामान्य Heading या Paragraph को चुनें।');
   const frame = useRef<HTMLIFrameElement>(null);
   const page = useMemo(() => VISUAL_EDITOR_V2_PAGES.find(item => item.id === pageId)!, [pageId]);
-  const src = page.path === '/' ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + page.path.replace(/^\\//, '');
+  const src = page.path === '/' ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + page.path.slice(1);
   useEffect(() => { setSelected(null); setFrameReady(false); setNotice('नया पेज लोड हो रहा है।'); }, [pageId]);
   useEffect(() => {
     const doc = frame.current?.contentDocument;
