@@ -63,14 +63,14 @@ export const AdminVisualStudio: React.FC = () => {
     try {
       const { data, error } = await client.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
       if (error) throw error;
-      const assets = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async item=>{
+      const assets: (MediaAsset | null)[] = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async (item): Promise<MediaAsset | null> => {
         const path = user.id+'/'+item.name;
         const { data: signed, error: signError } = await client.storage.from('visual-studio-media').createSignedUrl(path,3600);
         if (signError || !signed?.signedUrl) return null;
         const mime = item.metadata?.mimetype ?? '';
-        return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at};
+        return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at ?? undefined};
       }));
-      setMediaItems(assets.filter((item):item is MediaAsset=>Boolean(item)));
+      setMediaItems(assets.filter(item => item !== null));
     } catch(error) { setMediaError(error instanceof Error?error.message:'Media Library load नहीं हो सकी।'); }
     finally { setMediaLoading(false); }
   };
@@ -100,15 +100,16 @@ export const AdminVisualStudio: React.FC = () => {
   useEffect(() => {
     let active = true;
     const restoreDraft = async () => {
-      if (!supabase || !user || !isAdmin) { setDraftReady(true); return; }
+      const client = supabase;
+      if (!client || !user || !isAdmin) { setDraftReady(true); return; }
       setDraftReady(false);
       try {
-        const { data, error } = await supabase.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
+        const { data, error } = await client.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
         if (error) throw error;
         if (active && Array.isArray(data?.content)) {
           const restored = await Promise.all((data.content as Block[]).map(async block => {
             if (!block.mediaPath) return block;
-            const { data: signed } = await supabase.storage.from('visual-studio-media').createSignedUrl(block.mediaPath, 3600);
+            const { data: signed } = await client.storage.from('visual-studio-media').createSignedUrl(block.mediaPath, 3600);
             return signed?.signedUrl ? { ...block, imageUrl: signed.signedUrl } : block;
           }));
           if (active) { setBlocks(restored); setSelected(restored[0]?.id ?? ''); setNotice('Cloud draft restored'); }
