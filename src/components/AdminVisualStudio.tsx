@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -46,6 +47,9 @@ export const AdminVisualStudio: React.FC = () => {
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
   const [mediaOpen,setMediaOpen] = useState(false);
   const [componentsOpen,setComponentsOpen] = useState(false);
+  const componentButtonRef = useRef<HTMLButtonElement|null>(null);
+  const componentMenuRef = useRef<HTMLDivElement|null>(null);
+  const [componentMenuPosition,setComponentMenuPosition] = useState({left:24,top:100,width:260});
   const [device,setDevice] = useState<Device>('desktop');
   const [notice,setNotice] = useState('Unsaved changes');
   const [history,setHistory] = useState<Block[][]>([]);
@@ -53,7 +57,35 @@ export const AdminVisualStudio: React.FC = () => {
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
-  const loadMedia = async () => {
+  useEffect(()=>{
+    if(!componentsOpen) return;
+    const updatePosition=()=>{
+      const rect=componentButtonRef.current?.getBoundingClientRect();
+      if(!rect) return;
+      const width=Math.min(280,window.innerWidth-24);
+      const left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
+      const estimatedHeight=Math.min(palette.length*58+16,window.innerHeight-32);
+      const top=rect.bottom+8+estimatedHeight>window.innerHeight?Math.max(12,rect.top-estimatedHeight-8):rect.bottom+8;
+      setComponentMenuPosition({left,top,width});
+    };
+    const onPointerDown=(event:PointerEvent)=>{
+      const target=event.target as Node;
+      if(!componentButtonRef.current?.contains(target)&&!componentMenuRef.current?.contains(target)) setComponentsOpen(false);
+    };
+    const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape')setComponentsOpen(false);};
+    updatePosition();
+    window.addEventListener('resize',updatePosition);
+    window.addEventListener('scroll',updatePosition,true);
+    document.addEventListener('pointerdown',onPointerDown);
+    document.addEventListener('keydown',onKeyDown);
+    return ()=>{
+      window.removeEventListener('resize',updatePosition);
+      window.removeEventListener('scroll',updatePosition,true);
+      document.removeEventListener('pointerdown',onPointerDown);
+      document.removeEventListener('keydown',onKeyDown);
+    };
+  },[componentsOpen]);
+    const loadMedia = async () => {
     if (!supabase || !user || !isAdmin) return;
     setMediaLoading(true); setMediaError('');
     try {
@@ -176,11 +208,11 @@ export const AdminVisualStudio: React.FC = () => {
       {!previewMode&&<aside className="relative rounded-2xl border border-slate-200 bg-white p-2.5">
         <label className="mb-3 block text-[11px] font-semibold text-slate-600">Starter template<select value={templateName} onChange={e=>applyTemplate(e.target.value)} className="mt-1 w-full rounded-lg border p-2 text-xs"><option>Education Portal</option><option>Course Landing Page</option><option>Announcement Page</option></select></label>
         <div className="relative mb-2">
-          <button type="button" aria-expanded={componentsOpen} aria-controls="visual-studio-component-menu" onClick={()=>setComponentsOpen(v=>!v)} title={componentsOpen?'Hide components':'Show all components'} className="flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg border border-sky-200 bg-sky-900 px-2.5 py-2 text-left text-[11px] font-extrabold text-white shadow-sm transition hover:bg-sky-800">
+          <button ref={componentButtonRef} type="button" aria-expanded={componentsOpen} aria-controls="visual-studio-component-menu" onClick={()=>setComponentsOpen(v=>!v)} title={componentsOpen?'Hide components':'Show all components'} className="flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg border border-sky-200 bg-sky-900 px-2.5 py-2 text-left text-[11px] font-extrabold text-white shadow-sm transition hover:bg-sky-800">
             <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap"><Plus className="h-3.5 w-3.5 shrink-0"/><span className="whitespace-nowrap">Add Components</span><span className="shrink-0 rounded-full bg-white/15 px-1.5 py-0.5 text-[9px]">{palette.length}</span></span>
             <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${componentsOpen?'rotate-180':''}`}/>
           </button>
-          {componentsOpen&&<div id="visual-studio-component-menu" className="absolute left-0 top-full z-50 mt-2 max-h-[65vh] w-[min(280px,82vw)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,0.22)]">{palette.map(p=>{const Icon=p.icon;return <button key={p.kind} draggable onDragStart={e=>e.dataTransfer.setData('application/krishan-block',p.kind)} onClick={()=>{add(p.kind);setComponentsOpen(false);}} className="flex w-full items-center gap-2 rounded-lg border border-transparent bg-white p-2 text-left transition hover:border-sky-200 hover:bg-sky-50"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-sky-50"><Icon className="h-3.5 w-3.5 text-sky-800"/></span><span className="min-w-0"><span className="block text-[11px] font-bold leading-4">{p.label}</span><span className="block text-[9px] leading-3 text-slate-500">{p.hint}</span></span><Plus className="ml-auto h-3 w-3 shrink-0 text-slate-400"/></button>})}</div>}
+          {componentsOpen&&createPortal(<div ref={componentMenuRef} id="visual-studio-component-menu" role="dialog" aria-label="Add components" className="fixed z-[99999] max-h-[min(70vh,560px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,0.28)]" style={{left:componentMenuPosition.left,top:componentMenuPosition.top,width:componentMenuPosition.width}}><div className="mb-2 flex items-center justify-between border-b border-slate-100 px-1 pb-2"><span className="text-[11px] font-extrabold text-slate-800">Add a component</span><button type="button" onClick={()=>setComponentsOpen(false)} className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">Esc ✕</button></div><div className="grid grid-cols-1 gap-1">{palette.map(p=>{const Icon=p.icon;return <button key={p.kind} draggable onDragStart={e=>e.dataTransfer.setData('application/krishan-block',p.kind)} onClick={()=>{add(p.kind);setComponentsOpen(false);}} className="flex w-full items-center gap-3 rounded-lg border border-transparent bg-white p-2.5 text-left transition hover:border-sky-200 hover:bg-sky-50"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-50"><Icon className="h-4 w-4 text-sky-800"/></span><span className="min-w-0 flex-1"><span className="block text-xs font-bold leading-4 text-slate-800">{p.label}</span><span className="block text-[10px] leading-4 text-slate-500">{p.hint}</span></span><Plus className="h-3.5 w-3.5 shrink-0 text-slate-400"/></button>})}</div></div>,document.body)}
         </div>
         <div className="mt-4 border-t border-slate-100 pt-3">
           <button onClick={()=>setMediaOpen(v=>!v)} className="flex w-full items-center justify-between rounded-xl bg-violet-50 p-3 text-left text-xs font-extrabold text-violet-900"><span className="flex items-center gap-2"><ImageIcon className="h-4 w-4"/>Media Library</span><span>{mediaOpen?'−':'+'}</span></button>
