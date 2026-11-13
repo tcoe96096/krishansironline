@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'divider' | 'columns' | 'spacer' | 'video';
-type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string };
+type Device = 'desktop'|'tablet'|'mobile';
+type ResponsiveStyle = { fontSize?: number; hidden?: boolean };
+type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string; responsive?: Partial<Record<Device, ResponsiveStyle>> };
 const starter: Block[] = [
   { id:'b1', kind:'heading', text:'Welcome to Krishan Sir Online Learning', size:34, color:'#123b75', align:'left' },
   { id:'b2', kind:'text', text:'A dedicated digital learning platform designed to make quality education accessible, engaging and meaningful for every learner.', size:16, color:'#475569', align:'left' },
@@ -33,7 +35,7 @@ export const AdminVisualStudio: React.FC = () => {
     try { const saved=localStorage.getItem(key); return saved ? JSON.parse(saved) as Block[] : starter; } catch { return starter; }
   });
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
-  const [device,setDevice] = useState<'desktop'|'tablet'|'mobile'>('desktop');
+  const [device,setDevice] = useState<Device>('desktop');
   const [notice,setNotice] = useState('Unsaved changes');
   const [history,setHistory] = useState<Block[][]>([]);
   const [future,setFuture] = useState<Block[][]>([]);
@@ -99,17 +101,17 @@ export const AdminVisualStudio: React.FC = () => {
   const save=()=>{try{localStorage.setItem(key,JSON.stringify(blocks));setNotice('Draft saved in this browser');}catch{setNotice('Unable to save draft in browser storage');}};
   const onDrop=(event:React.DragEvent<HTMLDivElement>,index:number)=>{event.preventDefault();const kind=event.dataTransfer.getData('application/krishan-block') as Kind;if(kind&&palette.some(p=>p.kind===kind))add(kind,index);};
   const canvasWidth=device==='mobile'?'390px':device==='tablet'?'768px':'100%';
-  const renderBlock=(b:Block,index:number)=> <div key={b.id} onClick={()=>{if(!previewMode)setSelected(b.id)}} onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,index)}} className={`group relative my-2 rounded-xl border-2 p-3 transition ${previewMode?'border-transparent':selected===b.id?'border-sky-500 ring-2 ring-sky-100':'border-transparent hover:border-slate-300'}`} style={{background:b.background??'transparent',textAlign:b.align??'left'}}>
+  const renderBlock=(b:Block,index:number)=> { if (b.responsive?.[device]?.hidden) return null; const responsiveFontSize=b.responsive?.[device]?.fontSize ?? b.size; return <div key={b.id} onClick={()=>{if(!previewMode)setSelected(b.id)}} onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,index)}} className={`group relative my-2 rounded-xl border-2 p-3 transition ${previewMode?'border-transparent':selected===b.id?'border-sky-500 ring-2 ring-sky-100':'border-transparent hover:border-slate-300'}`} style={{background:b.background??'transparent',textAlign:b.align??'left'}}>
     {!previewMode&&selected===b.id&&<div className="absolute -top-3 right-2 z-10 flex items-center gap-1 rounded-lg bg-sky-700 px-2 py-1 text-[10px] font-bold text-white shadow"><GripVertical className="h-3 w-3"/>{b.kind.toUpperCase()}<button onClick={e=>{e.stopPropagation();move(b.id,-1)}} title="Move up"><ChevronUp className="h-3 w-3"/></button><button onClick={e=>{e.stopPropagation();move(b.id,1)}} title="Move down"><ChevronDown className="h-3 w-3"/></button></div>}
-    {b.kind==='heading'?<div contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:b.size,color:b.color,fontWeight:800,outline:'none'}}>{b.text}</div>
-    :b.kind==='text'?<p contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:b.size,color:b.color,outline:'none',lineHeight:1.7}}>{b.text}</p>
+    {b.kind==='heading'?<div contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:responsiveFontSize,color:b.color,fontWeight:800,outline:'none'}}>{b.text}</div>
+    :b.kind==='text'?<p contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:responsiveFontSize,color:b.color,outline:'none',lineHeight:1.7}}>{b.text}</p>
     :b.kind==='button'?<span contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{display:'inline-block',padding:'12px 20px',borderRadius:10,background:b.background,color:b.color,fontWeight:700,outline:'none'}}>{b.text}</span>
     :b.kind==='image'?<div className="grid min-h-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"><ImageIcon className="mb-2 h-6 w-6"/>Image placeholder — select and add image URL in Inspector</div>
     :b.kind==='card'||b.kind==='columns'?<div className="rounded-xl border border-slate-200 p-5" style={{background:b.background}}><div contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} className="font-bold" style={{color:b.color}}>{b.text}</div><p contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{subtitle:e.currentTarget.textContent??''})} className="mt-2 text-sm text-slate-600">{b.subtitle??'Add a supporting description here.'}</p></div>
     :b.kind==='video'?<div className="grid min-h-36 place-items-center rounded-xl bg-slate-900 text-white"><Video className="h-8 w-8"/><span className="text-sm">Video embed placeholder</span></div>
     :b.kind==='divider'?<hr className="border-slate-300"/>
     :<div className="h-10 rounded bg-slate-100"/>}
-  </div>;
+  </div>; };
   return <div className="min-h-[80vh] space-y-4">
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Drag & Drop Website Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Separate development preview</p></div>
@@ -140,6 +142,14 @@ export const AdminVisualStudio: React.FC = () => {
           <label className="block text-xs font-semibold">Background<input type="color" value={active.background??'#ffffff'} onChange={e=>update(active.id,{background:e.target.value})} className="mt-1 h-9 w-full"/></label>
           <label className="block text-xs font-semibold">Font size · {active.size??16}px<input type="range" min="10" max="56" value={active.size??16} onChange={e=>update(active.id,{size:Number(e.target.value)})} className="mt-1 w-full"/></label>
           <label className="block text-xs font-semibold">Alignment<select value={active.align??'left'} onChange={e=>update(active.id,{align:e.target.value as Block['align']})} className="mt-1 w-full rounded-lg border p-2 text-sm"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+          <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+            <div className="mb-2 flex items-center justify-between"><span className="text-xs font-extrabold text-sky-900">Responsive override</span><span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold uppercase text-sky-800">{device}</span></div>
+            <label className="block text-xs font-semibold">Font size on {device} · {active.responsive?.[device]?.fontSize ?? active.size ?? 16}px
+              <input type="range" min="10" max="56" value={active.responsive?.[device]?.fontSize ?? active.size ?? 16} onChange={e=>update(active.id,{responsive:{...active.responsive,[device]:{...active.responsive?.[device],fontSize:Number(e.target.value)}}})} className="mt-1 w-full"/>
+            </label>
+            <label className="mt-3 flex items-center gap-2 text-xs font-semibold"><input type="checkbox" checked={!!active.responsive?.[device]?.hidden} onChange={e=>update(active.id,{responsive:{...active.responsive,[device]:{...active.responsive?.[device],hidden:e.target.checked}}})}/>Hide this component on {device}</label>
+            <button onClick={()=>{const responsive={...active.responsive};delete responsive[device];update(active.id,{responsive});}} className="mt-3 w-full rounded-lg border border-sky-200 bg-white p-2 text-[11px] font-bold text-sky-800">Reset {device} overrides</button>
+          </div>
           <button onClick={duplicate} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-50 p-2 text-xs font-bold text-sky-800"><Copy className="h-4 w-4"/>Duplicate component</button><button onClick={remove} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-rose-50 p-2 text-xs font-bold text-rose-700"><Trash2 className="h-4 w-4"/>Remove selected component</button>
         </div>}
         <div className="mt-4 border-t pt-3"><h4 className="mb-2 flex items-center gap-2 text-xs font-extrabold"><Layers className="h-4 w-4"/>Layers</h4>{blocks.map((b,i)=><button key={b.id} onClick={()=>setSelected(b.id)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-[10px] ${selected===b.id?'bg-sky-100 text-sky-900':'hover:bg-slate-50'}`}><span>{i+1}. {b.kind} — {b.text.slice(0,22)}</span><GripVertical className="h-3 w-3"/></button>)}</div>
