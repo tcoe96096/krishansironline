@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
 import { StudentNotificationCenter } from './StudentNotificationCenter';
+import { StudentProLearningTools } from './StudentProLearningTools';
 
 export const StudentDashboard: React.FC = () => {
   const { profile, profileLoading } = useAuth();
@@ -66,6 +67,7 @@ export const StudentDashboard: React.FC = () => {
     {profileLoading && <p className="text-sm text-slate-500">प्रोफाइल लोड हो रही है…</p>}
     {!profile && !profileLoading && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">विद्यार्थी प्रोफाइल उपलब्ध नहीं है। Admin से संपर्क करें।</p>}
     <StudentNotificationCenter />
+    <StudentProLearningTools classLevel={profile?.class_level} />
     <section className="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4 shadow-sm sm:p-5" aria-labelledby="smart-actions-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
