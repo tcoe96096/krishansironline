@@ -78,7 +78,7 @@ export const AdminTestManagement: React.FC = () => {
     setClassLevel(set.class_level); setSubject(set.subject); setChapter(set.chapter);
     setQuestions(current => [...current, ...set.questions.map(q => ({
       ...q, explanation: q.explanation || { en: '', hi: '' },
-      marks: Number(q.marks || 1), category: q.category === 'conceptual' ? 'conceptual' : 'factual'
+      marks: Number(q.marks || 1), category: (q.category === 'conceptual' ? 'conceptual' : 'factual') as 'conceptual' | 'factual'
     }))]);
     setAnswers(current => [...current, ...set.answer_key]);
     setNotice(set.questions.length + ' प्रश्न वर्तमान Test Draft में जोड़ दिए गए हैं। Save Draft दबाएँ।');
