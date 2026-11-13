@@ -21,6 +21,15 @@ const generateSeoPages = () => ({
     const indexPath = path.resolve(__dirname, 'dist/index.html');
     if (!existsSync(indexPath)) return;
     const template = readFileSync(indexPath, 'utf8');
+
+    // The app uses client-side path routing. Emit entry HTML for protected
+    // routes too, so Vercel can serve /admin/ and /admin-preview/ directly.
+    for (const route of ['admin', 'admin-preview']) {
+      const directory = path.resolve(__dirname, 'dist', route);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(path.join(directory, 'index.html'), template);
+    }
+
     for (const page of seoPages) {
       const canonical = `https://krishansir.online/${page.slug}/`;
       const html = template
