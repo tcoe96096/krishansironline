@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { requireSupabase } from '../lib/supabase';
-import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList, Search } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
 type DraftQuestion = { question: Bilingual; options: { en: string[]; hi: string[] }; explanation: Bilingual; marks: number; category: 'factual' | 'conceptual' };
+type BankSet = { id: string; title: Bilingual; class_level: string; subject: string; chapter: string; questions: DraftQuestion[]; answer_key: number[]; updated_at: string };
 type TestRow = { id: string; title: Bilingual; class_level: string; subject: string; chapter: string; duration_minutes: number; total_marks: number; attempt_limit: number; is_published: boolean; questions: DraftQuestion[] };
 
 const blankQuestion = (): DraftQuestion => ({ question: { en: '', hi: '' }, options: { en: ['', '', '', ''], hi: ['', '', '', ''] }, explanation: { en: '', hi: '' }, marks: 1, category: 'factual' });
@@ -24,6 +25,9 @@ export const AdminTestManagement: React.FC = () => {
   const [answers, setAnswers] = useState<number[]>([-1]);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [bulkJson, setBulkJson] = useState('');
+  const [bankSets, setBankSets] = useState<BankSet[]>([]);
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankSaving, setBankSaving] = useState(false);
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -37,7 +41,50 @@ export const AdminTestManagement: React.FC = () => {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void loadTests(); }, [loadTests]);
+
+  const loadBankSets = useCallback(async () => {
+    try {
+      const { data, error: bankError } = await requireSupabase().from('question_bank_sets')
+        .select('id,title,class_level,subject,chapter,questions,answer_key,updated_at')
+        .order('updated_at', { ascending: false }).limit(200);
+      if (bankError) throw bankError;
+      setBankSets((data ?? []) as BankSet[]);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Question Bank लोड नहीं हो सका।'); }
+  }, []);
+
+  useEffect(() => { void loadTests(); void loadBankSets(); }, [loadTests, loadBankSets]);
+
+  const saveCurrentToBank = async () => {
+    setBankSaving(true); setError(''); setNotice('');
+    try {
+      if (!title.en.trim() || !title.hi.trim() || !chapter.trim() || !questions.length) throw new Error('दोनों भाषाओं में शीर्षक, अध्याय और प्रश्न आवश्यक हैं।');
+      if (answers.length !== questions.length || answers.some((a, i) => !Number.isInteger(a) || a < 0 || a > 3)) throw new Error('हर प्रश्न का सही उत्तर चुनें।');
+      if (questions.some(q => !q.question.en.trim() || !q.question.hi.trim() || q.options.en.length !== 4 || q.options.hi.length !== 4 || q.options.en.some(x => !x.trim()) || q.options.hi.some(x => !x.trim()))) throw new Error('हर प्रश्न और चारों विकल्प Hindi तथा English में भरें।');
+      const { error: insertError } = await requireSupabase().from('question_bank_sets').insert({
+        title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
+        questions, answer_key: answers, updated_at: new Date().toISOString()
+      });
+      if (insertError) throw insertError;
+      setNotice('प्रश्नों का सेट Question Bank में सुरक्षित हो गया।');
+      await loadBankSets();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Question Bank में सेव नहीं हुआ।'); }
+    finally { setBankSaving(false); }
+  };
+
+  const importBankSet = (set: BankSet) => {
+    if (!Array.isArray(set.questions) || !Array.isArray(set.answer_key) || set.questions.length !== set.answer_key.length) {
+      setError('इस Question Set का डेटा अधूरा है।'); return;
+    }
+    setClassLevel(set.class_level); setSubject(set.subject); setChapter(set.chapter);
+    setQuestions(current => [...current, ...set.questions.map(q => ({
+      ...q, explanation: q.explanation || { en: '', hi: '' },
+      marks: Number(q.marks || 1), category: q.category === 'conceptual' ? 'conceptual' : 'factual'
+    }))]);
+    setAnswers(current => [...current, ...set.answer_key]);
+    setNotice(set.questions.length + ' प्रश्न वर्तमान Test Draft में जोड़ दिए गए हैं। Save Draft दबाएँ।');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
 
   const importBulkJson = () => {
     setError(''); setNotice('');
@@ -144,6 +191,24 @@ export const AdminTestManagement: React.FC = () => {
       <p className="mt-1 text-sm text-slate-600">40 bilingual प्रश्न एक साथ लोड करें। 28 factual + 12 conceptual अनिवार्य हैं।</p>
       <textarea value={bulkJson} onChange={e=>setBulkJson(e.target.value)} placeholder='{"title":{"en":"Minerals and Energy Resources","hi":"खनिज तथा ऊर्जा संसाधन"},"chapter":"खनिज तथा ऊर्जा संसाधन","questions":[...]}' className="mt-3 min-h-36 w-full rounded-xl border border-sky-200 bg-white p-3 font-mono text-xs"/>
       <button type="button" onClick={importBulkJson} className="mt-3 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white">Load 40 Questions</button>
+    </section>
+
+    <section className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700">REUSABLE REPOSITORY</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">Question Bank / प्रश्न बैंक</h3><p className="mt-1 text-xs text-slate-600">Class, Subject और Chapter के अनुसार प्रश्न सेट सेव करें और नए टेस्ट में दोबारा उपयोग करें।</p></div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-800">{bankSets.length} Sets</span>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" disabled={bankSaving} onClick={() => void saveCurrentToBank()} className="rounded-lg bg-indigo-800 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">{bankSaving ? 'Saving…' : 'वर्तमान प्रश्नों को Bank में सेव करें'}</button>
+        <button type="button" onClick={() => void loadBankSets()} className="rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-800">Refresh Bank</button>
+      </div>
+      <label className="relative mt-4 block"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400"/><input value={bankSearch} onChange={e => setBankSearch(e.target.value)} placeholder="Search title, class, subject or chapter…" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm"/></label>
+      <div className="mt-3 space-y-2">
+        {bankSets.filter(x => [x.title?.en, x.title?.hi, x.class_level, x.subject, x.chapter].join(' ').toLowerCase().includes(bankSearch.toLowerCase())).map(set => <div key={set.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"><div className="min-w-0"><p className="text-sm font-bold text-slate-900">{set.title?.hi || set.title?.en}</p><p className="mt-1 text-[11px] text-slate-500">Class {set.class_level} · {set.subject} · {set.chapter} · {set.questions.length} प्रश्न</p></div><button type="button" onClick={() => importBankSet(set)} className="rounded-lg border border-indigo-200 px-3 py-2 text-xs font-bold text-indigo-800">टेस्ट में जोड़ें</button></div>)}
+        {bankSets.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-xs text-slate-500">अभी Question Bank खाली है। ऊपर वर्तमान प्रश्नों को सेव करें।</p>}
+        {bankSets.length > 0 && bankSets.every(x => ![x.title?.en, x.title?.hi, x.class_level, x.subject, x.chapter].join(' ').toLowerCase().includes(bankSearch.toLowerCase())) && <p className="p-4 text-center text-xs text-slate-500">कोई matching question set नहीं मिला।</p>}
+      </div>
+      <p className="mt-3 text-[10px] text-slate-500">सुरक्षा: Question Bank admin-only RLS के अंतर्गत है; सही उत्तर Student catalogue में उपलब्ध नहीं होते।</p>
     </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <h3 className="mb-4 flex items-center gap-2 font-extrabold text-slate-900"><Plus className="h-5 w-5 text-sky-700"/>{editingTestId ? 'Edit Test Draft' : 'Create New Test'}</h3>
