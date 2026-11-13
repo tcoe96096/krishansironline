@@ -119,6 +119,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         key:target.getAttribute('data-vs-key')||target.getAttribute('data-vs-added')||'',
         sectionKey:section?.getAttribute('data-vs-section-key')||'',
         tag:target.tagName.toLowerCase(),
+        hasChildren:target.children.length>0,
         text:(target.textContent||'').trim().slice(0,2000),
         color:style.color,
         backgroundColor:style.backgroundColor,
