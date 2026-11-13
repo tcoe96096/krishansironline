@@ -52,7 +52,7 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite, demoMode = fa
       setLoginBusy(false);
     }
   };
-  const [active, setActive] = useState<ModuleId>('overview');
+  const [active, setActive] = useState<ModuleId>(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '').endsWith('/admin/visual-studio') ? 'visualStudio' : 'overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState('');
