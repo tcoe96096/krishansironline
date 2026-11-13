@@ -80,7 +80,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     if ((event.target as HTMLElement).closest('button,input,select,textarea,label')) return;
     event.preventDefault();
     const startX = event.clientX, startY = event.clientY;
-    const origin = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const dragTarget = event.currentTarget.dataset.visualEditorUi === 'toolbar' ? event.currentTarget : event.currentTarget.parentElement as HTMLElement;
+    const origin = dragTarget.getBoundingClientRect();
     const move = (e: PointerEvent) => setter({ x: Math.max(0, Math.min(window.innerWidth - 80, origin.left + e.clientX - startX)), y: Math.max(0, Math.min(window.innerHeight - 48, origin.top + e.clientY - startY)) });
     const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop, { once: true });
