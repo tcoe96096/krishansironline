@@ -62,7 +62,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         const node=document.querySelector('[data-vs-key="'+CSS.escape(key)+'"]') as HTMLElement|null;
         if(node)Object.entries(style).forEach(([name,value])=>{(node.style as any)[name]=value;});
       }
-      draft.hidden.forEach(key=>{const node=document.querySelector('[data-vs-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node)node.style.display='none';});
+      draft.hidden.forEach(key=>{const node=document.querySelector('[data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node)node.style.display='none';});
       const container=getContainer();
       if(container){
         sectionContainer=container;
@@ -85,13 +85,13 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       }
       document.documentElement.classList.add('krishan-visual-editing');
     };
-    const createBlock=(kind:string,text:string):HTMLElement=>{
+    const createBlock=(kind:string,text:string,imageUrl?:string):HTMLElement=>{
       let node:HTMLElement;
       if(kind==='heading'){node=document.createElement('h2');node.className='mx-auto my-6 max-w-5xl text-3xl font-extrabold text-[#12396f]';}
       else if(kind==='text'){node=document.createElement('p');node.className='mx-auto my-4 max-w-4xl text-base leading-7 text-slate-700';}
       else if(kind==='button'){node=document.createElement('a');node.href='#';node.className='my-4 inline-flex rounded-xl bg-[#0b3979] px-6 py-3 font-bold text-white';}
-      else if(kind==='image'){node=document.createElement('div');node.className='my-6 grid min-h-48 place-items-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500';node.textContent='Image block · Add media from Media Library';}
-      else if(kind==='video'){node=document.createElement('div');node.className='my-6 grid min-h-48 place-items-center rounded-2xl bg-slate-950 text-white';node.textContent='Video block · Add media from Media Library';}
+      else if(kind==='image'){if(imageUrl){node=document.createElement('img');(node as HTMLImageElement).src=imageUrl;(node as HTMLImageElement).alt=text;node.className='my-6 max-h-[520px] w-full rounded-xl object-contain';}else{node=document.createElement('div');node.className='my-6 grid min-h-48 place-items-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500';node.textContent='Image block · Add media from Media Library';}}
+      else if(kind==='video'){if(imageUrl){node=document.createElement('video');(node as HTMLVideoElement).src=imageUrl;(node as HTMLVideoElement).controls=true;node.className='my-6 max-h-[520px] w-full rounded-xl bg-black';}else{node=document.createElement('div');node.className='my-6 grid min-h-48 place-items-center rounded-2xl bg-slate-950 text-white';node.textContent='Video block · Add media from Media Library';}}
       else if(kind==='divider'){node=document.createElement('hr');node.className='my-8 border-slate-200';}
       else if(kind==='spacer'){node=document.createElement('div');node.className='my-4 h-10';node.setAttribute('aria-label','Vertical spacing');}
       else {node=document.createElement('div');node.className='my-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm';node.textContent=text||'New content card';}
@@ -133,7 +133,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       const leaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label') as HTMLElement|null;
       const section=getSection(target);
       const chosen=leaf||section||target;
-      if(chosen&&document.querySelector('main')?.contains(chosen)){
+      if(chosen&&document.body.contains(chosen)){
         event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
         select(chosen);
       }
@@ -143,7 +143,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       const target=event.target as HTMLElement|null;
       if(!target||target.closest('[data-vs-ui]'))return;
       const leaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label') as HTMLElement|null;
-      if(!leaf||!document.querySelector('main')?.contains(leaf))return;
+      if(!leaf||!document.body.contains(leaf))return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
       leaf.contentEditable='true';leaf.focus();leaf.dataset.vsEditing='true';
     };
@@ -189,10 +189,11 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(type==='vs:text'&&selected){const text=String(event.data.value??'');selected.textContent=text;const key=selected.getAttribute('data-vs-key')||'';if(key)draft.texts[key]=text;persist();}
       if(type==='vs:style'&&selected){const property=String(event.data.property||'');const value=String(event.data.value??'');if(['color','backgroundColor','fontSize','textAlign','padding','margin','display'].includes(property)){(selected.style as any)[property]=value;const key=selected.getAttribute('data-vs-key')||'';if(key){draft.styles[key]={...(draft.styles[key]||{}),[property]:value};if(property==='display'&&value==='none'&&!draft.hidden.includes(key))draft.hidden.push(key);if(property==='display'&&value!=='none')draft.hidden=draft.hidden.filter(id=>id!==key);}persist();}}
       if(type==='vs:move'&&selected){const section=getSection(selected);const direction=Number(event.data.direction);if(section&&sectionContainer&&direction!==0){const sibling=direction<0?section.previousElementSibling:section.nextElementSibling;if(sibling)sectionContainer.insertBefore(section,direction<0?sibling: sibling.nextElementSibling);draft.order=Array.from(sectionContainer.children).map(child=>(child as HTMLElement).getAttribute('data-vs-section-key')||'').filter(Boolean);persist();}}
-      if(type==='vs:hide'&&selected){const key=selected.getAttribute('data-vs-key')||'';const hidden=Boolean(event.data.hidden);selected.style.display=hidden?'none':'';draft.hidden=hidden?[...new Set([...draft.hidden,key])]:draft.hidden.filter(id=>id!==key);persist();}
-      if(type==='vs:add'){const kind=String(event.data.kind||'text');const text=String(event.data.text||({heading:'New heading',text:'Write your text here',button:'Button label',card:'New content card'} as Record<string,string>)[kind]||'');const id='vs-added-'+Math.random().toString(36).slice(2,10);const container=getContainer();if(container){const node=createBlock(kind,text);node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);const section=selected?getSection(selected):null;if(section?.parentElement===container)container.insertBefore(node,section.nextSibling);else container.appendChild(node);draft.added.push({id,kind,text});select(node);persist();}}
+      if(type==='vs:hide'){const key=String(event.data.sectionKey||'');const node=document.querySelector('[data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node){const hidden=Boolean(event.data.hidden);node.style.display=hidden?'none':'';draft.hidden=hidden?[...new Set([...draft.hidden,key])]:draft.hidden.filter(id=>id!==key);persist();}}
+      if(type==='vs:add'){const kind=String(event.data.kind||'text');const text=String(event.data.text||({heading:'New heading',text:'Write your text here',button:'Button label',card:'New content card'} as Record<string,string>)[kind]||'');const imageUrl=String(event.data.url||'');const id='vs-added-'+Math.random().toString(36).slice(2,10);const container=getContainer();if(container){const node=createBlock(kind,text,imageUrl||undefined);node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);const section=selected?getSection(selected):null;if(section?.parentElement===container)container.insertBefore(node,section.nextSibling);else container.appendChild(node);draft.added.push({id,kind,text,url:imageUrl} as any);select(node);persist();}}
     };
-    const mo=new MutationObserver(()=>{assignKeys();});
+    let applying=false;
+    const mo=new MutationObserver(()=>{if(applying)return;applying=true;window.requestAnimationFrame(()=>{apply();applying=false;});});
     assignKeys();apply();
     editing=true;
     document.addEventListener('click',onClick,true);
