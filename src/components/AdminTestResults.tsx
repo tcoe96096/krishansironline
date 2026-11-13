@@ -75,8 +75,9 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
       const student = studentById.get(item.student_id); const test = testById.get(item.test_id);
       return '<tr><td>'+escapeHtml(student?.student_name)+'</td><td>'+escapeHtml(student?.roll_no)+'</td><td>'+escapeHtml(student?.class_level)+'</td><td>'+escapeHtml(titleOf(test))+'</td><td>'+escapeHtml(item.attempt_number)+'</td><td>'+escapeHtml(item.status)+'</td><td>'+escapeHtml(item.score)+' / '+escapeHtml(item.total_marks)+'</td><td>'+escapeHtml(item.percentage)+'%</td><td>'+escapeHtml(item.started_at ? new Date(item.started_at).toLocaleString('en-IN') : '')+'</td></tr>';
     }).join('');
-    const popup = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
+    const popup = window.open('', '_blank', 'width=1100,height=800');
     if (!popup) { setError('Print window blocked. कृपया browser में pop-ups allow करें।'); return; }
+    popup.opener = null;
     popup.document.write('<!doctype html><html><head><title>Krishan Sir - Test Results Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{font-size:22px}p{color:#475569;font-size:12px}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#eef2ff}@media print{button{display:none}}</style></head><body><h1>Krishan Sir — Test Results Report</h1><p>Generated: '+escapeHtml(new Date().toLocaleString('en-IN'))+' · Records: '+filtered.length+'</p><table><thead><tr><th>Student</th><th>Roll</th><th>Class</th><th>Test</th><th>Attempt</th><th>Status</th><th>Score</th><th>%</th><th>Started</th></tr></thead><tbody>'+body+'</tbody></table><p>Use the browser print dialog and choose “Save as PDF”.</p><script>window.onload=()=>window.print()<\/script></body></html>');
     popup.document.close();
   };
