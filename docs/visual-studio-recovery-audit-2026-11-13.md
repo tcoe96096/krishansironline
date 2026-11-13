@@ -27,3 +27,15 @@
 2. Check whether required Supabase tables/storage policies for Studio are present without applying migrations.
 3. Review PR #90's non-Studio files only for dependencies actually imported by the current Studio.
 4. Do not merge to `main` or deploy to production without explicit approval.
+
+## Additional dependency checks
+- The main-branch `AdminVisualStudio.tsx` is the PR #90 builder lineage plus the PR #95 `AdminVisualEditorV2` integration; the old PR #90 file does not contain that V2 import.
+- The main-branch Studio component references Supabase table `visual_studio_drafts` and Storage bucket `visual-studio-media`.
+- Repository code search found those references in the component, but did not find a matching SQL migration or bucket provisioning definition in the repository. Treat cloud draft/media persistence as **not verified** until the Supabase project is inspected read-only for the table, bucket, RLS policies and storage policies.
+- The V2 real-page editor uses the existing `site_config_versions` service and draft RPC flow. This is distinct from the legacy builder's `visual_studio_drafts` table.
+- `package.json` currently exposes `build` (`vite build`) and `lint` (`tsc --noEmit`). These should be run against a preview build before production release.
+- The legacy PR #90 preview trigger workflow calls the old `krishansironline-preview` repository dispatch endpoint using `PREVIEW_DEPLOY_TOKEN`. Do not enable or copy this workflow into the replacement setup.
+
+## Current recovery decision
+- No additional PR #90 code has been cherry-picked: the directly relevant Studio component is already present in main and the V2 integration is already present as well.
+- Next safe work is a read-only Supabase dependency check and an isolated GitHub Actions build of the current recovery/main baseline. Any missing backend setup should be documented and handled separately; do not apply database migrations or publish website drafts without explicit approval.
