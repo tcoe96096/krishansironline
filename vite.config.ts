@@ -5,6 +5,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 
 const seoPages = [
+  { slug: 'all-exams', title: 'All Exams & Preparation Hub | Krishan Sir', description: 'Explore UGC NET, HTET, CTET and competitive examination preparation resources.' },
+  { slug: 'student-dashboard', title: 'Student Dashboard | Krishan Sir', description: 'Open your student learning dashboard, continue tests, and access study resources.' },
   { slug: 'classes', title: 'Classes 6–12 | Krishan Sir', description: 'Explore class-wise learning resources and study support for Classes 6 to 12, aligned with HBSE and CBSE learning needs.' },
   { slug: 'online-tests', title: 'Online Tests & MCQ Practice | Krishan Sir', description: 'Attempt online tests and bilingual MCQ practice for school Social Science and related subjects.' },
   { slug: 'study-materials', title: 'Study Materials & Notes | Krishan Sir', description: 'Find chapter-wise study materials, notes and learning resources for Classes 6–12.' },
