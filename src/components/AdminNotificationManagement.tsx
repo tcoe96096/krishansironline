@@ -10,7 +10,10 @@ type NotificationRow = {
   target_class: string | null;
   source_type: string;
   published_at: string;
-  created_at: string;\n  priority: 'normal'|'important'|'urgent';\n  scheduled_at: string;\n  expires_at: string | null;
+  created_at: string;
+  priority: 'normal'|'important'|'urgent';
+  scheduled_at: string;
+  expires_at: string | null;
 };
 type ReadCount = Record<string, number>;
 
@@ -25,7 +28,10 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
   const [titleHi, setTitleHi] = useState('');
   const [bodyEn, setBodyEn] = useState('');
   const [bodyHi, setBodyHi] = useState('');
-  const [targetClass, setTargetClass] = useState('');\n  const [priority, setPriority] = useState<'normal'|'important'|'urgent'>('normal');\n  const [scheduledAt, setScheduledAt] = useState('');\n  const [expiresAt, setExpiresAt] = useState('');
+  const [targetClass, setTargetClass] = useState('');
+  const [priority, setPriority] = useState<'normal'|'important'|'urgent'>('normal');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -75,7 +81,10 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
         target_class: targetClass || null,
         source_type: 'manual',
         created_by: user?.id ?? null,
-        published_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),\n        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),\n        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,\n        priority,
+        published_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        priority,
       });
       if (insertError) throw insertError;
       setTitleEn(''); setTitleHi(''); setBodyEn(''); setBodyHi(''); setTargetClass(''); setPriority('normal'); setScheduledAt(''); setExpiresAt('');
