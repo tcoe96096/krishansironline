@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ClipboardCheck, RefreshCw, UserRound, MapPin, Trophy, PlayCircle, Clock3, GraduationCap } from 'lucide-react';
+import { BookOpen, ClipboardCheck, RefreshCw, UserRound, MapPin, Trophy, PlayCircle, Clock3, GraduationCap, Sparkles, ArrowRight, Target, Bookmark, Brain, CalendarCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
@@ -35,6 +35,20 @@ export const StudentDashboard: React.FC = () => {
   const available = profile ? tests.filter(x => x.class_level === String(profile.class_level)) : [];
   const average = completed.length ? Math.round(completed.reduce((s,x) => s + Number(x.percentage || 0),0) / completed.length) : 0;
   // Attempts are fetched newest-first; retain the newest status for each test.
+  const weakestProgress = useMemo(() => learningProgress
+    .filter((item) => item.progress_percent < 100)
+    .sort((a, b) => a.progress_percent - b.progress_percent)[0] ?? null, [learningProgress]);
+  const latestCompleted = completed[0] ?? null;
+  const nextSmartAction = inProgress.length > 0
+    ? { title: 'अपना अधूरा टेस्ट पूरा करें', detail: 'आपका एक टेस्ट अभी जारी है। उसी टेस्ट को खोलकर आगे बढ़ें।', href: `${import.meta.env.BASE_URL}online-tests/`, label: 'टेस्ट जारी रखें', icon: PlayCircle }
+    : weakestProgress
+      ? { title: 'कम प्रगति वाले अध्याय का रिवीजन करें', detail: `${weakestProgress.chapter_title} में आपकी प्रगति ${weakestProgress.progress_percent}% है। इसे पूरा करने का लक्ष्य रखें।`, href: `${import.meta.env.BASE_URL}study-materials/`, label: 'अध्ययन सामग्री खोलें', icon: BookOpen }
+      : available.length > completed.length
+        ? { title: 'अगला अभ्यास टेस्ट दें', detail: 'आपकी कक्षा के प्रकाशित टेस्ट में से एक नया टेस्ट चुनें।', href: `${import.meta.env.BASE_URL}online-tests/`, label: 'टेस्ट चुनें', icon: ClipboardCheck }
+        : latestCompleted
+          ? { title: 'अपना पिछला परिणाम देखें', detail: `पिछले टेस्ट में आपका स्कोर ${latestCompleted.percentage ?? 0}% रहा। अपनी प्रगति देखें।`, href: `${import.meta.env.BASE_URL}results/`, label: 'परिणाम देखें', icon: Trophy }
+          : { title: 'अपनी पढ़ाई शुरू करें', detail: 'अध्ययन सामग्री और प्रकाशित टेस्ट से शुरुआत करें।', href: `${import.meta.env.BASE_URL}study-materials/`, label: 'पढ़ाई शुरू करें', icon: BookOpen };
+
   const attemptByTest = useMemo(() => {
     const latest = new Map<string, TestAttempt>();
     attempts.forEach((attempt) => {
@@ -52,6 +66,29 @@ export const StudentDashboard: React.FC = () => {
     {profileLoading && <p className="text-sm text-slate-500">प्रोफाइल लोड हो रही है…</p>}
     {!profile && !profileLoading && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">विद्यार्थी प्रोफाइल उपलब्ध नहीं है। Admin से संपर्क करें।</p>}
     <StudentNotificationCenter />
+    <section className="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4 shadow-sm sm:p-5" aria-labelledby="smart-actions-heading">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-100 text-indigo-800"><Sparkles className="h-5 w-5"/></span>
+          <div><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-indigo-700">SMART ACTIONS</p><h4 id="smart-actions-heading" className="text-lg font-extrabold text-slate-900">आपका अगला बेहतर कदम</h4></div>
+        </div>
+        <span className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-[10px] font-bold text-indigo-700">आपकी वास्तविक प्रगति पर आधारित</span>
+      </div>
+      <div className="mt-4 rounded-xl border border-white bg-white/90 p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-800"><nextSmartAction.icon className="h-5 w-5"/></span>
+          <div className="min-w-0 flex-1"><h5 className="font-extrabold text-slate-900">{nextSmartAction.title}</h5><p className="mt-1 text-sm leading-6 text-slate-600">{nextSmartAction.detail}</p>
+            <a href={nextSmartAction.href} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#0b3979] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#124887]">{nextSmartAction.label}<ArrowRight className="h-4 w-4"/></a>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <a href={`${import.meta.env.BASE_URL}online-tests/`} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-700 hover:border-sky-300"><Target className="h-4 w-4 text-sky-700"/>अभ्यास टेस्ट</a>
+        <a href={`${import.meta.env.BASE_URL}study-materials/`} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-700 hover:border-sky-300"><Bookmark className="h-4 w-4 text-sky-700"/>अध्ययन सामग्री</a>
+        <a href={`${import.meta.env.BASE_URL}results/`} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-700 hover:border-sky-300"><Brain className="h-4 w-4 text-sky-700"/>मेरे परिणाम</a>
+      </div>
+      <p className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-500"><CalendarCheck className="h-3.5 w-3.5"/>सुझाव उपलब्ध टेस्ट, आपके टेस्ट प्रयास और सेव की गई अध्ययन प्रगति से बनता है।</p>
+    </section>
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {[
         {label:'उपलब्ध टेस्ट',value:available.length,icon:BookOpen,tone:'text-sky-700 bg-sky-50'},
