@@ -6,7 +6,7 @@ type Draft = {
   styles:Record<string,Record<string,string>>;
   hidden:string[];
   order:string[];
-  added:Array<{id:string;kind:string;text:string}>;
+  added:Array<{id:string;kind:string;text:string;url?:string}>;
 };
 const emptyDraft=():Draft=>({paths:{},texts:{},styles:{},hidden:[],order:[],added:[]});
 const pageKey=()=> 'krishan.visual-editor.page.'+(window.location.pathname.replace(/\/+$/,'')||'home');
@@ -77,7 +77,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         }
         draft.added.forEach(item=>{
           if(document.querySelector('[data-vs-added="'+CSS.escape(item.id)+'"]'))return;
-          const node=createBlock(item.kind,item.text);
+          const node=createBlock(item.kind,item.text,item.url);
           node.setAttribute('data-vs-added',item.id);
           node.setAttribute('data-vs-key',item.id);
           container.appendChild(node);
