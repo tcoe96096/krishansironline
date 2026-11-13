@@ -88,6 +88,7 @@ export const AdminVisualStudio: React.FC = () => {
       if(event.origin!==window.location.origin||event.source!==iframeRef.current?.contentWindow)return;
       const data=event.data;if(!data||data.source!=='krishan-visual-editor')return;
       if(data.type==='vs:ready'){setFrameReady(true);setNotice('Original website loaded · '+(data.pageTitle||selectedPageInfo.label));}
+      if(data.type==='vs:navigate'&&visualPages.some(page=>page.id===data.page)){setSelectedPage(data.page as VisualPageId);setSelectedDom(null);setSelectedHidden(false);}
       if(data.type==='vs:select'){setSelectedDom(data as DomSelection);setSelectedHidden(Boolean(data.hidden));setInspectorOpen(true);}
       if(data.type==='vs:saved')setNotice('Page changes saved locally · '+selectedPageInfo.label);
       if(data.type==='vs:error')setNotice(String(data.message||'Draft save failed'));
