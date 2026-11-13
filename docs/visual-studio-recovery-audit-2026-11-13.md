@@ -100,3 +100,12 @@
 ## Operational tooling limitation
 - The connected GitHub toolset supports repository listing/reading, branches, files, commits, PRs and Actions inspection, but does not expose a create-repository operation. Do not pretend that `krishansironline-preview-v2` has been created. The new repository must first be created through the GitHub UI or a connection that explicitly supports repository creation; after that, configure its Pages workflow and transfer only the required Preview pipeline.
 - Browser tabs available to this audit do not include the previous Vercel Visual Studio Preview tab. The localStorage draft key is known from source, but the current browser connector exposes read-only tab context and does not expose localStorage extraction. The old browser profile/preview origin must remain untouched until the user can export or inspect the local draft.
+
+
+## Prepared replacement Preview deployment template (2026-11-13)
+- Added `docs/preview-v2-pages-workflow.yml` on the recovery branch. It is a template to copy into `.github/workflows/preview.yml` after `krishansironline-preview-v2` exists.
+- Template behavior: manual source branch/tag selection from the public Main repository; Node 22; `npm install --legacy-peer-deps`; TypeScript validation; Vite build with `/krishansironline-preview-v2/` base path; required entry-page checks; GitHub Pages artifact upload and deployment to the new Preview repository only.
+- Preview Supabase configuration is passed through that new repo's `PREVIEW_SUPABASE_URL` and `PREVIEW_SUPABASE_PUBLISHABLE_KEY` Actions secrets. No service-role key is used.
+- Latest recovery-branch-only build after adding the workflow template succeeded: https://github.com/tcoe96096/krishansironline/actions/runs/43429755820. `npm run lint`, `npm run build`, and artifact upload all completed successfully. Artifact ID `14038584194` is present and not expired at audit time.
+- GitHub account repository inventory currently lists only `krishansironline` and `krishansironline-preview`; `krishansironline-preview-v2` does not yet exist.
+- GitHub code search on the default `main` branch returned no occurrences of `krishansironline-preview`, and `main` has no `trigger-preview-deployment.yml`. This verifies no currently indexed default-branch code is dispatching new Preview work to the old repository. The old repository's own six-hour scheduled checkout remains active until a safe cutover is completed.
