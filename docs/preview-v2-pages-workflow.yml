@@ -11,7 +11,7 @@ on:
       source_ref:
         description: "Main repository branch or tag to preview"
         required: true
-        default: "main"
+        default: "recovery/visual-studio-audit-2026-11-13"
         type: string
 
 permissions:
@@ -74,6 +74,7 @@ jobs:
           test -s dist/index.html
           test -s dist/admin/index.html
           test -s dist/classes/index.html
+          test -s dist/all-exams/index.html
           test -s dist/online-tests/index.html
           test -s dist/study-materials/index.html
           test -s dist/results/index.html
