@@ -70,9 +70,11 @@ const buildSafeSelector = (element: HTMLElement): string => {
   let current: HTMLElement | null = element;
   while (current && current.tagName.toLowerCase() !== 'body') {
     const tag = current.tagName.toLowerCase();
-    const parent = current.parentElement;
-    if (!parent) break;
-    const index = Array.from(parent.children).filter(child => child.tagName === current!.tagName).indexOf(current) + 1;
+    const parentElement: HTMLElement | null = current.parentElement;
+    if (!parentElement) break;
+    const currentTagName: string = current.tagName;
+    const siblings = Array.from(parentElement.children) as HTMLElement[];
+    const index = siblings.filter((child: HTMLElement) => child.tagName === currentTagName).indexOf(current) + 1;
     parts.unshift(`${tag}:nth-of-type(${index})`);
     current = parent;
   }
