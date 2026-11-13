@@ -9,6 +9,7 @@ on:
       - "test-module-finalization"
       - "release/all-nov11-work"
       - "integration/**"
+      - "recovery/**"
   pull_request:
     branches:
       - "main"
