@@ -68,3 +68,11 @@
 - Therefore, the V2 Real Page Editor's cloud-draft save path has its required table/RPC/security-policy objects in both environments. Saving creates/updates a **draft**; publishing is a separate RPC and is not invoked by this editor's Save Cloud Draft button.
 - The legacy Canvas Builder's separate `visual_studio_drafts` table and `visual-studio-media` bucket remain configured in Preview but absent from the Production Supabase project. Its cloud draft/media persistence is therefore not ready in Production; browser-local draft behavior remains separate.
 - All Supabase inspections in this section were SELECT-only. No schema, policies, functions, buckets or data were changed.
+
+
+## Production deployment preservation check (2026-11-13)
+- The latest `main` GitHub Pages workflow run inspected was successful: https://github.com/tcoe96096/krishansironline/actions/runs/43417003920
+- It deployed from `main` commit `49bfbd9f7c55238266486078279ba99051ebab21`; both the build and Pages deploy jobs completed successfully.
+- The recovery branch changes were not merged to `main`; this production deployment run predates and is independent of the recovery branch.
+- Main branch workflow inventory contains `pages.yml`, `preview-build.yml`, `student-dashboard-validation.yml`, `student-mobile-auth-validation.yml`, and `validate-pages.yml`. The old `trigger-preview-deployment.yml` is not present on `main`.
+- The old `krishansironline-preview` repository still has an active six-hour scheduled workflow that checks out `preview/student-system-live-design-integration` from the main repository. Do not remove/disable it until the replacement preview repository is built and verified, but do not direct new Visual Studio work to it.
