@@ -174,6 +174,7 @@ const MainApp: React.FC = () => {
     '/contact': 'contact',
     '/student-dashboard': 'studentDashboard',
     '/admin': 'admin',
+    '/admin/visual-studio': 'admin',
     '/admin-preview': 'adminPreview',
   };
   const pageToPath: Record<PageId, string> = {
