@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import {
   Type, AlignLeft, MousePointerClick, Image as ImageIcon, Square, Minus,
   Columns2, MoveVertical, Video, Trash2, Copy, ChevronUp, ChevronDown,
@@ -8,8 +10,9 @@ import {
 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'divider' | 'columns' | 'spacer' | 'video';
 type Device = 'desktop'|'tablet'|'mobile';
+type MediaAsset = { name:string; path:string; type:'image'|'video'; url:string; createdAt?:string };
 type ResponsiveStyle = { fontSize?: number; hidden?: boolean };
-type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string; responsive?: Partial<Record<Device, ResponsiveStyle>> };
+type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string; mediaPath?:string; altText?:string; fit?:'cover'|'contain'; responsive?: Partial<Record<Device, ResponsiveStyle>> };
 const starter: Block[] = [
   { id:'b1', kind:'heading', text:'Welcome to Krishan Sir Online Learning', size:34, color:'#123b75', align:'left' },
   { id:'b2', kind:'text', text:'A dedicated digital learning platform designed to make quality education accessible, engaging and meaningful for every learner.', size:16, color:'#475569', align:'left' },
@@ -31,10 +34,17 @@ const uid = () => 'block-' + Math.random().toString(36).slice(2,10);
 const key = 'krishan.visual-studio.draft.v1';
 
 export const AdminVisualStudio: React.FC = () => {
+  const { user, isAdmin } = useAuth();
+  const [mediaItems,setMediaItems] = useState<MediaAsset[]>([]);
+  const [mediaLoading,setMediaLoading] = useState(false);
+  const [mediaBusy,setMediaBusy] = useState(false);
+  const [mediaError,setMediaError] = useState('');
+  const [mediaAlt,setMediaAlt] = useState('');
   const [blocks,setBlocks] = useState<Block[]>(() => {
     try { const saved=localStorage.getItem(key); return saved ? JSON.parse(saved) as Block[] : starter; } catch { return starter; }
   });
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
+  const [mediaOpen,setMediaOpen] = useState(false);
   const [device,setDevice] = useState<Device>('desktop');
   const [notice,setNotice] = useState('Unsaved changes');
   const [history,setHistory] = useState<Block[][]>([]);
@@ -42,6 +52,45 @@ export const AdminVisualStudio: React.FC = () => {
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
+  const loadMedia = async () => {
+    if (!supabase || !user || !isAdmin) return;
+    setMediaLoading(true); setMediaError('');
+    try {
+      const { data, error } = await supabase.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
+      if (error) throw error;
+      const assets = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async item=>{
+        const path = user.id+'/'+item.name;
+        const { data: signed, error: signError } = await supabase.storage.from('visual-studio-media').createSignedUrl(path,3600);
+        if (signError || !signed?.signedUrl) return null;
+        const mime = item.metadata?.mimetype ?? '';
+        return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at};
+      }));
+      setMediaItems(assets.filter((item):item is MediaAsset=>Boolean(item)));
+    } catch(error) { setMediaError(error instanceof Error?error.message:'Media Library load नहीं हो सकी।'); }
+    finally { setMediaLoading(false); }
+  };
+  useEffect(()=>{ void loadMedia(); },[user?.id,isAdmin]);
+  const uploadMedia = async (file:File) => {
+    if (!supabase || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
+    const allowed = ['image/jpeg','image/png','image/webp','image/gif','image/avif','video/mp4','video/webm'];
+    if (!allowed.includes(file.type)) { setMediaError('केवल JPG, PNG, WEBP, GIF, AVIF, MP4 और WEBM फाइलें स्वीकार हैं।'); return; }
+    if (file.size > 50*1024*1024) { setMediaError('फाइल का आकार 50 MB से कम होना चाहिए।'); return; }
+    setMediaBusy(true); setMediaError('');
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
+      const path = user.id+'/'+crypto.randomUUID()+'.'+extension;
+      const {error} = await supabase.storage.from('visual-studio-media').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false,metadata:{altText:mediaAlt.trim()}});
+      if (error) throw error;
+      setMediaAlt('');
+      await loadMedia();
+    } catch(error) { setMediaError(error instanceof Error?error.message:'Upload विफल रहा।'); }
+    finally { setMediaBusy(false); }
+  };
+  const insertMedia = (asset:MediaAsset) => {
+    const block:Block = {id:uid(),kind:asset.type==='video'?'video':'image',text:asset.name,mediaPath:asset.path,imageUrl:asset.url,altText:mediaAlt||asset.name,fit:'contain',background:'#f8fafc'};
+    setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(current=>[...current,block]); setSelected(block.id); setNotice('Media added to canvas');
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try { localStorage.setItem(key, JSON.stringify(blocks)); setNotice('All changes autosaved locally'); }
@@ -106,9 +155,9 @@ export const AdminVisualStudio: React.FC = () => {
     {b.kind==='heading'?<div contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:responsiveFontSize,color:b.color,fontWeight:800,outline:'none'}}>{b.text}</div>
     :b.kind==='text'?<p contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{fontSize:responsiveFontSize,color:b.color,outline:'none',lineHeight:1.7}}>{b.text}</p>
     :b.kind==='button'?<span contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} style={{display:'inline-block',padding:'12px 20px',borderRadius:10,background:b.background,color:b.color,fontWeight:700,outline:'none'}}>{b.text}</span>
-    :b.kind==='image'?<div className="grid min-h-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"><ImageIcon className="mb-2 h-6 w-6"/>Image placeholder — select and add image URL in Inspector</div>
+    :b.kind==='image'?b.imageUrl?<img src={b.imageUrl} alt={b.altText??b.text} className="mx-auto max-h-[520px] w-full rounded-xl" style={{objectFit:b.fit??'contain'}}/>:<div className="grid min-h-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"><ImageIcon className="mb-2 h-6 w-6"/>Media Library से Image चुनें</div>
     :b.kind==='card'||b.kind==='columns'?<div className="rounded-xl border border-slate-200 p-5" style={{background:b.background}}><div contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{text:e.currentTarget.textContent??''})} className="font-bold" style={{color:b.color}}>{b.text}</div><p contentEditable={!previewMode} suppressContentEditableWarning onBlur={e=>update(b.id,{subtitle:e.currentTarget.textContent??''})} className="mt-2 text-sm text-slate-600">{b.subtitle??'Add a supporting description here.'}</p></div>
-    :b.kind==='video'?<div className="grid min-h-36 place-items-center rounded-xl bg-slate-900 text-white"><Video className="h-8 w-8"/><span className="text-sm">Video embed placeholder</span></div>
+    :b.kind==='video'?b.imageUrl?<video src={b.imageUrl} controls className="mx-auto max-h-[520px] w-full rounded-xl bg-black"/>:<div className="grid min-h-36 place-items-center rounded-xl bg-slate-900 text-white"><Video className="h-8 w-8"/><span className="text-sm">Media Library से Video चुनें</span></div>
     :b.kind==='divider'?<hr className="border-slate-300"/>
     :<div className="h-10 rounded bg-slate-100"/>}
   </div>; };
@@ -127,6 +176,17 @@ export const AdminVisualStudio: React.FC = () => {
         <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold"><Plus className="h-4 w-4"/>Add Components</h3><label className="mb-3 block text-[11px] font-semibold text-slate-600">Starter template<select value={templateName} onChange={e=>applyTemplate(e.target.value)} className="mt-1 w-full rounded-lg border p-2 text-xs"><option>Education Portal</option><option>Course Landing Page</option><option>Announcement Page</option></select></label>
         <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">{palette.map(p=>{const Icon=p.icon;return <button key={p.kind} draggable onDragStart={e=>e.dataTransfer.setData('application/krishan-block',p.kind)} onClick={()=>add(p.kind)} className="flex items-center gap-2 rounded-xl border border-slate-200 p-2 text-left hover:border-sky-400 hover:bg-sky-50"><Icon className="h-4 w-4 text-sky-800"/><span><span className="block text-xs font-bold">{p.label}</span><span className="hidden text-[9px] text-slate-500 xl:block">{p.hint}</span></span></button>})}</div>
         <div className="mt-4 rounded-lg bg-sky-50 p-2 text-[10px] leading-5 text-sky-900">किसी component को क्लिक करके जोड़ें या Canvas पर Drag & Drop करें।</div>
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <button onClick={()=>setMediaOpen(v=>!v)} className="flex w-full items-center justify-between rounded-xl bg-violet-50 p-3 text-left text-xs font-extrabold text-violet-900"><span className="flex items-center gap-2"><ImageIcon className="h-4 w-4"/>Media Library</span><span>{mediaOpen?'−':'+'}</span></button>
+          {mediaOpen&&<div className="mt-3 space-y-2">
+            <p className="text-[10px] leading-4 text-slate-500">Private Storage · Admin-only upload · Max 50 MB</p>
+            <input value={mediaAlt} onChange={e=>setMediaAlt(e.target.value)} placeholder="Alt text / accessible description" className="w-full rounded-lg border p-2 text-[11px]"/>
+            <label className="block cursor-pointer rounded-lg border border-dashed border-violet-300 bg-violet-50 p-3 text-center text-[11px] font-bold text-violet-900">{mediaBusy?'Uploading…':'Upload Image / Video'}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm" disabled={mediaBusy} className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)void uploadMedia(file);e.currentTarget.value='';}}/></label>
+            {mediaError&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-[10px] text-rose-700">{mediaError}</p>}
+            {mediaLoading?<p className="text-[10px] text-slate-500">Loading media…</p>:mediaItems.length===0?<p className="text-[10px] text-slate-400">अभी कोई media upload नहीं है।</p>:<div className="grid grid-cols-2 gap-2">{mediaItems.map(asset=><div key={asset.path} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="grid h-20 place-items-center bg-slate-100">{asset.type==='image'?<img src={asset.url} alt={asset.name} className="h-full w-full object-cover"/>:<Video className="h-7 w-7 text-slate-500"/>}</div><p className="truncate px-2 pt-1 text-[9px] text-slate-600">{asset.name}</p><button onClick={()=>insertMedia(asset)} className="m-1 w-[calc(100%-8px)] rounded-md bg-sky-900 p-1.5 text-[10px] font-bold text-white">Insert</button></div>)}</div>}
+            <button onClick={()=>void loadMedia()} disabled={mediaLoading} className="w-full rounded-lg border p-2 text-[10px] font-bold text-slate-600">Refresh Library</button>
+          </div>}
+        </div>
       </aside>}
       <main className={`min-w-0 rounded-2xl border p-3 sm:p-5 ${previewMode?'border-transparent bg-transparent':'border-slate-200 bg-slate-100'}`}>
         <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-extrabold text-slate-800">{previewMode?'Preview Canvas':'Website Canvas'}</h3><span className="text-[10px] text-slate-500">{previewMode?'Read-only preview':'Click to select · Edit text inline'}</span></div>
