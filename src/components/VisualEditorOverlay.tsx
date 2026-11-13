@@ -81,6 +81,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
           const node=createBlock(item.kind,item.text,item.url);
           node.setAttribute('data-vs-added',item.id);
           node.setAttribute('data-vs-key',item.id);
+          node.setAttribute('data-vs-section-key',item.id);
           container.appendChild(node);
         });
       }
