@@ -20,7 +20,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 export function isSafeV2Selector(value: unknown): value is string {
   if (typeof value !== 'string' || value.length > 500) return false;
   const parts = value.split(' > ');
-  return parts[0] === 'body' && parts.length > 1 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\\([1-9]\\d*\\)$/i.test(part));
+  return parts[0] === 'body' && parts.length > 1 && parts.slice(1).every(part => /^[a-z][a-z0-9-]*:nth-of-type\([1-9]\d*\\)$/i.test(part));
 }
 export function validateV2Override(value: unknown): value is VisualEditorV2Override {
   if (!value || typeof value !== 'object') return false;
