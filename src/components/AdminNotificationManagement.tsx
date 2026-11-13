@@ -92,7 +92,9 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
       });
       if (insertError) throw insertError;
       setTitleEn(''); setTitleHi(''); setBodyEn(''); setBodyHi(''); setTargetClass(''); setPriority('normal'); setScheduledAt(''); setExpiresAt('');
-      setMessage('सूचना सफलतापूर्वक विद्यार्थियों को भेज दी गई।');
+      setMessage(scheduledAt
+        ? 'सूचना निर्धारित समय के लिए schedule हो गई है। उस समय विद्यार्थियों को दिखाई देगी।'
+        : 'सूचना सफलतापूर्वक विद्यार्थियों को भेज दी गई।');
       await loadRows();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'सूचना भेजी नहीं जा सकी।');
