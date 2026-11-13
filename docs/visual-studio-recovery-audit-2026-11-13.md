@@ -39,3 +39,14 @@
 ## Current recovery decision
 - No additional PR #90 code has been cherry-picked: the directly relevant Studio component is already present in main and the V2 integration is already present as well.
 - Next safe work is a read-only Supabase dependency check and an isolated GitHub Actions build of the current recovery/main baseline. Any missing backend setup should be documented and handled separately; do not apply database migrations or publish website drafts without explicit approval.
+
+## Read-only Supabase environment verification (2026-11-13)
+- Supabase project `krishan-sir-lms-preview` (`zgpkmfqioqvincmgyfpi`) is ACTIVE_HEALTHY. It contains `public.visual_studio_drafts` with RLS enabled, one admin-own-draft policy, a private `visual-studio-media` bucket, and four authenticated storage object policies for admin read/upload/update/delete.
+- Supabase project `krishan-sir-lms` (`vsqwlkqqsxcehvdsdbna`) is ACTIVE_HEALTHY. It contains `public.site_config_versions`, but does **not** currently contain `public.visual_studio_drafts` or the `visual-studio-media` bucket; the read-only policy and bucket checks returned no matching records.
+- This means the older builder's cloud draft/media feature is configured in the preview Supabase project but is not configured in the project named as the main LMS/production project. Local browser draft behavior may still work, but cloud persistence/media cannot be assumed to work against that production project.
+- The newer real-page editor's `site_config_versions` backend exists in both projects. No database schema, policy, bucket, or data was changed during this inspection.
+
+## Follow-up required before production release
+- Decide and verify which Supabase project the current production deployment actually uses by inspecting deployment environment configuration (without exposing secret values).
+- If production uses `krishan-sir-lms`, prepare a reviewed migration and storage-policy plan for the legacy builder only if that feature is intended to persist drafts/media in production. Do not apply it automatically.
+- Continue isolated preview build verification; the recovery documentation commit's Vercel check is pending, while the current main commit's Vercel status reports failure with a build-rate-limit upgrade URL. Neither result is a successful build confirmation.
