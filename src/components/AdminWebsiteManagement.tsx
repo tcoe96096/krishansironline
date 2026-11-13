@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
+import { AdminVisualEditorV2 } from './AdminVisualEditorV2';
 import { getWebsiteConfigVersions, publishWebsiteConfig, saveWebsiteConfigDraft, type WebsiteConfigVersion } from '../services/siteConfigService';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
@@ -207,7 +207,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
     </label>
   );
 
-  if (siteWideBuilderOpen) return <AdminSiteWideBuilder onBack={() => setSiteWideBuilderOpen(false)} />;
+  if (siteWideBuilderOpen) return <AdminVisualEditorV2 onBack={() => setSiteWideBuilderOpen(false)} />;
 
   const tabs: { id: EditorTab; label: string; icon: React.ElementType }[] = [
     { id: 'hero', label: 'Homepage Hero', icon: Type },
