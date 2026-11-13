@@ -14,7 +14,10 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&s.test_ids.includes(a.test_id)).map(a=>a.test_id));
  const nextId=s.test_ids.find(id=>!doneIds.has(id));
  const nextActive=nextId?activeIds.has(nextId):false;
- const percent=Math.round(doneIds.size/Math.max(1,s.test_ids.length)*100);\n const testById=new Map(tests.map(test=>[test.id,test]));\n const activeId=s.test_ids.find(id=>activeIds.has(id));\n const nextLabel=(id:string)=>{const test=testById.get(id);return test?.title?.hi||test?.title?.en||'प्रकाशित टेस्ट विवरण उपलब्ध नहीं';};
+ const percent=Math.round(doneIds.size/Math.max(1,s.test_ids.length)*100);
+ const testById=new Map(tests.map(test=>[test.id,test]));
+ const activeId=s.test_ids.find(id=>activeIds.has(id));
+ const nextLabel=(id:string)=>{const test=testById.get(id);return test?.title?.hi||test?.title?.en||'प्रकाशित टेस्ट विवरण उपलब्ध नहीं';};
  return <article key={s.id} className="rounded-xl border border-indigo-100 bg-white p-3">
  <p className="text-sm font-extrabold text-slate-900">{s.title?.hi||s.title?.en||'Mock Test Series'}</p>
  <p className="mt-1 text-xs text-slate-500">{s.description?.hi||s.description?.en||s.subject}</p>
