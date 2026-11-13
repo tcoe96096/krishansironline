@@ -80,8 +80,8 @@ export const AdminVisualStudio: React.FC = () => {
   const sendToPage=(type:string,payload:Record<string,unknown>={})=>{iframeRef.current?.contentWindow?.postMessage({source:'krishan-visual-parent',type,...payload},window.location.origin);};
   const toColor=(value:string,fallback:string)=>{
     if(/^#[0-9a-f]{6}$/i.test(value))return value;
-    if(value.startsWith('rgb')){const values=value.replace('rgba(','').replace('rgb(','').replace(')','').split(',').slice(0,3).map(part=>Number(part.trim()));if(values.length===3)return '#'+values.map(part=>Math.max(0,Math.min(255,part)).toString(16).padStart(2,'0')).join('');}
-    return match?'#'+match.slice(1,4).map(part=>Number(part).toString(16).padStart(2,'0')).join(''):fallback;
+    if(value.startsWith('rgb')){const values=value.replace('rgba(','').replace('rgb(','').replace(')','').split(',').slice(0,3).map(part=>Number(part.trim()));if(values.length===3&&values.every(Number.isFinite))return '#'+values.map(part=>Math.max(0,Math.min(255,part)).toString(16).padStart(2,'0')).join('');}
+    return fallback;
   };
   useEffect(()=>{
     const handleMessage=(event:MessageEvent)=>{
