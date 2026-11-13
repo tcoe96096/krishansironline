@@ -142,7 +142,7 @@ export const AdminVisualStudio: React.FC = () => {
           <button onClick={duplicate} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-50 p-2 text-xs font-bold text-sky-800"><Copy className="h-4 w-4"/>Duplicate component</button><button onClick={remove} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-rose-50 p-2 text-xs font-bold text-rose-700"><Trash2 className="h-4 w-4"/>Remove selected component</button>
         </div>}
         <div className="mt-4 border-t pt-3"><h4 className="mb-2 flex items-center gap-2 text-xs font-extrabold"><Layers className="h-4 w-4"/>Layers</h4>{blocks.map((b,i)=><button key={b.id} onClick={()=>setSelected(b.id)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-[10px] ${selected===b.id?'bg-sky-100 text-sky-900':'hover:bg-slate-50'}`}><span>{i+1}. {b.kind} — {b.text.slice(0,22)}</span><GripVertical className="h-3 w-3"/></button>)}</div>
-      </aside>
+      </aside>}
     </div>
     {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Integration safety:</strong> यह अलग Visual Studio prototype है। Autosave और manual Draft अभी इसी browser में काम करते हैं; Templates, Preview, Duplicate और Undo/Redo उपलब्ध हैं। वास्तविक Live website, Online Test Engine या Production Database पर कोई बदलाव नहीं होता। Production integration approval और mapping tests के बाद होगी।</div>}
   </div>;
