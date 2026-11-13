@@ -85,3 +85,18 @@
 - Production `public.site_config_versions`: 0 rows.
 - Production does not have `public.visual_studio_drafts`; its query returned PostgreSQL relation-not-found. Production `storage.objects` for `visual-studio-media`: 0 objects.
 - No cloud-saved Studio draft/content was found in either Supabase project at the time of this snapshot. The Canvas Builder code also stores drafts in browser localStorage under key `krishan.visual-studio.draft.v1`; browser-local data must be retrieved from the original browser profile/origin. Do not clear browser site data or close/replace the old Vercel preview context until that extraction is complete.
+
+
+## Old Preview source drift and missing Studio (2026-11-13)
+- The old Preview repository `tcoe96096/krishansironline-preview` is still active and has exactly one workflow: `.github/workflows/pr22-preview.yml`.
+- That workflow runs on `workflow_dispatch`, `repository_dispatch` (`preview-source-updated`), and a six-hour cron schedule (`17 */6 * * *`). It checks out `preview/student-system-live-design-integration` by default, and also checks out `feature/student-learning-progress-production` as a separate candidate.
+- The scheduled Preview workflow had recent successful runs on 2026-11-13 07:32 UTC (and earlier), showing the old Preview pipeline is still active.
+- The old workflow's source branch `preview/student-system-live-design-integration` is substantially diverged from `main` (178 commits ahead, 124 behind at the time checked).
+- That source branch does not contain `src/components/AdminVisualStudio.tsx`; its `src/components/AdminDashboard.tsx` does not import or expose Visual Studio. Therefore the old Preview cannot be relied upon to show the current merged Visual Studio.
+- Current `main` Admin Dashboard imports and renders `AdminVisualStudio`, including both the Canvas Builder and V2 real-page editing mode. The recovery-branch build validates this current Main code.
+- Main's workflow directory does not contain `trigger-preview-deployment.yml`; the old repository is being refreshed by its own scheduled source checkout and past repository-dispatch events. The recovery branch workflow added for this audit does not dispatch to the old repository.
+- Do not disable the old scheduled workflow until the replacement Preview repository is actually created, configured, deployed and validated. After replacement is verified, remove its old source/dispatch connections in a planned cutover.
+
+## Operational tooling limitation
+- The connected GitHub toolset supports repository listing/reading, branches, files, commits, PRs and Actions inspection, but does not expose a create-repository operation. Do not pretend that `krishansironline-preview-v2` has been created. The new repository must first be created through the GitHub UI or a connection that explicitly supports repository creation; after that, configure its Pages workflow and transfer only the required Preview pipeline.
+- Browser tabs available to this audit do not include the previous Vercel Visual Studio Preview tab. The localStorage draft key is known from source, but the current browser connector exposes read-only tab context and does not expose localStorage extraction. The old browser profile/preview origin must remain untouched until the user can export or inspect the local draft.
