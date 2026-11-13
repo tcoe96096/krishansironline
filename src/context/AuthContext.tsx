@@ -174,12 +174,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session?.user?.id]);
 
   const signInWithGoogle = useCallback(async () => {
+    const currentPath = window.location.pathname.replace(/\\/+$/, '');
+    const isVisualStudioPreview = currentPath.endsWith('/admin/visual-studio');
+    // Always return the isolated Studio Preview to its Vercel branch URL after Google OAuth,
+    // even if the login button was reached from the legacy GitHub Pages site.
+    const redirectTo = isVisualStudioPreview
+      ? 'https://krishansironline-preview-git-feature-kris-6b1f73-tcoe96096-5898.vercel.app/admin/visual-studio/'
+      : new URL(window.location.pathname, window.location.origin).toString();
     const { error } = await requireSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        // Preserve the exact Preview/Admin path so OAuth returns to the same interface.
-        redirectTo: new URL(window.location.pathname, window.location.origin).toString(),
-      },
+      options: { redirectTo },
     });
     if (error) throw error;
   }, []);
