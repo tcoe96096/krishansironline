@@ -174,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session?.user?.id]);
 
   const signInWithGoogle = useCallback(async () => {
-    const currentPath = window.location.pathname.replace(/\\/+$/, '');
+    const currentPath = window.location.pathname.replace(/\/+$/, '');
     const isVisualStudioPreview = currentPath.endsWith('/admin/visual-studio');
     // Always return the isolated Studio Preview to its Vercel branch URL after Google OAuth,
     // even if the login button was reached from the legacy GitHub Pages site.
