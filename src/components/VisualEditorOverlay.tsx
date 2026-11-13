@@ -168,9 +168,13 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
     };
     const onDragOver=(event:DragEvent)=>{
-      if(!editing||!dragKey)return;
+      if(!editing)return;
       if((event.target as HTMLElement|null)?.closest('[data-vs-ui]'))return;
-      if(getSection(event.target as HTMLElement)?.parentElement===sectionContainer)event.preventDefault();
+      const hasComponent=Array.from(event.dataTransfer?.types??[]).includes('application/krishan-block');
+      if(hasComponent|| (dragKey&&getSection(event.target as HTMLElement)?.parentElement===sectionContainer)){
+        event.preventDefault();
+        if(event.dataTransfer)event.dataTransfer.dropEffect=hasComponent?'copy':'move';
+      }
     };
     const onDrop=(event:DragEvent)=>{
       if(!editing||!sectionContainer)return;
