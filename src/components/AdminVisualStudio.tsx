@@ -80,7 +80,7 @@ export const AdminVisualStudio: React.FC = () => {
   const sendToPage=(type:string,payload:Record<string,unknown>={})=>{iframeRef.current?.contentWindow?.postMessage({source:'krishan-visual-parent',type,...payload},window.location.origin);};
   const toColor=(value:string,fallback:string)=>{
     if(/^#[0-9a-f]{6}$/i.test(value))return value;
-    const match=value.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/i);
+    if(value.startsWith('rgb')){const values=value.replace('rgba(','').replace('rgb(','').replace(')','').split(',').slice(0,3).map(part=>Number(part.trim()));if(values.length===3)return '#'+values.map(part=>Math.max(0,Math.min(255,part)).toString(16).padStart(2,'0')).join('');}
     return match?'#'+match.slice(1,4).map(part=>Number(part).toString(16).padStart(2,'0')).join(''):fallback;
   };
   useEffect(()=>{
@@ -248,7 +248,7 @@ export const AdminVisualStudio: React.FC = () => {
     </header>
     <main className="relative min-h-[calc(100vh-185px)] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {canvasMode==='site' ? <div className="flex min-h-[calc(100vh-185px)] w-full justify-center overflow-auto">
-        <iframe key={selectedPage+'-'+(previewMode?'preview':'edit')} ref={iframeRef} title={selectedPageInfo.label+' live website visual editor'} src={frameSrc} onLoad={()=>{setFrameReady(true);try{const path=iframeRef.current?.contentWindow?.location.pathname||'/';const match=visualPages.find(item=>item.path.replace(/\\/$/,'')===(path.replace(/\\/$/,'')||'/'));if(match)setSelectedPage(match.id);}catch{}}} className="block shrink-0 border-0 bg-white" style={{width:frameWidth,maxWidth:device==='desktop'?'100%':frameWidth,height:'calc(100vh - 185px)',minHeight:620}} />
+        <iframe key={selectedPage+'-'+(previewMode?'preview':'edit')} ref={iframeRef} title={selectedPageInfo.label+' live website visual editor'} src={frameSrc} onLoad={()=>{setFrameReady(true);try{const path=iframeRef.current?.contentWindow?.location.pathname||'/';const clean=(value:string)=>value.endsWith('/')?value.slice(0,-1):value;const match=visualPages.find(item=>clean(item.path)===clean(path));if(match)setSelectedPage(match.id);}catch{}}} className="block shrink-0 border-0 bg-white" style={{width:frameWidth,maxWidth:device==='desktop'?'100%':frameWidth,height:'calc(100vh - 185px)',minHeight:620}} />
       </div> : <div className="mx-auto w-full overflow-hidden bg-white" style={{maxWidth:canvasWidth}}>
         <div className="mb-3 flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{previewMode?'Read-only draft preview':'Editable draft canvas'}</p><p className="text-xs font-bold text-slate-800">Draft page · {device}</p></div><span className="rounded-full bg-white px-3 py-1 text-[10px] text-slate-500">Not published</span></div>
         <div className="bg-[#090d14] px-3 py-1.5 text-center text-[9px] font-semibold tracking-wide text-slate-200">✦ WELCOME · FREE Online Learning · Classes 6–12 · Competitive Exams</div>
@@ -288,6 +288,6 @@ export const AdminVisualStudio: React.FC = () => {
         <button onClick={duplicate} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-50 p-2 text-xs font-bold text-sky-800"><Copy className="h-4 w-4"/>Duplicate component</button><button onClick={remove} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-rose-50 p-2 text-xs font-bold text-rose-700"><Trash2 className="h-4 w-4"/>Remove selected component</button>
       </div>}
     </aside>,document.body)}
-    {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Integration safety:</strong> यह अलग Visual Studio prototype है। Autosave और manual Draft अभी इसी browser में काम करते हैं; Templates, Preview, Duplicate और Undo/Redo उपलब्ध हैं। वास्तविक Live website, Online Test Engine या Production Database पर कोई बदलाव नहीं होता। Production integration approval और mapping tests के बाद होगी।</div>}
+    {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Page-wise Draft:</strong> Canvas में वास्तविक website के सभी उपलब्ध pages खुलते हैं। बदलाव इसी browser में सुरक्षित रहते हैं; Production पर Publish अलग approval के बाद होगा।</div>}
   </div>;
 };
