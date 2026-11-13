@@ -98,10 +98,11 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
 
 interface OnlineTestEngineProps {
   initialClassFilter?: string;
+  initialTestId?: string;
   onRequestLogin: () => void;
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, onRequestLogin }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
@@ -242,6 +243,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   }, [catalogueLoading, user?.id, profile?.class_level, databaseTests, selectedTest.id]);
 
+  // Deep links from Student Dashboard / Mock Test Series select the requested published test.
+  // Authenticated students are still restricted to their profile class via availableTests.
+  useEffect(() => {
+    if (!initialTestId || catalogueLoading) return;
+    const match = availableTests.find((test) => test.id === initialTestId);
+    if (match && selectedTest.id !== match.id) setSelectedTest(match);
+  }, [initialTestId, catalogueLoading, availableTests, selectedTest.id]);
+
   // Select the first published database test for visitors when no class filter is supplied.
   useEffect(() => {
     if (!catalogueLoading && !user && !initialClassFilter && !selectedTest.id && databaseTests.length > 0) {
@@ -292,14 +301,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Do not override a saved in-progress test after a refresh.
   useEffect(() => {
-    if (restoredSession) return;
+    if (restoredSession || initialTestId) return;
     if (initialClassFilter) {
       const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
         setSelectedTest(match);
       }
     }
-  }, [initialClassFilter, databaseTests, user?.id, profile?.class_level]);
+  }, [initialClassFilter, initialTestId, restoredSession, databaseTests, user?.id, profile?.class_level]);
 
 
   // Auto-save every active attempt locally for refresh/tab-close recovery.

@@ -10,6 +10,8 @@ type NotificationItem = {
   body: { en?: string; hi?: string };
   source_type: string;
   published_at: string;
+  priority?: 'normal'|'important'|'urgent';
+  scheduled_at?: string;
 };
 type ReadReceipt = { notification_id: string; read_at: string };
 
@@ -33,7 +35,7 @@ export const StudentNotificationCenter: React.FC = () => {
       const client = requireSupabase();
       const [notifications, receipts] = await Promise.all([
         client.from('student_notifications')
-          .select('id,title,body,source_type,published_at')
+          .select('id,title,body,source_type,published_at,priority,scheduled_at')
           .order('published_at', { ascending: false }).limit(50),
         client.from('student_notification_reads')
           .select('notification_id,read_at').eq('student_id', user.id),
@@ -77,7 +79,7 @@ export const StudentNotificationCenter: React.FC = () => {
             <span className={'mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ' + (isRead ? 'bg-slate-100 text-slate-500' : 'bg-sky-100 text-sky-800')}>{isRead ? <CheckCheck className="h-4 w-4"/> : <Bell className="h-4 w-4"/>}</span>
             <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="text-sm font-bold text-slate-800">{localized(item.title, language) || 'Update'}</span>{!isRead && <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-extrabold text-sky-800">NEW</span>}</span><span className="mt-1 block text-[10px] text-slate-400">{new Date(item.published_at).toLocaleString(language === 'hi' ? 'hi-IN' : 'en-IN')}</span></span>
           </button>
-          {isOpen && <div className="ml-11 mt-2 border-t border-slate-100 pt-3"><p className="whitespace-pre-line text-xs leading-6 text-slate-600">{localized(item.body, language)}</p><p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.source_type}</p></div>}
+          {isOpen && <div className="ml-11 mt-2 border-t border-slate-100 pt-3"><p className="whitespace-pre-line text-xs leading-6 text-slate-600">{localized(item.body, language)}</p><p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.source_type} · {item.priority || 'normal'}</p></div>}
         </article>;
       })}</div>}
       <p className="mt-3 text-[10px] text-slate-400">{language === 'hi' ? 'आपकी पढ़ी हुई सूचनाओं का रिकॉर्ड सुरक्षित रखा जाता है।' : 'Your read notification history is saved securely.'}</p>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, RefreshCw, Search, ClipboardList, Users, Trophy, Clock3 } from 'lucide-react';
+import { Download, RefreshCw, Search, ClipboardList, Users, Trophy, Clock3, FileDown, Printer } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
 
@@ -69,10 +69,23 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     URL.revokeObjectURL(url);
   };
 
+  const printReport = () => {
+    const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char] || char));
+    const body = filtered.map(item => {
+      const student = studentById.get(item.student_id); const test = testById.get(item.test_id);
+      return '<tr><td>'+escapeHtml(student?.student_name)+'</td><td>'+escapeHtml(student?.roll_no)+'</td><td>'+escapeHtml(student?.class_level)+'</td><td>'+escapeHtml(titleOf(test))+'</td><td>'+escapeHtml(item.attempt_number)+'</td><td>'+escapeHtml(item.status)+'</td><td>'+escapeHtml(item.score)+' / '+escapeHtml(item.total_marks)+'</td><td>'+escapeHtml(item.percentage)+'%</td><td>'+escapeHtml(item.started_at ? new Date(item.started_at).toLocaleString('en-IN') : '')+'</td></tr>';
+    }).join('');
+    const popup = window.open('', '_blank', 'width=1100,height=800');
+    if (!popup) { setError('Print window blocked. कृपया browser में pop-ups allow करें।'); return; }
+    popup.opener = null;
+    popup.document.write('<!doctype html><html><head><title>Krishan Sir - Test Results Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{font-size:22px}p{color:#475569;font-size:12px}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#eef2ff}@media print{button{display:none}}</style></head><body><h1>Krishan Sir — Test Results Report</h1><p>Generated: '+escapeHtml(new Date().toLocaleString('en-IN'))+' · Records: '+filtered.length+'</p><table><thead><tr><th>Student</th><th>Roll</th><th>Class</th><th>Test</th><th>Attempt</th><th>Status</th><th>Score</th><th>%</th><th>Started</th></tr></thead><tbody>'+body+'</tbody></table><p>Use the browser print dialog and choose “Save as PDF”.</p><script>window.onload=()=>window.print()<\/script></body></html>');
+    popup.document.close();
+  };
+
   if (demoMode) return <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Demo mode में live विद्यार्थी परिणाम नहीं दिखाए जाते।</section>;
 
   return <section className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Results & Reports</h2><p className="mt-1 text-sm text-slate-500">विद्यार्थियों के टेस्ट प्रयास, स्कोर और परिणामों की सुरक्षित रिपोर्ट।</p></div><div className="flex gap-2"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"><RefreshCw className="h-4 w-4"/>{loading ? 'लोड…' : 'Refresh'}</button><button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl bg-[#082d65] px-3 py-2 text-xs font-bold text-white disabled:opacity-40"><Download className="h-4 w-4"/>Export CSV</button></div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Results & Reports</h2><p className="mt-1 text-sm text-slate-500">विद्यार्थियों के टेस्ट प्रयास, स्कोर और परिणामों की सुरक्षित रिपोर्ट।</p></div><div className="flex gap-2"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"><RefreshCw className="h-4 w-4"/>{loading ? 'लोड…' : 'Refresh'}</button><button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl bg-[#082d65] px-3 py-2 text-xs font-bold text-white disabled:opacity-40"><Download className="h-4 w-4"/>Export CSV</button><button type="button" onClick={printReport} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"><Printer className="h-4 w-4"/>Print / Save PDF</button></div></div>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {[{label:'कुल प्रयास',value:attempts.length,icon:ClipboardList},{label:'पूर्ण परिणाम',value:completed.length,icon:Trophy},{label:'जारी प्रयास',value:attempts.filter(x=>x.status==='in_progress').length,icon:Clock3},{label:'औसत स्कोर',value:average+'%',icon:Users}].map(card=>{const Icon=card.icon;return <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{card.label}</span><Icon className="h-4 w-4 text-sky-800"/></div><p className="mt-3 text-2xl font-extrabold text-slate-900">{loading?'…':card.value}</p></div>;})}

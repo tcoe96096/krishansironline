@@ -617,7 +617,7 @@ const MainApp: React.FC = () => {
               icon={Laptop}
               onBackHome={() => navigateTo('home')}
             />
-            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} onRequestLogin={() => setIsAuthOpen(true)} />
+            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} />
           </div>
         )}
 
