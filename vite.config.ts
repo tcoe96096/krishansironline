@@ -24,7 +24,7 @@ const generateSeoPages = () => ({
 
     // The app uses client-side path routing. Emit entry HTML for protected
     // routes too, so Vercel can serve /admin/ and /admin-preview/ directly.
-    for (const route of ['admin', 'admin-preview']) {
+    for (const route of ['admin', 'admin/visual-studio', 'admin-preview']) {
       const directory = path.resolve(__dirname, 'dist', route);
       mkdirSync(directory, { recursive: true });
       writeFileSync(path.join(directory, 'index.html'), template);
