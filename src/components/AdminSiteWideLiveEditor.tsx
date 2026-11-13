@@ -38,7 +38,7 @@ const selectorFor = (element: HTMLElement) => {
     const siblings = Array.from(parentElement.children) as HTMLElement[];
     const index = siblings.filter(item => item.tagName === current!.tagName).indexOf(current) + 1;
     parts.unshift(current.tagName.toLowerCase() + ':nth-of-type(' + index + ')');
-    current = parent;
+    current = parentElement;
   }
   return ['body', ...parts].join(' > ');
 };
@@ -142,8 +142,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       element.style.minHeight = s.minHeight > 0 ? s.minHeight + 'px' : '';
     });
     (draft.addedComponents?.[pageId] || []).forEach(item => {
-      if (item.mediaPath && supabase && user?.id) {
-        void supabase.storage.from('visual-studio-media').createSignedUrl(item.mediaPath, 3600).then(({ data }) => addDomNode(doc, item, data?.signedUrl));
+      const client = supabase;
+      if (item.mediaPath && client && user?.id) {
+        void client.storage.from('visual-studio-media').createSignedUrl(item.mediaPath, 3600).then(({ data }) => addDomNode(doc, item, data?.signedUrl));
       } else addDomNode(doc, item);
     });
   }, [ready, draft, pageId, user?.id]);
