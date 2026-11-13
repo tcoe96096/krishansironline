@@ -45,6 +45,7 @@ export const AdminVisualStudio: React.FC = () => {
   });
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
   const [mediaOpen,setMediaOpen] = useState(false);
+  const [componentsOpen,setComponentsOpen] = useState(false);
   const [device,setDevice] = useState<Device>('desktop');
   const [notice,setNotice] = useState('Unsaved changes');
   const [history,setHistory] = useState<Block[][]>([]);
@@ -173,9 +174,15 @@ export const AdminVisualStudio: React.FC = () => {
     </header>
     <div className={`grid gap-4 ${previewMode?'grid-cols-1':'xl:grid-cols-[220px_minmax(0,1fr)_270px]'}`}>
       {!previewMode&&<aside className="rounded-2xl border border-slate-200 bg-white p-3">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold"><Plus className="h-4 w-4"/>Add Components</h3><label className="mb-3 block text-[11px] font-semibold text-slate-600">Starter template<select value={templateName} onChange={e=>applyTemplate(e.target.value)} className="mt-1 w-full rounded-lg border p-2 text-xs"><option>Education Portal</option><option>Course Landing Page</option><option>Announcement Page</option></select></label>
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">{palette.map(p=>{const Icon=p.icon;return <button key={p.kind} draggable onDragStart={e=>e.dataTransfer.setData('application/krishan-block',p.kind)} onClick={()=>add(p.kind)} className="flex items-center gap-2 rounded-xl border border-slate-200 p-2 text-left hover:border-sky-400 hover:bg-sky-50"><Icon className="h-4 w-4 text-sky-800"/><span><span className="block text-xs font-bold">{p.label}</span><span className="hidden text-[9px] text-slate-500 xl:block">{p.hint}</span></span></button>})}</div>
-        <div className="mt-4 rounded-lg bg-sky-50 p-2 text-[10px] leading-5 text-sky-900">किसी component को क्लिक करके जोड़ें या Canvas पर Drag & Drop करें।</div>
+        <label className="mb-3 block text-[11px] font-semibold text-slate-600">Starter template<select value={templateName} onChange={e=>applyTemplate(e.target.value)} className="mt-1 w-full rounded-lg border p-2 text-xs"><option>Education Portal</option><option>Course Landing Page</option><option>Announcement Page</option></select></label>
+        <div className="mb-3">
+          <button type="button" aria-expanded={componentsOpen} onClick={()=>setComponentsOpen(v=>!v)} className="flex w-full items-center justify-between rounded-xl border border-sky-200 bg-sky-900 px-3 py-3 text-left text-xs font-extrabold text-white shadow-sm transition hover:bg-sky-800">
+            <span className="flex items-center gap-2"><Plus className="h-4 w-4"/><span>Add Components</span><span className="rounded-full bg-white/15 px-2 py-0.5 text-[9px]">{palette.length}</span></span>
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${componentsOpen?'rotate-180':''}`}/>
+          </button>
+          {componentsOpen&&<div className="mt-2 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">{palette.map(p=>{const Icon=p.icon;return <button key={p.kind} draggable onDragStart={e=>e.dataTransfer.setData('application/krishan-block',p.kind)} onClick={()=>{add(p.kind);setComponentsOpen(false);}} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5 text-left transition hover:border-sky-400 hover:bg-sky-50"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-50"><Icon className="h-4 w-4 text-sky-800"/></span><span><span className="block text-xs font-bold">{p.label}</span><span className="block text-[9px] text-slate-500">{p.hint}</span></span><Plus className="ml-auto h-3.5 w-3.5 text-slate-400"/></button>})}</div>}
+        </div>
+        <div className="rounded-lg bg-sky-50 p-2 text-[10px] leading-5 text-sky-900">Add Components पर क्लिक करें। सभी विकल्प dropdown में खुलेंगे। किसी component को चुनें या Canvas पर Drag & Drop करें।</div>
         <div className="mt-4 border-t border-slate-100 pt-3">
           <button onClick={()=>setMediaOpen(v=>!v)} className="flex w-full items-center justify-between rounded-xl bg-violet-50 p-3 text-left text-xs font-extrabold text-violet-900"><span className="flex items-center gap-2"><ImageIcon className="h-4 w-4"/>Media Library</span><span>{mediaOpen?'−':'+'}</span></button>
           {mediaOpen&&<div className="mt-3 space-y-2">
