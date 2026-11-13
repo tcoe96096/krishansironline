@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { AdminHomepageCanvas, DEFAULT_HOME_SECTION_ORDER, HOME_SECTION_LABELS, type HomeSectionId } from './AdminHomepageCanvas';
 import {
   Type, AlignLeft, MousePointerClick, Image as ImageIcon, Square, Minus,
   Columns2, MoveVertical, Video, Trash2, Copy, ChevronUp, ChevronDown,
@@ -34,6 +33,15 @@ const palette: {kind:Kind;label:string;icon:React.ElementType;hint:string}[] = [
 ];
 const uid = () => 'block-' + Math.random().toString(36).slice(2,10);
 const key = 'krishan.visual-studio.draft.v1';
+type VisualPageId='home'|'classes'|'exams'|'tests'|'materials'|'polity'|'affairs'|'results'|'about'|'contact'|'studentDashboard';
+const visualPages:{id:VisualPageId;label:string;path:string}[]=[
+  {id:'home',label:'Home',path:'/'},{id:'classes',label:'Classes 6–12',path:'/classes/'},{id:'exams',label:'All Exams',path:'/all-exams/'},
+  {id:'tests',label:'Online Tests',path:'/online-tests/'},{id:'materials',label:'Study Materials',path:'/study-materials/'},
+  {id:'polity',label:'Constitution',path:'/constitution/'},{id:'affairs',label:'Current Affairs',path:'/current-affairs/'},
+  {id:'results',label:'Results',path:'/results/'},{id:'about',label:'About',path:'/about/'},{id:'contact',label:'Contact',path:'/contact/'},
+  {id:'studentDashboard',label:'Student Dashboard',path:'/student-dashboard/'}
+];
+type DomSelection={key:string;sectionKey:string;tag:string;text:string;color:string;backgroundColor:string;fontSize:number;textAlign:string;pageTitle?:string;sectionText?:string;hidden?:boolean};
 
 export const AdminVisualStudio: React.FC = () => {
   const { user, isAdmin } = useAuth();
@@ -48,11 +56,11 @@ export const AdminVisualStudio: React.FC = () => {
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
   const [mediaOpen,setMediaOpen] = useState(false);
   const [inspectorOpen,setInspectorOpen] = useState(false);
+  const [selectedPage,setSelectedPage] = useState<VisualPageId>('home');
+  const [selectedDom,setSelectedDom] = useState<DomSelection|null>(null);
+  const [frameReady,setFrameReady] = useState(false);
+  const iframeRef=useRef<HTMLIFrameElement|null>(null);
   const [canvasMode,setCanvasMode] = useState<'site'|'draft'>('site');
-  const [homepageOrder,setHomepageOrder] = useState<HomeSectionId[]>(()=>{try{const value=JSON.parse(localStorage.getItem('krishan.visual-studio.home-order.v1')||'null');return Array.isArray(value)&&DEFAULT_HOME_SECTION_ORDER.every(id=>value.includes(id))?value as HomeSectionId[]:DEFAULT_HOME_SECTION_ORDER;}catch{return DEFAULT_HOME_SECTION_ORDER;}});
-  const [hiddenHomepageSections,setHiddenHomepageSections] = useState<HomeSectionId[]>(()=>{try{const value=JSON.parse(localStorage.getItem('krishan.visual-studio.home-hidden.v1')||'[]');return Array.isArray(value)?value as HomeSectionId[]:[];}catch{return [];}});
-  const [selectedHomepageSection,setSelectedHomepageSection] = useState<HomeSectionId>('hero');
-  const [homepageCustomBlockIds,setHomepageCustomBlockIds] = useState<string[]>(()=>{try{const value=JSON.parse(localStorage.getItem('krishan.visual-studio.home-blocks.v1')||'[]');return Array.isArray(value)?value as string[]:[];}catch{return [];}});
   const [componentsOpen,setComponentsOpen] = useState(false);
   const componentButtonRef = useRef<HTMLButtonElement|null>(null);
   const componentMenuRef = useRef<HTMLDivElement|null>(null);
@@ -64,30 +72,29 @@ export const AdminVisualStudio: React.FC = () => {
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
-  const reorderHomepageSections=(from:HomeSectionId,to:HomeSectionId)=>{
-    setHomepageOrder(current=>{
-      const next=[...current];const fromIndex=next.indexOf(from);const toIndex=next.indexOf(to);
-      if(fromIndex<0||toIndex<0)return current;
-      const [item]=next.splice(fromIndex,1);next.splice(toIndex,0,item);
-      try{localStorage.setItem('krishan.visual-studio.home-order.v1',JSON.stringify(next));}catch{}
-      setNotice('Homepage section order changed — local draft');
-      return next;
-    });
+  const pageBase=import.meta.env.BASE_URL.endsWith('/')?import.meta.env.BASE_URL.slice(0,-1):import.meta.env.BASE_URL;
+  const selectedPageInfo=visualPages.find(page=>page.id===selectedPage)??visualPages[0];
+  const frameSrc=pageBase+selectedPageInfo.path+(previewMode?'':'?visual-editor=1');
+  const frameWidth=device==='mobile'?'390px':device==='tablet'?'768px':'100%';
+  const sendToPage=(type:string,payload:Record<string,unknown>={})=>{iframeRef.current?.contentWindow?.postMessage({source:'krishan-visual-parent',type,...payload},window.location.origin);};
+  const toColor=(value:string,fallback:string)=>{
+    if(/^#[0-9a-f]{6}$/i.test(value))return value;
+    const match=value.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/i);
+    return match?'#'+match.slice(1,4).map(part=>Number(part).toString(16).padStart(2,'0')).join(''):fallback;
   };
-  const moveHomepageSection=(id:HomeSectionId,delta:-1|1)=>{
-    const index=homepageOrder.indexOf(id);const target=homepageOrder[index+delta];
-    if(target)reorderHomepageSections(id,target);
-  };
-  const toggleHomepageSection=(id:HomeSectionId)=>{
-    setHiddenHomepageSections(current=>{
-      const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];
-      try{localStorage.setItem('krishan.visual-studio.home-hidden.v1',JSON.stringify(next));}catch{}
-      return next;
-    });
-  };
-  const handlePreviewNavigate=(page:string)=>{
-    setNotice('Editor mode: navigation to "'+page+'" is paused so the homepage canvas stays open.');
-  };
+  useEffect(()=>{
+    const handleMessage=(event:MessageEvent)=>{
+      if(event.origin!==window.location.origin||event.source!==iframeRef.current?.contentWindow)return;
+      const data=event.data;if(!data||data.source!=='krishan-visual-editor')return;
+      if(data.type==='vs:ready'){setFrameReady(true);setNotice('Original website loaded · '+(data.pageTitle||selectedPageInfo.label));}
+      if(data.type==='vs:select'){setSelectedDom(data as DomSelection);setInspectorOpen(true);}
+      if(data.type==='vs:saved')setNotice('Page changes saved locally · '+selectedPageInfo.label);
+      if(data.type==='vs:error')setNotice(String(data.message||'Draft save failed'));
+    };
+    window.addEventListener('message',handleMessage);return()=>window.removeEventListener('message',handleMessage);
+  },[selectedPageInfo.label]);
+  useEffect(()=>{setFrameReady(false);setSelectedDom(null);},[selectedPage,previewMode]);
+  const save=()=>{try{localStorage.setItem(key,JSON.stringify(blocks));sendToPage('vs:save');setNotice('Current page draft saved in this browser');}catch{setNotice('Unable to save draft in browser storage');}};
   useEffect(()=>{
     if(!componentsOpen) return;
     const updatePosition=()=>{
@@ -211,7 +218,7 @@ export const AdminVisualStudio: React.FC = () => {
   const move = (id:string,dir:-1|1) => { const i=blocks.findIndex(b=>b.id===id),j=i+dir;if(j<0||j>=blocks.length)return;setHistory(h=>[...h,blocks]);setBlocks(current=>{const next=[...current];[next[i],next[j]]=[next[j],next[i]];return next;}); };
   const undo=()=>{if(!history.length)return;setFuture(f=>[blocks,...f]);setBlocks(history[history.length-1]);setHistory(h=>h.slice(0,-1));setNotice('Undo applied');};
   const redo=()=>{if(!future.length)return;setHistory(h=>[...h,blocks]);setBlocks(future[0]);setFuture(f=>f.slice(1));setNotice('Redo applied');};
-  const save=()=>{try{localStorage.setItem(key,JSON.stringify(blocks));localStorage.setItem('krishan.visual-studio.home-order.v1',JSON.stringify(homepageOrder));localStorage.setItem('krishan.visual-studio.home-hidden.v1',JSON.stringify(hiddenHomepageSections));localStorage.setItem('krishan.visual-studio.home-blocks.v1',JSON.stringify(homepageCustomBlockIds));setNotice('Draft saved in this browser');}catch{setNotice('Unable to save draft in browser storage');}};
+  
   const onDrop=(event:React.DragEvent<HTMLDivElement>,index:number)=>{event.preventDefault();const kind=event.dataTransfer.getData('application/krishan-block') as Kind;if(kind&&palette.some(p=>p.kind===kind))add(kind,index);};
   const canvasWidth=device==='mobile'?'390px':device==='tablet'?'768px':'100%';
   const renderBlock=(b:Block,index:number)=> { if (b.responsive?.[device]?.hidden) return null; const responsiveFontSize=b.responsive?.[device]?.fontSize ?? b.size; return <div key={b.id} onClick={()=>{if(!previewMode)setSelected(b.id)}} onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,index)}} className={`group relative my-0 border-0 p-0 transition-all duration-150 ${previewMode?'outline-none':selected===b.id?'z-[1] rounded-lg outline outline-2 outline-sky-500 outline-offset-4':'hover:outline hover:outline-1 hover:outline-slate-300 hover:outline-offset-2'}`} style={{background:['card','columns','spacer'].includes(b.kind)?(b.background??'transparent'):'transparent',textAlign:b.align??'left'}}>
