@@ -42,8 +42,8 @@ const selectorFor = (element: HTMLElement) => {
   }
   return ['body', ...parts].join(' > ');
 };
-const protectedElement = (element: Element) => Boolean(element.closest('form,button,a,input,textarea,select,[role=button],[data-visual-editor-protected],[data-visual-editor-ui]'));
-const textLeaf = (element: Element) => ['H1','H2','H3','H4','H5','H6','P','LI','SPAN','STRONG','EM'].includes(element.tagName) && element.children.length === 0 && Boolean(element.textContent?.trim()) && !protectedElement(element);
+const protectedElement = (element: Element) => Boolean(element.closest('form,input,textarea,select,[role=button],[data-visual-editor-protected],[data-visual-editor-ui]'));
+const textLeaf = (element: Element) => ['H1','H2','H3','H4','H5','H6','P','LI','SPAN','STRONG','EM','BUTTON','A'].includes(element.tagName) && element.children.length === 0 && Boolean(element.textContent?.trim()) && !protectedElement(element);
 const selectable = (element: Element) => !['HTML','BODY','SCRIPT','STYLE','INPUT','TEXTAREA','SELECT','OPTION','SVG'].includes(element.tagName) && !protectedElement(element);
 const hex = (value: string, fallback: string) => {
   if (/^#[0-9a-f]{6}$/i.test(value)) return value;
@@ -120,7 +120,6 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       const section = doc.createElement('section'); section.textContent = item.text; section.style.cssText = 'padding:20px;background:#f1f5f9;border:1px solid #dbe5f0;border-radius:16px;margin:16px 0;'; node = section;
     }
     node.dataset.builderComponentId = item.id;
-    node.dataset.visualEditorProtected = 'true';
     parent.appendChild(node);
   };
 
@@ -165,7 +164,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     const selectElement = (event: MouseEvent) => {
       const clicked = event.target as HTMLElement | null;
       if (!clicked || typeof clicked.closest !== 'function' || clicked.closest('[data-visual-editor-ui]')) return;
-      const candidate = clicked.closest<HTMLElement>('h1,h2,h3,h4,h5,h6,p,li,span,strong,em,img,section,article,header,footer,main,aside,nav,figure,div');
+      const candidate = clicked.closest<HTMLElement>('h1,h2,h3,h4,h5,h6,p,li,span,strong,em,button,a,img,section,article,header,footer,main,aside,nav,figure,div');
       if (!candidate || !selectable(candidate) || candidate === doc.body || candidate.id === 'root') return;
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
       if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
