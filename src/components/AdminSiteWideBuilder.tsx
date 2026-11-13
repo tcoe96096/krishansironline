@@ -76,7 +76,7 @@ const buildSafeSelector = (element: HTMLElement): string => {
     const siblings = Array.from(parentElement.children) as HTMLElement[];
     const index = siblings.filter((child: HTMLElement) => child.tagName === currentTagName).indexOf(current) + 1;
     parts.unshift(`${tag}:nth-of-type(${index})`);
-    current = parent;
+    current = parentElement;
   }
   return ['body', ...parts].join(' > ');
 };
