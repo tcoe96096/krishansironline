@@ -132,6 +132,8 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(!editing)return;
       const target=event.target as HTMLElement|null;
       if(!target||target.closest('[data-vs-ui]'))return;
+      const interactive=target.closest('button,a,input,select,textarea,[role="button"]');
+      if(interactive&&!event.altKey)return;
       const leaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label') as HTMLElement|null;
       const section=getSection(target);
       const chosen=leaf||section||target;
@@ -179,7 +181,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
     const onDrop=(event:DragEvent)=>{
       if(!editing||!sectionContainer)return;
       const componentKind=event.dataTransfer?.getData('application/krishan-block');
-      if(componentKind){event.preventDefault();event.stopPropagation();const id='vs-added-'+Math.random().toString(36).slice(2,10);const node=createBlock(componentKind,'');node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);node.setAttribute('data-vs-section-key',id);const target=getSection(event.target as HTMLElement);if(target)sectionContainer.insertBefore(node,target.nextSibling);else sectionContainer.appendChild(node);draft.added.push({id,kind:componentKind,text:''});select(node);persist();dragKey='';return;}
+      if(componentKind){event.preventDefault();event.stopPropagation();const id='vs-added-'+Math.random().toString(36).slice(2,10);const defaults:Record<string,string>={heading:'New heading',text:'Write your text here',button:'Button label',card:'New content card',columns:'New columns section'};const node=createBlock(componentKind,defaults[componentKind]||'');node.setAttribute('data-vs-added',id);node.setAttribute('data-vs-key',id);node.setAttribute('data-vs-section-key',id);const target=getSection(event.target as HTMLElement);if(target)sectionContainer.insertBefore(node,target.nextSibling);else sectionContainer.appendChild(node);draft.added.push({id,kind:componentKind,text:defaults[componentKind]||''});select(node);persist();dragKey='';return;}
       if(!dragKey)return;
       const target=event.target as HTMLElement|null;const targetSection=target?getSection(target):null;
       const moving=sectionContainer.querySelector('[data-vs-section-key="'+CSS.escape(dragKey)+'"]') as HTMLElement|null;
