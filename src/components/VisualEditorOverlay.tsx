@@ -14,6 +14,15 @@ const pageKey=()=> 'krishan.visual-editor.page.'+(window.location.pathname.repla
 export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
   useEffect(()=>{
     if(!enabled) return;
+    const styleTag=document.createElement('style');
+    styleTag.id='krishan-visual-editor-styles';
+    styleTag.textContent=`
+      html.krishan-visual-editing [data-vs-section-key]:hover{outline:1px dashed rgba(2,132,199,.7)!important;outline-offset:-2px}
+      html.krishan-visual-editing [data-vs-selected-section="true"]{outline:1px dashed #0284c7!important;outline-offset:-2px}
+      html.krishan-visual-editing [data-vs-selected="true"]{outline:2px solid #0284c7!important;outline-offset:3px;position:relative}
+      html.krishan-visual-editing [data-vs-section-key]{cursor:default}
+    `;
+    document.head.appendChild(styleTag);
     const storageKey=pageKey();
     const read=():Draft=>{try{return {...emptyDraft(),...JSON.parse(localStorage.getItem(storageKey)||'{}')};}catch{return emptyDraft();}};
     let draft=read();
@@ -111,7 +120,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
     const select=(target:HTMLElement)=>{
       const section=getSection(target);
       selected=target;sectionContainer=getContainer();
-      document.querySelectorAll('[data-vs-selected="true"]').forEach(node=>node.removeAttribute('data-vs-selected'));
+      document.querySelectorAll('[data-vs-selected="true"],[data-vs-selected-section="true"]').forEach(node=>{node.removeAttribute('data-vs-selected');node.removeAttribute('data-vs-selected-section');});
       target.setAttribute('data-vs-selected','true');
       if(section)section.setAttribute('data-vs-selected-section','true');
       const style=getComputedStyle(target);
@@ -228,6 +237,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       document.removeEventListener('drop',onDrop,true);
       window.removeEventListener('message',applyMessage);
       mo.disconnect();
+      styleTag.remove();
     };
   },[enabled]);
   return null;
