@@ -38,7 +38,7 @@ const selectorFor = (element: HTMLElement) => {
     const siblings = Array.from(parentElement.children) as HTMLElement[];
     const index = siblings.filter(item => item.tagName === current!.tagName).indexOf(current) + 1;
     parts.unshift(current.tagName.toLowerCase() + ':nth-of-type(' + index + ')');
-    current = parent;
+    current = parentElement;
   }
   return ['body', ...parts].join(' > ');
 };
