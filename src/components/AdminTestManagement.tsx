@@ -72,8 +72,11 @@ export const AdminTestManagement: React.FC = () => {
   };
 
   const importBankSet = (set: BankSet) => {
-    if (!Array.isArray(set.questions) || !Array.isArray(set.answer_key) || set.questions.length !== set.answer_key.length) {
+    if (!Array.isArray(set.questions) || !Array.isArray(set.answer_key) || set.questions.length !== set.answer_key.length || set.questions.length === 0) {
       setError('इस Question Set का डेटा अधूरा है।'); return;
+    }
+    if (set.answer_key.some((answer, index) => !Number.isInteger(answer) || answer < 0 || answer > 3 || !Array.isArray(set.questions[index]?.options?.en) || !Array.isArray(set.questions[index]?.options?.hi) || set.questions[index].options.en.length !== 4 || set.questions[index].options.hi.length !== 4)) {
+      setError('इस Question Set में किसी प्रश्न का सही उत्तर या चार विकल्प अमान्य हैं।'); return;
     }
     setClassLevel(set.class_level); setSubject(set.subject); setChapter(set.chapter);
     setQuestions(current => [...current, ...set.questions.map(q => ({
