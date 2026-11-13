@@ -11,7 +11,7 @@ import {
 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'divider' | 'columns' | 'spacer' | 'video';
 type Device = 'desktop'|'tablet'|'mobile';
-type MediaAsset = { name:string; path:string; type:'image'|'video'; url:string; createdAt?:string };
+type MediaAsset = { name:string; path:string; type:'image'|'video'; url:string; createdAt?:string | null };
 type ResponsiveStyle = { fontSize?: number; hidden?: boolean };
 type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string; mediaPath?:string; altText?:string; fit?:'cover'|'contain'; responsive?: Partial<Record<Device, ResponsiveStyle>> };
 const starter: Block[] = [
@@ -57,14 +57,15 @@ export const AdminVisualStudio: React.FC = () => {
   if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
   const loadMedia = async () => {
-    if (!supabase || !user || !isAdmin) return;
+    const client = supabase;
+    if (!client || !user || !isAdmin) return;
     setMediaLoading(true); setMediaError('');
     try {
-      const { data, error } = await supabase.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
+      const { data, error } = await client.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
       if (error) throw error;
       const assets = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async item=>{
         const path = user.id+'/'+item.name;
-        const { data: signed, error: signError } = await supabase.storage.from('visual-studio-media').createSignedUrl(path,3600);
+        const { data: signed, error: signError } = await client.storage.from('visual-studio-media').createSignedUrl(path,3600);
         if (signError || !signed?.signedUrl) return null;
         const mime = item.metadata?.mimetype ?? '';
         return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at};
@@ -75,7 +76,8 @@ export const AdminVisualStudio: React.FC = () => {
   };
   useEffect(()=>{ void loadMedia(); },[user?.id,isAdmin]);
   const uploadMedia = async (file:File) => {
-    if (!supabase || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
+    const client = supabase;
+    if (!client || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
     const allowed = ['image/jpeg','image/png','image/webp','image/gif','image/avif','video/mp4','video/webm'];
     if (!allowed.includes(file.type)) { setMediaError('केवल JPG, PNG, WEBP, GIF, AVIF, MP4 और WEBM फाइलें स्वीकार हैं।'); return; }
     if (file.size > 50*1024*1024) { setMediaError('फाइल का आकार 50 MB से कम होना चाहिए।'); return; }
@@ -83,7 +85,7 @@ export const AdminVisualStudio: React.FC = () => {
     try {
       const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
       const path = user.id+'/'+crypto.randomUUID()+'.'+extension;
-      const {error} = await supabase.storage.from('visual-studio-media').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false,metadata:{altText:mediaAlt.trim()}});
+      const {error} = await client.storage.from('visual-studio-media').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false,metadata:{altText:mediaAlt.trim()}});
       if (error) throw error;
       setMediaAlt('');
       await loadMedia();
