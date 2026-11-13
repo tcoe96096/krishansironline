@@ -10,6 +10,7 @@ on:
       - "release/all-nov11-work"
       - "integration/**"
       - "recovery/**"
+      - "feature/full-website-builder-live-editor"
   pull_request:
     branches:
       - "main"
