@@ -29,7 +29,6 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
     let selected:HTMLElement|null=null;
     let sectionContainer:HTMLElement|null=null;
     let editing=false;
-    let suppressClick=false;
     const send=(type:string,payload:Record<string,unknown>={})=>window.parent.postMessage({source:'krishan-visual-editor',type,page:window.location.pathname,...payload},window.location.origin);
     const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify(draft));send('vs:saved');}catch{send('vs:error',{message:'Browser draft storage is full.'});}};
     const getPath=(element:Element)=>{
@@ -65,7 +64,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       assignKeys();
       for(const [key,value] of Object.entries(draft.texts)){
         const node=document.querySelector('[data-vs-key="'+CSS.escape(key)+'"]');
-        if(node&&node.textContent!==value) node.textContent=value;
+        if(node&&node.children.length===0&&node.textContent!==value) node.textContent=value;
       }
       for(const [key,style] of Object.entries(draft.styles)){
         const node=document.querySelector('[data-vs-key="'+CSS.escape(key)+'"]') as HTMLElement|null;
@@ -81,9 +80,12 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
         });
         draft.hidden.forEach(key=>{const node=container.querySelector(':scope > [data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node)node.style.display='none';});
         if(draft.order.length){
-          const children=Array.from(container.children) as HTMLElement[];
-          const byKey=new Map(children.map(child=>[child.getAttribute('data-vs-section-key')||'',child]));
-          draft.order.forEach(key=>{const node=byKey.get(key);if(node)container.appendChild(node);});
+          const currentOrder=Array.from(container.children).map(child=>(child as HTMLElement).getAttribute('data-vs-section-key')||'');
+          const desiredOrder=draft.order.filter(key=>currentOrder.includes(key));
+          if(desiredOrder.length&&desiredOrder.some((key,index)=>currentOrder[index]!==key)){
+            const byKey=new Map(Array.from(container.children).map(child=>[(child as HTMLElement).getAttribute('data-vs-section-key')||'',child as HTMLElement]));
+            desiredOrder.forEach(key=>{const node=byKey.get(key);if(node)container.appendChild(node);});
+          }
         }
         draft.added.forEach(item=>{
           if(document.querySelector('[data-vs-added="'+CSS.escape(item.id)+'"]'))return;
@@ -143,11 +145,12 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(!editing)return;
       const target=event.target as HTMLElement|null;
       if(!target||target.closest('[data-vs-ui]'))return;
-      const interactive=target.closest('button,a,input,select,textarea,[role="button"]');
-      if(interactive&&!event.altKey)return;
-      const leaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label') as HTMLElement|null;
+      // In edit mode every click selects first, including buttons and links.
+      // Normal site interactions remain available in the separate Preview mode.
+      const textLeaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label,span,strong,em,b,small') as HTMLElement|null;
+      const directText=textLeaf&&textLeaf.children.length===0?textLeaf:null;
       const section=getSection(target);
-      const chosen=leaf||section||target;
+      const chosen=directText||textLeaf||section||target;
       if(chosen&&document.body.contains(chosen)){
         event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
         select(chosen);
@@ -157,9 +160,11 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(!editing)return;
       const target=event.target as HTMLElement|null;
       if(!target||target.closest('[data-vs-ui]'))return;
-      const leaf=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label') as HTMLElement|null;
+      const candidate=target.closest('h1,h2,h3,h4,h5,h6,p,li,a,button,label,span,strong,em,b,small') as HTMLElement|null;
+      const leaf=candidate&&candidate.children.length===0?candidate:null;
       if(!leaf||!document.body.contains(leaf))return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      select(leaf);
       leaf.contentEditable='true';leaf.focus();leaf.dataset.vsEditing='true';
     };
     const onBlur=(event:FocusEvent)=>{
@@ -167,7 +172,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       if(!target?.dataset.vsEditing)return;
       target.contentEditable='false';delete target.dataset.vsEditing;
       const key=target.getAttribute('data-vs-key')||'';
-      if(key)draft.texts[key]=target.textContent||'';
+      if(key&&target.children.length===0)draft.texts[key]=target.textContent||'';
       persist();select(target);
     };
     let dragKey='';
@@ -208,7 +213,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       const {type}=event.data;
       if(type==='vs:mode'){editing=Boolean(event.data.editing);document.documentElement.classList.toggle('krishan-visual-editing',editing);send('vs:ready',{pageTitle:document.title,editing});return;}
       if(type==='vs:save'){persist();return;}
-      if(type==='vs:text'&&selected){const text=String(event.data.value??'');selected.textContent=text;const key=selected.getAttribute('data-vs-key')||'';if(key)draft.texts[key]=text;persist();}
+      if(type==='vs:text'&&selected&&selected.children.length===0){const text=String(event.data.value??'');selected.textContent=text;const key=selected.getAttribute('data-vs-key')||'';if(key)draft.texts[key]=text;persist();}
       if(type==='vs:style'&&selected){const property=String(event.data.property||'');const value=String(event.data.value??'');if(['color','backgroundColor','fontSize','textAlign','padding','margin','display'].includes(property)){(selected.style as any)[property]=value;const key=selected.getAttribute('data-vs-key')||'';if(key){draft.styles[key]={...(draft.styles[key]||{}),[property]:value};if(property==='display'&&value==='none'&&!draft.hidden.includes(key))draft.hidden.push(key);if(property==='display'&&value!=='none')draft.hidden=draft.hidden.filter(id=>id!==key);}persist();}}
       if(type==='vs:move'&&selected){const section=getSection(selected);const direction=Number(event.data.direction);if(section&&sectionContainer&&direction!==0){const sibling=direction<0?section.previousElementSibling:section.nextElementSibling;if(sibling)sectionContainer.insertBefore(section,direction<0?sibling: sibling.nextElementSibling);draft.order=Array.from(sectionContainer.children).map(child=>(child as HTMLElement).getAttribute('data-vs-section-key')||'').filter(Boolean);persist();}}
       if(type==='vs:hide'){const key=String(event.data.sectionKey||'');const node=document.querySelector('[data-vs-section-key="'+CSS.escape(key)+'"]') as HTMLElement|null;if(node){const hidden=Boolean(event.data.hidden);node.style.display=hidden?'none':'';draft.hidden=hidden?[...new Set([...draft.hidden,key])]:draft.hidden.filter(id=>id!==key);persist();}}
