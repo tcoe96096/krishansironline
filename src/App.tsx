@@ -16,6 +16,7 @@ import { AboutTeacher } from './components/AboutTeacher';
 import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
+import { VisualEditorOverlay } from './components/VisualEditorOverlay';
 import { AdminDashboard } from './components/AdminDashboard';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
@@ -159,6 +160,7 @@ const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
   const { user, profile } = useAuth();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const visualEditorEnabled = new URLSearchParams(window.location.search).get('visual-editor') === '1';
   
   // Support clean SEO URLs and legacy hash links.
   const pathToPage: Record<string, PageId> = {
@@ -218,7 +220,7 @@ const MainApp: React.FC = () => {
 
     if (pageId === 'notices') {
       setActivePage('home');
-      const homePath = `${basePath}/`;
+      const homePath = `${basePath}/${visualEditorEnabled ? '?visual-editor=1' : ''}`;
       if (window.location.pathname !== homePath) window.history.pushState(null, '', homePath);
       setTimeout(() => document.getElementById('notices')?.scrollIntoView({ behavior: 'smooth' }), 50);
       return;
@@ -226,7 +228,7 @@ const MainApp: React.FC = () => {
 
     const targetPage = VALID_PAGES.includes(pageId as PageId) ? (pageId as PageId) : 'home';
     setActivePage(targetPage);
-    const targetPath = `${basePath}${pageToPath[targetPage]}`;
+    const targetPath = `${basePath}${pageToPath[targetPage]}${visualEditorEnabled ? '?visual-editor=1' : ''}`;
     if (window.location.pathname !== targetPath) window.history.pushState(null, '', targetPath);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -754,6 +756,7 @@ const MainApp: React.FC = () => {
         onNavigate={navigateTo}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <VisualEditorOverlay enabled={visualEditorEnabled} />
     </div>
   );
 };
