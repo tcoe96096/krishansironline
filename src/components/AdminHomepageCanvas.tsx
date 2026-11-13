@@ -32,6 +32,7 @@ type Props = {
   onSelectSection?:(section:HomeSectionId)=>void;
   onReorderSections?:(from:HomeSectionId,to:HomeSectionId)=>void;
   customContent?:React.ReactNode;
+  onAddComponent?:(kind:string)=>void;
 };
 
 type HomeStudentSession = {studentName:string;studentClass:string};
@@ -75,7 +76,7 @@ const StudentDashboardHome:React.FC<{onNavigate:(page:string)=>void;language:str
 
 export const AdminHomepageCanvas:React.FC<Props>=({
   onNavigate,editable=false,sectionOrder=DEFAULT_HOME_SECTION_ORDER,hiddenSections=[],
-  selectedSection=null,onSelectSection,onReorderSections,customContent
+  selectedSection=null,onSelectSection,onReorderSections,customContent,onAddComponent
 })=>{
   const {language}=useLanguage();
   const [searchOpen,setSearchOpen]=useState(false);
@@ -84,6 +85,8 @@ export const AdminHomepageCanvas:React.FC<Props>=({
 
   const handleDrop=(event:React.DragEvent<HTMLDivElement>,target:HomeSectionId)=>{
     event.preventDefault();
+    const component=event.dataTransfer.getData('application/krishan-block');
+    if(component){onAddComponent?.(component);setDragging(null);return;}
     const from=(event.dataTransfer.getData('application/krishan-home-section')||dragging) as HomeSectionId|null;
     if(from&&from!==target) onReorderSections?.(from,target);
     setDragging(null);
