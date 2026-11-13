@@ -233,7 +233,17 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     element.style.borderRadius = style.borderRadius + 'px'; element.style.width = style.width > 0 ? style.width + 'px' : '';
     element.style.minHeight = style.minHeight > 0 ? style.minHeight + 'px' : '';
     const rect = element.getBoundingClientRect();
-    setSelected(current => current ? { ...current, width: rect.width, height: rect.height } : current);
+    const overlay = element.ownerDocument.querySelector<HTMLElement>('[data-visual-editor-ui="resize-overlay"]');
+    if (overlay) {
+      overlay.style.left = rect.left + 'px';
+      overlay.style.top = rect.top + 'px';
+      overlay.style.width = Math.max(1, rect.width) + 'px';
+      overlay.style.height = Math.max(1, rect.height) + 'px';
+    }
+    setSelected(current => {
+      if (!current || (Math.abs(current.width - rect.width) < 0.5 && Math.abs(current.height - rect.height) < 0.5)) return current;
+      return { ...current, width: rect.width, height: rect.height };
+    });
   }, [ready, selected?.text, style]);
 
   const insertComponent = (kind: Kind, asset?: Media) => {
