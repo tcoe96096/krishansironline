@@ -71,6 +71,10 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
     if (demoMode) return;
     if (!titleEn.trim() && !titleHi.trim()) { setError('सूचना का शीर्षक दर्ज करें।'); return; }
     if (!bodyEn.trim() && !bodyHi.trim()) { setError('सूचना का विवरण दर्ज करें।'); return; }
+    if (scheduledAt && expiresAt && new Date(expiresAt).getTime() <= new Date(scheduledAt).getTime()) {
+      setError('Expiry time, Schedule time के बाद होना चाहिए।');
+      return;
+    }
     setSaving(true);
     setError('');
     setMessage('');
