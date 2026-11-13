@@ -31,6 +31,7 @@ type Props = {
   selectedSection?:HomeSectionId|null;
   onSelectSection?:(section:HomeSectionId)=>void;
   onReorderSections?:(from:HomeSectionId,to:HomeSectionId)=>void;
+  customContent?:React.ReactNode;
 };
 
 type HomeStudentSession = {studentName:string;studentClass:string};
@@ -74,7 +75,7 @@ const StudentDashboardHome:React.FC<{onNavigate:(page:string)=>void;language:str
 
 export const AdminHomepageCanvas:React.FC<Props>=({
   onNavigate,editable=false,sectionOrder=DEFAULT_HOME_SECTION_ORDER,hiddenSections=[],
-  selectedSection=null,onSelectSection,onReorderSections
+  selectedSection=null,onSelectSection,onReorderSections,customContent
 })=>{
   const {language}=useLanguage();
   const [searchOpen,setSearchOpen]=useState(false);
@@ -139,7 +140,7 @@ export const AdminHomepageCanvas:React.FC<Props>=({
 
   return <div className="min-h-screen bg-slate-50 text-slate-800">
     <Header activeSection="home" onNavigate={onNavigate} onOpenSearch={()=>setSearchOpen(true)} onOpenAuth={()=>setAuthOpen(true)}/>
-    <main className="space-y-0">{ordered.map((id,index)=>wrap(id,index))}</main>
+    <main className="space-y-0">{ordered.map((id,index)=>wrap(id,index))}{customContent&&<div data-home-editor-section="customContent" className={editable?"relative border-t border-dashed border-sky-300":""}>{editable&&<div className="px-4 py-2 text-[10px] font-bold text-sky-700">ADDED COMPONENTS · DRAFT ONLY</div>}{customContent}</div>}</main>
     <Footer onNavigate={onNavigate}/>
     <SearchModal isOpen={searchOpen} onClose={()=>setSearchOpen(false)} onNavigate={onNavigate}/>
     <AuthModal isOpen={authOpen} onClose={()=>setAuthOpen(false)}/>
