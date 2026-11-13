@@ -76,3 +76,12 @@
 - The recovery branch changes were not merged to `main`; this production deployment run predates and is independent of the recovery branch.
 - Main branch workflow inventory contains `pages.yml`, `preview-build.yml`, `student-dashboard-validation.yml`, `student-mobile-auth-validation.yml`, and `validate-pages.yml`. The old `trigger-preview-deployment.yml` is not present on `main`.
 - The old `krishansironline-preview` repository still has an active six-hour scheduled workflow that checks out `preview/student-system-live-design-integration` from the main repository. Do not remove/disable it until the replacement preview repository is built and verified, but do not direct new Visual Studio work to it.
+
+
+## Saved draft inventory (read-only snapshot, 2026-11-13)
+- Preview `public.visual_studio_drafts`: 0 rows.
+- Preview `storage.objects` for bucket `visual-studio-media`: 0 objects.
+- Preview `public.site_config_versions`: 0 rows.
+- Production `public.site_config_versions`: 0 rows.
+- Production does not have `public.visual_studio_drafts`; its query returned PostgreSQL relation-not-found. Production `storage.objects` for `visual-studio-media`: 0 objects.
+- No cloud-saved Studio draft/content was found in either Supabase project at the time of this snapshot. The Canvas Builder code also stores drafts in browser localStorage under key `krishan.visual-studio.draft.v1`; browser-local data must be retrieved from the original browser profile/origin. Do not clear browser site data or close/replace the old Vercel preview context until that extraction is complete.
