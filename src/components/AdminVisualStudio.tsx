@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { AdminVisualEditorV2 } from './AdminVisualEditorV2';
 import {
   Type, AlignLeft, MousePointerClick, Image as ImageIcon, Square, Minus,
   Columns2, MoveVertical, Video, Trash2, Copy, ChevronUp, ChevronDown,
@@ -10,7 +11,7 @@ import {
 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'divider' | 'columns' | 'spacer' | 'video';
 type Device = 'desktop'|'tablet'|'mobile';
-type MediaAsset = { name:string; path:string; type:'image'|'video'; url:string; createdAt?:string };
+type MediaAsset = { name:string; path:string; type:'image'|'video'; url:string; createdAt?:string | null };
 type ResponsiveStyle = { fontSize?: number; hidden?: boolean };
 type Block = { id: string; kind: Kind; text: string; subtitle?: string; color?: string; background?: string; size?: number; align?: 'left'|'center'|'right'; imageUrl?: string; mediaPath?:string; altText?:string; fit?:'cover'|'contain'; responsive?: Partial<Record<Device, ResponsiveStyle>> };
 const starter: Block[] = [
@@ -52,27 +53,31 @@ export const AdminVisualStudio: React.FC = () => {
   const [future,setFuture] = useState<Block[][]>([]);
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
+  const [realPageMode,setRealPageMode] = useState(false);
+  if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
   const loadMedia = async () => {
-    if (!supabase || !user || !isAdmin) return;
+    const client = supabase;
+    if (!client || !user || !isAdmin) return;
     setMediaLoading(true); setMediaError('');
     try {
-      const { data, error } = await supabase.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
+      const { data, error } = await client.storage.from('visual-studio-media').list(user.id,{limit:100,sortBy:{column:'created_at',order:'desc'}});
       if (error) throw error;
-      const assets = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async item=>{
+      const assets: (MediaAsset | null)[] = await Promise.all((data??[]).filter(item=>item.name && !item.name.startsWith('.')).map(async (item): Promise<MediaAsset | null> => {
         const path = user.id+'/'+item.name;
-        const { data: signed, error: signError } = await supabase.storage.from('visual-studio-media').createSignedUrl(path,3600);
+        const { data: signed, error: signError } = await client.storage.from('visual-studio-media').createSignedUrl(path,3600);
         if (signError || !signed?.signedUrl) return null;
         const mime = item.metadata?.mimetype ?? '';
-        return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at};
+        return {name:item.name,path,type:mime.startsWith('video/')?'video' as const:'image' as const,url:signed.signedUrl,createdAt:item.created_at ?? undefined};
       }));
-      setMediaItems(assets.filter((item):item is MediaAsset=>Boolean(item)));
+      setMediaItems(assets.filter(item => item !== null));
     } catch(error) { setMediaError(error instanceof Error?error.message:'Media Library load नहीं हो सकी।'); }
     finally { setMediaLoading(false); }
   };
   useEffect(()=>{ void loadMedia(); },[user?.id,isAdmin]);
   const uploadMedia = async (file:File) => {
-    if (!supabase || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
+    const client = supabase;
+    if (!client || !user || !isAdmin) { setMediaError('केवल सत्यापित Admin Media Upload कर सकता है।'); return; }
     const allowed = ['image/jpeg','image/png','image/webp','image/gif','image/avif','video/mp4','video/webm'];
     if (!allowed.includes(file.type)) { setMediaError('केवल JPG, PNG, WEBP, GIF, AVIF, MP4 और WEBM फाइलें स्वीकार हैं।'); return; }
     if (file.size > 50*1024*1024) { setMediaError('फाइल का आकार 50 MB से कम होना चाहिए।'); return; }
@@ -80,7 +85,7 @@ export const AdminVisualStudio: React.FC = () => {
     try {
       const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
       const path = user.id+'/'+crypto.randomUUID()+'.'+extension;
-      const {error} = await supabase.storage.from('visual-studio-media').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false,metadata:{altText:mediaAlt.trim()}});
+      const {error} = await client.storage.from('visual-studio-media').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false,metadata:{altText:mediaAlt.trim()}});
       if (error) throw error;
       setMediaAlt('');
       await loadMedia();
@@ -95,15 +100,16 @@ export const AdminVisualStudio: React.FC = () => {
   useEffect(() => {
     let active = true;
     const restoreDraft = async () => {
-      if (!supabase || !user || !isAdmin) { setDraftReady(true); return; }
+      const client = supabase;
+      if (!client || !user || !isAdmin) { setDraftReady(true); return; }
       setDraftReady(false);
       try {
-        const { data, error } = await supabase.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
+        const { data, error } = await client.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
         if (error) throw error;
         if (active && Array.isArray(data?.content)) {
           const restored = await Promise.all((data.content as Block[]).map(async block => {
             if (!block.mediaPath) return block;
-            const { data: signed } = await supabase.storage.from('visual-studio-media').createSignedUrl(block.mediaPath, 3600);
+            const { data: signed } = await client.storage.from('visual-studio-media').createSignedUrl(block.mediaPath, 3600);
             return signed?.signedUrl ? { ...block, imageUrl: signed.signedUrl } : block;
           }));
           if (active) { setBlocks(restored); setSelected(restored[0]?.id ?? ''); setNotice('Cloud draft restored'); }
@@ -196,6 +202,10 @@ export const AdminVisualStudio: React.FC = () => {
     :<div className="h-10 rounded bg-slate-100"/>}
   </div>; };
   return <div className="min-h-[80vh] space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3">
+      <div><p className="text-sm font-extrabold text-slate-900">Visual Website Studio</p><p className="text-xs text-slate-600">Canvas Builder और वास्तविक वेबसाइट पेज एडिटर एक ही Studio में</p></div>
+      <button type="button" onClick={() => setRealPageMode(true)} className="rounded-lg bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800">वास्तविक वेबसाइट पेज Edit करें</button>
+    </div>
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Drag & Drop Website Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Separate development preview</p></div>
       <div className="flex flex-wrap items-center gap-2">
