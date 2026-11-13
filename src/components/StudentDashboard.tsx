@@ -5,6 +5,7 @@ import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedT
 import { getMyLearningProgress, type StudentLearningProgress } from '../services/learningProgressService';
 import { StudentNotificationCenter } from './StudentNotificationCenter';
 import { StudentProLearningTools } from './StudentProLearningTools';
+import { saveBookmark } from '../services/proLearningService';
 
 export const StudentDashboard: React.FC = () => {
   const { profile, profileLoading } = useAuth();
@@ -13,6 +14,18 @@ export const StudentDashboard: React.FC = () => {
   const [learningProgress, setLearningProgress] = useState<StudentLearningProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [savedTests, setSavedTests] = useState<string[]>([]);
+  const [savingTest, setSavingTest] = useState<string | null>(null);
+
+  const bookmarkTest = async (test: PublishedTest, title: string) => {
+    setSavingTest(test.id);
+    try {
+      await saveBookmark({ itemType: 'test', itemId: test.id, title, snapshot: { subject: test.subject, class_level: test.class_level } });
+      setSavedTests(current => current.includes(test.id) ? current : [...current, test.id]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'बुकमार्क सेव नहीं हुआ।');
+    } finally { setSavingTest(null); }
+  };
 
   const loadDashboard = async () => {
     setLoading(true); setError('');
@@ -107,6 +120,7 @@ export const StudentDashboard: React.FC = () => {
         return <article key={test.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-2"><span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-800">कक्षा {test.class_level}</span>{attempt?.status==='submitted' && <span className="text-xs font-bold text-emerald-700">पूर्ण</span>}</div>
           <h5 className="mt-3 font-extrabold text-slate-900">{title}</h5><p className="mt-1 text-xs text-slate-500">{test.subject} · {test.questions.length} प्रश्न · {test.total_marks} अंक · {test.duration_minutes} मिनट</p>
+          <button type="button" onClick={() => void bookmarkTest(test,title)} disabled={savingTest===test.id || savedTests.includes(test.id)} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2.5 text-xs font-bold text-indigo-800 disabled:opacity-60"><Bookmark className="h-4 w-4"/>{savedTests.includes(test.id) ? 'बुकमार्क सेव है' : savingTest===test.id ? 'सेव हो रहा है…' : 'टेस्ट सेव करें'}</button>
           <a href={`${import.meta.env.BASE_URL}online-tests/`} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0b3979] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#124887]"><PlayCircle className="h-4 w-4"/>{attempt?.status==='in_progress'?'टेस्ट जारी रखें':'टेस्ट शुरू करें'}</a>
         </article>;
       })}</div>}
