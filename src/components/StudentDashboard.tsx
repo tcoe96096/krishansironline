@@ -6,7 +6,7 @@ import { getMyLearningProgress, type StudentLearningProgress } from '../services
 import { StudentNotificationCenter } from './StudentNotificationCenter';
 import { StudentProLearningTools } from './StudentProLearningTools';
 import { StudentMockTestSeries } from './StudentMockTestSeries';
-import { saveBookmark } from '../services/proLearningService';
+import { getMyBookmarks, saveBookmark } from '../services/proLearningService';
 
 export const StudentDashboard: React.FC = () => {
   const { profile, profileLoading } = useAuth();
@@ -31,8 +31,9 @@ export const StudentDashboard: React.FC = () => {
   const loadDashboard = async () => {
     setLoading(true); setError('');
     try {
-      const [history, catalogue] = await Promise.all([getMyTestAttempts(), getPublishedTests()]);
+      const [history, catalogue, saved] = await Promise.all([getMyTestAttempts(), getPublishedTests(), getMyBookmarks()]);
       setAttempts(history); setTests(catalogue);
+      setSavedTests(saved.filter(item => item.item_type === 'test').map(item => item.item_id));
       // Progress storage may not be deployed in Preview yet; keep tests and dashboard usable.
       const progress = await getMyLearningProgress().catch((progressError) => {
         console.warn('Learning progress is temporarily unavailable:', progressError);
