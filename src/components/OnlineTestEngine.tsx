@@ -301,14 +301,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Do not override a saved in-progress test after a refresh.
   useEffect(() => {
-    if (restoredSession) return;
+    if (restoredSession || initialTestId) return;
     if (initialClassFilter) {
       const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
         setSelectedTest(match);
       }
     }
-  }, [initialClassFilter, databaseTests, user?.id, profile?.class_level]);
+  }, [initialClassFilter, initialTestId, restoredSession, databaseTests, user?.id, profile?.class_level]);
 
 
   // Auto-save every active attempt locally for refresh/tab-close recovery.
