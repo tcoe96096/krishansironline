@@ -72,6 +72,21 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaError, setMediaError] = useState('');
   const [mediaAlt, setMediaAlt] = useState('');
+  const [toolbarPos, setToolbarPos] = useState({ x: Math.max(12, Math.round((window.innerWidth - 360) / 2)), y: Math.max(12, window.innerHeight - 90) });
+  const [componentsPos, setComponentsPos] = useState({ x: 16, y: 100 });
+  const [mediaPos, setMediaPos] = useState({ x: 16, y: 100 });
+  const [inspectorPos, setInspectorPos] = useState({ x: Math.max(12, window.innerWidth - 360), y: 100 });
+  const dragPanel = (event: React.PointerEvent<HTMLElement>, setter: React.Dispatch<React.SetStateAction<{x:number;y:number}>>) => {
+    if ((event.target as HTMLElement).closest('button,input,select,textarea,label')) return;
+    event.preventDefault();
+    const startX = event.clientX, startY = event.clientY;
+    const dragTarget = event.currentTarget.dataset.visualEditorUi === 'toolbar' ? event.currentTarget : event.currentTarget.parentElement as HTMLElement;
+    const origin = dragTarget.getBoundingClientRect();
+    const move = (e: PointerEvent) => setter({ x: Math.max(0, Math.min(window.innerWidth - 80, origin.left + e.clientX - startX)), y: Math.max(0, Math.min(window.innerHeight - 48, origin.top + e.clientY - startY)) });
+    const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop, { once: true });
+  };
+
 
   useEffect(() => {
     let active = true;
@@ -352,25 +367,25 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
         <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} onLoad={() => setReady(true)} className="h-full w-full border-0" />
       </div>
       {createPortal(<>
-        <div data-visual-editor-ui="toolbar" className="fixed bottom-4 left-1/2 z-[99990] flex -translate-x-1/2 items-center gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.22)] backdrop-blur">
+        <div data-visual-editor-ui="toolbar" style={{ left: toolbarPos.x, top: toolbarPos.y }} onPointerDown={event => dragPanel(event, setToolbarPos)} className="fixed z-[99990] flex items-center gap-1 rounded-xl cursor-move touch-none border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.22)] backdrop-blur">
           <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-2.5 py-2 text-[10px] font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
           <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
           <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>Inspector</button>
         </div>
-        {componentsOpen && <div data-visual-editor-ui="components-menu" className="fixed bottom-[4.6rem] left-1/2 z-[99999] max-h-[min(65vh,520px)] w-[min(280px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,.26)]">
-          <div className="mb-1 flex items-center justify-between border-b border-slate-100 px-1 pb-2"><span className="text-[11px] font-extrabold text-slate-800">Add Component to Page</span><button onClick={() => setComponentsOpen(false)} className="rounded px-2 py-1 text-xs text-slate-500">×</button></div>
+        {componentsOpen && <div data-visual-editor-ui="components-menu" style={{ left: componentsPos.x, top: componentsPos.y }} className="fixed z-[99999] max-h-[min(65vh,520px)] w-[min(280px,calc(100vw-24px))] overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,.26)]">
+          <div onPointerDown={event => dragPanel(event, setComponentsPos)} className="mb-1 flex items-center justify-between border-b border-slate-100 px-1 pb-2 cursor-move touch-none"><span className="text-[11px] font-extrabold text-slate-800">Add Component to Page</span><button onClick={() => setComponentsOpen(false)} className="rounded px-2 py-1 text-xs text-slate-500">×</button></div>
           {palette.map(item => { const Icon = item.icon; return <button key={item.kind} onClick={() => insertComponent(item.kind)} className="flex w-full items-center gap-2 rounded-lg p-2 text-left hover:bg-sky-50"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-800"><Icon className="h-4 w-4"/></span><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-800">{item.label}</span><span className="block text-[10px] text-slate-500">{item.hint}</span></span><Plus className="h-3.5 w-3.5 text-slate-400"/></button>; })}
         </div>}
-        {mediaOpen && <section data-visual-editor-ui="media-panel" className="fixed bottom-20 left-1/2 z-[99998] max-h-[min(70vh,620px)] w-[min(360px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
-          <div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-extrabold text-slate-900">Media Library</h3><p className="text-[10px] text-slate-500">Admin-only · Supabase Storage · Max 50 MB</p></div><button onClick={() => setMediaOpen(false)} className="rounded-lg border px-2 py-1 text-xs">Close ×</button></div>
+        {mediaOpen && <section data-visual-editor-ui="media-panel" style={{ left: mediaPos.x, top: mediaPos.y }} className="fixed z-[99998] max-h-[min(70vh,620px)] w-[min(360px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
+          <div onPointerDown={event => dragPanel(event, setMediaPos)} className="mb-3 flex items-center justify-between cursor-move touch-none"><div><h3 className="text-sm font-extrabold text-slate-900">Media Library</h3><p className="text-[10px] text-slate-500">Admin-only · Supabase Storage · Max 50 MB</p></div><button onClick={() => setMediaOpen(false)} className="rounded-lg border px-2 py-1 text-xs">Close ×</button></div>
           <input value={mediaAlt} onChange={event => setMediaAlt(event.target.value)} placeholder="Alt text / accessible description" className="mb-2 w-full rounded-lg border p-2 text-[11px]"/>
           <label className="block cursor-pointer rounded-lg border border-dashed border-violet-300 bg-violet-50 p-3 text-center text-[11px] font-bold text-violet-900">{mediaBusy ? 'Uploading…' : 'Upload Image / Video'}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm" disabled={mediaBusy || !isAdmin} className="hidden" onChange={event => { const file = event.target.files?.[0]; if (file) void uploadMedia(file); event.currentTarget.value = ''; }}/></label>
           {mediaError && <p role="alert" className="mt-2 rounded-lg bg-rose-50 p-2 text-[10px] text-rose-700">{mediaError}</p>}
           {mediaLoading ? <p className="py-4 text-center text-xs text-slate-500">Loading media…</p> : media.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No media uploaded yet.</p> : <div className="mt-3 grid grid-cols-2 gap-2">{media.map(asset => <div key={asset.path} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="grid h-20 place-items-center bg-slate-100">{asset.type === 'image' ? <img src={asset.url} alt={asset.name} className="h-full w-full object-cover"/> : <Video className="h-7 w-7 text-slate-500"/>}</div><p className="truncate px-2 pt-1 text-[9px] text-slate-600">{asset.name}</p><button onClick={() => insertComponent(asset.type === 'video' ? 'video' : 'image', asset)} className="m-1 w-[calc(100%-8px)] rounded-md bg-sky-900 p-1.5 text-[10px] font-bold text-white">Insert into page</button></div>)}</div>}
           <button onClick={() => void loadMedia()} disabled={mediaLoading} className="mt-3 w-full rounded-lg border p-2 text-[10px] font-bold text-slate-600">Refresh Library</button>
         </section>}
-        {inspectorOpen && <aside data-visual-editor-ui="inspector-panel" className="fixed bottom-20 right-4 z-[99997] max-h-[min(75vh,700px)] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
-          <div className="mb-3 flex items-center justify-between"><div><h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Settings2 className="h-4 w-4"/>Live Inspector</h3><p className="text-[10px] text-slate-500">Click an element in the website preview</p></div><button onClick={() => setInspectorOpen(false)} className="rounded-lg border px-2 py-1 text-xs">×</button></div>
+        {inspectorOpen && <aside data-visual-editor-ui="inspector-panel" style={{ left: inspectorPos.x, top: inspectorPos.y }} className="fixed z-[99997] max-h-[min(75vh,700px)] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
+          <div onPointerDown={event => dragPanel(event, setInspectorPos)} className="mb-3 flex items-center justify-between cursor-move touch-none"><div><h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Settings2 className="h-4 w-4"/>Live Inspector</h3><p className="text-[10px] text-slate-500">Click an element in the website preview</p></div><button onClick={() => setInspectorOpen(false)} className="rounded-lg border px-2 py-1 text-xs">×</button></div>
           {selected ? <div className="space-y-2">
             <p className="rounded-lg bg-sky-50 p-2 text-[10px] font-bold text-sky-900">{selected.tag.toUpperCase()} · {Math.round(selected.width)} × {Math.round(selected.height)} px</p>
             {selected.textEditable && <label className="block text-[10px] font-semibold text-slate-600">Text / Content<textarea rows={3} value={selected.text} onChange={event => setSelected(current => current ? { ...current, text: event.target.value } : current)} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>}
