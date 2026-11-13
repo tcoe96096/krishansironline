@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
-import { AdminVisualEditorV2 } from './AdminVisualEditorV2';
 import { getWebsiteConfigVersions, publishWebsiteConfig, saveWebsiteConfigDraft, type WebsiteConfigVersion } from '../services/siteConfigService';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
@@ -40,7 +39,6 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
   const [draftLabel, setDraftLabel] = useState('Unsaved UI changes');
   const [palette, setPalette] = useState<PaletteKey>('navy');
   const [siteWideBuilderOpen, setSiteWideBuilderOpen] = useState(false);
-  const [visualV2Open, setVisualV2Open] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [versions, setVersions] = useState<WebsiteConfigVersion[]>([]);
   const [saving, setSaving] = useState(false);
@@ -210,7 +208,6 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
   );
 
   if (siteWideBuilderOpen) return <AdminSiteWideBuilder onBack={() => setSiteWideBuilderOpen(false)} />;
-  if (visualV2Open) return <AdminVisualEditorV2 onBack={() => setVisualV2Open(false)} />;
 
   const tabs: { id: EditorTab; label: string; icon: React.ElementType }[] = [
     { id: 'hero', label: 'Homepage Hero', icon: Type },
@@ -229,7 +226,6 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
-          <button onClick={() => setVisualV2Open(true)} className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-bold text-sky-900 hover:bg-sky-100"><Eye className="h-4 w-4" />Quick Element Editor (Beta)</button>
           <span className={'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold ' + (demoMode || !backendReady ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800')}><Info className="h-3.5 w-3.5" />{demoMode ? 'Demo · Read only' : backendReady ? 'Supabase connected' : 'Connecting…'}</span>
           <button onClick={() => { setShowPreview((value) => !value); setNotice(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{showPreview ? 'Hide Preview' : 'Show Preview'}</button>
         </div>
