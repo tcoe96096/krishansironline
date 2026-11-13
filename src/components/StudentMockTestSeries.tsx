@@ -22,6 +22,6 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-600 transition-all" style={{width:percent+'%'}}/></div>
  <ol className="mt-3 space-y-1">{s.test_ids.map((id,i)=><li key={id} className="flex items-center justify-between gap-2 text-[10px]"><span className="min-w-0 truncate text-slate-600">{i+1}. {id}</span><span className={doneIds.has(id)?'font-bold text-emerald-700':activeIds.has(id)?'font-bold text-amber-700':'text-slate-400'}>{doneIds.has(id)?'पूर्ण':activeIds.has(id)?'जारी':'बाकी'}</span></li>)}</ol>
  <a href={import.meta.env.BASE_URL+'online-tests/'} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-700 px-3 py-2.5 text-xs font-bold text-white"><PlayCircle className="h-4 w-4"/>{doneIds.size===s.test_ids.length?'Series दोबारा देखें':nextActive?'जारी टेस्ट खोलें':'अगला टेस्ट चुनें'}{nextId?' · '+nextId:''}</a></article>;
-})}}
+})}
  <p className="text-[10px] text-slate-400">प्रगति आपके सुरक्षित Test Attempts से निकाली जाती है। एक ही टेस्ट में कई प्रयास होने पर पूर्ण स्थिति बनी रहती है। टेस्ट शुरू करने और attempt limit लागू करने का काम मौजूदा सुरक्षित Test Engine करता है।</p></section>
 };
