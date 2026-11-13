@@ -58,6 +58,7 @@ export const AdminVisualStudio: React.FC = () => {
   const [inspectorOpen,setInspectorOpen] = useState(false);
   const [selectedPage,setSelectedPage] = useState<VisualPageId>('home');
   const [selectedDom,setSelectedDom] = useState<DomSelection|null>(null);
+  const [selectedHidden,setSelectedHidden] = useState(false);
   const [frameReady,setFrameReady] = useState(false);
   const iframeRef=useRef<HTMLIFrameElement|null>(null);
   const [canvasMode,setCanvasMode] = useState<'site'|'draft'>('site');
@@ -87,13 +88,13 @@ export const AdminVisualStudio: React.FC = () => {
       if(event.origin!==window.location.origin||event.source!==iframeRef.current?.contentWindow)return;
       const data=event.data;if(!data||data.source!=='krishan-visual-editor')return;
       if(data.type==='vs:ready'){setFrameReady(true);setNotice('Original website loaded · '+(data.pageTitle||selectedPageInfo.label));}
-      if(data.type==='vs:select'){setSelectedDom(data as DomSelection);setInspectorOpen(true);}
+      if(data.type==='vs:select'){setSelectedDom(data as DomSelection);setSelectedHidden(Boolean(data.hidden));setInspectorOpen(true);}
       if(data.type==='vs:saved')setNotice('Page changes saved locally · '+selectedPageInfo.label);
       if(data.type==='vs:error')setNotice(String(data.message||'Draft save failed'));
     };
     window.addEventListener('message',handleMessage);return()=>window.removeEventListener('message',handleMessage);
   },[selectedPageInfo.label]);
-  useEffect(()=>{setFrameReady(false);setSelectedDom(null);},[selectedPage,previewMode]);
+  useEffect(()=>{setFrameReady(false);setSelectedDom(null);setSelectedHidden(false);},[selectedPage,previewMode]);
   const save=()=>{try{localStorage.setItem(key,JSON.stringify(blocks));sendToPage('vs:save');setNotice('Current page draft saved in this browser');}catch{setNotice('Unable to save draft in browser storage');}};
   useEffect(()=>{
     if(!componentsOpen) return;
@@ -188,7 +189,7 @@ export const AdminVisualStudio: React.FC = () => {
   const update = (id:string, patch:Partial<Block>) => { setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(current=>current.map(b=>b.id===id?{...b,...patch}:b)); setNotice('Unsaved changes'); };
   const add = (kind:Kind, at=blocks.length) => {
     const base:Block = {id:uid(),kind,text:kind==='heading'?'New heading':kind==='text'?'Write your text here':kind==='button'?'Button label':kind==='card'?'New content card':kind==='columns'?'Column section':kind==='video'?'Video block':kind==='image'?'Image placeholder':'',size:kind==='heading'?30:16,color:'#24364b',background:kind==='card'||kind==='columns'?'#f1f5f9':'#ffffff',align:'left'};
-    setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(current=>{const next=[...current];next.splice(at,0,base);return next;});setSelected(base.id);if(canvasMode==='site'){setHomepageCustomBlockIds(ids=>{const next=[...ids,base.id];try{localStorage.setItem('krishan.visual-studio.home-blocks.v1',JSON.stringify(next));}catch{}return next;});}setNotice(canvasMode==='site'?'Component added to live homepage draft':'New component added');
+    setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(current=>{const next=[...current];next.splice(at,0,base);return next;});setSelected(base.id);setNotice('New component added');
   };
   const duplicate = () => {
     if (!active) return;
@@ -196,7 +197,7 @@ export const AdminVisualStudio: React.FC = () => {
     const index = blocks.findIndex(b => b.id === active.id);
     setHistory(h => [...h, blocks]); setFuture([]);
     setBlocks(current => { const next = [...current]; next.splice(index + 1, 0, clone); return next; });
-    setSelected(clone.id); if(canvasMode==='site'){setHomepageCustomBlockIds(ids=>{const next=[...ids,clone.id];try{localStorage.setItem('krishan.visual-studio.home-blocks.v1',JSON.stringify(next));}catch{}return next;});} setNotice('Component duplicated');
+    setSelected(clone.id);setNotice('Component duplicated');
   };
   const applyTemplate = (name: string) => {
     const layouts: Record<string, Block[]> = {
@@ -218,7 +219,7 @@ export const AdminVisualStudio: React.FC = () => {
     const next = layouts[name] ?? starter;
     setHistory(h=>[...h,blocks]); setFuture([]); setBlocks(next.map(b=>({...b,id:uid()}))); setSelected(''); setTemplateName(name); setNotice(name+' template loaded — edit before saving');
   };
-  const remove = () => { if(!active)return; setHistory(h=>[...h,blocks]);setBlocks(current=>current.filter(b=>b.id!==active.id));setSelected(blocks.find(b=>b.id!==active.id)?.id??'');setHomepageCustomBlockIds(ids=>{const next=ids.filter(id=>id!==active.id);try{localStorage.setItem('krishan.visual-studio.home-blocks.v1',JSON.stringify(next));}catch{}return next;});setNotice('Component removed from draft'); };
+  const remove = () => { if(!active)return;setHistory(h=>[...h,blocks]);setBlocks(current=>current.filter(b=>b.id!==active.id));setSelected(blocks.find(b=>b.id!==active.id)?.id??'');setNotice('Component removed from draft'); };
   const move = (id:string,dir:-1|1) => { const i=blocks.findIndex(b=>b.id===id),j=i+dir;if(j<0||j>=blocks.length)return;setHistory(h=>[...h,blocks]);setBlocks(current=>{const next=[...current];[next[i],next[j]]=[next[j],next[i]];return next;}); };
   const undo=()=>{if(!history.length)return;setFuture(f=>[blocks,...f]);setBlocks(history[history.length-1]);setHistory(h=>h.slice(0,-1));setNotice('Undo applied');};
   const redo=()=>{if(!future.length)return;setHistory(h=>[...h,blocks]);setBlocks(future[0]);setFuture(f=>f.slice(1));setNotice('Redo applied');};
@@ -238,7 +239,7 @@ export const AdminVisualStudio: React.FC = () => {
   </div>; };
   return <div className="min-h-[80vh] space-y-4">
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Drag & Drop Website Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Separate development preview</p><div className="mt-2 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1"><button onClick={()=>{setCanvasMode('site');setPreviewMode(false);}} className={`rounded-md px-3 py-1.5 text-[10px] font-bold ${canvasMode==='site'?'bg-sky-900 text-white shadow-sm':'text-slate-600 hover:bg-white'}`}>Live Website</button><button onClick={()=>{setCanvasMode('draft');setPreviewMode(false);}} className={`rounded-md px-3 py-1.5 text-[10px] font-bold ${canvasMode==='draft'?'bg-sky-900 text-white shadow-sm':'text-slate-600 hover:bg-white'}`}>Draft Canvas</button></div></div>
+      <div className="min-w-0"><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Full Website Visual Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Local draft · No production publish</p><div className="mt-2 flex flex-wrap items-center gap-2"><div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1"><button onClick={()=>{setCanvasMode('site');setPreviewMode(false);}} className={`rounded-md px-3 py-1.5 text-[10px] font-bold ${canvasMode==='site'?'bg-sky-900 text-white shadow-sm':'text-slate-600 hover:bg-white'}`}>Live Page Editor</button><button onClick={()=>{setCanvasMode('draft');setPreviewMode(false);}} className={`rounded-md px-3 py-1.5 text-[10px] font-bold ${canvasMode==='draft'?'bg-sky-900 text-white shadow-sm':'text-slate-600 hover:bg-white'}`}>Draft Canvas</button></div>{canvasMode==='site'&&<select aria-label="Choose website page" value={selectedPage} onChange={e=>{setSelectedPage(e.target.value as VisualPageId);setInspectorOpen(false);}} className="max-w-[230px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800">{visualPages.map(page=><option key={page.id} value={page.id}>{page.label}</option>)}</select>}</div></div>
       <div className="flex flex-wrap items-center gap-2">
         {!previewMode&&canvasMode==='draft'&&<><button onClick={undo} disabled={!history.length} className="rounded-lg border p-2 disabled:opacity-40" title="Undo"><Undo2 className="h-4 w-4"/></button><button onClick={redo} disabled={!future.length} className="rounded-lg border p-2 disabled:opacity-40" title="Redo"><Redo2 className="h-4 w-4"/></button></>}
         {!previewMode&&<><div className="flex rounded-lg border p-1"><button onClick={()=>setDevice('desktop')} className={`rounded p-2 ${device==='desktop'?'bg-sky-800 text-white':''}`} title="Desktop"><Monitor className="h-4 w-4"/></button><button onClick={()=>setDevice('tablet')} className={`rounded p-2 ${device==='tablet'?'bg-sky-800 text-white':''}`} title="Tablet"><Tablet className="h-4 w-4"/></button><button onClick={()=>setDevice('mobile')} className={`rounded p-2 ${device==='mobile'?'bg-sky-800 text-white':''}`} title="Mobile"><Smartphone className="h-4 w-4"/></button></div><button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white"><Save className="h-4 w-4"/>Save Draft</button></>}
