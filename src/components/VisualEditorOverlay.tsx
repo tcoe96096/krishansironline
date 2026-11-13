@@ -157,7 +157,7 @@ export const VisualEditorOverlay:React.FC<{enabled:boolean}> = ({enabled})=>{
       target.contentEditable='false';delete target.dataset.vsEditing;
       const key=target.getAttribute('data-vs-key')||'';
       if(key)draft.texts[key]=target.textContent||'';
-      persist();send('vs:select',{key,text:target.textContent||'',hidden:false});
+      persist();select(target);
     };
     let dragKey='';
     const onDragStart=(event:DragEvent)=>{
