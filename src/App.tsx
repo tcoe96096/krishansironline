@@ -204,6 +204,13 @@ const MainApp: React.FC = () => {
 
   // Handle browser back/forward navigation for clean page URLs.
   useEffect(() => {
+    if (window.parent !== window) {
+      const pageLabels:Record<PageId,string>={home:'Home',classes:'Classes 6–12',exams:'All Exams',tests:'Online Tests',materials:'Study Materials',polity:'Constitution',affairs:'Current Affairs',results:'Results',about:'About',contact:'Contact',studentDashboard:'Student Dashboard',admin:'Admin',adminPreview:'Admin Preview'};
+      window.parent.postMessage({source:'krishan-visual-editor',type:'vs:navigate',page:activePage,label:pageLabels[activePage]},window.location.origin);
+    }
+  }, [activePage]);
+
+  useEffect(() => {
     const handleLocationChange = () => setActivePage(readPageFromLocation());
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
