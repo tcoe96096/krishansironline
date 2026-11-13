@@ -10,7 +10,7 @@ type NotificationRow = {
   target_class: string | null;
   source_type: string;
   published_at: string;
-  created_at: string;
+  created_at: string;\n  priority: 'normal'|'important'|'urgent';\n  scheduled_at: string;\n  expires_at: string | null;
 };
 type ReadCount = Record<string, number>;
 
@@ -25,7 +25,7 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
   const [titleHi, setTitleHi] = useState('');
   const [bodyEn, setBodyEn] = useState('');
   const [bodyHi, setBodyHi] = useState('');
-  const [targetClass, setTargetClass] = useState('');
+  const [targetClass, setTargetClass] = useState('');\n  const [priority, setPriority] = useState<'normal'|'important'|'urgent'>('normal');\n  const [scheduledAt, setScheduledAt] = useState('');\n  const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
       const client = requireSupabase();
       const [notifications, receipts] = await Promise.all([
         client.from('student_notifications')
-          .select('id,title,body,target_class,source_type,published_at,created_at')
+          .select('id,title,body,target_class,source_type,published_at,created_at,priority,scheduled_at,expires_at')
           .order('published_at', { ascending: false }).limit(100),
         client.from('student_notification_reads').select('notification_id'),
       ]);
@@ -75,10 +75,10 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
         target_class: targetClass || null,
         source_type: 'manual',
         created_by: user?.id ?? null,
-        published_at: new Date().toISOString(),
+        published_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),\n        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),\n        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,\n        priority,
       });
       if (insertError) throw insertError;
-      setTitleEn(''); setTitleHi(''); setBodyEn(''); setBodyHi(''); setTargetClass('');
+      setTitleEn(''); setTitleHi(''); setBodyEn(''); setBodyHi(''); setTargetClass(''); setPriority('normal'); setScheduledAt(''); setExpiresAt('');
       setMessage('सूचना सफलतापूर्वक विद्यार्थियों को भेज दी गई।');
       await loadRows();
     } catch (cause) {
@@ -113,13 +113,16 @@ export const AdminNotificationManagement: React.FC<{ demoMode?: boolean }> = ({ 
           <label><span className={labelClass}>शीर्षक · हिन्दी</span><input className={inputClass} value={titleHi} onChange={(e) => setTitleHi(e.target.value)} placeholder="सूचना का शीर्षक"/></label>
           <label><span className={labelClass}>विवरण · English</span><textarea className={inputClass} rows={3} value={bodyEn} onChange={(e) => setBodyEn(e.target.value)} placeholder="Write the announcement…"/></label>
           <label><span className={labelClass}>विवरण · हिन्दी</span><textarea className={inputClass} rows={3} value={bodyHi} onChange={(e) => setBodyHi(e.target.value)} placeholder="सूचना का विवरण लिखें…"/></label>
+          <label><span className={labelClass}>Priority / प्राथमिकता</span><select className={inputClass} value={priority} onChange={e=>setPriority(e.target.value as 'normal'|'important'|'urgent')}><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></label>
+          <label><span className={labelClass}>Schedule at (optional)</span><input type="datetime-local" className={inputClass} value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>
+          <label><span className={labelClass}>Expiry at (optional)</span><input type="datetime-local" className={inputClass} value={expiresAt} onChange={e=>setExpiresAt(e.target.value)}/></label>
           <label className="md:col-span-2"><span className={labelClass}>किसे भेजना है?</span><select className={inputClass} value={targetClass} onChange={(e) => setTargetClass(e.target.value)}><option value="">सभी कक्षाएँ (6–12)</option>{['6','7','8','9','10','11','12'].map((value) => <option key={value} value={value}>केवल कक्षा {value}</option>)}</select></label>
         </div>
         <div className="mt-4 flex justify-end"><button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-5 py-2.5 text-xs font-extrabold text-white disabled:opacity-60">{saving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}{saving ? 'Sending…' : 'Send Announcement'}</button></div>
       </form>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between"><h4 className="font-extrabold text-slate-900">Notification History <span className="text-xs font-semibold text-slate-400">({rows.length})</span></h4><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Manual + Automatic</span></div>
-        {loading ? <div className="flex items-center gap-2 py-6 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin"/>Loading…</div> : rows.length === 0 ? <p className="py-6 text-center text-sm text-slate-400">अभी कोई सूचना नहीं है।</p> : <div className="space-y-2">{rows.map((row) => <article key={row.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800">{localize(row.title, 'Untitled')}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{localize(row.body)}</p><p className="mt-1 text-[10px] text-slate-400">{row.target_class ? 'Class ' + row.target_class : 'All Classes'} · {row.source_type} · {new Date(row.published_at).toLocaleString()}</p></div><div className="flex shrink-0 items-center gap-3"><span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500"><Users className="h-3.5 w-3.5"/>{readCounts[row.id] || 0} read</span><button type="button" onClick={() => void deleteNotification(row)} className="rounded-lg border border-rose-100 p-2 text-rose-600 hover:bg-rose-50" title="Delete notification"><Trash2 className="h-4 w-4"/></button></div></article>)}</div>}
+        {loading ? <div className="flex items-center gap-2 py-6 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin"/>Loading…</div> : rows.length === 0 ? <p className="py-6 text-center text-sm text-slate-400">अभी कोई सूचना नहीं है।</p> : <div className="space-y-2">{rows.map((row) => <article key={row.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800">{localize(row.title, 'Untitled')}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{localize(row.body)}</p><p className="mt-1 text-[10px] text-slate-400">{row.target_class ? 'Class ' + row.target_class : 'All Classes'} · {row.source_type} · {row.priority||'normal'} · {row.scheduled_at ? 'Scheduled '+new Date(row.scheduled_at).toLocaleString() : new Date(row.published_at).toLocaleString()}</p></div><div className="flex shrink-0 items-center gap-3"><span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500"><Users className="h-3.5 w-3.5"/>{readCounts[row.id] || 0} read</span><button type="button" onClick={() => void deleteNotification(row)} className="rounded-lg border border-rose-100 p-2 text-rose-600 hover:bg-rose-50" title="Delete notification"><Trash2 className="h-4 w-4"/></button></div></article>)}</div>}
       </section>
       <p className="text-[10px] leading-5 text-slate-400">प्रकाशित टेस्ट, सूचनाएँ और अध्ययन सामग्री पर automatic notifications भी बनेंगी। विद्यार्थियों का Read/Unread status अलग से सुरक्षित रहेगा।</p>
     </div>
