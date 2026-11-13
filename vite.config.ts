@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 
 const seoPages = [
   { slug: 'classes', title: 'Classes 6–12 | Krishan Sir', description: 'Explore class-wise learning resources and study support for Classes 6 to 12, aligned with HBSE and CBSE learning needs.' },
+  { slug: 'all-exams', title: 'All Competitive Exams & Preparation | Krishan Sir', description: 'Explore exam-wise preparation pathways and learning resources for UGC NET, HTET, CTET, UPSC, HPSC and teacher recruitment.' },
   { slug: 'online-tests', title: 'Online Tests & MCQ Practice | Krishan Sir', description: 'Attempt online tests and bilingual MCQ practice for school Social Science and related subjects.' },
   { slug: 'study-materials', title: 'Study Materials & Notes | Krishan Sir', description: 'Find chapter-wise study materials, notes and learning resources for Classes 6–12.' },
   { slug: 'results', title: 'Student Results Portal | Krishan Sir', description: 'Visit the student examination results portal. Verified result information will be published when an authorized source is connected.' },
