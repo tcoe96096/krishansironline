@@ -43,6 +43,7 @@ export const AdminVisualStudio: React.FC = () => {
   const [blocks,setBlocks] = useState<Block[]>(() => {
     try { const saved=localStorage.getItem(key); return saved ? JSON.parse(saved) as Block[] : starter; } catch { return starter; }
   });
+  const [draftReady,setDraftReady] = useState(false);
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
   const [mediaOpen,setMediaOpen] = useState(false);
   const [device,setDevice] = useState<Device>('desktop');
@@ -92,12 +93,45 @@ export const AdminVisualStudio: React.FC = () => {
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try { localStorage.setItem(key, JSON.stringify(blocks)); setNotice('All changes autosaved locally'); }
-      catch { setNotice('Autosave unavailable — use Save Draft or export your work'); }
-    }, 1200);
+    let active = true;
+    const restoreDraft = async () => {
+      if (!supabase || !user || !isAdmin) { setDraftReady(true); return; }
+      setDraftReady(false);
+      try {
+        const { data, error } = await supabase.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
+        if (error) throw error;
+        if (active && Array.isArray(data?.content)) {
+          const restored = await Promise.all((data.content as Block[]).map(async block => {
+            if (!block.mediaPath) return block;
+            const { data: signed } = await supabase.storage.from('visual-studio-media').createSignedUrl(block.mediaPath, 3600);
+            return signed?.signedUrl ? { ...block, imageUrl: signed.signedUrl } : block;
+          }));
+          if (active) { setBlocks(restored); setSelected(restored[0]?.id ?? ''); setNotice('Cloud draft restored'); }
+        }
+      } catch (error) {
+        if (active) setNotice(error instanceof Error ? 'Cloud draft unavailable; local backup active' : 'Cloud draft unavailable; local backup active');
+      } finally { if (active) setDraftReady(true); }
+    };
+    void restoreDraft();
+    return () => { active = false; };
+  }, [user?.id, isAdmin]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    const timer = window.setTimeout(async () => {
+      try {
+        localStorage.setItem(key, JSON.stringify(blocks));
+        if (supabase && user && isAdmin) {
+          const { error } = await supabase.from('visual_studio_drafts').upsert({ user_id: user.id, draft_key: 'main', content: blocks, updated_at: new Date().toISOString() }, { onConflict: 'user_id,draft_key' });
+          if (error) throw error;
+          setNotice('Draft autosaved to cloud and this browser');
+        } else setNotice('All changes autosaved locally');
+      } catch {
+        setNotice('Cloud autosave failed — local backup saved');
+      }
+    }, 1500);
     return () => window.clearTimeout(timer);
-  }, [blocks]);
+  }, [blocks, draftReady, user?.id, isAdmin]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -147,7 +181,7 @@ export const AdminVisualStudio: React.FC = () => {
   const move = (id:string,dir:-1|1) => { const i=blocks.findIndex(b=>b.id===id),j=i+dir;if(j<0||j>=blocks.length)return;setHistory(h=>[...h,blocks]);setBlocks(current=>{const next=[...current];[next[i],next[j]]=[next[j],next[i]];return next;}); };
   const undo=()=>{if(!history.length)return;setFuture(f=>[blocks,...f]);setBlocks(history[history.length-1]);setHistory(h=>h.slice(0,-1));setNotice('Undo applied');};
   const redo=()=>{if(!future.length)return;setHistory(h=>[...h,blocks]);setBlocks(future[0]);setFuture(f=>f.slice(1));setNotice('Redo applied');};
-  const save=()=>{try{localStorage.setItem(key,JSON.stringify(blocks));setNotice('Draft saved in this browser');}catch{setNotice('Unable to save draft in browser storage');}};
+  const save=async()=>{try{localStorage.setItem(key,JSON.stringify(blocks));if(supabase&&user&&isAdmin){const {error}=await supabase.from('visual_studio_drafts').upsert({user_id:user.id,draft_key:'main',content:blocks,updated_at:new Date().toISOString()},{onConflict:'user_id,draft_key'});if(error)throw error;setNotice('Draft saved securely to cloud and this browser');}else setNotice('Draft saved in this browser');}catch{setNotice('Cloud save failed — browser backup is available');}};
   const onDrop=(event:React.DragEvent<HTMLDivElement>,index:number)=>{event.preventDefault();const draggedId=event.dataTransfer.getData('application/krishan-sort-block');if(draggedId){const from=blocks.findIndex(b=>b.id===draggedId);if(from<0||from===index)return;setHistory(h=>[...h,blocks]);setFuture([]);setBlocks(current=>{const next=[...current];const [item]=next.splice(from,1);const target=from<index?index-1:index;next.splice(Math.max(0,Math.min(target,next.length)),0,item);return next;});setSelected(draggedId);setNotice('Component order updated');return;}const kind=event.dataTransfer.getData('application/krishan-block') as Kind;if(kind&&palette.some(p=>p.kind===kind))add(kind,index);};
   const canvasWidth=device==='mobile'?'390px':device==='tablet'?'768px':'100%';
   const renderBlock=(b:Block,index:number)=> { if (b.responsive?.[device]?.hidden) return null; const responsiveFontSize=b.responsive?.[device]?.fontSize ?? b.size; return <div key={b.id} onClick={()=>{if(!previewMode)setSelected(b.id)}} onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,index)}} className={`group relative my-2 rounded-xl border-2 p-3 transition ${previewMode?'border-transparent':selected===b.id?'border-sky-500 ring-2 ring-sky-100':'border-transparent hover:border-slate-300'}`} style={{background:b.background??'transparent',textAlign:b.align??'left'}}>
