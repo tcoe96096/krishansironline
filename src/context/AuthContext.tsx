@@ -180,9 +180,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Always return to the Admin route after Google OAuth. Preserve a hosting
         // subpath (for example GitHub Pages) while avoiding an accidental homepage return.
         redirectTo: (() => {
-          const currentPath = window.location.pathname;
-          const adminBasePath = currentPath.replace(/\\/admin\\/?$/, '').replace(/\\/+$/, '');
-          const adminPath = `${adminBasePath}/admin/`.replace(/\\/+/g, '/');
+          const pathSegments = window.location.pathname.split('/').filter(Boolean);
+          if (pathSegments[pathSegments.length - 1] === 'admin') pathSegments.pop();
+          const adminPath = `/${pathSegments.concat('admin').join('/')}/`;
           return new URL(adminPath, window.location.origin).toString();
         })(),
       },
