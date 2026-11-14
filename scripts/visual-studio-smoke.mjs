@@ -32,11 +32,11 @@ try {
   await toolbar.getByRole('button', { name: /Components/ }).click();
   const components = page.locator('[data-visual-editor-ui="components-menu"]');
   await components.waitFor({ timeout: 15000 });
-  assert.equal(await components.getByRole('button').count(), 14); // 13 components + close
+  assert.equal(await components.getByRole('button').count(), 17); // 16 components + close
   await components.getByRole('textbox', { name: 'Search components' }).fill('FAQ');
   assert.equal(await components.getByRole('button', { name: /FAQ/ }).count(), 1);
   await components.getByRole('textbox', { name: 'Search components' }).fill('');
-  console.log('PASS: Floating commands, 13-component palette, and search');
+  console.log('PASS: Floating commands, 16-component palette, and search');
 
   const frame = page.frameLocator('iframe[title^="Interactive website editor"]');
   await frame.locator('main').first().waitFor({ timeout: 25000 });
@@ -81,6 +81,41 @@ try {
   const testsSrc = await page.locator('iframe[title^="Interactive website editor"]').getAttribute('src');
   assert.match(testsSrc || '', /online-tests/);
   console.log('PASS: Page switching, responsive controls, and protected routes in design-only mode');
+
+  // Draft new page: demo mode never writes to Supabase or publishes a route.
+  await page.getByRole('button', { name: 'Add New Page' }).click();
+  await page.getByRole('textbox', { name: 'New page title' }).fill('Class 10 Sample Lesson');
+  await page.getByRole('textbox', { name: 'New page slug' }).fill('class-10-sample-lesson');
+  await page.getByRole('combobox', { name: 'New page template' }).selectOption('course');
+  await page.getByRole('textbox', { name: 'New page description' }).fill('Draft learning page');
+  await page.getByRole('button', { name: 'Create Draft Page' }).click();
+  await selector.selectOption('custom-class-10-sample-lesson');
+  const draftFrame = page.frameLocator('iframe[title^="Interactive website editor"]');
+  await draftFrame.getByText('Class 10 Sample Lesson', { exact: true }).waitFor({ timeout: 15000 });
+  assert.equal(await page.getByRole('status').allTextContents().then(values => values.join(' ')).then(v => /demo session only/i.test(v)), true);
+  console.log('PASS: New page creator, safe slug, course template and draft-only behavior');
+
+  const draftToolbar = page.locator('[data-visual-editor-ui="toolbar"]');
+  await draftToolbar.getByRole('button', { name: 'Themes' }).click();
+  await page.locator('[data-visual-editor-ui="themes-panel"]').getByRole('button', { name: 'Forest Green' }).click();
+  await draftFrame.locator('style[data-studio-theme="forest"]').waitFor({ timeout: 15000 });
+  console.log('PASS: Theme presets apply to custom page Preview only');
+
+  await draftToolbar.getByRole('button', { name: /Components/ }).click();
+  const customPalette = page.locator('[data-visual-editor-ui="components-menu"]');
+  await customPalette.getByRole('textbox', { name: 'Search components' }).fill('PDF');
+  await customPalette.getByRole('button', { name: /PDF Reader/ }).click();
+  const customInspector = page.locator('[data-visual-editor-ui="inspector-panel"]');
+  await customInspector.getByRole('textbox', { name: 'Component media URL' }).fill('https://example.com/guide.pdf');
+  await draftFrame.locator('iframe[title="PDF learning resource"]').waitFor({ timeout: 15000 });
+  console.log('PASS: PDF reader embeds only HTTPS URL');
+
+  await draftToolbar.getByRole('button', { name: /Components/ }).click();
+  await customPalette.getByRole('textbox', { name: 'Search components' }).fill('Video');
+  await customPalette.getByRole('button', { name: /Video Player/ }).click();
+  await customInspector.getByRole('textbox', { name: 'Component media URL' }).fill('https://example.com/lesson.mp4');
+  await draftFrame.locator('video[src^="https://example.com/"]').waitFor({ timeout: 15000 });
+  console.log('PASS: HTML5 video player via HTTPS URL');
 
   assert.deepEqual(errors, [], 'Uncaught browser errors: ' + errors.join('; '));
   console.log('PASS: No uncaught browser runtime errors');
