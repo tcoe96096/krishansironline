@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { FilePlus2, Layers3, Monitor, MousePointerClick, Image as ImageIcon, ShieldCheck, Smartphone } from 'lucide-react';
+import { CalendarClock, FilePlus2, Layers3, Monitor, MousePointerClick, Image as ImageIcon, Send, ShieldCheck, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminSiteWideLiveEditor } from './AdminSiteWideLiveEditor';
 import { getVisualDesignPreviewPages } from '../visual-editor/registry';
-import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } from '../services/siteConfigService';
+import { getWebsiteConfigVersions, saveWebsiteConfigDraft, publishWebsiteConfig,
+  scheduleStudioPublish, cancelStudioPublish, getStudioPublishSchedules, type WebsiteConfig, type StudioPublishSchedule
+} from '../services/siteConfigService';
 import {
   normalizeStudioSlug, parseStudioPages, studioPagePreviewHtml, STUDIO_TEMPLATES,
   type StudioDraftPage, type StudioTemplate,
@@ -24,6 +26,13 @@ export const AdminVisualStudio: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [newTemplate, setNewTemplate] = useState<StudioTemplate>('landing');
   const [creating, setCreating] = useState(false);
+  const [publishPanelOpen, setPublishPanelOpen] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishMessage, setPublishMessage] = useState('');
+  const [scheduleAt, setScheduleAt] = useState('');
+  const [recentSchedules, setRecentSchedules] = useState<StudioPublishSchedule[]>([]);
+  const [publishedVersion, setPublishedVersion] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -33,7 +42,12 @@ export const AdminVisualStudio: React.FC = () => {
       const current = history.find(item => item.status === 'draft') || history.find(item => item.status === 'published');
       const visual = current?.config.visualEditor as { customPages?: unknown } | undefined;
       setCustomPages(parseStudioPages(visual?.customPages));
+      setDraftId(history.find(item => item.status === 'draft')?.id || null);
+      setPublishedVersion(history.find(item => item.status === 'published')?.version_number || null);
       setPagesReady(true);
+      if (user && isAdmin) void getStudioPublishSchedules()
+        .then(items => { if (active) setRecentSchedules(items); })
+        .catch(() => { if (active) setPublishMessage('Schedule API not connected yet. The Preview database migration must be applied.'); });
     }).catch(() => {
       if (!active) return;
       setCustomPages([]);
@@ -80,10 +94,11 @@ export const AdminVisualStudio: React.FC = () => {
         const currentPages = parseStudioPages((latest?.config.visualEditor as { customPages?: unknown } | undefined)?.customPages);
         if (currentPages.some(page => page.slug === slug)) throw new Error('यह URL slug अभी किसी अन्य draft में जुड़ गया है।');
         const config: WebsiteConfig = latest?.config || { hero: {}, header: {}, sections: {}, palette: 'navy' };
-        await saveWebsiteConfigDraft({
+        const newDraftId = await saveWebsiteConfigDraft({
           ...config,
           visualEditor: { ...(config.visualEditor || {}), customPages: [...currentPages, added] },
         });
+        setDraftId(newDraftId);
       }
       setCustomPages(prev => [...prev, added]);
       setPageId(added.id);
@@ -96,6 +111,62 @@ export const AdminVisualStudio: React.FC = () => {
       setPagesStatus(error instanceof Error ? error.message : 'Page draft सुरक्षित नहीं हुआ।');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const refreshPublishing = async () => {
+    if (!user || !isAdmin) return;
+    const [versions, plans] = await Promise.all([getWebsiteConfigVersions(), getStudioPublishSchedules()]);
+    setDraftId(versions.find(version => version.status === 'draft')?.id || null);
+    setPublishedVersion(versions.find(version => version.status === 'published')?.version_number || null);
+    setRecentSchedules(plans);
+  };
+  const publishNow = async () => {
+    if (!user || !isAdmin || !draftId || publishBusy) return;
+    if (!window.confirm('Publish the currently saved Studio Draft to the connected website database? This is separate from deploying code.')) return;
+    setPublishBusy(true);
+    try {
+      const plans = recentSchedules.filter(plan => plan.status === 'pending' && plan.source_version_id === draftId);
+      for (const plan of plans) await cancelStudioPublish(plan.id);
+      const version = await publishWebsiteConfig(draftId);
+      setPublishMessage('Published saved Website Draft version ' + version + '. Public pages update after their publication refresh.');
+      await refreshPublishing();
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : 'Publish failed.');
+    } finally {
+      setPublishBusy(false);
+    }
+  };
+  const schedulePublish = async () => {
+    if (!user || !isAdmin || !draftId || !scheduleAt || publishBusy) return;
+    const selected = new Date(scheduleAt);
+    const diff = selected.getTime() - Date.now();
+    if (!Number.isFinite(diff) || diff < 120000 || diff > 365 * 86400000) {
+      setPublishMessage('Select a future date/time between 2 minutes and 365 days from now.'); return;
+    }
+    setPublishBusy(true);
+    try {
+      const saved = await scheduleStudioPublish(draftId, selected.toISOString());
+      setPublishMessage('Scheduled saved Draft ID ' + saved.slice(0,8) + '… for ' + selected.toLocaleString() +
+        '. This schedule runs server-side; later edits do not change the scheduled snapshot.');
+      await refreshPublishing();
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : 'Scheduling failed.');
+    } finally {
+      setPublishBusy(false);
+    }
+  };
+  const cancelPublish = async (id: string) => {
+    if (!user || !isAdmin || publishBusy) return;
+    setPublishBusy(true);
+    try {
+      await cancelStudioPublish(id);
+      await refreshPublishing();
+      setPublishMessage('Scheduled publication cancelled.');
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : 'Cancellation failed.');
+    } finally {
+      setPublishBusy(false);
     }
   };
 
@@ -137,6 +208,10 @@ export const AdminVisualStudio: React.FC = () => {
         aria-expanded={newPageOpen}
         className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white">
         <FilePlus2 className="h-4 w-4"/> Add New Page
+      </button>
+      <button type="button" onClick={() => setPublishPanelOpen(v => !v)}
+        aria-expanded={publishPanelOpen} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900">
+        <CalendarClock className="h-4 w-4"/> Publish & Schedule
       </button>
       {designOnly && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
         Design-only mode: authentication, test submissions, results and admin actions cannot be edited.
@@ -184,8 +259,52 @@ export const AdminVisualStudio: React.FC = () => {
       </div>
     </form>}
     {pagesStatus && <p role="status" className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">{pagesStatus}</p>}
+    {publishPanelOpen && <section data-testid="studio-publishing-panel" className="space-y-3 rounded-xl border border-emerald-200 bg-white p-4">
+      <div>
+        <h3 className="text-sm font-extrabold text-slate-900">Publish Manager · Scheduled Publishing</h3>
+        <p className="mt-1 text-xs text-slate-600">Save your changes with <strong>Save Cloud Draft</strong> in the Inspector first.
+          Publish applies the saved version, not unsaved visual changes.</p>
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <span className="rounded-lg bg-sky-50 px-3 py-2 text-sky-900">Draft: {draftId ? 'Ready (' + draftId.slice(0,8) + '…)' : 'Not saved'}</span>
+        <span className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-900">Live Version: {publishedVersion ?? 'None'}</span>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <button type="button" onClick={() => void publishNow()}
+          disabled={!isAdmin || !draftId || publishBusy}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">
+          <Send className="h-4 w-4"/> {publishBusy ? 'Working…' : 'Publish Saved Draft Now'}
+        </button>
+        <label className="text-xs font-bold text-slate-700">Schedule local date & time
+          <input type="datetime-local" aria-label="Schedule publication date and time" value={scheduleAt}
+            onChange={event => setScheduleAt(event.target.value)}
+            className="mt-1 block rounded-lg border p-2 text-xs"/>
+        </label>
+        <button type="button" onClick={() => void schedulePublish()}
+          disabled={!isAdmin || !draftId || !scheduleAt || publishBusy}
+          className="rounded-lg border border-sky-800 bg-sky-50 px-4 py-2.5 text-xs font-bold text-sky-900 disabled:opacity-50">
+          Schedule Publish
+        </button>
+      </div>
+      <p className="text-[11px] text-slate-500">Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone || 'Browser local'}.
+        Scheduler checks due plans around once a minute and publishes the saved snapshot.
+        Only one pending publication is supported; scheduling another replaces it.</p>
+      {recentSchedules.filter(item => item.status === 'pending').map(plan => <div key={plan.id}
+        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <span className="text-xs text-amber-900">Scheduled: {new Date(plan.scheduled_for).toLocaleString()} · Draft {plan.source_version_id?.slice(0,8) || 'unknown'}…</span>
+        <button type="button" disabled={publishBusy || !isAdmin} onClick={() => void cancelPublish(plan.id)}
+          className="rounded-lg border border-amber-500 px-3 py-1.5 text-xs font-bold text-amber-900 disabled:opacity-50">Cancel Schedule</button>
+      </div>)}
+      <button type="button" onClick={() => void refreshPublishing().catch(error => setPublishMessage(error instanceof Error ? error.message : 'Refresh failed'))}
+        disabled={!isAdmin || publishBusy} className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-50">Refresh Publish Status</button>
+      {publishMessage && <p role="status" className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{publishMessage}</p>}
+      <p className="text-xs font-medium text-amber-900">
+        Preview deployments use their connected Preview database. PR merge and Production code deployment remain separate, explicit actions.
+      </p>
+    </section>}
     <AdminSiteWideLiveEditor key={active.id} src={src}
       srcDoc={customPage ? studioPagePreviewHtml(customPage) : undefined}
-      pageId={active.id} pageLabel={active.label} mobile={mobile} designOnly={designOnly}/>
+      pageId={active.id} pageLabel={active.label} mobile={mobile} designOnly={designOnly}
+      onDraftSaved={savedId => { setDraftId(savedId); setPublishMessage('Cloud Draft saved. Publish Manager can now publish or schedule this version.'); }}/>
   </section>;
 };
