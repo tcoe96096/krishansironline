@@ -97,8 +97,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           country, state, district, areaType, localityName, pinCode,
         });
         setMessage(en
-          ? 'Registration successful. You can now sign in with your mobile number or email ID and password.'
-          : 'पंजीकरण सफल रहा। अब आप मोबाइल नंबर या Email ID और पासवर्ड से लॉगिन कर सकते हैं।');
+          ? 'Registration submitted. Your account will be available after Admin approval.'
+          : 'पंजीकरण जमा हो गया है। Admin Approval के बाद ही आप Login कर सकेंगे।');
         setMode('login');
         setRegistrationStep(1);
         setPassword('');
