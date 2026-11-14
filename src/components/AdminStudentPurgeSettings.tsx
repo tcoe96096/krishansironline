@@ -53,7 +53,7 @@ export const AdminStudentPurgeSettings: React.FC = () => {
       setError('Recovery period 30 से 365 दिनों के बीच होना चाहिए।');
       return;
     }
-    if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(runTime)) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(runTime)) {
       setError('समय HH:MM (24-hour) format में दें।');
       return;
     }
