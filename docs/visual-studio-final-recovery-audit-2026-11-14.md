@@ -36,7 +36,7 @@ PR #97's merge commit is an ancestor of current `main`; its panel-dragging chang
 ## Remaining verification before calling Visual Studio complete
 
 1. Verify in the connected Supabase project that the Admin-only `site_config_versions` table and `admin_save_site_config` / `admin_publish_site_config` RPCs are installed and enforce Admin-only writes.
-2. Verify the legacy Canvas Builder's `visual_studio_drafts` table and `visual-studio-media` storage bucket/policies. The current repository migration directory contains `0011_versioned_website_configuration.sql`, but no migration explicitly named for the legacy drafts table or media bucket. Do not assume those resources exist merely because the UI references them.
+2. The connected Supabase project was inspected read-only: `site_config_versions` exists, but `visual_studio_drafts` and the `visual-studio-media` bucket were absent. A new migration `0020_visual_studio_cloud_drafts_and_media.sql` has now been added to this PR. It creates an Admin-only per-user draft table and a private 50 MB image/video bucket with per-user folder policies. The migration has not been applied to the connected project; apply only after this PR is reviewed and explicitly approved.
 3. Run authenticated Admin browser checks on Preview: open Studio, switch Canvas / Real Page Editor, select text and image/section elements, edit styles, resize, drag panels, save a cloud draft, reload and restore the draft.
 4. Verify the public-page allowlist and protected routes remain excluded (online tests, results, student dashboard, Admin routes).
 5. Verify that Save Draft never publishes. Test explicit publish separately only after owner review.
@@ -49,4 +49,4 @@ This audit does not create or run database migrations, change storage policies, 
 
 ## Recommended next implementation PR
 
-Create a clean Visual Studio completion PR from current `main` only after the Supabase resource audit. Include only verified missing schema/policy fixes and concrete UI/QA fixes. Do not include student authentication, tests, Google Apps Script, purge/scheduler work, or Vercel configuration.
+This PR is the clean Visual Studio recovery PR from current `main`: it records the audit and includes the verified missing Canvas Draft / Media backend migration. After review and approval, apply the migration to Preview first, then complete authenticated browser QA. Do not apply it to Production or publish website content without explicit approval. Do not include student authentication, tests, Google Apps Script, purge/scheduler work, or Vercel configuration.
