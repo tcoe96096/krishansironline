@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlignLeft, BarChart3, ChevronDown, ChevronUp, Columns2, Copy, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
+import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
+import { STUDIO_THEMES, safeStudioMediaUrl, studioYouTubeEmbed, type StudioDraftPage, type StudioTheme } from '../visual-editor/studioBuilder';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } from '../services/siteConfigService';
 
-type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'divider' | 'spacer' | 'quote' | 'faq' | 'callout' | 'stat';
+type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'pdf' | 'divider' | 'spacer' | 'quote' | 'faq' | 'callout' | 'stat' | 'hero' | 'steps';
 type Media = { name: string; path: string; type: 'image' | 'video'; url: string };
-type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string };
+type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string; url?: string };
 type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number };
 type Override = { selector: string; text: string; textEditable: boolean; style: StyleDraft };
-type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]> };
+type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]>; themes?: Record<string, StudioTheme>; customPages?: StudioDraftPage[] };
 type Selected = { tag: string; text: string; selector: string; width: number; height: number; textEditable: boolean };
 
 const defaults: StyleDraft = { color: '#18263b', backgroundColor: '#ffffff', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0 };
@@ -21,13 +22,16 @@ const palette: { kind: Kind; label: string; hint: string; icon: React.ElementTyp
   { kind: 'image', label: 'Image', hint: 'Add an image block', icon: ImageIcon },
   { kind: 'card', label: 'Card', hint: 'Content card', icon: Square },
   { kind: 'columns', label: 'Columns', hint: 'Two-column section', icon: Columns2 },
-  { kind: 'video', label: 'Video', hint: 'Video placeholder', icon: Video },
+  { kind: 'video', label: 'Video Player', hint: 'MP4, WEBM or YouTube URL', icon: Video },
+  { kind: 'pdf', label: 'PDF Reader', hint: 'Embed an HTTPS PDF link', icon: BookOpen },
   { kind: 'divider', label: 'Divider', hint: 'Horizontal separator', icon: Minus },
   { kind: 'spacer', label: 'Spacer', hint: 'Vertical spacing', icon: MoveVertical },
   { kind: 'quote', label: 'Quote', hint: 'Quotation and author', icon: Quote },
   { kind: 'faq', label: 'FAQ', hint: 'Expandable question and answer', icon: HelpCircle },
   { kind: 'callout', label: 'Callout', hint: 'Highlight a notice', icon: Megaphone },
   { kind: 'stat', label: 'Statistic', hint: 'Important number and context', icon: BarChart3 },
+  { kind: 'hero', label: 'Hero Banner', hint: 'Page hero and supporting text', icon: ImageIcon },
+  { kind: 'steps', label: 'Learning Steps', hint: 'Step-by-step timeline', icon: Columns2 },
 ];
 const safeSelector = (selector: string) => {
   const parts = selector.split(' > ');
@@ -55,7 +59,7 @@ const hex = (value: string, fallback: string) => {
   return match ? '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('') : fallback;
 };
 
-export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean }> = ({ src, pageId, pageLabel, mobile = false, designOnly = false }) => {
+export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean }> = ({ src, srcDoc, pageId, pageLabel, mobile = false, designOnly = false }) => {
   const { user, isAdmin } = useAuth();
   const iframe = useRef<HTMLIFrameElement>(null);
   const targetRef = useRef<HTMLElement | null>(null);
@@ -71,6 +75,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [saving, setSaving] = useState(false);
   const [componentsOpen, setComponentsOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [themesOpen, setThemesOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [media, setMedia] = useState<Media[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -84,6 +89,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [toolbarPos, setToolbarPos] = useState({ x: Math.max(12, Math.round((window.innerWidth - 360) / 2)), y: Math.max(12, window.innerHeight - 90) });
   const [componentsPos, setComponentsPos] = useState({ x: 16, y: 100 });
   const [mediaPos, setMediaPos] = useState({ x: 16, y: 100 });
+  const [themesPos, setThemesPos] = useState({ x: 36, y: 145 });
   const [inspectorPos, setInspectorPos] = useState({ x: Math.max(12, window.innerWidth - 360), y: 100 });
   const dragPanel = (event: React.PointerEvent<HTMLElement>, setter: React.Dispatch<React.SetStateAction<{x:number;y:number}>>) => {
     if ((event.target as HTMLElement).closest('button,input,select,textarea,label')) return;
@@ -105,7 +111,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
         if (!active) return;
         const latest = history.find(item => item.status === 'draft') || history.find(item => item.status === 'published');
         const saved = latest?.config.visualEditor as Draft | undefined;
-        if (saved?.version === 1 && saved.pages && typeof saved.pages === 'object') setDraft({ version: 1, pages: saved.pages, addedComponents: saved.addedComponents || {} });
+        if (saved?.version === 1 && saved.pages && typeof saved.pages === 'object') setDraft({ version: 1, pages: saved.pages, addedComponents: saved.addedComponents || {}, themes: saved.themes || {}, customPages: saved.customPages || [] });
         setStatus(latest ? 'Cloud Draft · Version ' + latest.version_number : 'Cloud Draft अभी खाली है');
         setCloudReady(true);
       } catch (error) {
@@ -115,7 +121,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { setReady(false); setSelected(null); setManagedComponentId(null); targetRef.current = null; }, [src, pageId]);
+  useEffect(() => { setReady(false); setSelected(null); setManagedComponentId(null); targetRef.current = null; }, [src, srcDoc, pageId]);
 
   const addDomNode = (doc: Document, item: Added, mediaUrl?: string) => {
     if (!safeSelector(item.parentSelector) || doc.querySelector('[data-builder-component-id="' + item.id + '"]')) return;
@@ -299,7 +305,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
       overlay?.remove(); targetRef.current = null;
     };
-  }, [ready, src, pageId, designOnly]);
+  }, [ready, src, srcDoc, pageId, designOnly]);
 
   useEffect(() => {
     if (!ready || !selected) return;
@@ -494,7 +500,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
         <span className="font-semibold text-sky-800">{status}</span>
       </div>
       <div className="mx-auto overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 560, maxWidth: mobile ? '390px' : '100%' }}>
-        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} onLoad={() => setReady(true)} className="h-full w-full border-0" />
+        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} srcDoc={srcDoc} onLoad={() => setReady(true)} className="h-full w-full border-0" />
       </div>
       {createPortal(<>
         <div data-visual-editor-ui="toolbar" style={{ left: toolbarPos.x, top: toolbarPos.y }} onPointerDown={event => dragPanel(event, setToolbarPos)} className="fixed z-[99990] flex items-center gap-1 rounded-xl cursor-move touch-none border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.22)] backdrop-blur">
