@@ -197,8 +197,12 @@ declare
   v_recovery_days integer := 30;
 begin
   if new.account_status = 'deleted' and old.account_status is distinct from 'deleted' then
-    select recovery_days into v_recovery_days
-    from public.student_purge_settings where singleton = true;
+    if exists (select 1 from public.user_roles where user_id = auth.uid() and lower(role) = 'super_admin') then
+      select recovery_days into v_recovery_days
+      from public.student_purge_settings where singleton = true;
+    else
+      v_recovery_days := 30;
+    end if;
     new.deleted_at := now();
     new.purge_after := now() + make_interval(days => coalesce(v_recovery_days, 30));
   elsif old.account_status = 'deleted' and new.account_status <> 'deleted' then
