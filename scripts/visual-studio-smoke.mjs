@@ -98,7 +98,7 @@ try {
   const draftToolbar = page.locator('[data-visual-editor-ui="toolbar"]');
   await draftToolbar.getByRole('button', { name: 'Themes' }).click();
   await page.locator('[data-visual-editor-ui="themes-panel"]').getByRole('button', { name: 'Forest Green' }).click();
-  await draftFrame.locator('style[data-studio-theme="forest"]').waitFor({ timeout: 15000 });
+  await draftFrame.locator('style[data-studio-theme="forest"]').waitFor({ state: 'attached', timeout: 15000 });
   console.log('PASS: Theme presets apply to custom page Preview only');
 
   await draftToolbar.getByRole('button', { name: /Components/ }).click();
