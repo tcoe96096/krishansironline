@@ -105,7 +105,19 @@ interface OnlineTestEngineProps {
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
+
+  useEffect(() => {
+    const updateNetworkStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    return () => {
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+    };
+  }, []);
+
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [testSearch, setTestSearch] = useState('');
   const [testClassFilter, setTestClassFilter] = useState('all');
   const [catalogueLoading, setCatalogueLoading] = useState(true);
@@ -901,6 +913,18 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
               </div>
               <div className="mt-2 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[10px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
+              {!isOnline && (
+                <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-900">
+                  इंटरनेट कनेक्शन उपलब्ध नहीं है। आपका टेस्ट और टाइमर जारी है; उत्तर इस ब्राउज़र में सुरक्षित हो रहे हैं। नेटवर्क लौटने पर सबमिशन फिर प्रयास होगा।
+                  <span className="block mt-0.5 text-amber-800">No internet connection. Your timer continues and answers are saved locally; submission will retry when you reconnect.</span>
+                </div>
+              )}
+              {autoSubmitPending && (
+                <div role="status" aria-live="assertive" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-900">
+                  समय समाप्त। परीक्षा स्वतः सबमिट करने का प्रयास फिर से किया जा रहा है। कृपया पेज खुला रखें।
+                  <span className="block mt-0.5 text-rose-800">Time is up. Automatic submission will keep retrying; please keep this page open.</span>
+                </div>
+              )}
             </div>
             {/* MOBILE QUESTION PALETTE: compact collapsible navigation */}
             <div className="lg:hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
