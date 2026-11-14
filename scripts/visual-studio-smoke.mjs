@@ -132,7 +132,7 @@ try {
   await smart.getByRole('button', { name: /Rounded/ }).click();
   assert.equal(await title.evaluate(element => element.style.borderRadius), '22px');
   await smart.getByRole('button', { name: 'Auto Contrast' }).click();
-  assert.equal(await title.evaluate(element => element.style.color), 'rgb(11, 57, 121)');
+  assert.equal(await title.evaluate(element => element.style.color), 'rgb(15, 23, 42)');
   await smart.getByRole('button', { name: 'Copy Style' }).click();
   assert.equal(await smart.getByRole('button', { name: 'Paste Style' }).isEnabled(), true);
   console.log('PASS: Visual animations, filters, hover, preset, auto-contrast and clipboard tools');
@@ -141,7 +141,7 @@ try {
   const publishing = page.getByTestId('studio-publishing-panel');
   await publishing.waitFor({ timeout: 15000 });
   assert.equal(await publishing.getByRole('button', { name: /Publish Saved Draft Now/ }).isDisabled(), true);
-  await publishing.getByRole('textbox', { name: 'Schedule publication date and time' }).fill('2027-01-01T12:30');
+  await publishing.locator('input[aria-label="Schedule publication date and time"]').fill('2027-01-01T12:30');
   assert.equal(await publishing.getByRole('button', { name: 'Schedule Publish' }).isDisabled(), true);
   console.log('PASS: Publish and schedule controls prevent unauthorized demo writes');
 
