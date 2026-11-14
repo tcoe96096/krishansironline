@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Fail closed until the owner explicitly enables the execution gate after Preview review.
-  if (Deno.env.get("STUDENT_PURGE_EXECUTION_ENABLED") !== "true") {
+  if (Deno.env.get("STUDENT_PURGE_EXECUTION_ENABLED") !== "true" || Deno.env.get("STUDENT_PURGE_CONFIRMATION") !== "OWNER_APPROVED_PREVIEW_ONLY") {
     return json({
       status: "prepared_but_disabled",
       message: "Auth deletion is disabled. Configure the execution gate only after synthetic Preview acceptance.",
