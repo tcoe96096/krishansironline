@@ -9,7 +9,7 @@ import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } 
 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'pdf' | 'divider' | 'spacer' | 'quote' | 'faq' | 'callout' | 'stat' | 'hero' | 'steps';
 type Media = { name: string; path: string; type: 'image' | 'video'; url: string };
-type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string; url?: string };
+type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string; url?: string; effects?: StudioEffect };
 type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number; effects?: StudioEffect };
 type Override = { selector: string; text: string; textEditable: boolean; style: StyleDraft };
 type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]>; themes?: Record<string, StudioTheme>; customPages?: StudioDraftPage[] };
@@ -250,6 +250,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       const section = doc.createElement('section'); section.textContent = item.text; section.style.cssText = 'padding:20px;background:#f1f5f9;border:1px solid #dbe5f0;border-radius:16px;margin:16px 0;'; node = section;
     }
     node.dataset.builderComponentId = item.id;
+    ensureStudioEffectsStyles(doc);
+    applyStudioEffects(node, item.effects);
     parent.appendChild(node);
   };
 
@@ -468,7 +470,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     setManagedComponentId(null);
     setNotice('Redo applied to added components.');
   };
-  const updateComponent = (id: string, patch: Partial<Pick<Added, 'text' | 'subtitle' | 'url'>>) => {
+  const updateComponent = (id: string, patch: Partial<Pick<Added, 'text' | 'subtitle' | 'url' | 'effects'>>) => {
     replaceComponents(pageComponents.map(item => item.id === id ? { ...item, ...patch } : item), 'Component updated');
   };
   const duplicateComponent = (id: string) => {
@@ -696,6 +698,30 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
             <p className="text-xs font-bold text-violet-900">Edit Added Component · {managedComponent.kind}</p>
             <label className="block text-[10px] font-semibold text-slate-600">Title / Text<textarea aria-label="Component title" rows={2} maxLength={2000} value={managedComponent.text} onChange={event => updateComponent(managedComponent.id, { text: event.target.value })} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Subtitle / Answer / Attribution<textarea aria-label="Component subtitle" rows={2} maxLength={2000} value={managedComponent.subtitle || ''} onChange={event => updateComponent(managedComponent.id, { subtitle: event.target.value })} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>
+            <div data-testid="component-effects" className="space-y-2 rounded-lg border border-violet-200 bg-white p-2">
+              <p className="text-[10px] font-extrabold text-violet-900">Component Animation & Filters</p>
+              <label className="block text-[10px] font-bold">Animation
+                <select aria-label="Component animation" value={safeStudioEffect(managedComponent.effects).animation}
+                  onChange={event => updateComponent(managedComponent.id, { effects: { ...safeStudioEffect(managedComponent.effects), animation: event.target.value as StudioEffect['animation'] } })}
+                  className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_ANIMATIONS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="block text-[10px] font-bold">Filter
+                <select aria-label="Component filter" value={safeStudioEffect(managedComponent.effects).filter}
+                  onChange={event => updateComponent(managedComponent.id, { effects: { ...safeStudioEffect(managedComponent.effects), filter: event.target.value as StudioEffect['filter'] } })}
+                  className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_FILTERS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="block text-[10px] font-bold">Hover Effect
+                <select aria-label="Component hover" value={safeStudioEffect(managedComponent.effects).hover}
+                  onChange={event => updateComponent(managedComponent.id, { effects: { ...safeStudioEffect(managedComponent.effects), hover: event.target.value as StudioEffect['hover'] } })}
+                  className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_HOVERS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+            </div>
             {['video', 'pdf'].includes(managedComponent.kind) && <label className="block text-[10px] font-semibold text-slate-600">
               {managedComponent.kind === 'pdf' ? 'PDF document HTTPS URL' : 'Video MP4/WEBM/YouTube HTTPS URL'}
               <input aria-label="Component media URL" type="url" placeholder="https://..." maxLength={2048}
