@@ -32,7 +32,18 @@ const palette: {kind:Kind;label:string;icon:React.ElementType;hint:string}[] = [
   {kind:'spacer',label:'Spacer',icon:MoveVertical,hint:'Vertical spacing'},
 ];
 const uid = () => 'block-' + Math.random().toString(36).slice(2,10);
-const key = 'krishan.visual-studio.draft.v1';
+const draftKeyForUser = (userId: string) => 'krishan.visual-studio.draft.v1.' + userId;
+const readLocalDraft = (userId: string): Block[] | null => {
+  try {
+    const saved = localStorage.getItem(draftKeyForUser(userId));
+    if (!saved) return null;
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed) || !parsed.every(item =>
+      item && typeof item === 'object' && typeof item.id === 'string' && typeof item.kind === 'string'
+    )) return null;
+    return parsed as Block[];
+  } catch { return null; }
+};
 
 export const AdminVisualStudio: React.FC = () => {
   const { user, isAdmin } = useAuth();
@@ -41,10 +52,9 @@ export const AdminVisualStudio: React.FC = () => {
   const [mediaBusy,setMediaBusy] = useState(false);
   const [mediaError,setMediaError] = useState('');
   const [mediaAlt,setMediaAlt] = useState('');
-  const [blocks,setBlocks] = useState<Block[]>(() => {
-    try { const saved=localStorage.getItem(key); return saved ? JSON.parse(saved) as Block[] : starter; } catch { return starter; }
-  });
+  const [blocks,setBlocks] = useState<Block[]>(starter);
   const [draftReady,setDraftReady] = useState(false);
+  const [draftOwnerId,setDraftOwnerId] = useState<string | null>(null);
   const [selected,setSelected] = useState<string>(blocks[0]?.id ?? '');
   const [mediaOpen,setMediaOpen] = useState(false);
   const [device,setDevice] = useState<Device>('desktop');
@@ -98,12 +108,34 @@ export const AdminVisualStudio: React.FC = () => {
 
   useEffect(() => {
     let active = true;
+    setDraftReady(false);
+    setDraftOwnerId(null);
+    if (!user || !isAdmin) {
+      setBlocks(starter);
+      setSelected(starter[0]?.id ?? '');
+      setHistory([]);
+      setFuture([]);
+      return () => { active = false; };
+    }
+    const userId = user.id;
+    const backup = readLocalDraft(userId);
+    const initial = backup ?? starter;
+    setBlocks(initial);
+    setSelected(initial[0]?.id ?? '');
+    setHistory([]);
+    setFuture([]);
     const restoreDraft = async () => {
       const client = supabase;
-      if (!client || !user || !isAdmin) { setDraftReady(true); return; }
-      setDraftReady(false);
+      if (!client) {
+        if (active) {
+          setNotice(backup ? 'Admin browser backup restored' : 'Cloud unavailable; starter template loaded');
+          setDraftOwnerId(userId);
+          setDraftReady(true);
+        }
+        return;
+      }
       try {
-        const { data, error } = await client.from('visual_studio_drafts').select('content').eq('user_id', user.id).eq('draft_key', 'main').maybeSingle();
+        const { data, error } = await client.from('visual_studio_drafts').select('content').eq('user_id', userId).eq('draft_key', 'main').maybeSingle();
         if (error) throw error;
         if (active && Array.isArray(data?.content)) {
           const restored = await Promise.all((data.content as Block[]).map(async block => {
@@ -112,31 +144,39 @@ export const AdminVisualStudio: React.FC = () => {
             return signed?.signedUrl ? { ...block, imageUrl: signed.signedUrl } : block;
           }));
           if (active) { setBlocks(restored); setSelected(restored[0]?.id ?? ''); setNotice('Cloud draft restored'); }
+        } else if (active) {
+          setNotice(backup ? 'Admin browser backup restored' : 'No cloud draft yet; starter template loaded');
         }
-      } catch (error) {
-        if (active) setNotice(error instanceof Error ? 'Cloud draft unavailable; local backup active' : 'Cloud draft unavailable; local backup active');
-      } finally { if (active) setDraftReady(true); }
+      } catch {
+        if (active) setNotice(backup ? 'Cloud draft unavailable; Admin browser backup restored' : 'Cloud draft unavailable; starter template loaded');
+      } finally {
+        if (active) { setDraftOwnerId(userId); setDraftReady(true); }
+      }
     };
     void restoreDraft();
     return () => { active = false; };
   }, [user?.id, isAdmin]);
 
   useEffect(() => {
-    if (!draftReady) return;
+    if (!draftReady || !user || !isAdmin || draftOwnerId !== user.id) return;
+    const userId = user.id;
     const timer = window.setTimeout(async () => {
+      let browserSaved = false;
+      try { localStorage.setItem(draftKeyForUser(userId), JSON.stringify(blocks)); browserSaved = true; } catch { /* Browser storage may be disabled */ }
+      if (!supabase) {
+        setNotice(browserSaved ? 'Draft autosaved in this browser' : 'Browser autosave unavailable');
+        return;
+      }
       try {
-        localStorage.setItem(key, JSON.stringify(blocks));
-        if (supabase && user && isAdmin) {
-          const { error } = await supabase.from('visual_studio_drafts').upsert({ user_id: user.id, draft_key: 'main', content: blocks, updated_at: new Date().toISOString() }, { onConflict: 'user_id,draft_key' });
-          if (error) throw error;
-          setNotice('Draft autosaved to cloud and this browser');
-        } else setNotice('All changes autosaved locally');
+        const { error } = await supabase.from('visual_studio_drafts').upsert({ user_id: userId, draft_key: 'main', content: blocks, updated_at: new Date().toISOString() }, { onConflict: 'user_id,draft_key' });
+        if (error) throw error;
+        setNotice(browserSaved ? 'Draft autosaved to cloud and this browser' : 'Draft autosaved to cloud');
       } catch {
-        setNotice('Cloud autosave failed — local backup saved');
+        setNotice(browserSaved ? 'Cloud autosave failed — browser backup saved' : 'Cloud and browser autosave failed');
       }
     }, 1500);
     return () => window.clearTimeout(timer);
-  }, [blocks, draftReady, user?.id, isAdmin]);
+  }, [blocks, draftReady, draftOwnerId, user?.id, isAdmin]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -186,7 +226,25 @@ export const AdminVisualStudio: React.FC = () => {
   const move = (id:string,dir:-1|1) => { const i=blocks.findIndex(b=>b.id===id),j=i+dir;if(j<0||j>=blocks.length)return;setHistory(h=>[...h,blocks]);setBlocks(current=>{const next=[...current];[next[i],next[j]]=[next[j],next[i]];return next;}); };
   const undo=()=>{if(!history.length)return;setFuture(f=>[blocks,...f]);setBlocks(history[history.length-1]);setHistory(h=>h.slice(0,-1));setNotice('Undo applied');};
   const redo=()=>{if(!future.length)return;setHistory(h=>[...h,blocks]);setBlocks(future[0]);setFuture(f=>f.slice(1));setNotice('Redo applied');};
-  const save=async()=>{try{localStorage.setItem(key,JSON.stringify(blocks));if(supabase&&user&&isAdmin){const {error}=await supabase.from('visual_studio_drafts').upsert({user_id:user.id,draft_key:'main',content:blocks,updated_at:new Date().toISOString()},{onConflict:'user_id,draft_key'});if(error)throw error;setNotice('Draft saved securely to cloud and this browser');}else setNotice('Draft saved in this browser');}catch{setNotice('Cloud save failed — browser backup is available');}};
+  const save = async () => {
+    if (!user || !isAdmin || !draftReady || draftOwnerId !== user.id) {
+      setNotice('Admin draft is loading or access is unavailable');
+      return;
+    }
+    let browserSaved = false;
+    try { localStorage.setItem(draftKeyForUser(user.id), JSON.stringify(blocks)); browserSaved = true; } catch { /* Browser storage may be disabled */ }
+    if (!supabase) {
+      setNotice(browserSaved ? 'Draft saved in this browser' : 'Browser storage unavailable; draft not saved');
+      return;
+    }
+    try {
+      const { error } = await supabase.from('visual_studio_drafts').upsert({ user_id: user.id, draft_key: 'main', content: blocks, updated_at: new Date().toISOString() }, { onConflict: 'user_id,draft_key' });
+      if (error) throw error;
+      setNotice(browserSaved ? 'Draft saved securely to cloud and this browser' : 'Draft saved securely to cloud');
+    } catch {
+      setNotice(browserSaved ? 'Cloud save failed — browser backup is available' : 'Cloud and browser save failed');
+    }
+  };
   const onDrop=(event:React.DragEvent<HTMLDivElement>,index:number)=>{event.preventDefault();const draggedId=event.dataTransfer.getData('application/krishan-sort-block');if(draggedId){const from=blocks.findIndex(b=>b.id===draggedId);if(from<0||from===index)return;setHistory(h=>[...h,blocks]);setFuture([]);setBlocks(current=>{const next=[...current];const [item]=next.splice(from,1);const target=from<index?index-1:index;next.splice(Math.max(0,Math.min(target,next.length)),0,item);return next;});setSelected(draggedId);setNotice('Component order updated');return;}const kind=event.dataTransfer.getData('application/krishan-block') as Kind;if(kind&&palette.some(p=>p.kind===kind))add(kind,index);};
   const canvasWidth=device==='mobile'?'390px':device==='tablet'?'768px':'100%';
   const renderBlock=(b:Block,index:number)=> { if (b.responsive?.[device]?.hidden) return null; const responsiveFontSize=b.responsive?.[device]?.fontSize ?? b.size; return <div key={b.id} onClick={()=>{if(!previewMode)setSelected(b.id)}} onDragOver={e=>{if(!previewMode)e.preventDefault()}} onDrop={e=>{if(!previewMode)onDrop(e,index)}} className={`group relative my-2 rounded-xl border-2 p-3 transition ${previewMode?'border-transparent':selected===b.id?'border-sky-500 ring-2 ring-sky-100':'border-transparent hover:border-slate-300'}`} style={{background:b.background??'transparent',textAlign:b.align??'left'}}>
@@ -211,7 +269,7 @@ export const AdminVisualStudio: React.FC = () => {
       <div className="flex flex-wrap items-center gap-2">
         {!previewMode&&<><button onClick={undo} disabled={!history.length} className="rounded-lg border p-2 disabled:opacity-40" title="Undo"><Undo2 className="h-4 w-4"/></button><button onClick={redo} disabled={!future.length} className="rounded-lg border p-2 disabled:opacity-40" title="Redo"><Redo2 className="h-4 w-4"/></button>
         <div className="flex rounded-lg border p-1"><button onClick={()=>setDevice('desktop')} className={`rounded p-2 ${device==='desktop'?'bg-sky-800 text-white':''}`} title="Desktop"><Monitor className="h-4 w-4"/></button><button onClick={()=>setDevice('tablet')} className={`rounded p-2 ${device==='tablet'?'bg-sky-800 text-white':''}`} title="Tablet"><Tablet className="h-4 w-4"/></button><button onClick={()=>setDevice('mobile')} className={`rounded p-2 ${device==='mobile'?'bg-sky-800 text-white':''}`} title="Mobile"><Smartphone className="h-4 w-4"/></button></div>
-        <button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white"><Save className="h-4 w-4"/>Save Draft</button></>}
+        <button onClick={save} disabled={!draftReady || draftOwnerId !== user?.id || !isAdmin} className="inline-flex items-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>Save Draft</button></>}
         <button onClick={()=>setPreviewMode(v=>!v)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Eye className="h-4 w-4"/>{previewMode?'Exit Preview':'Preview'}</button>
       </div>
     </header>
@@ -259,6 +317,6 @@ export const AdminVisualStudio: React.FC = () => {
         <div className="mt-4 border-t pt-3"><h4 className="mb-2 flex items-center gap-2 text-xs font-extrabold"><Layers className="h-4 w-4"/>Layers</h4>{blocks.map((b,i)=><button key={b.id} onClick={()=>setSelected(b.id)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-[10px] ${selected===b.id?'bg-sky-100 text-sky-900':'hover:bg-slate-50'}`}><span>{i+1}. {b.kind} — {b.text.slice(0,22)}</span><GripVertical className="h-3 w-3"/></button>)}</div>
       </aside>}
     </div>
-    {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Integration safety:</strong> यह अलग Visual Studio prototype है। Autosave और manual Draft अभी इसी browser में काम करते हैं; Templates, Preview, Duplicate और Undo/Redo उपलब्ध हैं। वास्तविक Live website, Online Test Engine या Production Database पर कोई बदलाव नहीं होता। Production integration approval और mapping tests के बाद होगी।</div>}
+    {!previewMode&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><strong>Integration safety:</strong> यह अलग Visual Studio prototype है। Autosave और manual Draft प्रति-Admin Supabase Cloud में और इस browser के अलग Admin backup में सेव होते हैं; Templates, Preview, Duplicate और Undo/Redo उपलब्ध हैं। वास्तविक Live website, Online Test Engine या Production Database पर कोई बदलाव नहीं होता। Production integration approval और mapping tests के बाद होगी।</div>}
   </div>;
 };
