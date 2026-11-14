@@ -79,6 +79,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [mediaAlt, setMediaAlt] = useState('');
   const [componentQuery, setComponentQuery] = useState('');
   const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
+  const [componentUndo, setComponentUndo] = useState<Record<string, Added[][]>>({});
+  const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
   const [toolbarPos, setToolbarPos] = useState({ x: Math.max(12, Math.round((window.innerWidth - 360) / 2)), y: Math.max(12, window.innerHeight - 90) });
   const [componentsPos, setComponentsPos] = useState({ x: 16, y: 100 });
   const [mediaPos, setMediaPos] = useState({ x: 16, y: 100 });
@@ -316,6 +318,56 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     });
   }, [ready, selected?.text, style]);
 
+  const pageComponents = draft.addedComponents?.[pageId] || [];
+  const managedComponent = pageComponents.find(item => item.id === managedComponentId);
+  const replaceComponents = (next: Added[], message: string) => {
+    if (user && isAdmin && !cloudReady) { setNotice('Cloud Draft लोड होने के बाद edit करें।'); return; }
+    setComponentUndo(prev => ({ ...prev, [pageId]: [...(prev[pageId] || []), pageComponents].slice(-30) }));
+    setComponentRedo(prev => ({ ...prev, [pageId]: [] }));
+    setDraft(prev => ({ ...prev, addedComponents: { ...(prev.addedComponents || {}), [pageId]: next } }));
+    setNotice(message + ' · Save Cloud Draft to keep changes.');
+  };
+  const undoComponents = () => {
+    const history = componentUndo[pageId] || [];
+    if (!history.length) return;
+    setComponentUndo(prev => ({ ...prev, [pageId]: history.slice(0, -1) }));
+    setComponentRedo(prev => ({ ...prev, [pageId]: [...(prev[pageId] || []), pageComponents].slice(-30) }));
+    setDraft(prev => ({ ...prev, addedComponents: { ...(prev.addedComponents || {}), [pageId]: history[history.length - 1] } }));
+    setManagedComponentId(null);
+    setNotice('Undo applied to added components.');
+  };
+  const redoComponents = () => {
+    const future = componentRedo[pageId] || [];
+    if (!future.length) return;
+    setComponentRedo(prev => ({ ...prev, [pageId]: future.slice(0, -1) }));
+    setComponentUndo(prev => ({ ...prev, [pageId]: [...(prev[pageId] || []), pageComponents].slice(-30) }));
+    setDraft(prev => ({ ...prev, addedComponents: { ...(prev.addedComponents || {}), [pageId]: future[future.length - 1] } }));
+    setManagedComponentId(null);
+    setNotice('Redo applied to added components.');
+  };
+  const updateComponent = (id: string, patch: Partial<Pick<Added, 'text' | 'subtitle'>>) => {
+    replaceComponents(pageComponents.map(item => item.id === id ? { ...item, ...patch } : item), 'Component updated');
+  };
+  const duplicateComponent = (id: string) => {
+    const index = pageComponents.findIndex(item => item.id === id);
+    if (index < 0) return;
+    const copy = { ...pageComponents[index], id: 'builder-' + crypto.randomUUID() };
+    replaceComponents([...pageComponents.slice(0,index+1), copy, ...pageComponents.slice(index+1)], 'Component duplicated');
+    setManagedComponentId(copy.id);
+  };
+  const deleteComponent = (id: string) => {
+    replaceComponents(pageComponents.filter(item => item.id !== id), 'Component deleted');
+    setManagedComponentId(null);
+  };
+  const moveComponent = (id: string, offset: -1 | 1) => {
+    const index = pageComponents.findIndex(item => item.id === id);
+    const other = index + offset;
+    if (index < 0 || other < 0 || other >= pageComponents.length) return;
+    const next = [...pageComponents];
+    [next[index], next[other]] = [next[other], next[index]];
+    replaceComponents(next, 'Component reordered');
+  };
+
   const insertComponent = (kind: Kind, asset?: Media) => {
     const doc = iframe.current?.contentDocument;
     if (!doc) return;
@@ -326,11 +378,26 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     if (!safeSelector(parentSelector)) { setNotice('इस page पर सुरक्षित insertion point नहीं मिला।'); return; }
     const item: Added = {
       id: 'builder-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
-      kind, text: kind === 'heading' ? 'New section heading' : kind === 'text' ? 'Write your content here.' : kind === 'button' ? 'Button label' : kind === 'card' ? 'New content card' : kind === 'columns' ? 'First column content' : kind === 'video' ? 'Video placeholder' : asset?.name || 'New component',
+      kind,
+      text: kind === 'heading' ? 'New section heading' :
+        kind === 'text' ? 'Write your content here.' :
+        kind === 'button' ? 'Button label' :
+        kind === 'card' ? 'New content card' :
+        kind === 'columns' ? 'First column content' :
+        kind === 'video' ? 'Video placeholder' :
+        kind === 'quote' ? 'Learning opens new possibilities.' :
+        kind === 'faq' ? 'What will I learn?' :
+        kind === 'callout' ? 'Important announcement' :
+        kind === 'stat' ? '100+' : asset?.name || 'New component',
+      subtitle: kind === 'quote' ? 'Your source or attribution' :
+        kind === 'faq' ? 'Write the answer here.' :
+        kind === 'callout' ? 'Add the important details here.' :
+        kind === 'stat' ? 'Courses and resources' : undefined,
       parentSelector, ...(asset ? { mediaPath: asset.path, altText: mediaAlt || asset.name } : {}),
     };
-    setDraft(current => ({ ...current, addedComponents: { ...(current.addedComponents || {}), [pageId]: [...(current.addedComponents?.[pageId] || []), item] } }));
-    setNotice('Component preview में जोड़ा गया। Save Cloud Draft दबाकर draft सुरक्षित करें।');
+    replaceComponents([...pageComponents, item], 'Component inserted');
+    setManagedComponentId(item.id);
+    setInspectorOpen(true);
     setComponentsOpen(false); setMediaOpen(false);
   };
 
