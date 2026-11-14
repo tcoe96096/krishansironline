@@ -117,6 +117,34 @@ try {
   await draftFrame.locator('video[src^="https://example.com/"]').waitFor({ timeout: 15000 });
   console.log('PASS: HTML5 video player via HTTPS URL');
 
+  // Smart visual editor effects: animation, filter, hover, preset, auto contrast.
+  await draftFrame.getByRole('heading', { name: 'Class 10 Sample Lesson' }).click();
+  const effects = page.getByTestId('effects-inspector');
+  await effects.getByRole('combobox', { name: 'Entrance Animation' }).selectOption('fade');
+  await effects.getByRole('combobox', { name: 'Visual Filter' }).selectOption('grayscale');
+  await effects.getByRole('combobox', { name: 'Hover Animation' }).selectOption('lift');
+  const title = draftFrame.getByRole('heading', { name: 'Class 10 Sample Lesson' });
+  assert.equal(await title.getAttribute('data-studio-animation'), 'fade');
+  assert.equal(await title.getAttribute('data-studio-hover'), 'lift');
+  assert.match(await title.evaluate(element => element.style.filter), /grayscale/);
+  await draftToolbar.getByRole('button', { name: /Smart Tools/ }).click();
+  const smart = page.locator('[data-visual-editor-ui="smart-tools-panel"]');
+  await smart.getByRole('button', { name: /Rounded/ }).click();
+  assert.equal(await title.evaluate(element => element.style.borderRadius), '22px');
+  await smart.getByRole('button', { name: 'Auto Contrast' }).click();
+  assert.equal(await title.evaluate(element => element.style.color), 'rgb(11, 57, 121)');
+  await smart.getByRole('button', { name: 'Copy Style' }).click();
+  assert.equal(await smart.getByRole('button', { name: 'Paste Style' }).isEnabled(), true);
+  console.log('PASS: Visual animations, filters, hover, preset, auto-contrast and clipboard tools');
+
+  await page.getByRole('button', { name: 'Publish & Schedule' }).click();
+  const publishing = page.getByTestId('studio-publishing-panel');
+  await publishing.waitFor({ timeout: 15000 });
+  assert.equal(await publishing.getByRole('button', { name: /Publish Saved Draft Now/ }).isDisabled(), true);
+  await publishing.getByRole('textbox', { name: 'Schedule publication date and time' }).fill('2027-01-01T12:30');
+  assert.equal(await publishing.getByRole('button', { name: 'Schedule Publish' }).isDisabled(), true);
+  console.log('PASS: Publish and schedule controls prevent unauthorized demo writes');
+
   assert.deepEqual(errors, [], 'Uncaught browser errors: ' + errors.join('; '));
   console.log('PASS: No uncaught browser runtime errors');
 } finally {
