@@ -56,12 +56,12 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $function$
   select auth.uid() is not null and exists (
     select 1 from public.user_roles
     where user_id = auth.uid() and lower(role) in ('admin','super_admin')
   );
-$;
+$function$;
 revoke all on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
 
