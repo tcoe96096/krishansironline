@@ -4,7 +4,7 @@ _Date: 2026-11-14_
 ## Approved decisions
 - Approval policy: Hybrid.
 - Deletion policy: Soft delete with a 30-day recovery period. If not restored, permanently remove the student's Supabase Auth login identity only; retain the student's personal profile.
-- Personal profile retention: The profile row and its existing profile details are retained after the login identity is removed. Do not delete or anonymize the profile as part of Auto-Purge unless the owner separately changes this decision.
+- Profile retention: retain a minimal named academic profile (student name, class, roll number, school and stable archive UUID). After the 30-day recovery period, remove geographic/location fields (country, state, district, area type, locality and PIN code) while preserving the academic identity and result joins.
 - Academic results (including the student's name, test attempts, marks and result history) must remain identifiable by the student's name after the 30-day purge.
 - Scope: All planned capabilities.
 - Delivery: GitHub feature branch -> isolated GitHub Pages Preview -> owner acceptance -> separate Production PR/release.
@@ -41,7 +41,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - On soft delete, set a server-generated deletion timestamp and calculate the purge deadline as exactly 30 days later. Do not accept deletion timestamps/deadlines from the browser.
 - During the 30-day recovery period, authorized admins can restore the account; restoration cancels the pending purge and is audit-logged.
 - At/after the 30-day deadline, a scheduled server-side process permanently removes only the student's Supabase Auth login identity if the account remains deleted and has not been restored.
-- **Retain the personal profile:** Do not delete the `student_profiles` row or remove/anonymize its profile fields under this owner decision. This supersedes earlier plan language that called for deleting the personal profile/contact details.
+- **Retain a minimal named academic profile:** Do not delete the `student_profiles` row or erase the student's name, class, roll number, school or stable archive UUID. After the 30-day recovery period, clear non-academic location fields (country, state, district, area type, locality and PIN code).
 - **Retain named academic results:** The student's name must remain visible with retained test attempts, scores, marks and result history for academic reporting. Do not anonymize or erase the student's name from academic result records.
 - Retained profile and academic records must remain accessible only under existing authorized admin/staff role and class-scope permissions. Removing the Auth login must not grant public access or accidentally expose retained profile data.
 - The implementation must safely handle the retained profile after its Auth identity is removed. Inspect and explicitly resolve Auth/profile foreign keys, delete cascades, RLS, joins, admin directory queries, exports and any code that assumes every profile has a live Auth user. Do not create an invalid/orphaned row or weaken security to make it work.
@@ -81,7 +81,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 ### Phase D — Automatic purge (Preview only)
 - Confirm an approved scheduling capability exists in the current Supabase project; do not add a platform or incur cost without permission.
 - Implement trusted scheduled purge for deleted records whose server-side deadline has passed and which remain deleted at execution time.
-- Permanently remove the Auth login identity only; retain the personal profile, named academic results, test attempts, marks and result history.
+- Permanently remove the Auth login identity; retain the minimal named academic profile and named results, test attempts, marks and result history. Clear non-academic location fields from the retained profile.
 - Make purge idempotent, concurrency-safe, retryable and auditable; include dry-run diagnostics and a restricted synthetic-account Preview test.
 
 ### Phase E — Diagnostics and repair
@@ -121,7 +121,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 ## Owner decision update — 2026-11-14
 - Owner approved a 30-day recovery period.
 - Latest correction: after 30 days in soft-deleted state without restoration, permanently remove the student's Supabase Auth login identity only.
-- Retain the `student_profiles` row and its existing profile details; do not delete or anonymize the personal profile as part of this Auto-Purge policy.
+- Retain the `student_profiles` row and academic identity fields (student name, class, roll number, school and stable archive UUID); clear geographic/location fields after the 30-day recovery period.
 - Preserve academic results with the student's name (test attempts, marks and result history); do not anonymize the name in academic result records.
 - The latest decision supersedes earlier wording that called for deleting the personal profile/contact details. The profile-retention implications for foreign keys, RLS, admin queries and exports must be audited before implementation.
 - This is a plan update only. Automatic purge implementation and Preview testing remain pending; no Production changes are authorized.
@@ -168,3 +168,12 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - Verified the listed student-data tables no longer have foreign keys to auth.users. Their unrelated foreign keys (e.g. attempt-to-test and mistake-to-attempt/test) remain unchanged.
 - Updated the Governance UI so soft-delete no longer sends a browser-generated deleted_at; the database trigger remains authoritative for the 30-day deadline. The post-update read now includes purge_after, and refreshed audit rows include student_name.
 - Remaining before any purge worker: verify all remaining Auth references for a student identity (including any Visual Studio drafts/role rows) in a synthetic account; confirm admin result exports and analytics after Auth deletion; implement and security-review a dedicated server-side worker; establish safe scheduling; then run end-to-end synthetic Preview tests. No Auth identity has been deleted.
+
+
+## Profile minimization clarification — 2026-11-14
+- The retained profile is an academic archive, not a full personal/location dossier. Preserve student_name, class_level, roll_no, school_name, created_at and stable user_id so Admin reports can continue joining the named academic history.
+- At successful Auto-Purge, clear country, state, district, area_type, locality_name and pin_code from student_profiles. Do not delete the profile row or change its user_id.
+- Existing Preview profile columns do not include phone or email; do not introduce or retain login credentials in the archive. Auth identity deletion removes the login identity.
+- New admin audit snapshots now include only student name, class, roll number, school and lifecycle timestamps/status; they do not copy geographic/location fields. This was applied by Preview-only migration 20261114143000_sanitize_student_audit_snapshots.sql.
+- Before Auth deletion, the purge worker must clear free-text audit reasons for that student (they may contain accidentally entered personal details), while retaining the student_name snapshot, actor_id, action and timestamp. Never erase admin actor accountability.
+- The Preview foreign-key audit also found user_roles.user_id ON DELETE CASCADE (the table currently contains only 2 admin rows, no student role rows) and visual_studio_drafts.user_id ON DELETE CASCADE (0 rows currently). Preserve admin roles; verify the target is not an admin before purge. No student-owned Visual Studio draft records currently exist.
