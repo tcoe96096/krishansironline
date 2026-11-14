@@ -22,7 +22,9 @@ import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
 import { TEACHER_INFO } from './data/portalData';
-import { getPublishedWebsiteConfig, subscribeToWebsiteConfigChanges } from './services/siteConfigService';
+import { getPublishedWebsiteConfig, subscribeToWebsiteConfigChanges, type WebsiteConfig } from './services/siteConfigService';
+import { PublishedStudioRuntime } from './visual-editor/PublishedStudioRuntime';
+import { parseStudioPages } from './visual-editor/studioBuilder';
 import {
   BookOpen,
   LayoutDashboard,
@@ -161,14 +163,18 @@ const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
   const { user, profile } = useAuth();
   const [homeSections, setHomeSections] = useState<Record<string, boolean>>({});
+  const [publishedConfig, setPublishedConfig] = useState<WebsiteConfig | null>(null);
   useEffect(() => {
     let active = true;
     const refreshPublishedSections = () => {
       void getPublishedWebsiteConfig().then((config) => {
-        if (active && config?.sections) setHomeSections(config.sections);
+        if (active) { setPublishedConfig(config); if (config?.sections) setHomeSections(config.sections); }
       }).catch((error) => console.warn('Published homepage section settings unavailable:', error));
     };
     refreshPublishedSections();
+    // Cron publishes in the database even while a browser is open; polling
+    // complements Realtime when the deployment's publication is not enabled.
+    const poll = window.setInterval(refreshPublishedSections, 60000);
     let unsubscribe = () => {};
     try {
       unsubscribe = subscribeToWebsiteConfigChanges(refreshPublishedSections);
@@ -177,6 +183,7 @@ const MainApp: React.FC = () => {
     }
     return () => {
       active = false;
+      window.clearInterval(poll);
       unsubscribe();
     };
   }, []);
@@ -217,6 +224,12 @@ const MainApp: React.FC = () => {
   const [activePage, setActivePage] = useState<PageId>(() =>
     typeof window !== 'undefined' ? readPageFromLocation() : 'home'
   );
+  // Shareable custom-page route that works with static GitHub Pages hosting.
+  // A custom page appears ONLY when included in the published configuration.
+  const customSlug = new URLSearchParams(window.location.search).get('studio-page') || '';
+  const publishedCustomPage = activePage === 'home' ?
+    parseStudioPages((publishedConfig?.visualEditor as { customPages?: unknown } | undefined)?.customPages)
+      .find(page => page.slug === customSlug && Boolean(customSlug)) : undefined;
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -275,8 +288,17 @@ const MainApp: React.FC = () => {
         {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
+        {publishedCustomPage && <article data-studio-published-page={publishedCustomPage.slug} className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 sm:px-8">
+          <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Krishan Sir · Published Learning Page</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-sky-950">{publishedCustomPage.title}</h1>
+          <p className="text-base leading-8 text-slate-600">{publishedCustomPage.description}</p>
+          <section className="rounded-2xl border border-slate-200 bg-white p-8">
+            <h2 className="text-2xl font-bold text-sky-900">{publishedCustomPage.template === 'course' ? 'Course overview' : publishedCustomPage.template === 'article' ? 'Introduction' : 'Explore the content'}</h2>
+            <p className="mt-3 text-slate-600">This page is generated from the published Website Studio version.</p>
+          </section>
+        </article>}
         {/* ==================== PAGE 1: HOME ==================== */}
-        {activePage === 'home' && (
+        {activePage === 'home' && !publishedCustomPage && (
           <div className="space-y-0">
             {/* Hero Banner with Quick Actions */}
             <Hero onNavigate={navigateTo} />
@@ -799,6 +821,8 @@ const MainApp: React.FC = () => {
             </div>
           </div>
         )}
+        <PublishedStudioRuntime config={publishedConfig}
+          pageId={publishedCustomPage ? publishedCustomPage.id : activePage} />
       </main>
 
       {/* Footer */}
