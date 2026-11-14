@@ -180,17 +180,17 @@ export const AdminStudentGovernance: React.FC = () => {
       if (action === 'reject') updates = { approval_status: 'rejected', approval_note: reason!.trim() };
       if (action === 'suspend') updates = { account_status: 'suspended', suspended_at: now, suspended_by: authData.user.id, suspension_reason: reason!.trim() };
       if (action === 'activate') updates = { account_status: 'active', suspended_at: null, suspended_by: null, suspension_reason: null };
-      if (action === 'soft_delete') updates = { account_status: 'deleted', deleted_at: now, deleted_by: authData.user.id, deletion_reason: reason!.trim() };
+      if (action === 'soft_delete') updates = { account_status: 'deleted', deleted_by: authData.user.id, deletion_reason: reason!.trim() };
       if (action === 'restore') updates = { account_status: 'active', deleted_at: null, deleted_by: null, deletion_reason: null };
       const { data, error: updateError } = await client.from('student_profiles')
         .update(updates).eq('user_id', student.user_id)
-        .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at')
+        .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at,purge_after')
         .single();
       if (updateError) throw updateError;
       const updated = data as StudentOption;
       setStudents(current => current.map(item => item.user_id === updated.user_id ? updated : item));
       const { data: auditRows, error: auditError } = await client.from('student_admin_audit')
-        .select('id,student_id,actor_id,action,reason,created_at')
+        .select('id,student_id,student_name,actor_id,action,reason,created_at')
         .order('created_at', { ascending: false }).limit(100);
       if (auditError) throw auditError;
       setAudit((auditRows ?? []) as AuditRow[]);
