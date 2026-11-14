@@ -26,6 +26,17 @@ type AuditRow = {
   created_at: string;
 };
 
+type ActivityRow = {
+  id: string;
+  student_id: string;
+  activity_date: string;
+  study_minutes: number;
+  lessons_opened: number;
+  lessons_completed: number;
+  tests_completed: number;
+  questions_reviewed: number;
+};
+
 type CheckResult = {
   label: string;
   detail: string;
@@ -52,6 +63,7 @@ export const AdminStudentGovernance: React.FC = () => {
   const [selectedId, setSelectedId] = useState('');
   const [checks, setChecks] = useState<CheckResult[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -69,19 +81,24 @@ export const AdminStudentGovernance: React.FC = () => {
     setNotice('');
     try {
       const client = requireSupabase();
-      const [studentResult, auditResult] = await Promise.all([
+      const [studentResult, auditResult, activityResult] = await Promise.all([
         client.from('student_profiles')
           .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at')
           .order('created_at', { ascending: false }).limit(500),
         client.from('student_admin_audit')
           .select('id,student_id,actor_id,action,reason,created_at')
           .order('created_at', { ascending: false }).limit(100),
+        client.from('student_daily_activity')
+          .select('id,student_id,activity_date,study_minutes,lessons_opened,lessons_completed,tests_completed,questions_reviewed')
+          .order('activity_date', { ascending: false }).limit(100),
       ]);
       if (studentResult.error) throw studentResult.error;
       if (auditResult.error) throw auditResult.error;
+      if (activityResult.error) throw activityResult.error;
       const rows = (studentResult.data ?? []) as StudentOption[];
       setStudents(rows);
       setAudit((auditResult.data ?? []) as AuditRow[]);
+      setActivityRows((activityResult.data ?? []) as ActivityRow[]);
       setSelectedId(current => current || rows[0]?.user_id || '');
       setSchemaReady(true);
       setSchemaMessage('Approval, Account Status और Admin Audit schema उपलब्ध हैं। सभी actions Admin RLS और database audit trigger से सुरक्षित हैं।');
@@ -323,6 +340,16 @@ export const AdminStudentGovernance: React.FC = () => {
           </table>
         </div>
         <p className="text-[10px] text-slate-500">Audit entries database trigger द्वारा उसी transaction में बनती हैं; browser से edit/delete नहीं की जा सकतीं।</p>
+        <div className="mt-5 flex items-center gap-2 text-xs font-extrabold text-slate-800"><Activity className="h-4 w-4"/>Student Learning Activity</div>
+        <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <table className="w-full min-w-[620px] text-left text-xs">
+            <thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr><th className="p-3">Date</th><th className="p-3">Student</th><th className="p-3">Study Minutes</th><th className="p-3">Lessons</th><th className="p-3">Tests</th><th className="p-3">Reviewed</th></tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {activityRows.map(row => <tr key={row.id}><td className="p-3 text-slate-500">{row.activity_date}</td><td className="p-3 font-semibold text-slate-800">{students.find(s => s.user_id === row.student_id)?.student_name || row.student_id.slice(0,8)}</td><td className="p-3 tabular-nums">{row.study_minutes}</td><td className="p-3 tabular-nums">{row.lessons_completed}/{row.lessons_opened}</td><td className="p-3 tabular-nums">{row.tests_completed}</td><td className="p-3 tabular-nums">{row.questions_reviewed}</td></tr>)}
+              {!activityRows.length && <tr><td colSpan={6} className="p-8 text-center text-xs text-slate-500">अभी Student Activity Records उपलब्ध नहीं हैं।</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>}
     </section>
   );
