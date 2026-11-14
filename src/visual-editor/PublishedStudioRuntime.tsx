@@ -4,7 +4,7 @@ import { getVisualEditorPage } from './registry';
 import { ensureStudioEffectsStyles, applyStudioEffects, type StudioEffect } from './effects';
 import type { WebsiteConfig } from '../services/siteConfigService';
 
-type VisualComponent = { id: string; kind: string; text: string; subtitle?: string; parentSelector: string; url?: string; mediaPath?: string };
+type VisualComponent = { id: string; kind: string; text: string; subtitle?: string; parentSelector: string; url?: string; mediaPath?: string; effects?: StudioEffect };
 type VisualStyle = {
   color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: string; effects?: StudioEffect;
   marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number;
@@ -130,6 +130,7 @@ function renderComponent(doc: Document, item: VisualComponent, parent: Element):
       return;
   }
   element.dataset.builderComponentId = item.id;
+  applyStudioEffects(element, item.effects);
   parent.appendChild(element);
 }
 
