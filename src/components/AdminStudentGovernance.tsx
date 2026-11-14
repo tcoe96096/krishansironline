@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, AlertCircle, CheckCircle2, ClipboardCheck, Database, History, Loader2, RefreshCw, ShieldAlert, UserRoundSearch, Users, UserCheck, UserX, Ban, Trash2, RotateCcw } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
+import { AdminStudentPurgeSettings } from './AdminStudentPurgeSettings';
 
 type StudentOption = {
   user_id: string;
@@ -329,6 +330,8 @@ export const AdminStudentGovernance: React.FC = () => {
       <div className={`mt-4 rounded-xl border p-3 text-xs leading-5 ${schemaReady ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
         <div className="flex items-start gap-2"><Database className="mt-0.5 h-4 w-4 shrink-0" /><div><strong>{schemaReady ? 'Governance schema ready' : 'Governance schema unavailable'}</strong><p className="mt-1">{schemaMessage || 'Database जाँच जारी है…'}</p></div></div>
       </div>
+
+      <AdminStudentPurgeSettings />
 
       {error && <div role="alert" className="mt-3 flex gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
       {notice && <div role="status" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">{notice}</div>}
