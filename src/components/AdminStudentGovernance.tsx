@@ -205,8 +205,8 @@ export const AdminStudentGovernance: React.FC = () => {
   const nameNeedsReview = (value: string | null | undefined) => {
     const normalized = value?.trim().toLowerCase() ?? '';
     return !normalized
-      || /^\\d{6,15}$/.test(normalized)
-      || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized)
+      || /^\d{6,15}$/.test(normalized)
+      || /^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(normalized)
       || ['err', 'error', 'test', 'unknown', 'student', 'name', 'n/a', 'na', 'null', 'none', 'anonymous'].includes(normalized);
   };
 
