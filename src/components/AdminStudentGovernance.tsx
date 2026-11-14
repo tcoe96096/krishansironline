@@ -119,7 +119,7 @@ export const AdminStudentGovernance: React.FC = () => {
   const recoveryText = (deadline: string | null) => {
     if (!deadline) return 'Recovery deadline अभी उपलब्ध नहीं है';
     const remaining = new Date(deadline).getTime() - Date.now();
-    if (remaining <= 0) return '30 दिन पूरे — purge eligibility की जाँच बाकी';
+    if (remaining <= 0) return `Recovery अवधि पूरी · ${new Date(deadline).toLocaleString('en-IN')} · Auto-Purge Disabled`;
     const days = Math.ceil(remaining / 86400000);
     return `Restore के लिए ${days} दिन शेष · ${new Date(deadline).toLocaleString('en-IN')}`;
   };
@@ -356,13 +356,14 @@ export const AdminStudentGovernance: React.FC = () => {
         </div>
         <div className="overflow-x-auto rounded-xl border border-slate-100">
           <table className="w-full min-w-[760px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Student</th><th className="p-3">Class / Roll</th><th className="p-3">Approval</th><th className="p-3">Account</th><th className="p-3">Actions</th></tr></thead>
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Student</th><th className="p-3">Class / Roll</th><th className="p-3">Approval</th><th className="p-3">Account</th><th className="p-3">30-Day Recovery Deadline</th><th className="p-3">Actions</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {filteredStudents.map(student => <tr key={student.user_id}>
                 <td className="p-3"><p className="font-bold text-slate-800">{student.student_name}</p><p className="text-[10px] text-slate-500">{student.school_name}</p></td>
                 <td className="p-3 text-slate-600">Class {student.class_level} · {student.roll_no}</td>
                 <td className="p-3"><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${student.approval_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : student.approval_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-800'}`}>{approvalLabel(student.approval_status)}</span></td>
                 <td className="p-3"><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${student.account_status === 'active' ? 'bg-emerald-50 text-emerald-700' : student.account_status === 'suspended' ? 'bg-amber-50 text-amber-800' : 'bg-slate-200 text-slate-700'}`}>{accountLabel(student.account_status)}</span></td>
+                <td className="p-3"><div className="min-w-[190px] text-[10px] leading-4">{student.account_status === 'deleted' ? <><p className="font-bold text-slate-800">{student.deleted_at ? `Deleted: ${new Date(student.deleted_at).toLocaleString('en-IN')}` : 'Deletion date missing'}</p><p className={student.purge_after && new Date(student.purge_after).getTime() > Date.now() ? 'text-amber-800' : 'text-rose-700'}>{recoveryText(student.purge_after)}</p></> : <span className="text-slate-400">Not applicable</span>}</div></td>
                 <td className="p-3"><div className="flex flex-wrap gap-1.5">
                   {tab === 'approval' && student.approval_status !== 'approved' && student.account_status !== 'deleted' && <button type="button" onClick={() => void updateLifecycle(student,'approve')} disabled={Boolean(savingId)} className="rounded-md bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">Approve</button>}
                   {tab === 'approval' && student.approval_status === 'pending' && <button type="button" onClick={() => void updateLifecycle(student,'reject')} disabled={Boolean(savingId)} className="rounded-md bg-rose-700 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">Reject</button>}
@@ -372,7 +373,7 @@ export const AdminStudentGovernance: React.FC = () => {
                   {tab === 'account' && student.account_status === 'deleted' && <button type="button" onClick={() => void updateLifecycle(student,'restore')} disabled={Boolean(savingId)} className="rounded-md bg-sky-800 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"><RotateCcw className="mr-1 inline h-3 w-3"/>Restore</button>}
                 </div></td>
               </tr>)}
-              {!filteredStudents.length && <tr><td colSpan={5} className="p-8 text-center text-xs text-slate-500">इस Filter में कोई विद्यार्थी नहीं मिला।</td></tr>}
+              {!filteredStudents.length && <tr><td colSpan={6} className="p-8 text-center text-xs text-slate-500">इस Filter में कोई विद्यार्थी नहीं मिला।</td></tr>}
             </tbody>
           </table>
         </div>
