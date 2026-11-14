@@ -4,7 +4,7 @@ _Date: 2026-11-14_
 ## Approved decisions
 - Approval policy: Hybrid.
 - Deletion policy: Soft delete with a 30-day recovery period, followed by automatic permanent deletion of the student's login identity and personal profile if not restored.
-- Academic history (test attempts, results, marks and learning records) must be retained after the 30-day purge in anonymized, non-identifiable form.
+- Academic results (including the student's name, test attempts, marks and result history) must remain identifiable by the student's name after the 30-day purge. The personal profile and login identity are removed; named academic result records are retained.
 - Scope: All planned capabilities.
 - Delivery: GitHub feature branch -> isolated GitHub Pages Preview -> owner acceptance -> separate Production PR/release.
 - Production website and Production Supabase project remain untouched during Preview development.
@@ -40,9 +40,10 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - On soft delete, set a server-generated deletion timestamp and calculate the purge deadline as exactly 30 days later. Do not accept deletion timestamps/deadlines from the browser.
 - During the 30-day recovery period, authorized admins can restore the personal profile and login account; restoration cancels the pending purge and is audit-logged.
 - At/after the 30-day deadline, a scheduled server-side purge automatically removes the student's Supabase Auth login identity and personal profile/PII if the account has not been restored.
-- Preserve test attempts, scores, marks, result records and learning records for academic reporting. Before deleting identity/profile, detach or replace student foreign-key references using a stable non-identifying archival reference or nullable/anonymized subject key; do not cascade-delete academic records.
-- Remove direct identifiers from retained academic rows and related personal activity/notification data as appropriate. Do not retain phone, email, name, address, credentials, or a reversible mapping to the deleted identity in the academic archive.
-- Keep aggregate/class reporting functional and ensure retained records cannot be re-identified through joins, exports, logs or admin UI.
+- Preserve named academic results: the student's name must remain visible with retained test attempts, scores, marks and result history for academic reporting, even after the personal profile and login identity are removed.
+- Before deleting the personal profile, copy/snapshot the student's display name into a dedicated retained academic-result identity field or archive record, then detach academic records from the deleted Auth/profile row without cascading deletion. The name-to-result association must remain available to authorized academic reports and exports.
+- Remove login credentials and non-academic personal/contact/location details (such as phone, email, address and locality) from the purged profile and personal-only activity/notification data as appropriate. Do not anonymize or erase the student's name from retained academic results.
+- Keep class reporting functional and restrict named academic result access to authorized admins/staff under the existing role/class-scope permissions.
 - Keep purge idempotent, batch-safe, retryable, observable, and protected against deleting a record restored concurrently. Use a trusted scheduled server-side process and privileged Auth Admin API; never expose service-role credentials in browser code.
 - Enforce explicit Super Admin/system permission for purge configuration and operational visibility. No manual immediate permanent-delete action for ordinary admins.
 - Preview validation must use synthetic test accounts only. Never test permanent deletion against real student accounts.
@@ -79,7 +80,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 ### Phase D — Automatic purge (Preview only)
 - Confirm an approved scheduling capability exists in the current Supabase project; do not add a platform or incur cost without permission.
 - Implement trusted scheduled purge for deleted records whose server-side deadline has passed and which remain deleted at execution time.
-- Delete Auth identity and personal profile while retaining anonymized academic history.
+- Delete Auth identity and personal profile while retaining named academic results (student name, test attempts, marks and result history).
 - Make purge idempotent, concurrency-safe, retryable and auditable; include dry-run diagnostics and a restricted synthetic-account Preview test.
 
 ### Phase E — Diagnostics and repair
@@ -99,7 +100,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - Test existing student accounts remain approved and can log in.
 - Test pending/approved/rejected/suspended/soft-deleted/restored state transitions.
 - Use synthetic accounts to verify day-30 automatic purge, restore-before-deadline cancellation, retry/idempotency and concurrent restore protection.
-- Verify Auth identity and personal profile are removed while academic results/marks/history remain anonymized and usable for class reports.
+- Verify Auth identity and personal profile are removed while academic results retain the student's name, marks and history and remain usable in authorized class reports/exports.
 - Verify a student cannot read another student's profile, test attempts, progress or audit data.
 - Verify unauthorized staff cannot approve, suspend, restore or delete.
 - Verify test resume, timer, offline retry and auto-submit behavior is unchanged.
@@ -123,7 +124,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 ## Owner decision update — 2026-11-14
 - Owner approved the 30-day automatic permanent deletion policy.
 - After 30 days in soft-deleted state without restoration, automatically delete the student's Auth login identity and personal profile/PII.
-- Preserve academic history (test attempts, marks, results and learning records) in anonymized, non-identifiable form.
+- Preserve academic results with the student's name (test attempts, marks and result history) after login identity and personal profile removal; do not anonymize the name in academic result records.
 - This is a plan update only. Automatic purge implementation and Preview testing remain pending; no Production changes are authorized.
 
 
@@ -133,14 +134,21 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - The only currently deployed Preview Edge Function is `admin-test-import` (JWT verification enabled). It authenticates the caller using the user's JWT and checks the admin role; it is not a purge worker and must not be repurposed for deletion.
 - Schema audit found student identifiers in several student-owned tables without declared foreign keys to `student_profiles`. This means a profile delete cannot be assumed to cascade or safely detach those records. A complete table-by-table retention map and explicit anonymization strategy are required.
 - `student_admin_audit` currently contains 2 Preview rows; both have before/after snapshots and both match possible PII-key patterns. The audit table has admin-only SELECT/INSERT RLS, but the snapshots themselves must be scrubbed or transformed before an identity purge can be considered compliant with the approved anonymization policy.
-- Existing RLS has separate admin-read policies on academic/student-activity tables. Any anonymization design must keep authorized class-level reporting useful while ensuring archived rows cannot be joined back to a deleted Auth identity or exposed through student-facing policies.
+- Existing RLS has separate admin-read policies on academic/student-activity tables. The retention design must keep named academic results available only to authorized admin/staff reporting and exports, without restoring the deleted login identity or exposing the records through student-facing policies.
 - The extension catalog includes `pg_cron`, `pg_net`, and installed `supabase_vault`; this is a possible same-Supabase scheduling route, subject to current Supabase documentation and Preview validation. No external platform is proposed.
-- A secure design candidate is: a dedicated JWT-disabled Edge Function with mandatory high-entropy secret validation backed by Vault/RPC, using the platform-provided server-side service-role environment only inside the function; a Vault-backed `pg_cron` + `pg_net` call; and a database-side atomic claim/lock that rechecks `account_status='deleted'` and `purge_after <= now()` before any Auth Admin deletion. The function must fail closed if secret validation, profile lock, academic anonymization, or Auth deletion fails.
+- A secure design candidate is: a dedicated JWT-disabled Edge Function with mandatory high-entropy secret validation backed by Vault/RPC, using the platform-provided server-side service-role environment only inside the function; a Vault-backed `pg_cron` + `pg_net` call; and a database-side atomic claim/lock that rechecks `account_status='deleted'` and `purge_after <= now()` before any Auth Admin deletion. The function must fail closed if secret validation, profile lock, named academic-result snapshot/retention, or Auth deletion fails.
 - This candidate is **not implemented or activated**. Before implementation, verify current Supabase guidance for Edge Function environment variables, Vault access, pg_net scheduling, Auth Admin deletion, and transaction/concurrency boundaries. Never place a service-role key in SQL text, migration files, GitHub source, or browser code.
-- Audit finding: `student_admin_audit.student_id` and `actor_id` are UUIDs and snapshots may retain identifiers. Retention policy for admin actors must be explicit; do not erase staff accountability accidentally. Student target identifiers and snapshot PII must be replaced with a non-reversible archive subject key while preserving action/time/reason only where the reason itself is non-identifying.
+- Audit finding: `student_admin_audit.student_id` and `actor_id` are UUIDs and snapshots may retain identifiers. Retention policy for admin actors must be explicit; do not erase staff accountability accidentally. Student target identifiers in audit records must be detached from deleted Auth identity using a non-login archival reference. Preserve only the student's name where required to identify the named academic result; remove unrelated profile/contact PII from snapshots. Preserve action/time/reason only where the reason itself is appropriate and non-sensitive.
 - No Preview student profile, Auth identity, test attempt, result, learning record, or audit row was deleted or modified during this audit.
 
 ## Corrected implementation status
 - The 30-day recovery deadline and soft-delete/restore lifecycle are implemented in Preview.
 - Automatic purge, Auth identity deletion, academic-history anonymization, audit-snapshot anonymization, scheduler activation, and synthetic-account purge tests remain **not implemented / not verified**.
 - Do not describe the countdown as evidence that automatic deletion is operational.
+
+
+## Owner correction — named academic result retention (2026-11-14)
+- Owner explicitly corrected the retention rule: academic results must remain saved with the student's name; they must not be anonymized.
+- The 30-day purge removes the student's Auth login identity and personal profile/contact details, but retains the student's name alongside academic results, test attempts, marks and result history for authorized academic reporting.
+- Implementation must snapshot the display name into a durable academic-result identity field/archive before deleting `student_profiles`, then detach the retained academic rows from the deleted Auth identity. Do not retain login credentials, phone, email, address or unrelated personal profile data in that academic archive.
+- Named academic records remain protected by existing admin/staff role and class-scope permissions. This correction supersedes all earlier anonymization wording in this plan.
