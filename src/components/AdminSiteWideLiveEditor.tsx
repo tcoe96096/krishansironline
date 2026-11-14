@@ -62,6 +62,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [style, setStyle] = useState<StyleDraft>(defaults);
   const [draft, setDraft] = useState<Draft>({ version: 1, pages: {}, addedComponents: {} });
   const [status, setStatus] = useState('Cloud Draft loading…');
+  const [cloudReady, setCloudReady] = useState(false);
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [componentsOpen, setComponentsOpen] = useState(false);
@@ -98,8 +99,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
         const saved = latest?.config.visualEditor as Draft | undefined;
         if (saved?.version === 1 && saved.pages && typeof saved.pages === 'object') setDraft({ version: 1, pages: saved.pages, addedComponents: saved.addedComponents || {} });
         setStatus(latest ? 'Cloud Draft · Version ' + latest.version_number : 'Cloud Draft अभी खाली है');
+        setCloudReady(true);
       } catch (error) {
-        if (active) setStatus(error instanceof Error ? error.message : 'Cloud Draft load नहीं हुआ');
+        if (active) { setStatus(error instanceof Error ? error.message : 'Cloud Draft load नहीं हुआ'); setCloudReady(false); }
       }
     })();
     return () => { active = false; };
@@ -318,6 +320,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
 
   const saveCloudDraft = async () => {
     if (!supabase || !user || !isAdmin) { setStatus('Draft save करने के लिए Admin authentication आवश्यक है।'); return; }
+    if (!cloudReady || saving) { setStatus('Cloud Draft लोड होने के बाद ही Save करें।'); return; }
     if (!selected && !(draft.addedComponents?.[pageId]?.length)) { setStatus('पहले page पर कोई element चुनें या component जोड़ें।'); return; }
     setSaving(true); setStatus('Supabase Draft सेव हो रहा है…');
     try {
@@ -399,8 +402,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
             <label className="block text-[10px] font-semibold text-slate-600">Bottom Spacing · {style.marginBottom}px<input type="range" min="0" max="120" value={style.marginBottom} onChange={event => setStyle(current => ({ ...current, marginBottom: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Corner Radius · {style.borderRadius}px<input type="range" min="0" max="48" value={style.borderRadius} onChange={event => setStyle(current => ({ ...current, borderRadius: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Text Alignment<select value={style.textAlign} onChange={event => setStyle(current => ({ ...current, textAlign: event.target.value as StyleDraft['textAlign'] }))} className="mt-1 w-full rounded-lg border p-2 text-xs"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></label>
-            <div className="flex gap-2 pt-1"><button onClick={resetSelected} className="flex-1 rounded-lg border p-2 text-[10px] font-bold">Reset</button><button onClick={() => void saveCloudDraft()} disabled={saving} className="flex-1 rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Cloud Draft'}</button></div>
-          </div> : <div className="space-y-3"><p className="rounded-lg bg-slate-50 p-3 text-[10px] leading-5 text-slate-600">वेबसाइट के किसी भी text, card, section या image पर click करें। फिर properties बदलें या नीले corner handle को खींचें।</p>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <button onClick={() => void saveCloudDraft()} disabled={saving} className="w-full rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white">{saving ? 'Saving…' : 'Save Added Components to Cloud Draft'}</button>}</div>}
+            <div className="flex gap-2 pt-1"><button onClick={resetSelected} className="flex-1 rounded-lg border p-2 text-[10px] font-bold">Reset</button><button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="flex-1 rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Cloud Draft'}</button></div>
+          </div> : <div className="space-y-3"><p className="rounded-lg bg-slate-50 p-3 text-[10px] leading-5 text-slate-600">वेबसाइट के किसी भी text, card, section या image पर click करें। फिर properties बदलें या नीले corner handle को खींचें।</p>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="w-full rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white">{saving ? 'Saving…' : 'Save Added Components to Cloud Draft'}</button>}</div>}
           <p className="mt-2 text-[9px] leading-4 text-slate-500">{notice || 'Changes appear immediately in this Preview. Cloud Draft save never publishes the Live website.'}</p>
         </aside>}
       </>, document.body)}
