@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { AdminVisualEditorV2 } from './AdminVisualEditorV2';
+import { AdminSiteWideLiveEditor } from './AdminSiteWideLiveEditor';
+import { getEditableVisualEditorPages } from '../visual-editor/registry';
 import {
   Type, AlignLeft, MousePointerClick, Image as ImageIcon, Square, Minus,
   Columns2, MoveVertical, Video, Trash2, Copy, ChevronUp, ChevronDown,
@@ -32,6 +34,7 @@ const palette: {kind:Kind;label:string;icon:React.ElementType;hint:string}[] = [
   {kind:'spacer',label:'Spacer',icon:MoveVertical,hint:'Vertical spacing'},
 ];
 const uid = () => 'block-' + Math.random().toString(36).slice(2,10);
+const editableWebsitePages = getEditableVisualEditorPages();
 const draftKeyForUser = (userId: string) => 'krishan.visual-studio.draft.v1.' + userId;
 const readLocalDraft = (userId: string): Block[] | null => {
   try {
@@ -64,6 +67,9 @@ export const AdminVisualStudio: React.FC = () => {
   const [previewMode,setPreviewMode] = useState(false);
   const [templateName,setTemplateName] = useState('Education Portal');
   const [realPageMode,setRealPageMode] = useState(false);
+  const [basicPageMode,setBasicPageMode] = useState(false);
+  const [editingPageId,setEditingPageId] = useState(editableWebsitePages[0].id);
+  const [liveMobile,setLiveMobile] = useState(false);
   const active = blocks.find(b=>b.id===selected) ?? blocks[0];
   const loadMedia = async () => {
     const client = supabase;
@@ -258,11 +264,41 @@ export const AdminVisualStudio: React.FC = () => {
     :b.kind==='divider'?<hr className="border-slate-300"/>
     :<div className="h-10 rounded bg-slate-100"/>}
   </div>; };
-  if (realPageMode) return <AdminVisualEditorV2 onBack={() => setRealPageMode(false)} />;
+  if (realPageMode) {
+    const page = editableWebsitePages.find(item => item.id === editingPageId) ?? editableWebsitePages[0];
+    const pagePath = page.path === '/' ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + page.path.slice(1);
+    return <div className="min-h-[80vh] space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-wide text-sky-800">Visual Website Studio · Advanced Real Page Editor</p>
+          <h2 className="mt-1 text-xl font-extrabold text-slate-900">Interactive Website Editor</h2>
+          <p className="mt-1 text-xs text-slate-600">Floating Commands, Components, Media and Inspector. Changes update the preview immediately; Save Cloud Draft never publishes the live website.</p>
+        </div>
+        <button type="button" onClick={() => setRealPageMode(false)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">← Back to Canvas</button>
+      </header>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="text-xs font-bold text-slate-700">Website page
+          <select value={editingPageId} onChange={event => setEditingPageId(event.target.value as typeof editingPageId)} className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs">
+            {editableWebsitePages.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </label>
+        <div className="flex rounded-lg border border-slate-200 p-1">
+          <button type="button" onClick={() => setLiveMobile(false)} aria-pressed={!liveMobile} className={'flex items-center gap-1 rounded px-3 py-2 text-xs font-bold ' + (!liveMobile ? 'bg-sky-900 text-white' : 'text-slate-600')}><Monitor className="h-4 w-4"/>Desktop</button>
+          <button type="button" onClick={() => setLiveMobile(true)} aria-pressed={liveMobile} className={'flex items-center gap-1 rounded px-3 py-2 text-xs font-bold ' + (liveMobile ? 'bg-sky-900 text-white' : 'text-slate-600')}><Smartphone className="h-4 w-4"/>Mobile</button>
+        </div>
+        <button type="button" onClick={() => { setRealPageMode(false); setBasicPageMode(true); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-600">Basic Text Editor (V2)</button>
+      </div>
+      <AdminSiteWideLiveEditor key={page.id} src={pagePath + (pagePath.includes('?') ? '&' : '?') + 'visual-editor=1'} pageId={page.id} pageLabel={page.label} mobile={liveMobile}/>
+    </div>;
+  }
+  if (basicPageMode) return <AdminVisualEditorV2 onBack={() => setBasicPageMode(false)} />;
   return <div className="min-h-[80vh] space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3">
-      <div><p className="text-sm font-extrabold text-slate-900">Visual Website Studio</p><p className="text-xs text-slate-600">Canvas Builder और वास्तविक वेबसाइट पेज एडिटर एक ही Studio में</p></div>
-      <button type="button" onClick={() => setRealPageMode(true)} className="rounded-lg bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800">वास्तविक वेबसाइट पेज Edit करें</button>
+      <div><p className="text-sm font-extrabold text-slate-900">Visual Website Studio</p><p className="text-xs text-slate-600">Canvas Builder, Advanced Real Page Editor और Floating Panels एक ही Studio में</p></div>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setRealPageMode(true)} className="rounded-lg bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800">Advanced Real Page Editor · Floating Panels</button>
+        <button type="button" onClick={() => setBasicPageMode(true)} className="rounded-lg border border-sky-300 bg-white px-4 py-2 text-xs font-bold text-sky-900">Basic Text Editor</button>
+      </div>
     </div>
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div><div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-sky-700"><Sparkles className="h-4 w-4"/>Krishan Sir Visual Studio</div><h2 className="mt-1 text-xl font-extrabold text-slate-900">Drag & Drop Website Builder</h2><p className="mt-1 text-xs text-slate-500">{notice} · Separate development preview</p></div>
