@@ -48,6 +48,13 @@ try {
   const managed = inspector.getByTestId('managed-component-editor');
   await managed.waitFor({ timeout: 15000 });
   await managed.getByRole('textbox', { name: 'Component title' }).fill('Edited Website Heading');
+  await managed.getByRole('combobox', { name: 'Component animation' }).selectOption('fade');
+  await managed.getByRole('combobox', { name: 'Component filter' }).selectOption('grayscale');
+  await managed.getByRole('combobox', { name: 'Component hover' }).selectOption('glow');
+  const firstComponent = frame.locator('[data-builder-component-id]').first();
+  assert.equal(await firstComponent.getAttribute('data-studio-animation'), 'fade');
+  assert.equal(await firstComponent.getAttribute('data-studio-hover'), 'glow');
+  assert.match(await firstComponent.evaluate(element => element.style.filter), /grayscale/);
   assert.match(await frame.locator('[data-builder-component-id]').first().innerText(), /Edited Website Heading/);
   await managed.getByRole('button', { name: 'Duplicate component' }).click();
   assert.equal(await frame.locator('[data-builder-component-id]').count(), 2);
