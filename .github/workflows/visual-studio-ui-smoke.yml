@@ -1,0 +1,51 @@
+name: Visual Studio functional browser smoke
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "src/components/AdminVisualStudio.tsx"
+      - "src/components/AdminSiteWideLiveEditor.tsx"
+      - "src/components/AdminWebsiteManagement.tsx"
+      - "src/components/AdminDashboard.tsx"
+      - "scripts/visual-studio-smoke.mjs"
+      - ".github/workflows/visual-studio-ui-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-studio-smoke:
+    name: Test advanced floating editor in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install site dependencies
+        run: npm install --legacy-peer-deps
+      - name: Install isolated browser test dependency
+        run: npm install --no-save --legacy-peer-deps playwright
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: TypeScript check
+        run: npm run lint
+      - name: Build website
+        run: npm run build
+      - name: Start local test website
+        run: |
+          npm run dev -- --port 4173 --host 127.0.0.1 > /tmp/visual-studio-vite.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:4173/admin-preview/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/visual-studio-vite.log
+          exit 1
+      - name: Test single advanced editor and floating panels
+        run: node scripts/visual-studio-smoke.mjs
+      - name: Print server log if tests fail
+        if: failure()
+        run: cat /tmp/visual-studio-vite.log || true

@@ -60,3 +60,39 @@ export async function publishWebsiteConfig(versionId: string): Promise<number> {
   if (error) throw error;
   return Number(data);
 }
+
+/** Browser-local input is converted to ISO UTC before calling the admin-only scheduler RPC. */
+export type StudioPublishSchedule = {
+  id: string;
+  source_version_id: string | null;
+  scheduled_for: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+  completed_at: string | null;
+  published_version_number: number | null;
+};
+
+export async function getStudioPublishSchedules(): Promise<StudioPublishSchedule[]> {
+  const { data, error } = await requireSupabase()
+    .from('studio_publish_schedules')
+    .select('id,source_version_id,scheduled_for,status,created_at,completed_at,published_version_number')
+    .order('created_at', { ascending: false }).limit(15);
+  if (error) throw error;
+  return (data || []) as StudioPublishSchedule[];
+}
+
+export async function scheduleStudioPublish(draftId: string, isoTime: string): Promise<string> {
+  const { data, error } = await requireSupabase().rpc('admin_schedule_studio_publish', {
+    p_draft_id: draftId, p_publish_at: isoTime,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function cancelStudioPublish(scheduleId: string): Promise<boolean> {
+  const { data, error } = await requireSupabase().rpc('admin_cancel_studio_publish', {
+    p_schedule_id: scheduleId,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}

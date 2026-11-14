@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSiteWideBuilder } from './AdminSiteWideBuilder';
 import { getWebsiteConfigVersions, publishWebsiteConfig, saveWebsiteConfigDraft, type WebsiteConfigVersion } from '../services/siteConfigService';
 import {
   Eye, Monitor, Smartphone, Save, RotateCcw, Send, Globe, Image,
@@ -30,7 +29,7 @@ const palettes = {
 
 type PaletteKey = keyof typeof palettes;
 
-export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
+export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean; onOpenVisualStudio?: () => void }> = ({ demoMode = false, onOpenVisualStudio }) => {
   const [tab, setTab] = useState<EditorTab>('hero');
   const [language, setLanguage] = useState<LanguageTab>('en');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -38,7 +37,6 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
   const [notice, setNotice] = useState('');
   const [draftLabel, setDraftLabel] = useState('Unsaved UI changes');
   const [palette, setPalette] = useState<PaletteKey>('navy');
-  const [siteWideBuilderOpen, setSiteWideBuilderOpen] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [versions, setVersions] = useState<WebsiteConfigVersion[]>([]);
   const [saving, setSaving] = useState(false);
@@ -207,8 +205,6 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
     </label>
   );
 
-  if (siteWideBuilderOpen) return <AdminSiteWideBuilder onBack={() => setSiteWideBuilderOpen(false)} />;
-
   const tabs: { id: EditorTab; label: string; icon: React.ElementType }[] = [
     { id: 'hero', label: 'Homepage Hero', icon: Type },
     { id: 'header', label: 'Header & Footer', icon: PanelsTopLeft },
@@ -221,11 +217,11 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
       <div className="flex flex-col justify-between gap-3 xl:flex-row xl:items-end">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.16em] text-sky-700"><Globe className="h-3.5 w-3.5" />Website Management</div>
-          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Website Content Editor</h2>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Website Settings & Publishing</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Homepage Hero का bilingual content और colour framework edit करें। Hero, header/footer branding और homepage section visibility को Draft में सेव करके पुष्टि के बाद Live publish किया जा सकता है।</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setSiteWideBuilderOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800"><Globe className="h-4 w-4" />Full Website Builder</button>
+          <button onClick={onOpenVisualStudio} disabled={!onOpenVisualStudio} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-50"><Globe className="h-4 w-4" />Open Main Visual Editor</button>
           <span className={'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold ' + (demoMode || !backendReady ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800')}><Info className="h-3.5 w-3.5" />{demoMode ? 'Demo · Read only' : backendReady ? 'Supabase connected' : 'Connecting…'}</span>
           <button onClick={() => { setShowPreview((value) => !value); setNotice(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{showPreview ? 'Hide Preview' : 'Show Preview'}</button>
         </div>
@@ -234,7 +230,7 @@ export const AdminWebsiteManagement: React.FC<{ demoMode?: boolean }> = ({ demoM
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)]">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-            <div><h3 className="text-sm font-extrabold text-slate-900">Content Editor</h3><p className="mt-1 text-[11px] text-slate-500">मौजूदा वेबसाइट content के आधार पर editable preview</p></div>
+            <div><h3 className="text-sm font-extrabold text-slate-900">Website Configuration</h3><p className="mt-1 text-[11px] text-slate-500">मौजूदा वेबसाइट content के आधार पर editable preview</p></div>
             <div className="inline-flex rounded-xl bg-slate-100 p-1">
               <button onClick={() => setLanguage('en')} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${language === 'en' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-500'}`}>English</button>
               <button onClick={() => setLanguage('hi')} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${language === 'hi' ? 'bg-white text-sky-900 shadow-sm' : 'text-slate-500'}`}>हिन्दी</button>
