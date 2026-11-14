@@ -115,7 +115,15 @@ export const AdminStudentGovernance: React.FC = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const recoveryText = (deadline: string | null) => {\n    if (!deadline) return 'Recovery deadline अभी उपलब्ध नहीं है';\n    const remaining = new Date(deadline).getTime() - Date.now();\n    if (remaining <= 0) return '30 दिन पूरे — purge eligibility की जाँच बाकी';\n    const days = Math.ceil(remaining / 86400000);\n    return `Restore के लिए ${days} दिन शेष · ${new Date(deadline).toLocaleString('en-IN')}`;\n  };\n\n  const selectedStudent = useMemo(
+  const recoveryText = (deadline: string | null) => {
+    if (!deadline) return 'Recovery deadline अभी उपलब्ध नहीं है';
+    const remaining = new Date(deadline).getTime() - Date.now();
+    if (remaining <= 0) return '30 दिन पूरे — purge eligibility की जाँच बाकी';
+    const days = Math.ceil(remaining / 86400000);
+    return `Restore के लिए ${days} दिन शेष · ${new Date(deadline).toLocaleString('en-IN')}`;
+  };
+
+  const selectedStudent = useMemo(
     () => students.find(student => student.user_id === selectedId) ?? null,
     [students, selectedId],
   );
