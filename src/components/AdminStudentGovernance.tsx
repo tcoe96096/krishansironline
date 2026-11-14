@@ -214,8 +214,8 @@ export const AdminStudentGovernance: React.FC = () => {
     );
     if (entered === null) return;
     const verifiedName = entered.trim();
-    if (!verifiedName || /^\\d{10}$/.test(verifiedName)) {
-      setError('सही विद्यार्थी का नाम आवश्यक है। केवल 10 अंकों वाला नंबर स्वीकार नहीं होगा।');
+    if (nameNeedsReview(verifiedName)) {
+      setError('सही विद्यार्थी का नाम आवश्यक है। खाली नाम, 10 अंकों वाला नंबर या err/error जैसे placeholder स्वीकार नहीं होंगे।');
       return;
     }
     if (!window.confirm(`क्या “${verifiedName}” verified student name के रूप में save करें? Academic results में यही नाम सुरक्षित रहेगा।`)) return;
