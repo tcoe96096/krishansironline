@@ -116,10 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .select('approval_status,account_status,deleted_at')
             .eq('user_id', restoredSession.user.id)
             .maybeSingle();
-          if (!lifecycleError && lifecycle && (
+          if (!lifecycleError && (!lifecycle ||
             lifecycle.approval_status !== 'approved' ||
             lifecycle.account_status !== 'active' ||
-            Boolean(lifecycle.deleted_at)
+            Boolean(lifecycle?.deleted_at)
           )) {
             clearStudentTabSession();
             await client.auth.signOut({ scope: 'local' });
