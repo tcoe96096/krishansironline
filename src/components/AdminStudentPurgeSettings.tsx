@@ -20,6 +20,7 @@ export const AdminStudentPurgeSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const isProductionProject = import.meta.env.VITE_SUPABASE_URL?.includes('vsqwlkqqsxcehvdsdbna') ?? false;
 
   const load = async () => {
     setLoading(true);
@@ -37,7 +38,7 @@ export const AdminStudentPurgeSettings: React.FC = () => {
       setSettings(next);
       setDays(next.recovery_days);
       setRunTime(next.run_time_local);
-      setEnabled(next.auto_purge_enabled);
+      setEnabled(isProductionProject ? false : next.auto_purge_enabled);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Purge settings लोड नहीं हो सकीं।');
     } finally {
@@ -66,7 +67,7 @@ export const AdminStudentPurgeSettings: React.FC = () => {
     try {
       const client = requireSupabase();
       const { data, error: saveError } = await client.rpc('save_student_purge_settings', {
-        p_auto_purge_enabled: enabled,
+        p_auto_purge_enabled: isProductionProject ? false : enabled,
         p_recovery_days: days,
         p_run_time_local: runTime,
       });
@@ -77,7 +78,7 @@ export const AdminStudentPurgeSettings: React.FC = () => {
         setSettings(next);
         setDays(next.recovery_days);
         setRunTime(next.run_time_local);
-        setEnabled(next.auto_purge_enabled);
+        setEnabled(isProductionProject ? false : next.auto_purge_enabled);
       }
       setNotice('Super Admin settings और audit entry सुरक्षित रूप से अपडेट हो गई हैं।');
     } catch (cause) {
@@ -115,12 +116,12 @@ export const AdminStudentPurgeSettings: React.FC = () => {
               <input type="time" value={runTime} onChange={e => setRunTime(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"/>
             </label>
             <label className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-              <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="h-4 w-4"/>
-              <span><span className="block text-xs font-bold text-slate-800">Enable Daily Scheduler</span><span className="block text-[10px] text-slate-500">Preview only</span></span>
+              <input type="checkbox" checked={isProductionProject ? false : enabled} disabled={isProductionProject} onChange={e => setEnabled(e.target.checked)} className="h-4 w-4 disabled:cursor-not-allowed disabled:opacity-50"/>
+              <span><span className="block text-xs font-bold text-slate-800">Enable Daily Scheduler</span><span className="block text-[10px] text-slate-500">{isProductionProject ? 'Production में स्थायी रूप से Disabled' : 'Preview only'}</span></span>
             </label>
           </div>
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] leading-5 text-amber-900">
-            <strong>Safety:</strong> Scheduler enable करने के लिए Preview Vault credentials आवश्यक हैं। Worker के दो independent execution gates बंद रहने पर वह deletion नहीं करेगा। Production इस setting से प्रभावित नहीं होगा।
+            <strong>Safety:</strong> {isProductionProject ? 'Production में Daily Scheduler उपलब्ध नहीं है। यहाँ केवल Recovery Period और Run Time सुरक्षित किए जा सकते हैं; कोई Cron job या Auth deletion सक्रिय नहीं होगा।' : 'Scheduler enable करने के लिए Preview Vault credentials आवश्यक हैं। Worker के दो independent execution gates बंद रहने पर वह deletion नहीं करेगा।'}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[10px] text-slate-500">Current: {settings.recovery_days} दिन · {settings.run_time_local} IST · {settings.auto_purge_enabled ? 'Scheduler Enabled' : 'Scheduler Disabled'}</p>
