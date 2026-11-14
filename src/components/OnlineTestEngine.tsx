@@ -168,6 +168,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     () => restoredSession?.markedForReview || {}
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
   const allowedAttempts = Math.max(1, Number(selectedTest.attemptLimit || 1));
   const attemptLimitMessageHi = `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।`;
@@ -563,6 +564,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         answers[index] = Number.isInteger(selectedAnswers[index]) ? selectedAnswers[index] : null;
       }
       const result = await submitTestAttempt(activeAttempt.id, answers);
+      setAutoSubmitPending(false);
       setServerResult(result);
       setActiveAttempt(result);
       setIsSubmitted(true);
@@ -580,16 +582,67 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (error) {
+      // A request may have reached PostgreSQL even when the browser did not receive
+      // its response. Reconcile the attempt before asking the student to retry.
+      let reconciledAttempt: TestAttempt | undefined;
+      try {
+        reconciledAttempt = (await getMyTestAttempts()).find((attempt) => attempt.id === activeAttempt.id);
+      } catch {
+        // The network may still be unavailable; keep the local attempt and retry later.
+      }
+
+      if (reconciledAttempt && reconciledAttempt.status !== 'in_progress') {
+        setAutoSubmitPending(false);
+        setServerResult(reconciledAttempt);
+        setActiveAttempt(reconciledAttempt);
+        setIsSubmitted(true);
+        setIsTestActive(false);
+        localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        localStorage.removeItem('krishan_sir_active_student');
+        setSubmissionStatus({
+          loading: false,
+          success: reconciledAttempt.status === 'submitted',
+          message: reconciledAttempt.status === 'submitted'
+            ? 'आपका परिणाम database में सुरक्षित हो गया है।'
+            : 'परीक्षा का समय समाप्त हो गया था; प्रयास expired दर्ज किया गया है।',
+        });
+        return;
+      }
+
+      if (timeExpired) setAutoSubmitPending(true);
       setSubmissionStatus({
         loading: false,
         success: false,
-        message: error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।',
+        message: timeExpired
+          ? 'समय समाप्त हो गया है। इंटरनेट उपलब्ध होते ही परीक्षा स्वतः सबमिट करने का प्रयास फिर होगा।'
+          : (error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।'),
       });
-      // Keep the attempt active so the student can retry submission without losing answers.
+      // Keep the attempt and answers active; a deadline submission is retried on reconnect.
     } finally {
       submissionInFlight.current = false;
     }
   };
+
+  // Retry an automatic deadline submission after the network returns. A slow or
+  // dropped response is safe: submissionInFlight prevents concurrent RPC calls,
+  // and handleSubmitQuiz reconciles the database attempt before resending.
+  useEffect(() => {
+    if (!autoSubmitPending || isSubmitted || !isTestActive || !activeAttempt || timeLeftSeconds > 0) return;
+
+    const retryAutoSubmit = () => {
+      if (!navigator.onLine || submissionInFlight.current) return;
+      void handleSubmitQuiz(true);
+    };
+
+    window.addEventListener('online', retryAutoSubmit);
+    const retryTimer = window.setInterval(retryAutoSubmit, 5000);
+    retryAutoSubmit();
+
+    return () => {
+      window.removeEventListener('online', retryAutoSubmit);
+      window.clearInterval(retryTimer);
+    };
+  }, [autoSubmitPending, isSubmitted, isTestActive, activeAttempt?.id, timeLeftSeconds, studentDetails, selectedAnswers]);
 
   // Re-attempt test
   const handleReattempt = async () => {
