@@ -11,7 +11,7 @@ try {
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded', timeout: 45000 });
 
   // The admin demo route exercises the actual editor without authentication or writes.
-  await page.getByRole('button', { name: 'Website Settings & Publishing' }).click();
+  await page.getByRole('button', { name: 'Website Settings & Publishing', exact: true }).click();
   await page.getByRole('button', { name: 'Open Main Visual Editor' }).click();
   await page.getByTestId('visual-studio-main').waitFor({ timeout: 20000 });
 
