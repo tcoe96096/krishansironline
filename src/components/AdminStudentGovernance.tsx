@@ -45,7 +45,7 @@ type CheckResult = {
   status: 'ok' | 'warning' | 'error';
 };
 
-type Tab = 'overview' | 'approval' | 'account' | 'diagnostics' | 'audit';
+type Tab = 'overview' | 'approval' | 'account' | 'review' | 'diagnostics' | 'audit';
 
 const statusStyle: Record<CheckResult['status'], string> = {
   ok: 'border-emerald-200 bg-emerald-50 text-emerald-800',
@@ -202,6 +202,45 @@ export const AdminStudentGovernance: React.FC = () => {
     }
   };
 
+  const nameNeedsReview = (value: string | null | undefined) => !value?.trim() || /^\\d{10}$/.test(value.trim());
+
+  const correctStudentName = async (student: StudentOption) => {
+    const entered = window.prompt(
+      `Verified full student name for Class ${student.class_level} · Roll ${student.roll_no}:`,
+      nameNeedsReview(student.student_name) ? '' : student.student_name,
+    );
+    if (entered === null) return;
+    const verifiedName = entered.trim();
+    if (!verifiedName || /^\\d{10}$/.test(verifiedName)) {
+      setError('सही विद्यार्थी का नाम आवश्यक है। केवल 10 अंकों वाला नंबर स्वीकार नहीं होगा।');
+      return;
+    }
+    if (!window.confirm(`क्या “${verifiedName}” verified student name के रूप में save करें? Academic results में यही नाम सुरक्षित रहेगा।`)) return;
+    setSavingId(student.user_id);
+    setError('');
+    setNotice('');
+    try {
+      const client = requireSupabase();
+      const { data, error: updateError } = await client.from('student_profiles')
+        .update({ student_name: verifiedName })
+        .eq('user_id', student.user_id)
+        .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at,purge_after')
+        .single();
+      if (updateError) throw updateError;
+      setStudents(current => current.map(item => item.user_id === student.user_id ? data as StudentOption : item));
+      const { data: auditRows, error: auditError } = await client.from('student_admin_audit')
+        .select('id,student_id,student_name,actor_id,action,reason,created_at')
+        .order('created_at', { ascending: false }).limit(100);
+      if (auditError) throw auditError;
+      setAudit((auditRows ?? []) as AuditRow[]);
+      setNotice('Verified नाम save हो गया। Database audit history refresh कर दी गई है।');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Verified नाम save नहीं हो सका।');
+    } finally {
+      setSavingId('');
+    }
+  };
+
   const runDiagnostics = async () => {
     if (!selectedStudent) return;
     setChecking(true);
@@ -318,6 +357,29 @@ export const AdminStudentGovernance: React.FC = () => {
           </table>
         </div>
         <p className="text-[10px] leading-4 text-slate-500">Permanent Delete उपलब्ध नहीं है। Soft Delete में Auth और academic records सुरक्षित रहते हैं; केवल eligibility बंद होती है। Rejected विद्यार्थी को दोबारा Approve किया जा सकता है।</p>
+      </div>}
+
+      {tab === 'review' && <div className="mt-4 space-y-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          <strong>Auto-Purge Safety Gate</strong>
+          <p className="mt-1">जिन विद्यार्थियों के नाम खाली हैं या ठीक 10 अंकों के नंबर जैसे हैं, उनकी Auth identity कभी permanently delete नहीं होगी। पहले Admin द्वारा वास्तविक नाम verify करके सुधारना आवश्यक है। Academic results में verified नाम सुरक्षित रहेगा।</p>
+        </div>
+        <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-extrabold text-slate-800">Needs verified student name</h4><span className="rounded-lg bg-amber-100 px-3 py-2 text-[11px] font-bold text-amber-900">{students.filter(s => nameNeedsReview(s.student_name)).length} records</span></div>
+        <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <table className="w-full min-w-[680px] text-left text-xs">
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Student record</th><th className="p-3">Class / Roll</th><th className="p-3">Account status</th><th className="p-3">Action</th></tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {students.filter(s => nameNeedsReview(s.student_name)).map(student => <tr key={student.user_id}>
+                <td className="p-3"><p className="font-bold text-slate-800">{student.student_name || 'Name missing'}</p><p className="text-[10px] text-slate-500">{student.school_name || 'School not recorded'}</p></td>
+                <td className="p-3 text-slate-600">Class {student.class_level} · {student.roll_no || 'Roll missing'}</td>
+                <td className="p-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">{accountLabel(student.account_status)}</span></td>
+                <td className="p-3"><button type="button" onClick={() => void correctStudentName(student)} disabled={Boolean(savingId)} className="rounded-lg bg-[#082d65] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">Verify & Correct Name</button></td>
+              </tr>)}
+              {!students.some(s => nameNeedsReview(s.student_name)) && <tr><td colSpan={4} className="p-8 text-center text-xs text-emerald-700">कोई नाम समीक्षा लंबित नहीं है।</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[10px] leading-4 text-slate-500">नाम सुधारने पर मौजूदा profile update होगा और database audit trigger बदलाव दर्ज करेगा। यह स्क्रीन किसी भी account को permanently delete नहीं करती।</p>
       </div>}
 
       {tab === 'diagnostics' && <div className="mt-4 space-y-3">
