@@ -149,8 +149,44 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       const video = doc.createElement('video'); video.src = mediaUrl; video.controls = true;
       video.style.cssText = 'display:block;width:100%;max-height:440px;background:#0f172a;border-radius:14px;margin:16px 0;';
       node = video;
+    } else if (item.kind === 'video' && item.url && studioYouTubeEmbed(item.url)) {
+      const player = doc.createElement('iframe');
+      player.title = item.text || 'YouTube video player';
+      player.src = studioYouTubeEmbed(item.url)!;
+      player.allow = 'accelerometer; encrypted-media; gyroscope; picture-in-picture';
+      player.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+      player.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      player.style.cssText = 'display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#0f172a;margin:16px 0;';
+      node = player;
+    } else if (item.kind === 'video' && item.url && safeStudioMediaUrl(item.url)) {
+      const video = doc.createElement('video');
+      video.src = safeStudioMediaUrl(item.url)!; video.controls = true; video.preload = 'metadata';
+      video.style.cssText = 'display:block;width:100%;max-height:460px;background:#0f172a;border-radius:14px;margin:16px 0;';
+      node = video;
     } else if (item.kind === 'video') {
-      const div = doc.createElement('div'); div.textContent = 'Video block · ' + item.text; div.style.cssText = 'display:grid;place-items:center;min-height:160px;background:#0f172a;color:white;border-radius:14px;margin:16px 0;padding:20px;'; node = div;
+      const div = doc.createElement('div'); div.textContent = 'Video Player · Select an MP4, WEBM or YouTube URL in Inspector'; div.style.cssText = 'display:grid;place-items:center;min-height:160px;background:#0f172a;color:white;border-radius:14px;margin:16px 0;padding:20px;text-align:center;'; node = div;
+    } else if (item.kind === 'pdf' && item.url && safeStudioMediaUrl(item.url)) {
+      const box = doc.createElement('section');
+      box.style.cssText = 'padding:12px;border:1px solid #cbd5e1;background:white;border-radius:14px;margin:16px 0;';
+      const caption = doc.createElement('strong'); caption.textContent = item.text || 'PDF Reader';
+      caption.style.cssText = 'display:block;margin:4px 6px 12px;color:#0b3979;';
+      const pdf = doc.createElement('iframe');
+      pdf.title = item.text || 'PDF document reader';
+      pdf.src = safeStudioMediaUrl(item.url)!;
+      pdf.setAttribute('sandbox', '');
+      pdf.setAttribute('referrerpolicy', 'no-referrer');
+      pdf.loading = 'lazy';
+      pdf.style.cssText = 'display:block;width:100%;height:570px;max-height:72vh;border:0;background:#f8fafc;';
+      const link = doc.createElement('a'); link.href = safeStudioMediaUrl(item.url)!;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Open PDF in a new tab';
+      link.style.cssText = 'display:block;margin:10px 6px;color:#0b3979;font-size:13px;';
+      box.append(caption,pdf,link); node = box;
+    } else if (item.kind === 'pdf') {
+      const box = doc.createElement('section');
+      box.textContent = 'PDF Reader · Add an HTTPS PDF document URL in Inspector';
+      box.style.cssText = 'padding:45px 25px;border:2px dashed #93c5fd;border-radius:14px;background:#eff6ff;color:#0b3979;margin:16px 0;text-align:center;';
+      node = box;
     } else if (item.kind === 'quote') {
       const quote = doc.createElement('blockquote');
       quote.style.cssText = 'border-left:4px solid #0b3979;padding:18px 22px;background:#f0f7ff;border-radius:8px;margin:20px 0;';
@@ -175,6 +211,22 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       const value = doc.createElement('strong'); value.textContent = item.text; value.style.cssText = 'display:block;color:#0b3979;font-size:38px;font-weight:800;';
       const caption = doc.createElement('p'); caption.textContent = item.subtitle || 'Statistic description'; caption.style.cssText = 'margin-top:8px;color:#475569;font-size:14px;';
       card.append(value, caption); node = card;
+    } else if (item.kind === 'hero') {
+      const hero = doc.createElement('section'); hero.style.cssText = 'margin:16px 0;padding:50px 28px;background:linear-gradient(130deg,#0b3979,#0e7490);border-radius:22px;color:white;text-align:center;';
+      const title = doc.createElement('h2'); title.textContent = item.text; title.style.cssText = 'font-size:clamp(26px,4vw,48px);font-weight:800;color:white;';
+      const subtitle = doc.createElement('p'); subtitle.textContent = item.subtitle || 'Add your main message.'; subtitle.style.cssText = 'margin:15px auto 0;max-width:650px;line-height:1.7;color:white;';
+      hero.append(title,subtitle); node = hero;
+    } else if (item.kind === 'steps') {
+      const section = doc.createElement('section'); section.style.cssText = 'padding:24px;margin:16px 0;border:1px solid #dbeafe;border-radius:16px;background:#f8fafc;';
+      const title = doc.createElement('h2'); title.textContent = item.text; title.style.cssText = 'color:#0b3979;font-size:24px;margin-bottom:16px;';
+      section.appendChild(title);
+      (item.subtitle || 'Step 1: Learn\nStep 2: Practice\nStep 3: Review')
+        .split('\n').filter(Boolean).slice(0,12).forEach((line,index) => {
+          const paragraph = doc.createElement('p'); paragraph.textContent = (index+1) + '. ' + line.trim();
+          paragraph.style.cssText = 'margin:12px 0;padding:12px 16px;border-radius:10px;background:white;border-left:3px solid #0d9488;color:#334155;';
+          section.appendChild(paragraph);
+        });
+      node = section;
     } else {
       const section = doc.createElement('section'); section.textContent = item.text; section.style.cssText = 'padding:20px;background:#f1f5f9;border:1px solid #dbe5f0;border-radius:16px;margin:16px 0;'; node = section;
     }
@@ -398,7 +450,10 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
         kind === 'button' ? 'Button label' :
         kind === 'card' ? 'New content card' :
         kind === 'columns' ? 'First column content' :
-        kind === 'video' ? 'Video placeholder' :
+        kind === 'video' ? 'Video lesson' :
+        kind === 'pdf' ? 'PDF learning resource' :
+        kind === 'hero' ? 'Welcome to our learning portal' :
+        kind === 'steps' ? 'Learning Roadmap' :
         kind === 'quote' ? 'Learning opens new possibilities.' :
         kind === 'faq' ? 'What will I learn?' :
         kind === 'callout' ? 'Important announcement' :
@@ -406,7 +461,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       subtitle: kind === 'quote' ? 'Your source or attribution' :
         kind === 'faq' ? 'Write the answer here.' :
         kind === 'callout' ? 'Add the important details here.' :
-        kind === 'stat' ? 'Courses and resources' : undefined,
+        kind === 'stat' ? 'Courses and resources' :
+        kind === 'hero' ? 'Explore our latest courses and lessons.' :
+        kind === 'steps' ? 'Choose a lesson\\nPractice new skills\\nReview progress' : undefined,
       parentSelector, ...(asset ? { mediaPath: asset.path, altText: mediaAlt || asset.name } : {}),
     };
     replaceComponents([...pageComponents, item], 'Component inserted');
