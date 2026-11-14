@@ -204,7 +204,23 @@ export const AdminStudentGovernance: React.FC = () => {
 
   const nameNeedsReview = (value: string | null | undefined) => {
     const normalized = value?.trim().toLowerCase() ?? '';
-    return !normalized || /^\\d{10}$/.test(normalized) || ['err', 'error'].includes(normalized);
+    return !normalized
+      || /^\\d{6,15}$/.test(normalized)
+      || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized)
+      || ['err', 'error', 'test', 'unknown', 'student', 'name', 'n/a', 'na', 'null', 'none', 'anonymous'].includes(normalized);
+  };
+
+  const adminReviewReasons = (student: StudentOption): string[] => {
+    const reasons: string[] = [];
+    if (nameNeedsReview(student.student_name)) reasons.push('Student name is missing, placeholder, numeric or email-like');
+    if (!student.class_level?.trim()) reasons.push('Class is missing');
+    if (!student.roll_no?.trim()) reasons.push('Roll number is missing');
+    if (!student.school_name?.trim()) reasons.push('School name is missing');
+    if (student.account_status === 'deleted') {
+      reasons.push('Soft-deleted account — manual review required before any future permanent purge');
+      if (!student.deleted_at || !student.purge_after) reasons.push('Deletion timestamp or 30-day recovery deadline is missing');
+    }
+    return reasons;
   };
 
   const correctStudentName = async (student: StudentOption) => {
@@ -215,7 +231,7 @@ export const AdminStudentGovernance: React.FC = () => {
     if (entered === null) return;
     const verifiedName = entered.trim();
     if (nameNeedsReview(verifiedName)) {
-      setError('सही विद्यार्थी का नाम आवश्यक है। खाली नाम, 10 अंकों वाला नंबर या err/error जैसे placeholder स्वीकार नहीं होंगे।');
+      setError('Verified नाम आवश्यक है। Placeholder, numeric ID, email या खाली value स्वीकार नहीं होगी।');
       return;
     }
     if (!window.confirm(`क्या “${verifiedName}” verified student name के रूप में save करें? Academic results में यही नाम सुरक्षित रहेगा।`)) return;
@@ -365,25 +381,29 @@ export const AdminStudentGovernance: React.FC = () => {
 
       {tab === 'review' && <div className="mt-4 space-y-3">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-          <strong>Auto-Purge Safety Gate</strong>
-          <p className="mt-1">जिन विद्यार्थियों के नाम खाली हैं, ठीक 10 अंकों के नंबर जैसे हैं या err/error जैसे placeholder हैं, उनकी Auth identity कभी permanently delete नहीं होगी। पहले Admin द्वारा वास्तविक नाम verify करके सुधारना आवश्यक है। Academic results में verified नाम सुरक्षित रहेगा।</p>
+          <strong>Admin Review Queue · Auto-Purge Safety Gate</strong>
+          <p className="mt-1">किसी भी अस्पष्ट या अधूरे रिकॉर्ड को स्वतः ठीक या delete नहीं किया जाएगा। खाली/placeholder/numeric/email-जैसे नाम, missing academic details और सभी soft-deleted records यहाँ review के लिए दिखेंगे। Admin verification के बिना कोई permanent purge नहीं होगा। Academic results में verified student name सुरक्षित रहेगा।</p>
         </div>
-        <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-extrabold text-slate-800">Needs verified student name</h4><span className="rounded-lg bg-amber-100 px-3 py-2 text-[11px] font-bold text-amber-900">{students.filter(s => nameNeedsReview(s.student_name)).length} records</span></div>
+        <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-extrabold text-slate-800">Records requiring Admin decision</h4><span className="rounded-lg bg-amber-100 px-3 py-2 text-[11px] font-bold text-amber-900">{students.filter(s => adminReviewReasons(s).length > 0).length} records</span></div>
         <div className="overflow-x-auto rounded-xl border border-slate-100">
           <table className="w-full min-w-[680px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Student record</th><th className="p-3">Class / Roll</th><th className="p-3">Account status</th><th className="p-3">Action</th></tr></thead>
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Student record</th><th className="p-3">Class / Roll</th><th className="p-3">Account status</th><th className="p-3">Review reasons</th><th className="p-3">Action</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {students.filter(s => nameNeedsReview(s.student_name)).map(student => <tr key={student.user_id}>
+              {students.filter(s => adminReviewReasons(s).length > 0).map(student => <tr key={student.user_id}>
                 <td className="p-3"><p className="font-bold text-slate-800">{student.student_name || 'Name missing'}</p><p className="text-[10px] text-slate-500">{student.school_name || 'School not recorded'}</p></td>
-                <td className="p-3 text-slate-600">Class {student.class_level} · {student.roll_no || 'Roll missing'}</td>
+                <td className="p-3 text-slate-600">Class {student.class_level || 'Missing'} · {student.roll_no || 'Roll missing'}</td>
                 <td className="p-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">{accountLabel(student.account_status)}</span></td>
-                <td className="p-3"><button type="button" onClick={() => void correctStudentName(student)} disabled={Boolean(savingId)} className="rounded-lg bg-[#082d65] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">Verify & Correct Name</button></td>
+                <td className="p-3"><ul className="list-disc space-y-1 pl-4 text-[10px] leading-4 text-amber-800">{adminReviewReasons(student).map(reason => <li key={reason}>{reason}</li>)}</ul></td>
+                <td className="p-3"><div className="flex flex-col gap-1.5">
+                  {nameNeedsReview(student.student_name) && <button type="button" onClick={() => void correctStudentName(student)} disabled={Boolean(savingId)} className="rounded-lg bg-[#082d65] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">Verify & Correct Name</button>}
+                  <button type="button" onClick={() => { setSelectedId(student.user_id); setTab('diagnostics'); }} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-700">Inspect Record</button>
+                </div></td>
               </tr>)}
-              {!students.some(s => nameNeedsReview(s.student_name)) && <tr><td colSpan={4} className="p-8 text-center text-xs text-emerald-700">कोई नाम समीक्षा लंबित नहीं है।</td></tr>}
+              {!students.some(s => adminReviewReasons(s).length > 0) && <tr><td colSpan={5} className="p-8 text-center text-xs text-emerald-700">कोई Admin Review लंबित नहीं है।</td></tr>}
             </tbody>
           </table>
         </div>
-        <p className="text-[10px] leading-4 text-slate-500">नाम सुधारने पर मौजूदा profile update होगा और database audit trigger बदलाव दर्ज करेगा। यह स्क्रीन किसी भी account को permanently delete नहीं करती।</p>
+        <p className="text-[10px] leading-4 text-slate-500">Verified name correction database audit trigger में दर्ज होती है। Missing class/roll/school और lifecycle मामलों को Admin profile editor तथा diagnostics से जाँचें। यह स्क्रीन किसी भी account को permanently delete नहीं करती।</p>
       </div>}
 
       {tab === 'diagnostics' && <div className="mt-4 space-y-3">
