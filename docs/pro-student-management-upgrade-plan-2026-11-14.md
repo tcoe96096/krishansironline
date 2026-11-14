@@ -177,3 +177,11 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - New admin audit snapshots now include only student name, class, roll number, school and lifecycle timestamps/status; they do not copy geographic/location fields. This was applied by Preview-only migration 20261114143000_sanitize_student_audit_snapshots.sql.
 - Before Auth deletion, the purge worker must clear free-text audit reasons for that student (they may contain accidentally entered personal details), while retaining the student_name snapshot, actor_id, action and timestamp. Never erase admin actor accountability.
 - The Preview foreign-key audit also found user_roles.user_id ON DELETE CASCADE (the table currently contains only 2 admin rows, no student role rows) and visual_studio_drafts.user_id ON DELETE CASCADE (0 rows currently). Preserve admin roles; verify the target is not an admin before purge. No student-owned Visual Studio draft records currently exist.
+
+
+## Student-name data-quality gate — Preview audit (2026-11-14)
+- The current Preview profile sample has 8 rows; 4 have a 10-digit numeric value in student_name, including 1 soft-deleted profile. This is a data-quality/privacy risk because the field may contain a mobile number rather than a student's actual name.
+- Do not copy a phone-like value into the durable named academic archive or treat it as a verified student name. Do not silently replace it with a guessed name or erase the only available academic identifier.
+- The future purge worker must fail closed for any due profile whose student_name is empty or matches a phone-number-like numeric pattern, and place it in an Admin review queue. Correct the profile to the student's verified name before that student's Auth identity is deleted.
+- This gate does not change any current student profile or result. No Auth deletion or profile minimization has been performed.
+- Audit history was sanitized on Preview: 4 audit rows now have null free-text reason fields and no geographic keys in before/after snapshots; student_name, academic identifiers, lifecycle state, actor and timestamps remain.
