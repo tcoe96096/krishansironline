@@ -148,3 +148,12 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - Owner explicitly corrected the retention rule: academic results must remain saved with the student's name; they must not be anonymized.
 - The 30-day purge removes the student's Auth login identity only; the personal profile and its details remain retained under the latest owner decision.
 - Named academic records remain protected by existing admin/staff role and class-scope permissions. This correction supersedes all earlier anonymization wording in this plan.
+
+## Follow-up Auth deletion compatibility audit — Preview only (2026-11-14)
+- Confirmed the Preview schema has no declared foreign keys from `student_profiles.user_id`, `user_roles.user_id`, or the inspected student activity/result `student_id` columns to `auth.users`. Auth deletion therefore does not automatically cascade those rows; application queries and role cleanup must be handled explicitly.
+- Found `student_admin_audit.student_id` and `actor_id` both originally referenced `auth.users(id) ON DELETE RESTRICT`. The student target restriction would block the approved student Auth deletion while audit rows exist. The actor restriction is intentionally retained to protect staff/admin accountability.
+- Added `student_name` to audit rows, backfilled it from retained student profiles, made the target `student_id` nullable, and changed only the target FK to `ON DELETE SET NULL`. The audit trigger now snapshots the student name for future events. This preserves named audit history without requiring a live student login identity.
+- Applied this audit-FK adjustment only to Preview Supabase project `zgpkmfqioqvincmgyfpi`; Production remains untouched.
+- Updated the governance UI audit row type/query/rendering to use the retained `student_name` and safely display detached audit entries.
+- Remaining pre-activation checks: inspect and safely reconcile `user_roles` entries for student accounts; confirm all profile and academic/report queries still work after Auth deletion; review audit before/after JSON snapshots for unnecessary personal data; test Auth deletion with a synthetic student whose audit rows exist; verify the student profile and named results remain intact and admin-only.
+- Auto-Purge worker and scheduler remain inactive. No Auth identity has been deleted as part of this work.
