@@ -64,7 +64,6 @@ Deno.serve(async (req: Request) => {
     const { student_id: studentId, claim_token: claimToken } = claim;
     try {
       const { data: authorized, error: authzError } = await admin
-        .schema("private")
         .rpc("authorize_student_purge", {
           p_student_id: studentId,
           p_claim_token: claimToken,
@@ -92,6 +91,10 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      if (!alreadyAbsent && !authUser.user) {
+        throw new Error("auth_lookup_returned_no_user");
+      }
+
       if (!alreadyAbsent && authUser.user) {
         const appRole = String(authUser.user.app_metadata?.role ?? "").toLowerCase();
         const appRoles = Array.isArray(authUser.user.app_metadata?.roles)
@@ -106,7 +109,6 @@ Deno.serve(async (req: Request) => {
       }
 
       const { data: completed, error: completeError } = await admin
-        .schema("private")
         .rpc("complete_student_purge", {
           p_student_id: studentId,
           p_claim_token: claimToken,
