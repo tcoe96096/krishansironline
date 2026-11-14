@@ -1,6 +1,8 @@
 -- Server-side scheduled publishing for Visual Studio.
 -- Review this migration before any production rollout.
 -- A schedule captures the EXACT saved draft config, not later unsaved edits.
+-- Supabase Cron is enabled for server-side scheduling, including on a new production project.
+create extension if not exists pg_cron;
 create table if not exists public.studio_publish_schedules (
   id uuid primary key default gen_random_uuid(),
   source_version_id uuid references public.site_config_versions(id) on delete set null,
@@ -122,7 +124,7 @@ $$;
 revoke all on function studio_private.publish_due_studio_schedules() from public, anon, authenticated;
 -- Run the lightweight due-publish check once each minute; no browser required.
 select cron.schedule(
-  'studio-publish-due-preview',
+  'studio-publish-due',
   '* * * * *',
   'select studio_private.publish_due_studio_schedules()'
 );
