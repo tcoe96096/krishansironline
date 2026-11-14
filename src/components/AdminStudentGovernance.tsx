@@ -15,6 +15,7 @@ type StudentOption = {
   suspension_reason: string | null;
   deletion_reason: string | null;
   deleted_at: string | null;
+  purge_after: string | null;
 };
 
 type AuditRow = {
@@ -83,7 +84,7 @@ export const AdminStudentGovernance: React.FC = () => {
       const client = requireSupabase();
       const [studentResult, auditResult, activityResult] = await Promise.all([
         client.from('student_profiles')
-          .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at')
+          .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at,purge_after')
           .order('created_at', { ascending: false }).limit(500),
         client.from('student_admin_audit')
           .select('id,student_id,actor_id,action,reason,created_at')
@@ -114,7 +115,7 @@ export const AdminStudentGovernance: React.FC = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const selectedStudent = useMemo(
+  const recoveryText = (deadline: string | null) => {\n    if (!deadline) return 'Recovery deadline अभी उपलब्ध नहीं है';\n    const remaining = new Date(deadline).getTime() - Date.now();\n    if (remaining <= 0) return '30 दिन पूरे — purge eligibility की जाँच बाकी';\n    const days = Math.ceil(remaining / 86400000);\n    return `Restore के लिए ${days} दिन शेष · ${new Date(deadline).toLocaleString('en-IN')}`;\n  };\n\n  const selectedStudent = useMemo(
     () => students.find(student => student.user_id === selectedId) ?? null,
     [students, selectedId],
   );
