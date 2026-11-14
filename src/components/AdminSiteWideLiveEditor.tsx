@@ -68,7 +68,7 @@ const hex = (value: string, fallback: string) => {
   return match ? '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('') : fallback;
 };
 
-export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean }> = ({ src, srcDoc, pageId, pageLabel, mobile = false, designOnly = false }) => {
+export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean; onDraftSaved?: (draftId: string) => void }> = ({ src, srcDoc, pageId, pageLabel, mobile = false, designOnly = false, onDraftSaved }) => {
   const { user, isAdmin } = useAuth();
   const iframe = useRef<HTMLIFrameElement>(null);
   const targetRef = useRef<HTMLElement | null>(null);
@@ -591,7 +591,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
         customPages: existingVisual.customPages || draft.customPages || [],
         themes: { ...(existingVisual.themes || {}), ...(draft.themes || {}) },
       };
-      await saveWebsiteConfigDraft({ ...base, visualEditor: next });
+      const savedId = await saveWebsiteConfigDraft({ ...base, visualEditor: next });
+      onDraftSaved?.(savedId);
       setDraft(next);
       const refreshed = await getWebsiteConfigVersions();
       const saved = refreshed.find(item => item.status === 'draft');
