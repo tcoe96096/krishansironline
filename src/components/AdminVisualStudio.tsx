@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Monitor, Smartphone, MousePointerClick, Image as ImageIcon, Layers3, ShieldCheck } from 'lucide-react';
 import { AdminSiteWideLiveEditor } from './AdminSiteWideLiveEditor';
-import { getEditableVisualEditorPages } from '../visual-editor/registry';
+import { getVisualDesignPreviewPages } from '../visual-editor/registry';
 
 // The Advanced Real Page Editor is the single visual-design entry point.
 // The previous Canvas, V2 text editor and site-wide builder are no longer
 // offered in the Admin UI. Publishing remains a separate explicit action.
-const editablePages = getEditableVisualEditorPages();
+const editablePages = getVisualDesignPreviewPages();
 
 export const AdminVisualStudio: React.FC = () => {
   const [pageId, setPageId] = useState<string>(editablePages[0]?.id ?? 'home');
@@ -21,6 +21,7 @@ export const AdminVisualStudio: React.FC = () => {
     ? import.meta.env.BASE_URL
     : import.meta.env.BASE_URL + page.path.slice(1);
   const src = pagePath + (pagePath.includes('?') ? '&' : '?') + 'visual-editor=1';
+  const designOnly = !page.editable;
 
   return (
     <section data-testid="visual-studio-main" className="min-h-[80vh] space-y-4">
@@ -50,9 +51,10 @@ export const AdminVisualStudio: React.FC = () => {
             onChange={event => setPageId(event.target.value)}
             className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
           >
-            {editablePages.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            {editablePages.map(item => <option key={item.id} value={item.id}>{item.label}{item.editable ? '' : ' · Design only (protected)'}</option>)}
           </select>
         </label>
+        {designOnly && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Design-only mode: authentication, test submission, results and admin actions cannot be edited.</p>}
         <div className="flex items-center rounded-lg border border-slate-200 p-1" role="group" aria-label="Preview screen">
           <button
             type="button"
@@ -74,6 +76,7 @@ export const AdminVisualStudio: React.FC = () => {
         pageId={page.id}
         pageLabel={page.label}
         mobile={mobile}
+        designOnly={designOnly}
       />
     </section>
   );
