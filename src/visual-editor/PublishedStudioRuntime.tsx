@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { STUDIO_THEMES, parseStudioPages, safeStudioMediaUrl, studioYouTubeEmbed, type StudioTheme } from './studioBuilder';
 import { getVisualEditorPage } from './registry';
+import { ensureStudioEffectsStyles, applyStudioEffects, type StudioEffect } from './effects';
 import type { WebsiteConfig } from '../services/siteConfigService';
 
 type VisualComponent = { id: string; kind: string; text: string; subtitle?: string; parentSelector: string; url?: string; mediaPath?: string };
 type VisualStyle = {
-  color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: string;
+  color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: string; effects?: StudioEffect;
   marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number;
 };
 type VisualOverride = { selector: string; text: string; textEditable: boolean; style: VisualStyle };
@@ -138,6 +139,20 @@ function applyPublished(doc: Document, visual: VisualPayload, pageId: string): v
   if (!custom && !page?.editable) return;
   const scope = doc.querySelector('main');
   if (!scope) return;
+  ensureStudioEffectsStyles(doc);
+  const pageElement = custom ? scope.querySelector('article[data-studio-published-page]') : null;
+  const resolve = (selector: string) => {
+    if (!safeSelector(selector)) return null;
+    // Draft custom-page srcDoc has body > main; published app wraps this in a
+    // public React page. Translate only the exact known template root.
+    if (pageElement) {
+      const root = 'body > main:nth-of-type(1)';
+      if (!selector.startsWith(root) || (selector.length > root.length && selector[root.length] !== ' ')) return null;
+      const rest = selector.slice(root.length);
+      return (rest ? pageElement.querySelector(rest.replace(/^ > /, '')) : pageElement) as HTMLElement | null;
+    }
+    return doc.querySelector<HTMLElement>(selector);
+  };
   doc.querySelector('style[data-published-studio-theme]')?.remove();
   const name = visual.themes?.[pageId];
   if (name && name !== 'original' && Object.prototype.hasOwnProperty.call(STUDIO_THEMES, name)) {
@@ -151,7 +166,7 @@ function applyPublished(doc: Document, visual: VisualPayload, pageId: string): v
   }
   for (const item of Object.values(visual.pages?.[pageId] || {})) {
     if (!item || !safeSelector(item.selector) || !item.style) continue;
-    const node = doc.querySelector<HTMLElement>(item.selector);
+    const node = resolve(item.selector);
     if (!node || !scope.contains(node) || protectedMarkup(node)) continue;
     if (item.textEditable && node.children.length === 0 && /^(H[1-6]|P|LI|SPAN|STRONG|EM)$/.test(node.tagName)) {
       node.textContent = (item.text || '').slice(0, 2000);
@@ -169,6 +184,7 @@ function applyPublished(doc: Document, visual: VisualPayload, pageId: string): v
     if (style.width > 0) node.style.width = pixels(style.width, 1400);
     if (style.minHeight > 0) node.style.minHeight = pixels(style.minHeight, 700);
     if (/^(400|500|600|700|800|900)$/.test(style.fontWeight)) node.style.fontWeight = style.fontWeight;
+    applyStudioEffects(node, style.effects);
   }
   const components = visual.addedComponents?.[pageId] || [];
   if (!Array.isArray(components)) return;
@@ -176,7 +192,7 @@ function applyPublished(doc: Document, visual: VisualPayload, pageId: string): v
   doc.querySelectorAll('[data-builder-component-id]').forEach(node => node.remove());
   components.slice(0, 100).forEach(item => {
     if (!item || !safeSelector(item.parentSelector)) return;
-    const parent = doc.querySelector(item.parentSelector);
+    const parent = resolve(item.parentSelector);
     if (!parent || !scope.contains(parent) || protectedMarkup(parent)) return;
     renderComponent(doc, item, parent);
   });
