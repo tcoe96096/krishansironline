@@ -137,8 +137,36 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       const p = doc.createElement('p'); p.textContent = item.text; p.style.cssText = 'font-size:16px;line-height:1.7;color:#334155;margin:12px 0;'; node = p;
     } else if (item.kind === 'columns') {
       const div = doc.createElement('div'); div.textContent = item.text + '  |  Second column'; div.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:18px;background:#eff6ff;border-radius:14px;margin:16px 0;'; node = div;
+    } else if (item.kind === 'video' && mediaUrl) {
+      const video = doc.createElement('video'); video.src = mediaUrl; video.controls = true;
+      video.style.cssText = 'display:block;width:100%;max-height:440px;background:#0f172a;border-radius:14px;margin:16px 0;';
+      node = video;
     } else if (item.kind === 'video') {
       const div = doc.createElement('div'); div.textContent = 'Video block · ' + item.text; div.style.cssText = 'display:grid;place-items:center;min-height:160px;background:#0f172a;color:white;border-radius:14px;margin:16px 0;padding:20px;'; node = div;
+    } else if (item.kind === 'quote') {
+      const quote = doc.createElement('blockquote');
+      quote.style.cssText = 'border-left:4px solid #0b3979;padding:18px 22px;background:#f0f7ff;border-radius:8px;margin:20px 0;';
+      const words = doc.createElement('p'); words.textContent = item.text; words.style.cssText = 'font-size:20px;line-height:1.6;font-style:italic;color:#1e3a5f;';
+      const attribution = doc.createElement('cite'); attribution.textContent = item.subtitle || 'Attribution'; attribution.style.cssText = 'display:block;margin-top:10px;font-size:13px;color:#475569;';
+      quote.append(words, attribution); node = quote;
+    } else if (item.kind === 'faq') {
+      const details = doc.createElement('details');
+      details.style.cssText = 'margin:14px 0;padding:16px 18px;border:1px solid #bfdbfe;background:#f8fafc;border-radius:12px;';
+      const summary = doc.createElement('summary'); summary.textContent = item.text; summary.style.cssText = 'font-weight:700;color:#0f3b75;cursor:pointer;';
+      const answer = doc.createElement('p'); answer.textContent = item.subtitle || 'Write your answer here.'; answer.style.cssText = 'margin-top:12px;line-height:1.7;color:#475569;';
+      details.append(summary, answer); node = details;
+    } else if (item.kind === 'callout') {
+      const aside = doc.createElement('aside');
+      aside.style.cssText = 'padding:18px 20px;margin:16px 0;border-left:4px solid #0d9488;background:#f0fdfa;border-radius:12px;';
+      const heading = doc.createElement('strong'); heading.textContent = item.text; heading.style.cssText = 'display:block;color:#115e59;font-size:17px;';
+      const description = doc.createElement('p'); description.textContent = item.subtitle || 'Add your important notice.'; description.style.cssText = 'margin-top:8px;line-height:1.7;color:#134e4a;';
+      aside.append(heading, description); node = aside;
+    } else if (item.kind === 'stat') {
+      const card = doc.createElement('section');
+      card.style.cssText = 'padding:22px;margin:16px 0;border:1px solid #cbd5e1;background:#fff;border-radius:16px;text-align:center;';
+      const value = doc.createElement('strong'); value.textContent = item.text; value.style.cssText = 'display:block;color:#0b3979;font-size:38px;font-weight:800;';
+      const caption = doc.createElement('p'); caption.textContent = item.subtitle || 'Statistic description'; caption.style.cssText = 'margin-top:8px;color:#475569;font-size:14px;';
+      card.append(value, caption); node = card;
     } else {
       const section = doc.createElement('section'); section.textContent = item.text; section.style.cssText = 'padding:20px;background:#f1f5f9;border:1px solid #dbe5f0;border-radius:16px;margin:16px 0;'; node = section;
     }
@@ -164,12 +192,18 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       element.style.width = s.width > 0 ? s.width + 'px' : '';
       element.style.minHeight = s.minHeight > 0 ? s.minHeight + 'px' : '';
     });
+    // Reconcile editor-owned nodes only, leaving original website markup intact.
+    doc.querySelectorAll('[data-builder-component-id]').forEach(node => node.remove());
+    let current = true;
     (draft.addedComponents?.[pageId] || []).forEach(item => {
       const client = supabase;
       if (item.mediaPath && client && user?.id) {
-        void client.storage.from('visual-studio-media').createSignedUrl(item.mediaPath, 3600).then(({ data }) => addDomNode(doc, item, data?.signedUrl));
+        void client.storage.from('visual-studio-media').createSignedUrl(item.mediaPath, 3600)
+          .then(({ data }) => { if (current) addDomNode(doc, item, data?.signedUrl); })
+          .catch(() => { if (current) addDomNode(doc, item); });
       } else addDomNode(doc, item);
     });
+    return () => { current = false; };
   }, [ready, draft, pageId, user?.id]);
 
   useEffect(() => {
@@ -188,6 +222,18 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     const selectElement = (event: MouseEvent) => {
       const clicked = event.target as HTMLElement | null;
       if (!clicked || typeof clicked.closest !== 'function' || clicked.closest('[data-visual-editor-ui]')) return;
+      const added = clicked.closest<HTMLElement>('[data-builder-component-id]');
+      if (added) {
+        // FAQ summaries retain their native expand/collapse interaction.
+        if (!clicked.closest('summary')) { event.preventDefault(); event.stopPropagation(); }
+        if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
+        targetRef.current = null;
+        setSelected(null);
+        setManagedComponentId(added.dataset.builderComponentId || null);
+        setInspectorOpen(true);
+        return;
+      }
+      setManagedComponentId(null);
       const candidate = clicked.closest<HTMLElement>('h1,h2,h3,h4,h5,h6,p,li,span,strong,em,button,a,img,section,article,header,footer,main,aside,nav,figure,div');
       if (!candidate || !selectable(candidate) || candidate === doc.body || candidate.id === 'root') return;
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
