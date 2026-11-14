@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlignLeft, Columns2, Image as ImageIcon, Minus, MousePointerClick, MoveVertical, Plus, Settings2, Square, Type, Video } from 'lucide-react';
+import { AlignLeft, BarChart3, ChevronDown, ChevronUp, Columns2, Copy, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } from '../services/siteConfigService';
 
-type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'divider' | 'spacer';
+type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'divider' | 'spacer' | 'quote' | 'faq' | 'callout' | 'stat';
 type Media = { name: string; path: string; type: 'image' | 'video'; url: string };
-type Added = { id: string; kind: Kind; text: string; parentSelector: string; mediaPath?: string; altText?: string };
+type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string };
 type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number };
 type Override = { selector: string; text: string; textEditable: boolean; style: StyleDraft };
 type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]> };
@@ -24,6 +24,10 @@ const palette: { kind: Kind; label: string; hint: string; icon: React.ElementTyp
   { kind: 'video', label: 'Video', hint: 'Video placeholder', icon: Video },
   { kind: 'divider', label: 'Divider', hint: 'Horizontal separator', icon: Minus },
   { kind: 'spacer', label: 'Spacer', hint: 'Vertical spacing', icon: MoveVertical },
+  { kind: 'quote', label: 'Quote', hint: 'Quotation and author', icon: Quote },
+  { kind: 'faq', label: 'FAQ', hint: 'Expandable question and answer', icon: HelpCircle },
+  { kind: 'callout', label: 'Callout', hint: 'Highlight a notice', icon: Megaphone },
+  { kind: 'stat', label: 'Statistic', hint: 'Important number and context', icon: BarChart3 },
 ];
 const safeSelector = (selector: string) => {
   const parts = selector.split(' > ');
@@ -51,7 +55,7 @@ const hex = (value: string, fallback: string) => {
   return match ? '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('') : fallback;
 };
 
-export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pageLabel: string; mobile?: boolean }> = ({ src, pageId, pageLabel, mobile = false }) => {
+export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean }> = ({ src, pageId, pageLabel, mobile = false, designOnly = false }) => {
   const { user, isAdmin } = useAuth();
   const iframe = useRef<HTMLIFrameElement>(null);
   const targetRef = useRef<HTMLElement | null>(null);
@@ -73,6 +77,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaError, setMediaError] = useState('');
   const [mediaAlt, setMediaAlt] = useState('');
+  const [componentQuery, setComponentQuery] = useState('');
+  const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
   const [toolbarPos, setToolbarPos] = useState({ x: Math.max(12, Math.round((window.innerWidth - 360) / 2)), y: Math.max(12, window.innerHeight - 90) });
   const [componentsPos, setComponentsPos] = useState({ x: 16, y: 100 });
   const [mediaPos, setMediaPos] = useState({ x: 16, y: 100 });
@@ -107,7 +113,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { setReady(false); setSelected(null); targetRef.current = null; }, [src, pageId]);
+  useEffect(() => { setReady(false); setSelected(null); setManagedComponentId(null); targetRef.current = null; }, [src, pageId]);
 
   const addDomNode = (doc: Document, item: Added, mediaUrl?: string) => {
     if (!safeSelector(item.parentSelector) || doc.querySelector('[data-builder-component-id="' + item.id + '"]')) return;
@@ -192,7 +198,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       candidate.style.outline = '2px solid #f59e0b';
       const computed = view.getComputedStyle(candidate);
       const rect = candidate.getBoundingClientRect();
-      const editable = textLeaf(candidate);
+      const editable = !designOnly && textLeaf(candidate);
       setSelected({ tag: candidate.tagName.toLowerCase(), text: editable ? candidate.textContent || '' : '', selector: selectorFor(candidate), width: rect.width, height: rect.height, textEditable: editable });
       setStyle({
         color: hex(computed.color, '#18263b'), backgroundColor: hex(computed.backgroundColor, '#ffffff'),
@@ -237,7 +243,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; pageId: string; pa
       if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
       overlay?.remove(); targetRef.current = null;
     };
-  }, [ready, src, pageId]);
+  }, [ready, src, pageId, designOnly]);
 
   useEffect(() => {
     if (!ready || !selected) return;
