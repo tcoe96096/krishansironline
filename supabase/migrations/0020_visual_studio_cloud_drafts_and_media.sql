@@ -7,6 +7,7 @@ create table if not exists public.visual_studio_drafts (
   draft_key text not null default 'main' check (length(draft_key) between 1 and 100),
   content jsonb not null default '[]'::jsonb check (jsonb_typeof(content) = 'array'),
   updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
   unique (user_id, draft_key)
 );
 
