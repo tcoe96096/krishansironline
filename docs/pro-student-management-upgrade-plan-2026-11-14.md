@@ -85,3 +85,13 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - This branch is Preview-only.
 - No Production merge, deployment, schema migration, Auth configuration or data change is authorized by this plan.
 - After Preview acceptance, prepare a separate Production implementation/release plan and request explicit approval.
+
+
+## Progress update — 2026-11-14
+- Created Preview feature branch `feature/pro-student-management-upgrade-2026-11-14` and draft PR #102.
+- Added the Student Governance & Diagnostics workspace to the existing Pro Student Management component.
+- Configured and deployed the isolated `krishansironline-preview-v2` Pages preview. TypeScript validation and Vite build passed.
+- Applied Preview-only migrations `20261114053043_student_lifecycle_governance` and `20261114053108_fix_student_attempt_lifecycle_policy` to Preview Supabase project `zgpkmfqioqvincmgyfpi`.
+- Added lifecycle fields, grandfathered existing Preview profiles as approved/active, added append-only admin audit records, gated student-owned data policies, and gated `start_test_attempt` on approved/active state.
+- Production Supabase project `vsqwlkqqsxcehvdsdbna` was not modified.
+- Security advisor review still reports pre-existing warnings for `public.is_admin()` and other existing SECURITY DEFINER RPCs, plus the intentionally policy-less `test_answer_keys` table. These findings are not introduced by the lifecycle migration.
