@@ -202,7 +202,10 @@ export const AdminStudentGovernance: React.FC = () => {
     }
   };
 
-  const nameNeedsReview = (value: string | null | undefined) => !value?.trim() || /^\\d{10}$/.test(value.trim());
+  const nameNeedsReview = (value: string | null | undefined) => {
+    const normalized = value?.trim().toLowerCase() ?? '';
+    return !normalized || /^\\d{10}$/.test(normalized) || ['err', 'error'].includes(normalized);
+  };
 
   const correctStudentName = async (student: StudentOption) => {
     const entered = window.prompt(
@@ -363,7 +366,7 @@ export const AdminStudentGovernance: React.FC = () => {
       {tab === 'review' && <div className="mt-4 space-y-3">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
           <strong>Auto-Purge Safety Gate</strong>
-          <p className="mt-1">जिन विद्यार्थियों के नाम खाली हैं या ठीक 10 अंकों के नंबर जैसे हैं, उनकी Auth identity कभी permanently delete नहीं होगी। पहले Admin द्वारा वास्तविक नाम verify करके सुधारना आवश्यक है। Academic results में verified नाम सुरक्षित रहेगा।</p>
+          <p className="mt-1">जिन विद्यार्थियों के नाम खाली हैं, ठीक 10 अंकों के नंबर जैसे हैं या err/error जैसे placeholder हैं, उनकी Auth identity कभी permanently delete नहीं होगी। पहले Admin द्वारा वास्तविक नाम verify करके सुधारना आवश्यक है। Academic results में verified नाम सुरक्षित रहेगा।</p>
         </div>
         <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-extrabold text-slate-800">Needs verified student name</h4><span className="rounded-lg bg-amber-100 px-3 py-2 text-[11px] font-bold text-amber-900">{students.filter(s => nameNeedsReview(s.student_name)).length} records</span></div>
         <div className="overflow-x-auto rounded-xl border border-slate-100">
