@@ -105,7 +105,19 @@ interface OnlineTestEngineProps {
 export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
+
+  useEffect(() => {
+    const updateNetworkStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    return () => {
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+    };
+  }, []);
+
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [testSearch, setTestSearch] = useState('');
   const [testClassFilter, setTestClassFilter] = useState('all');
   const [catalogueLoading, setCatalogueLoading] = useState(true);
@@ -168,6 +180,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     () => restoredSession?.markedForReview || {}
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
   const allowedAttempts = Math.max(1, Number(selectedTest.attemptLimit || 1));
   const attemptLimitMessageHi = `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।`;
@@ -563,6 +576,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         answers[index] = Number.isInteger(selectedAnswers[index]) ? selectedAnswers[index] : null;
       }
       const result = await submitTestAttempt(activeAttempt.id, answers);
+      setAutoSubmitPending(false);
       setServerResult(result);
       setActiveAttempt(result);
       setIsSubmitted(true);
@@ -580,16 +594,67 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         document.getElementById('test-result-card')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (error) {
+      // A request may have reached PostgreSQL even when the browser did not receive
+      // its response. Reconcile the attempt before asking the student to retry.
+      let reconciledAttempt: TestAttempt | undefined;
+      try {
+        reconciledAttempt = (await getMyTestAttempts()).find((attempt) => attempt.id === activeAttempt.id);
+      } catch {
+        // The network may still be unavailable; keep the local attempt and retry later.
+      }
+
+      if (reconciledAttempt && reconciledAttempt.status !== 'in_progress') {
+        setAutoSubmitPending(false);
+        setServerResult(reconciledAttempt);
+        setActiveAttempt(reconciledAttempt);
+        setIsSubmitted(true);
+        setIsTestActive(false);
+        localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        localStorage.removeItem('krishan_sir_active_student');
+        setSubmissionStatus({
+          loading: false,
+          success: reconciledAttempt.status === 'submitted',
+          message: reconciledAttempt.status === 'submitted'
+            ? 'आपका परिणाम database में सुरक्षित हो गया है।'
+            : 'परीक्षा का समय समाप्त हो गया था; प्रयास expired दर्ज किया गया है।',
+        });
+        return;
+      }
+
+      if (timeExpired) setAutoSubmitPending(true);
       setSubmissionStatus({
         loading: false,
         success: false,
-        message: error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।',
+        message: timeExpired
+          ? 'समय समाप्त हो गया है। इंटरनेट उपलब्ध होते ही परीक्षा स्वतः सबमिट करने का प्रयास फिर होगा।'
+          : (error instanceof Error ? error.message : 'परिणाम सुरक्षित नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें।'),
       });
-      // Keep the attempt active so the student can retry submission without losing answers.
+      // Keep the attempt and answers active; a deadline submission is retried on reconnect.
     } finally {
       submissionInFlight.current = false;
     }
   };
+
+  // Retry an automatic deadline submission after the network returns. A slow or
+  // dropped response is safe: submissionInFlight prevents concurrent RPC calls,
+  // and handleSubmitQuiz reconciles the database attempt before resending.
+  useEffect(() => {
+    if (!autoSubmitPending || isSubmitted || !isTestActive || !activeAttempt || timeLeftSeconds > 0) return;
+
+    const retryAutoSubmit = () => {
+      if (!navigator.onLine || submissionInFlight.current) return;
+      void handleSubmitQuiz(true);
+    };
+
+    window.addEventListener('online', retryAutoSubmit);
+    const retryTimer = window.setInterval(retryAutoSubmit, 5000);
+    retryAutoSubmit();
+
+    return () => {
+      window.removeEventListener('online', retryAutoSubmit);
+      window.clearInterval(retryTimer);
+    };
+  }, [autoSubmitPending, isSubmitted, isTestActive, activeAttempt?.id, timeLeftSeconds, studentDetails, selectedAnswers]);
 
   // Re-attempt test
   const handleReattempt = async () => {
@@ -848,6 +913,18 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                 <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
               </div>
               <div className="mt-2 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[10px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
+              {!isOnline && (
+                <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-900">
+                  इंटरनेट कनेक्शन उपलब्ध नहीं है। आपका टेस्ट और टाइमर जारी है; उत्तर इस ब्राउज़र में सुरक्षित हो रहे हैं। नेटवर्क लौटने पर सबमिशन फिर प्रयास होगा।
+                  <span className="block mt-0.5 text-amber-800">No internet connection. Your timer continues and answers are saved locally; submission will retry when you reconnect.</span>
+                </div>
+              )}
+              {autoSubmitPending && (
+                <div role="status" aria-live="assertive" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-900">
+                  समय समाप्त। परीक्षा स्वतः सबमिट करने का प्रयास फिर से किया जा रहा है। कृपया पेज खुला रखें।
+                  <span className="block mt-0.5 text-rose-800">Time is up. Automatic submission will keep retrying; please keep this page open.</span>
+                </div>
+              )}
             </div>
             {/* MOBILE QUESTION PALETTE: compact collapsible navigation */}
             <div className="lg:hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

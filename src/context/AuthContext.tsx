@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         let restoredSession = data.session;
         const restoredStudent = restoredSession?.user.user_metadata?.account_type === 'student';
-        if (restoredSession && restoredStudent && (!hasStudentTabSession(restoredSession.user.id) || !navigator.onLine)) {
+        if (restoredSession && restoredStudent && !hasStudentTabSession(restoredSession.user.id)) {
           clearStudentTabSession();
           await client.auth.signOut({ scope: 'local' });
           restoredSession = null;
@@ -123,25 +123,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Immediately clear a student's local session when the browser reports loss of network.
-  useEffect(() => {
-    if (!session?.user || session.user.user_metadata?.account_type !== 'student') return;
-
-    const client = requireSupabase();
-    const handleOffline = () => {
-      clearStudentTabSession();
-      setSession(null);
-      setProfile(null);
-      setIsAdmin(false);
-      void client.auth.signOut({ scope: 'local' }).catch((error) => {
-        console.warn('Student local sign-out warning:', error);
-      });
-    };
-
-    window.addEventListener('offline', handleOffline);
-    if (!navigator.onLine) handleOffline();
-    return () => window.removeEventListener('offline', handleOffline);
-  }, [session?.user?.id]);
+  // Do not sign students out on a transient offline event. Keep the local Supabase
+  // session and the server-authoritative attempt clock intact; the test engine saves
+  // answers locally and retries auto-submission when the connection returns.
 
   const refreshProfile = useCallback(async () => {
     if (!session?.user) {
