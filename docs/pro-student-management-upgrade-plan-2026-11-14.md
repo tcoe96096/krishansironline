@@ -125,3 +125,22 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - After 30 days in soft-deleted state without restoration, automatically delete the student's Auth login identity and personal profile/PII.
 - Preserve academic history (test attempts, marks, results and learning records) in anonymized, non-identifiable form.
 - This is a plan update only. Automatic purge implementation and Preview testing remain pending; no Production changes are authorized.
+
+
+## Purge feasibility audit — Preview only (2026-11-14)
+- Rechecked the isolated Preview database project `zgpkmfqioqvincmgyfpi`; Production was not queried or changed.
+- `pg_cron` and `pg_net` are available in the extension catalog but are **not installed/enabled** in this project. `supabase_vault` is installed (0.3.1). No scheduler has been configured and no purge job is active.
+- The only currently deployed Preview Edge Function is `admin-test-import` (JWT verification enabled). It authenticates the caller using the user's JWT and checks the admin role; it is not a purge worker and must not be repurposed for deletion.
+- Schema audit found student identifiers in several student-owned tables without declared foreign keys to `student_profiles`. This means a profile delete cannot be assumed to cascade or safely detach those records. A complete table-by-table retention map and explicit anonymization strategy are required.
+- `student_admin_audit` currently contains 2 Preview rows; both have before/after snapshots and both match possible PII-key patterns. The audit table has admin-only SELECT/INSERT RLS, but the snapshots themselves must be scrubbed or transformed before an identity purge can be considered compliant with the approved anonymization policy.
+- Existing RLS has separate admin-read policies on academic/student-activity tables. Any anonymization design must keep authorized class-level reporting useful while ensuring archived rows cannot be joined back to a deleted Auth identity or exposed through student-facing policies.
+- The extension catalog includes `pg_cron`, `pg_net`, and installed `supabase_vault`; this is a possible same-Supabase scheduling route, subject to current Supabase documentation and Preview validation. No external platform is proposed.
+- A secure design candidate is: a dedicated JWT-disabled Edge Function with mandatory high-entropy secret validation backed by Vault/RPC, using the platform-provided server-side service-role environment only inside the function; a Vault-backed `pg_cron` + `pg_net` call; and a database-side atomic claim/lock that rechecks `account_status='deleted'` and `purge_after <= now()` before any Auth Admin deletion. The function must fail closed if secret validation, profile lock, academic anonymization, or Auth deletion fails.
+- This candidate is **not implemented or activated**. Before implementation, verify current Supabase guidance for Edge Function environment variables, Vault access, pg_net scheduling, Auth Admin deletion, and transaction/concurrency boundaries. Never place a service-role key in SQL text, migration files, GitHub source, or browser code.
+- Audit finding: `student_admin_audit.student_id` and `actor_id` are UUIDs and snapshots may retain identifiers. Retention policy for admin actors must be explicit; do not erase staff accountability accidentally. Student target identifiers and snapshot PII must be replaced with a non-reversible archive subject key while preserving action/time/reason only where the reason itself is non-identifying.
+- No Preview student profile, Auth identity, test attempt, result, learning record, or audit row was deleted or modified during this audit.
+
+## Corrected implementation status
+- The 30-day recovery deadline and soft-delete/restore lifecycle are implemented in Preview.
+- Automatic purge, Auth identity deletion, academic-history anonymization, audit-snapshot anonymization, scheduler activation, and synthetic-account purge tests remain **not implemented / not verified**.
+- Do not describe the countdown as evidence that automatic deletion is operational.
