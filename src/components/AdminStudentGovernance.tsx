@@ -290,6 +290,7 @@ export const AdminStudentGovernance: React.FC = () => {
     { id: 'overview', label: 'Overview' },
     { id: 'approval', label: 'Approval Centre' },
     { id: 'account', label: 'Account Control' },
+    { id: 'review', label: 'Name Review' },
     { id: 'diagnostics', label: 'Diagnostics' },
     { id: 'audit', label: 'Activity & Audit' },
   ];
