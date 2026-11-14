@@ -50,8 +50,16 @@ const selectorFor = (element: HTMLElement) => {
   }
   return ['body', ...parts].join(' > ');
 };
-const protectedElement = (element: Element) => Boolean(element.closest('form,input,textarea,select,[role=button],[data-visual-editor-protected],[data-visual-editor-ui]'));
-const textLeaf = (element: Element) => ['H1','H2','H3','H4','H5','H6','P','LI','SPAN','STRONG','EM','BUTTON','A'].includes(element.tagName) && element.children.length === 0 && Boolean(element.textContent?.trim()) && !protectedElement(element);
+// Style ordinary buttons and links even inside forms, but never edit form values,
+// credentials, interactive behavior, or protected application controls.
+const protectedElement = (element: Element) =>
+  Boolean(element.closest('input,textarea,select,[data-visual-editor-protected],[data-visual-editor-ui]')) ||
+  Boolean(element.closest('form') && !element.matches('button,a')) ||
+  Boolean(element.closest('[role=button]') && !element.matches('button,a'));
+const textLeaf = (element: Element) =>
+  ['H1','H2','H3','H4','H5','H6','P','LI','SPAN','STRONG','EM','BUTTON','A'].includes(element.tagName) &&
+  element.children.length === 0 && Boolean(element.textContent?.trim()) &&
+  !element.closest('form,[data-visual-editor-protected]') && !protectedElement(element);
 const selectable = (element: Element) => !['HTML','BODY','SCRIPT','STYLE','INPUT','TEXTAREA','SELECT','OPTION','SVG'].includes(element.tagName) && !protectedElement(element);
 const hex = (value: string, fallback: string) => {
   if (/^#[0-9a-f]{6}$/i.test(value)) return value;
