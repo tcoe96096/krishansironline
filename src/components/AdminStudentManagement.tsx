@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import { AdminProAnalytics } from './AdminProAnalytics';
+import { AdminStudentGovernance } from './AdminStudentGovernance';
 
 type StudentRecord = {
   user_id: string;
@@ -323,6 +324,8 @@ export const AdminStudentManagement: React.FC = () => {
       </div>
 
       <AdminProAnalytics />
+
+      <AdminStudentGovernance />
 
       <div className="grid gap-4 xl:grid-cols-[1.4fr_.8fr]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">

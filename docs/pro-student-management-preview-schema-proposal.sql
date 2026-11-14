@@ -1,0 +1,8 @@
+-- SUPERSEDED: the reviewed Preview schema has been applied.
+-- Keep the authoritative migration history in:
+--   supabase/migrations/20261114053043_student_lifecycle_governance.sql
+--   supabase/migrations/20261114053108_fix_student_attempt_lifecycle_policy.sql
+--
+-- These migrations were applied ONLY to Preview project zgpkmfqioqvincmgyfpi.
+-- They have NOT been applied to Production project vsqwlkqqsxcehvdsdbna.
+-- Do not execute this placeholder file.

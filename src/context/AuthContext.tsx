@@ -38,6 +38,9 @@ export type StudentProfile = {
   pin_code: string | null;
   created_at: string;
   updated_at: string;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  account_status: 'active' | 'suspended' | 'deleted';
+  deleted_at: string | null;
 };
 
 type AuthContextValue = {
@@ -104,6 +107,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           restoredSession = null;
         }
 
+        // Enforce the server-backed lifecycle state on tab-session restoration.
+        // A transient network error does not sign the student out; database RLS
+        // and start_test_attempt remain authoritative while connectivity returns.
+        if (restoredSession && restoredStudent) {
+          const { data: lifecycle, error: lifecycleError } = await client
+            .from('student_profiles')
+            .select('approval_status,account_status,deleted_at')
+            .eq('user_id', restoredSession.user.id)
+            .maybeSingle();
+          if (!lifecycleError && (!lifecycle ||
+            lifecycle.approval_status !== 'approved' ||
+            lifecycle.account_status !== 'active' ||
+            Boolean(lifecycle?.deleted_at)
+          )) {
+            clearStudentTabSession();
+            await client.auth.signOut({ scope: 'local' });
+            restoredSession = null;
+          }
+        }
+
         if (!active) return;
         setSession(restoredSession);
         setLoading(false);
@@ -136,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await requireSupabase()
         .from('student_profiles')
-        .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at')
+        .select('user_id, student_name, class_level, roll_no, school_name, country, state, district, area_type, locality_name, pin_code, created_at, updated_at, approval_status, account_status, deleted_at')
         .eq('user_id', session.user.id)
         .maybeSingle();
       if (error) throw error;
@@ -228,9 +251,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const input = identifierInput.trim();
     // Email accounts use their real email; legacy/new mobile accounts use a stable internal alias.
     const email = input.includes('@') ? input.toLowerCase() : studentLoginEmail(input);
-    const { data, error } = await requireSupabase().auth.signInWithPassword({ email, password });
+    const client = requireSupabase();
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    if (data.session?.user.user_metadata?.account_type === 'student') setStudentTabSession(data.session.user.id);
+    if (data.session?.user.user_metadata?.account_type === 'student') {
+      setStudentTabSession(data.session.user.id);
+      const { data: lifecycle, error: lifecycleError } = await client
+        .from('student_profiles')
+        .select('approval_status,account_status,deleted_at')
+        .eq('user_id', data.session.user.id)
+        .maybeSingle();
+      if (lifecycleError || !lifecycle) {
+        clearStudentTabSession();
+        await client.auth.signOut({ scope: 'local' });
+        throw new Error('विद्यार्थी प्रोफाइल सत्यापित नहीं हो सकी। कृपया Admin से संपर्क करें।');
+      }
+      if (lifecycle.approval_status !== 'approved') {
+        clearStudentTabSession();
+        await client.auth.signOut({ scope: 'local' });
+        throw new Error(lifecycle.approval_status === 'rejected'
+          ? 'आपका Registration अस्वीकार किया गया है। कृपया Admin से संपर्क करें।'
+          : 'आपका Registration Admin Approval के लिए Pending है। Approval के बाद Login करें।');
+      }
+      if (lifecycle.account_status !== 'active' || lifecycle.deleted_at) {
+        clearStudentTabSession();
+        await client.auth.signOut({ scope: 'local' });
+        throw new Error('आपका Student Account अभी Active नहीं है। कृपया Admin से संपर्क करें।');
+      }
+    }
   }, []);
 
   const registerStudent = useCallback(async (details: StudentRegistration) => {
@@ -266,7 +314,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     });
     if (error) throw error;
-    if (data.session?.user.user_metadata?.account_type === 'student') setStudentTabSession(data.session.user.id);
+    // New self-registrations are pending by default; do not leave them signed in.
+    if (data.session?.user.user_metadata?.account_type === 'student') {
+      clearStudentTabSession();
+      const { error: signOutError } = await requireSupabase().auth.signOut({ scope: 'local' });
+      if (signOutError) throw signOutError;
+    }
   }, []);
 
   const signOut = useCallback(async () => {
