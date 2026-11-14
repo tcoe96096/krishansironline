@@ -50,3 +50,8 @@ export const getVisualEditorPage = (id: string): VisualEditorPageDefinition | un
 
 export const getEditableVisualEditorPages = (): VisualEditorPageDefinition[] =>
   VISUAL_EDITOR_PAGES.filter((page) => page.editable);
+
+/** All routes may be previewed for visual design. Operational routes stay
+ * protected from content/behaviour editing, publishing and submission edits. */
+export const getVisualDesignPreviewPages = (): VisualEditorPageDefinition[] =>
+  [...VISUAL_EDITOR_PAGES];
