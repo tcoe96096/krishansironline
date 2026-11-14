@@ -3,7 +3,8 @@ _Date: 2026-11-14_
 
 ## Approved decisions
 - Approval policy: Hybrid.
-- Deletion policy: Soft delete; permanent deletion is Super Admin-only and is not part of the normal student workflow.
+- Deletion policy: Soft delete with a 30-day recovery period, followed by automatic permanent deletion of the student's login identity and personal profile if not restored.
+- Academic history (test attempts, results, marks and learning records) must be retained after the 30-day purge in anonymized, non-identifiable form.
 - Scope: All planned capabilities.
 - Delivery: GitHub feature branch -> isolated GitHub Pages Preview -> owner acceptance -> separate Production PR/release.
 - Production website and Production Supabase project remain untouched during Preview development.
@@ -23,7 +24,7 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 1. **Overview** — existing counts, class intelligence, analytics and health summary.
 2. **Directory** — preserve current search, filters, pagination, profile editor and CSV export; add active/pending/suspended/archived filters.
 3. **Approval Centre** — pending registrations, review details, approve/reject with reason, approval history.
-4. **Account Control** — activate/suspend, restore archived record, soft-delete with confirmation and reason. Permanent deletion remains a separately guarded Super Admin operation and is not exposed to ordinary admins.
+4. **Account Control** — activate/suspend, restore archived record, soft-delete with confirmation and reason; show deletion deadline/countdown and purge eligibility. No ordinary-admin immediate permanent-delete control.
 5. **Diagnostics** — read-only checks for Auth identity linkage, profile row, required fields, approval/account state, test-attempt linkage and relevant RLS/query failures. Show evidence and a safe next action; never claim an unperformed repair.
 6. **Activity & Audit** — immutable admin-action events with actor, target student, action, timestamp and structured before/after metadata; student-facing personal activity remains private.
 7. **Student Detail Drawer** — Profile, Account, Diagnostics, Test History, Learning Progress and Activity tabs.
@@ -34,6 +35,17 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - Admin-created/verified registrations can be approved during creation/review.
 - Only approved and active students may enter student learning/test routes. Pending/rejected/suspended/deleted states must be clearly explained.
 - This policy must be enforced by trusted database/auth checks, not only by hiding UI controls.
+
+## 30-day deletion and academic-retention policy (owner-approved)
+- On soft delete, set a server-generated deletion timestamp and calculate the purge deadline as exactly 30 days later. Do not accept deletion timestamps/deadlines from the browser.
+- During the 30-day recovery period, authorized admins can restore the personal profile and login account; restoration cancels the pending purge and is audit-logged.
+- At/after the 30-day deadline, a scheduled server-side purge automatically removes the student's Supabase Auth login identity and personal profile/PII if the account has not been restored.
+- Preserve test attempts, scores, marks, result records and learning records for academic reporting. Before deleting identity/profile, detach or replace student foreign-key references using a stable non-identifying archival reference or nullable/anonymized subject key; do not cascade-delete academic records.
+- Remove direct identifiers from retained academic rows and related personal activity/notification data as appropriate. Do not retain phone, email, name, address, credentials, or a reversible mapping to the deleted identity in the academic archive.
+- Keep aggregate/class reporting functional and ensure retained records cannot be re-identified through joins, exports, logs or admin UI.
+- Keep purge idempotent, batch-safe, retryable, observable, and protected against deleting a record restored concurrently. Use a trusted scheduled server-side process and privileged Auth Admin API; never expose service-role credentials in browser code.
+- Enforce explicit Super Admin/system permission for purge configuration and operational visibility. No manual immediate permanent-delete action for ordinary admins.
+- Preview validation must use synthetic test accounts only. Never test permanent deletion against real student accounts.
 
 ## Data and security design
 - Add explicit approval/account lifecycle fields to `student_profiles`, with safe defaults and backfill of existing rows to approved/active.
@@ -61,22 +73,33 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 ### Phase C — Approval and account lifecycle
 - Implement pending queue, approve/reject, suspend/activate and soft-delete/restore.
 - Require reason and confirmation for consequential actions.
+- Show the 30-day recovery deadline and remaining time.
 - Record each action in audit history.
 
-### Phase D — Diagnostics and repair
+### Phase D — Automatic purge (Preview only)
+- Confirm an approved scheduling capability exists in the current Supabase project; do not add a platform or incur cost without permission.
+- Implement trusted scheduled purge for deleted records whose server-side deadline has passed and which remain deleted at execution time.
+- Delete Auth identity and personal profile while retaining anonymized academic history.
+- Make purge idempotent, concurrency-safe, retryable and auditable; include dry-run diagnostics and a restricted synthetic-account Preview test.
+
+### Phase E — Diagnostics and repair
+
+### Phase F — Diagnostics and repair
 - Add read-only health checks and safe profile repair for fields that are demonstrably invalid/missing.
 - Do not repair credentials or manipulate Auth users from client code.
 - Provide a server-side workflow for any privileged Auth action only after Preview security review.
 
-### Phase E — Activity and reports
+### Phase G — Activity and reports
 - Add student activity timeline, admin audit view, filtered CSV export and diagnostic report.
 - Reuse existing records; do not create duplicate result or question-bank systems.
 
-### Phase F — Preview acceptance
+### Phase H — Preview acceptance
 - Run `npm run lint` and `npm run build`.
 - Verify desktop/mobile layout and Hindi/English.
 - Test existing student accounts remain approved and can log in.
-- Test pending/approved/rejected/suspended/soft-deleted state transitions.
+- Test pending/approved/rejected/suspended/soft-deleted/restored state transitions.
+- Use synthetic accounts to verify day-30 automatic purge, restore-before-deadline cancellation, retry/idempotency and concurrent restore protection.
+- Verify Auth identity and personal profile are removed while academic results/marks/history remain anonymized and usable for class reports.
 - Verify a student cannot read another student's profile, test attempts, progress or audit data.
 - Verify unauthorized staff cannot approve, suspend, restore or delete.
 - Verify test resume, timer, offline retry and auto-submit behavior is unchanged.
@@ -95,3 +118,10 @@ The inspected Preview Supabase schema has `student_profiles`, `test_attempts`, a
 - Added lifecycle fields, grandfathered existing Preview profiles as approved/active, added append-only admin audit records, gated student-owned data policies, and gated `start_test_attempt` on approved/active state.
 - Production Supabase project `vsqwlkqqsxcehvdsdbna` was not modified.
 - Security advisor review still reports pre-existing warnings for `public.is_admin()` and other existing SECURITY DEFINER RPCs, plus the intentionally policy-less `test_answer_keys` table. These findings are not introduced by the lifecycle migration.
+
+
+## Owner decision update — 2026-11-14
+- Owner approved the 30-day automatic permanent deletion policy.
+- After 30 days in soft-deleted state without restoration, automatically delete the student's Auth login identity and personal profile/PII.
+- Preserve academic history (test attempts, marks, results and learning records) in anonymized, non-identifiable form.
+- This is a plan update only. Automatic purge implementation and Preview testing remain pending; no Production changes are authorized.
