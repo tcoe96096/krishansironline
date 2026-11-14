@@ -20,7 +20,8 @@ type StudentOption = {
 
 type AuditRow = {
   id: string;
-  student_id: string;
+  student_id: string | null;
+  student_name: string | null;
   actor_id: string;
   action: string;
   reason: string | null;
@@ -87,7 +88,7 @@ export const AdminStudentGovernance: React.FC = () => {
           .select('user_id,student_name,class_level,roll_no,school_name,created_at,approval_status,account_status,approval_note,suspension_reason,deletion_reason,deleted_at,purge_after')
           .order('created_at', { ascending: false }).limit(500),
         client.from('student_admin_audit')
-          .select('id,student_id,actor_id,action,reason,created_at')
+          .select('id,student_id,student_name,actor_id,action,reason,created_at')
           .order('created_at', { ascending: false }).limit(100),
         client.from('student_daily_activity')
           .select('id,student_id,activity_date,study_minutes,lessons_opened,lessons_completed,tests_completed,questions_reviewed')
@@ -343,7 +344,7 @@ export const AdminStudentGovernance: React.FC = () => {
           <table className="w-full min-w-[620px] text-left text-xs">
             <thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr><th className="p-3">Time</th><th className="p-3">Student</th><th className="p-3">Action</th><th className="p-3">Reason</th><th className="p-3">Admin ID</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {audit.map(row => <tr key={row.id}><td className="p-3 text-slate-500">{new Date(row.created_at).toLocaleString('en-IN')}</td><td className="p-3 font-semibold text-slate-800">{students.find(s => s.user_id === row.student_id)?.student_name || row.student_id.slice(0,8)}</td><td className="p-3"><span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-800">{row.action.replaceAll('_',' ')}</span></td><td className="p-3 text-slate-600">{row.reason || '—'}</td><td className="p-3 font-mono text-[10px] text-slate-500">{row.actor_id.slice(0,8)}…</td></tr>)}
+              {audit.map(row => <tr key={row.id}><td className="p-3 text-slate-500">{new Date(row.created_at).toLocaleString('en-IN')}</td><td className="p-3 font-semibold text-slate-800">{row.student_name || students.find(s => s.user_id === row.student_id)?.student_name || (row.student_id ? row.student_id.slice(0,8) : 'Archived student')}</td><td className="p-3"><span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-800">{row.action.replaceAll('_',' ')}</span></td><td className="p-3 text-slate-600">{row.reason || '—'}</td><td className="p-3 font-mono text-[10px] text-slate-500">{row.actor_id.slice(0,8)}…</td></tr>)}
               {!audit.length && <tr><td colSpan={5} className="p-8 text-center text-xs text-slate-500">अभी कोई Admin Action दर्ज नहीं है।</td></tr>}
             </tbody>
           </table>
