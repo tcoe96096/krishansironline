@@ -48,6 +48,23 @@ $$;
 revoke all on function public.is_super_admin() from public, anon;
 grant execute on function public.is_super_admin() to authenticated;
 
+
+-- Treat Super Admin as an Admin for existing dashboard and governance RPC checks.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select auth.uid() is not null and exists (
+    select 1 from public.user_roles
+    where user_id = auth.uid() and lower(role) in ('admin','super_admin')
+  );
+$;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
 create or replace function public.get_student_purge_settings()
 returns table (
   auto_purge_enabled boolean,
