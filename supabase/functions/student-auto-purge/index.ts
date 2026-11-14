@@ -56,7 +56,6 @@ Deno.serve(async (req: Request) => {
   });
 
   const { data: claims, error: claimError } = await admin
-    .schema("private")
     .rpc("claim_student_purge_batch", { p_batch_size: 10 });
   if (claimError) return json({ error: "claim_batch_failed", code: claimError.code ?? "db_error" }, 500);
 
@@ -71,7 +70,7 @@ Deno.serve(async (req: Request) => {
           p_claim_token: claimToken,
         });
       if (authzError || authorized !== true) {
-        await admin.schema("private").rpc("release_student_purge_claim", {
+        await admin.rpc("release_student_purge_claim", {
           p_student_id: studentId,
           p_claim_token: claimToken,
           p_error_code: "eligibility_recheck_failed",
@@ -117,7 +116,7 @@ Deno.serve(async (req: Request) => {
       results.push({ status: alreadyAbsent ? "already_absent_completed" : "auth_deleted_completed" });
     } catch (error) {
       const code = error instanceof Error ? error.message : "worker_error";
-      await admin.schema("private").rpc("release_student_purge_claim", {
+      await admin.rpc("release_student_purge_claim", {
         p_student_id: studentId,
         p_claim_token: claimToken,
         p_error_code: code,
