@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
 import { STUDIO_THEMES, safeStudioMediaUrl, studioYouTubeEmbed, type StudioDraftPage, type StudioTheme } from '../visual-editor/studioBuilder';
+import { STUDIO_ANIMATIONS, STUDIO_FILTERS, STUDIO_HOVERS, STUDIO_DESIGN_PRESETS, DEFAULT_STUDIO_EFFECT, applyStudioEffects, ensureStudioEffectsStyles, contrastTextForHex, safeStudioEffect, type StudioEffect, type StudioDesignPreset } from '../visual-editor/effects';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } from '../services/siteConfigService';
@@ -9,12 +10,12 @@ import { getWebsiteConfigVersions, saveWebsiteConfigDraft, type WebsiteConfig } 
 type Kind = 'heading' | 'text' | 'button' | 'image' | 'card' | 'columns' | 'video' | 'pdf' | 'divider' | 'spacer' | 'quote' | 'faq' | 'callout' | 'stat' | 'hero' | 'steps';
 type Media = { name: string; path: string; type: 'image' | 'video'; url: string };
 type Added = { id: string; kind: Kind; text: string; parentSelector: string; subtitle?: string; mediaPath?: string; altText?: string; url?: string };
-type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number };
+type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fontWeight: string; textAlign: 'left' | 'center' | 'right' | 'justify'; marginTop: number; marginBottom: number; padding: number; borderRadius: number; width: number; minHeight: number; effects?: StudioEffect };
 type Override = { selector: string; text: string; textEditable: boolean; style: StyleDraft };
 type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]>; themes?: Record<string, StudioTheme>; customPages?: StudioDraftPage[] };
 type Selected = { tag: string; text: string; selector: string; width: number; height: number; textEditable: boolean };
 
-const defaults: StyleDraft = { color: '#18263b', backgroundColor: '#ffffff', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0 };
+const defaults: StyleDraft = { color: '#18263b', backgroundColor: '#ffffff', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0, effects: DEFAULT_STUDIO_EFFECT };
 const palette: { kind: Kind; label: string; hint: string; icon: React.ElementType }[] = [
   { kind: 'heading', label: 'Heading', hint: 'Section title or headline', icon: Type },
   { kind: 'text', label: 'Text', hint: 'Paragraph or description', icon: AlignLeft },
@@ -91,6 +92,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [mediaError, setMediaError] = useState('');
   const [mediaAlt, setMediaAlt] = useState('');
   const [componentQuery, setComponentQuery] = useState('');
+  const [copiedStyle, setCopiedStyle] = useState<StyleDraft | null>(null);
+  const [smartToolsOpen, setSmartToolsOpen] = useState(false);
+  const [smartPos, setSmartPos] = useState({ x: 100, y: 160 });
   const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
   const [componentUndo, setComponentUndo] = useState<Record<string, Added[][]>>({});
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
@@ -253,6 +257,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     if (!ready) return;
     const doc = iframe.current?.contentDocument;
     if (!doc) return;
+    ensureStudioEffectsStyles(doc);
     const previous = doc.querySelector('style[data-studio-theme]');
     previous?.remove();
     if (themeName === 'original') return;
@@ -287,6 +292,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       element.style.padding = s.padding + 'px'; element.style.borderRadius = s.borderRadius + 'px';
       element.style.width = s.width > 0 ? s.width + 'px' : '';
       element.style.minHeight = s.minHeight > 0 ? s.minHeight + 'px' : '';
+      applyStudioEffects(element, s.effects);
     });
     // Reconcile editor-owned nodes only, leaving original website markup intact.
     doc.querySelectorAll('[data-builder-component-id]').forEach(node => node.remove());
@@ -356,6 +362,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
         textAlign: (['left','center','right','justify'].includes(computed.textAlign) ? computed.textAlign : 'left') as StyleDraft['textAlign'],
         marginTop: Number.parseFloat(computed.marginTop) || 0, marginBottom: Number.parseFloat(computed.marginBottom) || 0,
         padding: Number.parseFloat(computed.paddingTop) || 0, borderRadius: Number.parseFloat(computed.borderRadius) || 0, width: 0, minHeight: 0,
+        effects: safeStudioEffect(draft.pages[pageId]?.[selectorFor(candidate)]?.style?.effects),
       });
       setInspectorOpen(true);
       if (!overlay) {
@@ -406,6 +413,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     element.style.marginBottom = style.marginBottom + 'px'; element.style.padding = style.padding + 'px';
     element.style.borderRadius = style.borderRadius + 'px'; element.style.width = style.width > 0 ? style.width + 'px' : '';
     element.style.minHeight = style.minHeight > 0 ? style.minHeight + 'px' : '';
+    ensureStudioEffectsStyles(element.ownerDocument);
+    applyStudioEffects(element, style.effects);
     const rect = element.getBoundingClientRect();
     const overlay = element.ownerDocument.querySelector<HTMLElement>('[data-visual-editor-ui="resize-overlay"]');
     if (overlay) {
@@ -420,6 +429,18 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     });
   }, [ready, selected?.text, style]);
 
+  const applySmartPreset = (preset: StudioDesignPreset) => {
+    if (!selected) { setNotice('First select any text, card, button or section.'); return; }
+    const next: Partial<StyleDraft> = preset === 'clean'
+      ? { padding: 12, borderRadius: 6, backgroundColor: '#ffffff', color: '#0f172a', fontWeight: '400' }
+      : preset === 'rounded'
+        ? { padding: 24, borderRadius: 22, backgroundColor: '#eff6ff', color: '#0b3979', fontWeight: '600' }
+        : preset === 'glass'
+          ? { padding: 24, borderRadius: 18, backgroundColor: '#f1f5f9', color: '#334155', fontWeight: '500' }
+          : { padding: 20, borderRadius: 10, backgroundColor: '#0b3979', color: '#ffffff', fontWeight: '800' };
+    setStyle(current => ({ ...current, ...next }));
+    setNotice('Smart design preset applied in Preview. Save Cloud Draft to keep it.');
+  };
   const pageComponents = draft.addedComponents?.[pageId] || [];
   const managedComponent = pageComponents.find(item => item.id === managedComponentId);
   const replaceComponents = (next: Added[], message: string) => {
@@ -607,9 +628,34 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
           <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
           <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>Inspector</button>
           <button type="button" onClick={() => { setThemesOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); }} aria-expanded={themesOpen} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (themesOpen ? 'bg-orange-100 text-orange-900' : 'bg-slate-100 text-slate-700')}><Palette className="h-3.5 w-3.5"/>Themes</button>
+          <button type="button" onClick={() => { setSmartToolsOpen(v => !v); setInspectorOpen(true); }} aria-expanded={smartToolsOpen} className={'rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (smartToolsOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}>✨ Smart Tools</button>
           <button type="button" aria-label="Undo added component" title="Undo added component" disabled={!(componentUndo[pageId] || []).length} onClick={undoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↶</button>
           <button type="button" aria-label="Redo added component" title="Redo added component" disabled={!(componentRedo[pageId] || []).length} onClick={redoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↷</button>
         </div>
+        {smartToolsOpen && <section data-visual-editor-ui="smart-tools-panel" style={{ left: smartPos.x, top: smartPos.y }}
+          className="fixed z-[99995] w-[min(310px,calc(100vw-24px))] rounded-xl border border-violet-200 bg-white p-3 shadow-2xl">
+          <div onPointerDown={event => dragPanel(event, setSmartPos)} className="mb-3 flex cursor-move items-center justify-between border-b pb-2">
+            <strong className="text-xs text-slate-900">✨ Smart Design Tools</strong>
+            <button type="button" onClick={() => setSmartToolsOpen(false)} className="rounded border px-2 py-1 text-xs">×</button>
+          </div>
+          <p className="mb-2 text-[10px] text-slate-500">Select a website element, then apply a preset or copy a design.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {STUDIO_DESIGN_PRESETS.map(preset => <button key={preset.value} type="button"
+              onClick={() => applySmartPreset(preset.value)} disabled={!selected}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-left disabled:opacity-50">
+              <span className="block text-xs font-bold text-slate-800">{preset.label}</span>
+              <span className="text-[10px] text-slate-500">{preset.hint}</span>
+            </button>)}
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-1">
+            <button type="button" disabled={!selected} onClick={() => { setCopiedStyle({ ...style, effects: safeStudioEffect(style.effects) }); setNotice('Style copied. Select a different element to paste.'); }}
+              className="rounded-lg border p-2 text-[10px] font-bold disabled:opacity-50">Copy Style</button>
+            <button type="button" disabled={!selected || !copiedStyle} onClick={() => { if(copiedStyle) setStyle({ ...copiedStyle }); setNotice('Style pasted in Preview. Save Cloud Draft to keep it.'); }}
+              className="rounded-lg border p-2 text-[10px] font-bold disabled:opacity-50">Paste Style</button>
+            <button type="button" disabled={!selected} onClick={() => setStyle(current => ({ ...current, color: contrastTextForHex(current.backgroundColor) }))}
+              className="rounded-lg border border-violet-200 bg-violet-50 p-2 text-[10px] font-bold disabled:opacity-50">Auto Contrast</button>
+          </div>
+        </section>}
         {themesOpen && <section data-visual-editor-ui="themes-panel" style={{ left: themesPos.x, top: themesPos.y }}
           className="fixed z-[99996] w-[min(300px,calc(100vw-24px))] rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
           <div onPointerDown={event => dragPanel(event, setThemesPos)} className="mb-3 flex cursor-move items-center justify-between border-b pb-2">
@@ -679,6 +725,25 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
             <label className="block text-[10px] font-semibold text-slate-600">Bottom Spacing · {style.marginBottom}px<input type="range" min="0" max="120" value={style.marginBottom} onChange={event => setStyle(current => ({ ...current, marginBottom: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Corner Radius · {style.borderRadius}px<input type="range" min="0" max="48" value={style.borderRadius} onChange={event => setStyle(current => ({ ...current, borderRadius: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Text Alignment<select value={style.textAlign} onChange={event => setStyle(current => ({ ...current, textAlign: event.target.value as StyleDraft['textAlign'] }))} className="mt-1 w-full rounded-lg border p-2 text-xs"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></label>
+            <div data-testid="effects-inspector" className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-2">
+              <p className="text-[11px] font-extrabold text-violet-900">Animations · Filters · Hover Effects</p>
+              <label className="block text-[10px] font-bold text-slate-600">Entrance Animation
+                <select aria-label="Entrance Animation" value={safeStudioEffect(style.effects).animation} onChange={event => setStyle(current => ({ ...current, effects: { ...safeStudioEffect(current.effects), animation: event.target.value as StudioEffect['animation'] } }))} className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_ANIMATIONS.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="block text-[10px] font-bold text-slate-600">Visual Filter
+                <select aria-label="Visual Filter" value={safeStudioEffect(style.effects).filter} onChange={event => setStyle(current => ({ ...current, effects: { ...safeStudioEffect(current.effects), filter: event.target.value as StudioEffect['filter'] } }))} className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_FILTERS.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="block text-[10px] font-bold text-slate-600">Hover Animation
+                <select aria-label="Hover Animation" value={safeStudioEffect(style.effects).hover} onChange={event => setStyle(current => ({ ...current, effects: { ...safeStudioEffect(current.effects), hover: event.target.value as StudioEffect['hover'] } }))} className="mt-1 w-full rounded border p-2 text-xs">
+                  {STUDIO_HOVERS.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <span className="text-[10px] text-slate-500">Effects respect reduced-motion preferences. Preview first, then Save Cloud Draft.</span>
+            </div>
             <div className="flex gap-2 pt-1"><button onClick={resetSelected} className="flex-1 rounded-lg border p-2 text-[10px] font-bold">Reset</button><button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="flex-1 rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Cloud Draft'}</button></div>
           </div> : !managedComponent && <div className="space-y-3"><p className="rounded-lg bg-slate-50 p-3 text-[10px] leading-5 text-slate-600">वेबसाइट के किसी भी text, button, card, section या image पर click करें। फिर properties बदलें। Components जोड़कर उन्हें edit, duplicate, delete या reorder कर सकते हैं।</p>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="w-full rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white">{saving ? 'Saving…' : 'Save Added Components to Cloud Draft'}</button>}</div>}
           <p className="mt-2 text-[9px] leading-4 text-slate-500">{notice || 'Changes appear immediately in this Preview. Cloud Draft save never publishes the Live website.'}</p>
