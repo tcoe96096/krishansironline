@@ -15,6 +15,7 @@ const emptyDraft = {title:'',description:'',subject:'History',class_level:'10',k
 
 export const StaffLearningWorkspace: React.FC = () => {
   const { user, loading:authLoading, signInWithGoogle } = useAuth();
+  const googleName = String(user?.user_metadata?.full_name || user?.user_metadata?.name || 'Not provided').trim();
   const [grant,setGrant] = useState<StaffGrant|null>(null);
   const [ready,setReady] = useState(false);
   const [loading,setLoading] = useState(true);
@@ -145,7 +146,9 @@ export const StaffLearningWorkspace: React.FC = () => {
       </div>
     </header>
     <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-      <h2 className="text-sm font-extrabold text-sky-950">Teacher Enrollment · Account Reference</h2>
+      <h2 className="text-sm font-extrabold text-sky-950">Your Teacher Account · Identification</h2>
+      <p className="mt-2 text-xs text-sky-950">Google Name: <strong>{googleName}</strong></p>
+      <p className="mt-1 break-all text-xs text-sky-950">Google Email: <strong>{user.email || 'Not provided'}</strong></p>
       <p className="mt-1 text-xs leading-5 text-sky-900">Google sign-in identifies your account; it never grants Teacher privileges automatically. The Super Admin must independently verify your identity and approve a scoped role.</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input aria-label="Your teacher account ID" readOnly value={user.id}
