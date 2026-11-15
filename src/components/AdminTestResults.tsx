@@ -56,6 +56,54 @@ export const AdminTestResults: React.FC<{
   const [inAppDeliveryAvailable, setInAppDeliveryAvailable] = useState(false);
   const [noticeSending, setNoticeSending] = useState(false);
   const [designNotice, setDesignNotice] = useState('');
+  const [canPublishTemplate, setCanPublishTemplate] = useState(false);
+  const [publishReason, setPublishReason] = useState('');
+  const [publishBusy, setPublishBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setCanPublishTemplate(false);
+    if (demoMode || !user?.id) return;
+    void (async () => {
+      try {
+        const {data,error} = await requireSupabase().rpc('can_publish_result_card_template');
+        if (active) setCanPublishTemplate(!error && data === true);
+      } catch { if (active) setCanPublishTemplate(false); }
+    })();
+    return () => { active = false; };
+  }, [demoMode,user?.id]);
+
+  const publishGlobalCardDesign = async () => {
+    if (!canPublishTemplate || !user || demoMode || publishBusy) return;
+    const reason = publishReason.trim();
+    if (reason.length < 12) {setDesignNotice('Publish reason must contain at least 12 characters.');return;}
+    // Local uploads never go directly into public database. Secure image asset
+    // storage and its permissions are a separately reviewed feature.
+    const {logoImage: _logo, portraitImage: _portrait, ...publishOptions} = cardOptions;
+    let design;
+    try {
+      design = parseReportCardTemplate(serializeReportCardTemplate(cardTheme,publishOptions));
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error?cause.message:'Invalid design settings.');
+      return;
+    }
+    if (!window.confirm('Publish this design for ALL student report cards? Local uploaded logo/photo previews will NOT be published.')) return;
+    setPublishBusy(true);
+    setDesignNotice('');
+    try {
+      const client = requireSupabase();
+      const authority = await client.rpc('can_publish_result_card_template');
+      if (authority.error || authority.data !== true) throw new Error('Super Admin permission was not verified by the server.');
+      const {data,error:publishError} = await client.rpc('publish_result_card_template',{
+        p_theme:design.theme,p_options:design.options,p_reason:reason
+      });
+      if (publishError) throw publishError;
+      setDesignNotice('Global result-card template version '+String(data)+' published with audit. Local uploaded images were excluded.');
+      setPublishReason('');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error?cause.message:'Template publication failed.');
+    } finally {setPublishBusy(false);}
+  };
 
   useEffect(() => {
     // Never reuse another administrator's stored design on a shared browser.
@@ -597,6 +645,32 @@ export const AdminTestResults: React.FC<{
                     <input type="file" accept=".json,application/json" className="sr-only"
                       onChange={event => {void importCardDesign(event.target.files?.[0]);event.target.value='';}}/>
                   </label>
+                </div>
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h5 className="text-sm font-extrabold text-amber-950">Global Result Card Publishing</h5>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-amber-900">
+                      {canPublishTemplate?'Super Admin backend verified':'Backend approval pending'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-amber-900">
+                    {canPublishTemplate
+                      ? 'Only Super Admin can publish to all students. This action is audited and does not edit exam scores.'
+                      : 'Student-wide design publishing remains disabled until the separately approved Preview database migration and permissions are verified.'}
+                    {' '}Uploaded local logo/portrait files are excluded until a secure image hosting workflow is approved.
+                  </p>
+                  {canPublishTemplate && <label className="mt-3 block text-xs font-bold text-amber-950">
+                    Mandatory Publish Reason
+                    <textarea rows={2} minLength={12} maxLength={1000} value={publishReason}
+                      onChange={event=>setPublishReason(event.target.value)}
+                      placeholder="Explain why this design is being published to all students."
+                      className="mt-2 w-full rounded-xl border border-amber-200 bg-white p-3 text-sm"/>
+                  </label>}
+                  <button type="button" disabled={!canPublishTemplate || publishBusy || publishReason.trim().length < 12}
+                    onClick={()=>void publishGlobalCardDesign()}
+                    className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-amber-950 px-4 text-xs font-bold text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-40">
+                    <ShieldCheck size={15}/>{publishBusy?'Publishing…':'Publish Approved Design to Students'}
+                  </button>
                 </div>
                 {designNotice && <p role="status" className="mt-2 text-xs text-teal-800">{designNotice}</p>}
               </div>
