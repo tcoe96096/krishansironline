@@ -9,6 +9,20 @@ import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 
 type StaffRecord = { user_id: string; role: 'admin' | 'super_admin'; created_at: string };
+type DelegatedRole = 'result_manager' | 'academic_admin' | 'teacher' | 'viewer';
+type DelegatedGrant = {
+  user_id: string; role: DelegatedRole; permissions: string[]; scope_class: string | null;
+  scope_test_id: string | null; is_active: boolean; change_reason: string; updated_at: string;
+};
+type GrantAudit = { id: number; operation: string; affected_user_id: string; actor_id: string; reason: string; created_at: string };
+const delegationCapabilities: Record<DelegatedRole, string[]> = {
+  result_manager: ['results.read','results.export','results.correction.request','results.release.propose'],
+  academic_admin: ['results.read','tests.manage','results.correction.request'],
+  teacher: ['results.read','results.correction.request'],
+  viewer: ['results.read']
+};
+const validUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 const modules = [
   { title: 'Auto Grading', hi: 'स्वतः अंक गणना', desc: 'Test Submit पर Server RPC स्कोर दर्ज करता है।', live: true, icon: ClipboardCheck },
   { title: 'Result Cards', hi: 'स्वतः रिजल्ट कार्ड', desc: 'Submitted Attempts से डिजिटल और प्रिंट कार्ड बनते हैं।', live: true, icon: Award },
@@ -33,11 +47,26 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [delegationReady, setDelegationReady] = useState(false);
+  const [grants, setGrants] = useState<DelegatedGrant[]>([]);
+  const [grantAudit, setGrantAudit] = useState<GrantAudit[]>([]);
+  const [grantError, setGrantError] = useState('');
+  const [grantNotice, setGrantNotice] = useState('');
+  const [grantBusy, setGrantBusy] = useState(false);
+  const [targetUserId, setTargetUserId] = useState('');
+  const [grantRole, setGrantRole] = useState<DelegatedRole>('viewer');
+  const [grantPermissions, setGrantPermissions] = useState<string[]>(['results.read']);
+  const [grantClass, setGrantClass] = useState('');
+  const [grantReason, setGrantReason] = useState('');
+
 
   useEffect(() => {
     let active = true;
     if (demoMode || !isAdmin || !user) {
       setStaff([]);
+      setGrants([]);
+      setGrantAudit([]);
+      setDelegationReady(false);
       setSuperAdmin(false);
       setLoading(false);
       return;
@@ -56,12 +85,90 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
         if (!active) return;
         setSuperAdmin(superResult.data === true);
         setStaff((rolesResult.data ?? []) as StaffRecord[]);
+        setDelegationReady(false);
+        setGrants([]);
+        setGrantAudit([]);
+        setGrantError('');
+        if (superResult.data === true) {
+          const [grantsResult,auditResult] = await Promise.all([
+            client.from('result_staff_grants')
+              .select('user_id,role,permissions,scope_class,scope_test_id,is_active,change_reason,updated_at')
+              .order('updated_at',{ascending:false}).limit(200),
+            client.from('result_staff_grant_audit')
+              .select('id,operation,affected_user_id,actor_id,reason,created_at')
+              .order('created_at',{ascending:false}).limit(30)
+          ]);
+          if (!active) return;
+          if (!grantsResult.error && !auditResult.error) {
+            setGrants((grantsResult.data ?? []) as DelegatedGrant[]);
+            setGrantAudit((auditResult.data ?? []) as GrantAudit[]);
+            setDelegationReady(true);
+          } else {
+            const failure = grantsResult.error || auditResult.error;
+            if (!['42P01','PGRST205','PGRST204'].includes(failure?.code || '')) {
+              setGrantError(failure?.message || 'Could not verify delegated-grant permissions.');
+            }
+          }
+        }
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : 'Staff permissions are unavailable.');
       } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
   }, [demoMode,isAdmin,user?.id,reload]);
+
+  const saveDelegation = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!superAdmin || !delegationReady || !user || grantBusy) return;
+    const id = targetUserId.trim().toLowerCase();
+    const reason = grantReason.trim();
+    if (!validUuid(id)) { setGrantError('प्राप्तकर्ता का सही Account UUID आवश्यक है।'); return; }
+    if (reason.length < 12) { setGrantError('बदलाव का कारण कम से कम 12 अक्षरों में लिखें।'); return; }
+    if (!grantPermissions.every((capability) => delegationCapabilities[grantRole].includes(capability))) {
+      setGrantError('इस भूमिका के लिए यह Permission अनुमत नहीं है।'); return;
+    }
+    setGrantBusy(true); setGrantError(''); setGrantNotice('');
+    try {
+      const client = requireSupabase();
+      const verification = await client.rpc('is_super_admin');
+      if (verification.error || verification.data !== true) throw new Error('Server denied Super Admin authority.');
+      const { data: prior, error: lookupError } = await client.from('result_staff_grants')
+        .select('user_id').eq('user_id',id).maybeSingle();
+      if (lookupError) throw lookupError;
+      const values = {
+        role: grantRole,permissions:grantPermissions,scope_class:grantClass || null,
+        scope_test_id:null,is_active:true,change_reason:reason
+      };
+      const result = prior
+        ? await client.from('result_staff_grants').update(values).eq('user_id',id)
+        : await client.from('result_staff_grants').insert({...values,user_id:id});
+      if (result.error) throw result.error;
+      setGrantNotice('Delegated Result Permissions saved with server audit.');
+      setGrantReason('');
+      setReload((n)=>n+1);
+    } catch (cause) {
+      setGrantError(cause instanceof Error ? cause.message : 'Could not save permissions.');
+    } finally { setGrantBusy(false); }
+  };
+
+  const disableDelegation = async (grant: DelegatedGrant) => {
+    if (!superAdmin || !delegationReady || grantBusy || !grant.is_active) return;
+    if (!window.confirm('इस Result Staff Grant को बंद करें? यह बदलाव Audit में दर्ज होगा।')) return;
+    setGrantBusy(true); setGrantError(''); setGrantNotice('');
+    try {
+      const client = requireSupabase();
+      const verification = await client.rpc('is_super_admin');
+      if (verification.error || verification.data !== true) throw new Error('Server denied Super Admin authority.');
+      const {error:changeError} = await client.from('result_staff_grants')
+        .update({is_active:false,change_reason:'Super Admin revoked delegated result access'})
+        .eq('user_id',grant.user_id);
+      if (changeError) throw changeError;
+      setGrantNotice('Result Staff Grant deactivated and audited.');
+      setReload((n)=>n+1);
+    } catch (cause) {
+      setGrantError(cause instanceof Error ? cause.message : 'Could not revoke access.');
+    } finally { setGrantBusy(false); }
+  };
 
   const roleCounts = useMemo(() => ({
     superAdmins: staff.filter((item) => item.role === 'super_admin').length,
@@ -83,7 +190,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
         <p className="mt-2 max-w-2xl text-sm leading-6 text-sky-100">Result Automation, Role Visibility, Security Controls और आगामी Delegated Permissions की एकीकृत रूपरेखा।</p>
         <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
           <span className="rounded-full bg-white/10 px-3 py-1.5">SERVER VERIFIED ACCESS</span>
-          <span className="rounded-full bg-white/10 px-3 py-1.5">READ ONLY • STAGE A</span>
+          <span className="rounded-full bg-white/10 px-3 py-1.5">DATABASE-ENFORCED RIGHTS</span>
         </div>
       </header>
 
@@ -136,8 +243,8 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
             <button type="button" onClick={() => setReload((n)=>n+1)} disabled={loading} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={15}/> Verify Permissions</button>
           </div>
           <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
-            <h3 className="flex items-center gap-2 text-sm font-extrabold text-amber-950"><LockKeyhole size={18}/> Super Admin-only editing</h3>
-            <p className="mt-3 text-xs leading-6 text-amber-900">Role Assign / Revoke, Staff Invite, Exam Result Correction, Auto-Publish और Approval Rules का असली Save/Update अगले सुरक्षित Backend Migration तथा Audit Review के बाद सक्षम होगा। अभी कोई असुरक्षित Client-side Role Editing विकल्प नहीं दिया गया है।</p>
+            <h3 className="flex items-center gap-2 text-sm font-extrabold text-amber-950"><LockKeyhole size={18}/> Server-enforced Super Admin Controls</h3>
+            <p className="mt-3 text-xs leading-6 text-amber-900">Role Grant / Revoke UI केवल Super Admin और सत्यापित Backend Policies उपलब्ध होने पर खुलेगा। जब तक Preview Schema और Audit Tests मंजूर नहीं होते, Save Controls बंद रहेंगे। Existing Admin Rights, Result Corrections और Publishing पर अलग Security Gate आवश्यक है।</p>
           </div>
         </div>
       </div>
@@ -164,6 +271,112 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
             </table>
           </div>
         )}
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold tracking-wide text-teal-800">SUPER ADMIN GOVERNANCE</p>
+            <h3 className="mt-1 text-lg font-extrabold text-slate-900">Result Staff Delegation</h3>
+            <p className="mt-1 text-xs text-slate-600">Specific result duties only. Does not grant website-wide Admin privileges.</p>
+          </div>
+          <span className={'rounded-full px-3 py-1.5 text-xs font-bold ' + (delegationReady ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>
+            {loading?'Checking…':delegationReady?'Backend verified':superAdmin?'Preview schema pending':'Super Admin only'}
+          </span>
+        </div>
+        {!superAdmin ? (
+          <div className="mt-5 rounded-xl bg-slate-50 p-5 text-sm text-slate-600">
+            <LockKeyhole size={23} className="mb-2 text-slate-500"/>
+            Permissions can only be assigned or revoked by a verified Super Admin.
+          </div>
+        ) : !delegationReady ? (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+            Delegated Role Editing is safely disabled. The audited grant tables are not yet available in this environment or could not be verified.
+            A separate approved Preview Database Migration and permission tests are required.
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-6 xl:grid-cols-[1fr_1.1fr]">
+            <form onSubmit={(event)=>{void saveDelegation(event);}} className="space-y-4 rounded-2xl bg-slate-50 p-4 sm:p-5">
+              <h4 className="font-extrabold text-slate-900">Assign / Update Scoped Role</h4>
+              <label className="block text-xs font-bold text-slate-700">
+                User Account UUID
+                <input required value={targetUserId} onChange={(event)=>setTargetUserId(event.target.value)}
+                  placeholder="00000000-0000-0000-0000-000000000000" autoComplete="off"
+                  className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">
+                Delegated Role
+                <select value={grantRole} onChange={(event)=>{
+                  const role=event.target.value as DelegatedRole;
+                  setGrantRole(role);setGrantPermissions([...delegationCapabilities[role]]);
+                }} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                  <option value="viewer">Viewer (Read Only)</option>
+                  <option value="teacher">Teacher / Evaluator</option>
+                  <option value="academic_admin">Academic Admin</option>
+                  <option value="result_manager">Result Manager</option>
+                </select>
+              </label>
+              <fieldset className="space-y-2">
+                <legend className="text-xs font-bold text-slate-700">Allowed Capabilities</legend>
+                {delegationCapabilities[grantRole].map((capability)=><label key={capability} className="flex items-center gap-2 text-xs text-slate-700">
+                  <input type="checkbox" checked={grantPermissions.includes(capability)} onChange={(event)=>setGrantPermissions((old)=>event.target.checked?[...old,capability]:old.filter((c)=>c!==capability))}
+                    className="h-4 w-4 rounded border-slate-300"/>
+                  {capability}
+                </label>)}
+              </fieldset>
+              <label className="block text-xs font-bold text-slate-700">
+                Optional Class Scope
+                <select value={grantClass} onChange={(event)=>setGrantClass(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                  <option value="">Platform scope (Super Admin selection)</option>
+                  {['6','7','8','9','10','11','12'].map((level)=><option key={level} value={level}>Class {level}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">
+                Mandatory Reason
+                <textarea required minLength={12} maxLength={1000} rows={3} value={grantReason}
+                  onChange={(event)=>setGrantReason(event.target.value)} placeholder="State why this person needs this permission."
+                  className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-sm"/>
+              </label>
+              <button type="submit" disabled={grantBusy || !validUuid(targetUserId.trim()) || grantReason.trim().length < 12}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800 disabled:opacity-40">
+                <ShieldCheck size={18}/>{grantBusy?'Saving…':'Save Audited Role Grant'}
+              </button>
+            </form>
+            <div className="min-w-0">
+              <h4 className="font-extrabold text-slate-900">Delegated Staff <span className="text-slate-500">({grants.length})</span></h4>
+              <div className="mt-3 max-h-[480px] space-y-2 overflow-y-auto">
+                {grants.length===0?<p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">No delegated result roles assigned yet.</p>
+                :grants.map((grant)=><div key={grant.user_id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div><p className="font-mono text-xs text-slate-600">ID …{grant.user_id.slice(-8)}</p>
+                      <h5 className="mt-1 text-sm font-extrabold text-slate-900">{grant.role.replaceAll('_',' ')}</h5>
+                      <p className="mt-1 text-[11px] text-slate-500">Scope: {grant.scope_class?'Class '+grant.scope_class:'Platform'} · {grant.permissions.join(', ')||'No capabilities'}</p>
+                    </div>
+                    <span className={'rounded-full px-2 py-1 text-[10px] font-bold '+(grant.is_active?'bg-emerald-50 text-emerald-800':'bg-slate-100 text-slate-600')}>{grant.is_active?'Active':'Revoked'}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={()=>{setTargetUserId(grant.user_id);setGrantRole(grant.role);setGrantPermissions(grant.permissions);setGrantClass(grant.scope_class||'');}}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Edit Grant</button>
+                    {grant.is_active&&<button type="button" disabled={grantBusy} onClick={()=>void disableDelegation(grant)}
+                      className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-40">Revoke Access</button>}
+                  </div>
+                </div>)}
+              </div>
+              <div className="mt-5 rounded-xl border border-slate-200 p-4">
+                <h4 className="text-sm font-extrabold text-slate-900">Latest Role Audit</h4>
+                <div className="mt-3 space-y-2">
+                  {grantAudit.length?grantAudit.slice(0,8).map((event)=><div key={event.id} className="border-b border-slate-100 pb-2 text-xs">
+                    <span className="font-bold text-slate-900">{event.operation}</span> · user …{event.affected_user_id.slice(-8)}
+                    <p className="mt-1 text-slate-600">{event.reason}</p>
+                    <p className="text-[10px] text-slate-500">{new Date(event.created_at).toLocaleString('en-IN')}</p>
+                  </div>):<p className="text-xs text-slate-500">No audited changes yet.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {grantError&&<p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{grantError}</p>}
+        {grantNotice&&<p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{grantNotice}</p>}
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
