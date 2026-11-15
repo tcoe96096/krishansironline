@@ -11,8 +11,11 @@ try {
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded', timeout: 45000 });
 
   // The admin demo route exercises the actual editor without authentication or writes.
-  await page.getByRole('button', { name: 'Website Settings & Publishing', exact: true }).click();
-  await page.getByRole('button', { name: 'Open Main Visual Editor' }).click();
+  await page.getByRole('button', { name: 'Website Studio', exact: true }).click();
+  const editorTabs = page.getByRole('group', {name:'Website editor panels'});
+  await editorTabs.getByRole('button', {name:'Branding & Site Settings'}).click();
+  await page.getByText('Legacy settings are kept inside this panel').waitFor();
+  await editorTabs.getByRole('button', {name:'Page Builder'}).click();
   await page.getByTestId('visual-studio-main').waitFor({ timeout: 20000 });
 
   assert.equal(await page.getByRole('heading', { name: 'Advanced Real Page Editor' }).count(), 1);
