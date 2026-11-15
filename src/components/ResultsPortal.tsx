@@ -41,6 +41,8 @@ export const ResultsPortal: React.FC = () => {
   const { language } = useLanguage();
   const { user, profile } = useAuth();
   const en = language === 'en';
+  // Guard against stale profile data while authentication accounts are switching.
+  const ownProfile = profile?.user_id === user?.id ? profile : null;
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [inbox, setInbox] = useState<ResultInboxNotice[]>([]);
   const [tests, setTests] = useState<PublishedTest[]>([]);
@@ -137,10 +139,10 @@ export const ResultsPortal: React.FC = () => {
     title: nameOf(attempt.test_id),
     subject: tests.find((test) => test.id === attempt.test_id)?.subject,
     student: {
-      name: profile?.student_name || (en ? 'Student' : 'विद्यार्थी'),
-      classLevel: profile?.class_level,
-      rollNo: profile?.roll_no,
-      school: profile?.school_name
+      name: ownProfile?.student_name || (en ? 'Student' : 'विद्यार्थी'),
+      classLevel: ownProfile?.class_level,
+      rollNo: ownProfile?.roll_no,
+      school: ownProfile?.school_name
     },
     isEnglish: en,
     theme: cardTheme
@@ -234,8 +236,8 @@ export const ResultsPortal: React.FC = () => {
             <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-teal-700">{en ? 'YOUR LEARNING OVERVIEW' : 'आपकी अध्ययन रिपोर्ट'}</p>
-                <h2 className="mt-1 text-xl font-extrabold text-slate-900">{profile?.student_name || (en ? 'Student account' : 'विद्यार्थी खाता')}</h2>
-                <p className="text-xs text-slate-500">{en ? 'Class' : 'कक्षा'} {profile?.class_level || '—'}</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">{ownProfile?.student_name || (en ? 'Student account' : 'विद्यार्थी खाता')}</h2>
+                <p className="text-xs text-slate-500">{en ? 'Class' : 'कक्षा'} {ownProfile?.class_level || '—'}</p>
               </div>
               <button type="button" onClick={() => setRefreshCount((n) => n + 1)} disabled={loading}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={15} className={loading ? 'animate-spin' : ''}/>{en ? 'Refresh data' : 'रिफ्रेश करें'}</button>
