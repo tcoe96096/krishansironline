@@ -66,6 +66,13 @@ export const ResultsPortal: React.FC = () => {
     }
     setLoading(true);
     setError('');
+    // Invalidate the previous account's private results immediately, including
+    // during refreshes and asynchronous auth changes.
+    setAttempts([]);
+    setInbox([]);
+    setTests([]);
+    setSelected(null);
+    setShareNotice('');
     Promise.all([getMyTestAttempts(), getPublishedTests()])
       .then(([history, catalogue]) => {
         if (!mounted) return;
@@ -83,13 +90,9 @@ export const ResultsPortal: React.FC = () => {
           const ownResult = history.find((attempt) =>
             attempt.id === requestedResultId && attempt.student_id === user.id && attempt.status === 'submitted'
           );
+          if (ownResult) setTab('history');
           setSelected(ownResult ?? null);
         }
-        // Only an attempt already returned for this authenticated student can open.
-        // Guessing another student's resultId never fetches their record.
-        const requested = new URLSearchParams(window.location.search).get('resultId');
-        const owned = requested ? history.find((attempt) => attempt.id === requested && attempt.status === 'submitted') : null;
-        if (owned) { setTab('history'); setSelected(owned); }
       })
       .catch((cause) => {
         if (mounted) setError(cause instanceof Error ? cause.message : 'Results are unavailable');
