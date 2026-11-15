@@ -86,7 +86,17 @@ export const TeacherEnrollmentApplication: React.FC = () => {
       setReason('');
       setReload(v=>v+1);
     } catch(cause) {
-      setError(cause instanceof Error?cause.message:'Request could not be submitted.');
+      // Supabase/PostgREST failures are plain objects, not always Error instances.
+      // Preserve the server's actionable permission/validation message without
+      // exposing a full response, stack trace, SQL details or account identifiers.
+      const serverError = cause as {message?: unknown; code?: unknown} | null;
+      const safeMessage = typeof serverError?.message === 'string' ? serverError.message.trim() : '';
+      const safeCode = typeof serverError?.code === 'string' ? serverError.code : '';
+      const knownCode = ['42501', '22023', '23505', 'PGRST202'].includes(safeCode) ? safeCode : '';
+      const publicMessage = safeMessage.length > 0 && safeMessage.length <= 180 &&
+        !/sql|select |insert |update |schema|token|jwt|password|secret|key|http/i.test(safeMessage)
+        ? safeMessage : 'Request failed. Please check account permissions and contact Super Admin.';
+      setError(knownCode ? `${publicMessage} (Code: ${knownCode})` : publicMessage);
     } finally {setBusy(false);}
   };
 
