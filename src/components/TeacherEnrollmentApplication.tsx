@@ -29,6 +29,9 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [busy,setBusy] = useState(false);
   const [application,setApplication] = useState<TeacherApplication|null>(null);
   const [name,setName] = useState('');
+  const accountName = String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim();
+  const accountEmail = user?.email || '';
+  const [loadedFor,setLoadedFor] = useState<string|null>(null);
   const [subject,setSubject] = useState<string>('History');
   const [classLevel,setClassLevel] = useState<string>('10');
   const [reason,setReason] = useState('');
@@ -43,6 +46,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     setNotice('');
     setError('');
     if (!user) return;
+    if(loadedFor!==user.id){setName(String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim());setLoadedFor(user.id);}
     setLoading(true);
     void (async()=>{
       try {
@@ -82,7 +86,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
         p_display_name:name.trim(),p_subject:subject,p_class_level:classLevel,p_reason:reason.trim()
       });
       if(submitError)throw submitError;
-      setNotice('Your Teacher enrollment request has been sent for Super Admin review. No permissions have been assigned.');
+      setNotice('Request submitted. You can track its status here. Super Admin approval is required before any Teacher access.');
       setReason('');
       setReload(v=>v+1);
     } catch(cause) {
@@ -118,24 +122,32 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   return <section className="rounded-2xl border border-slate-200 bg-white p-5" aria-label="Teacher enrollment request">
     <div className="flex items-center gap-2"><ShieldCheck size={20} className="text-sky-900"/>
       <h2 className="font-extrabold text-slate-900">Request Teacher Enrollment</h2></div>
-    <p className="mt-2 text-xs leading-5 text-slate-600">
-      Request a class-scoped Teacher role. A login or application does not grant
-      permission; only Super Admin verification and approval can do that.
-    </p>
+    <p className="mt-2 text-xs leading-5 text-slate-600">Step 1: Confirm your identity and requested class. Step 2: Submit. Step 3: Super Admin verifies and decides. Login alone never grants permissions.</p>
+    <div className="mt-3 rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs text-slate-800" aria-label="Signed-in teacher identity">
+      <p className="font-bold text-sky-950">Signed-in Google account</p>
+      <p className="mt-1">Name: {accountName || 'Not provided by Google — enter your name below'}</p>
+      <p className="mt-1 break-all">Email: {accountEmail || 'Not provided'}</p>
+      <p className="mt-1 break-all">Account ID: <span className="font-mono">{user.id}</span></p>
+      <p className="mt-2 text-slate-600">Your application is linked to this account ID. The Super Admin verifies your identity independently.</p>
+    </div>
     {loading?<p className="mt-3 flex items-center gap-2 text-xs text-slate-600"><Loader2 size={15} className="animate-spin"/>Checking enrollment availability…</p>:
      !backendReady?<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">
        Teacher application backend is awaiting separate approval and activation. Copy your Account ID above
        and contact Super Admin for now. No application has been sent.
      </p>:<>
        {application && <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-         <p className="flex items-center gap-2 font-bold"><ClipboardCheck size={15}/>Application: {application.status.toUpperCase()}</p>
+         <p className="flex items-center gap-2 font-bold"><ClipboardCheck size={15}/>Application status: {application.status.toUpperCase()}</p>
+         <p className="mt-1">Applicant: {application.display_name}</p>
          <p className="mt-1">Class {application.requested_class} · {application.subject}</p>
+         <p className="mt-1">Last updated: {new Date(application.updated_at).toLocaleString()}</p>
+         {application.status==='pending'&&<p className="mt-2 font-semibold">Submitted successfully. Waiting for Super Admin review.</p>}
+         {application.status==='rejected'&&<p className="mt-2">You may submit a revised application using the form below.</p>}
          {application.review_reason&&<p className="mt-2">Review note: {application.review_reason}</p>}
          {application.status==='approved'&&<p className="mt-2">Approval recorded. Refresh your workspace to verify active permissions.</p>}
        </div>}
        {(!application||['rejected','withdrawn'].includes(application.status)) &&
          <form onSubmit={event=>void submit(event)} className="mt-4 grid gap-3 sm:grid-cols-2">
-           <label className="text-xs font-bold text-slate-700">Your Display Name
+           <label className="text-xs font-bold text-slate-700">Full name (as you want Admin to identify you)
              <input required minLength={2} maxLength={100} value={name} onChange={e=>setName(e.target.value)}
                className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700">Subject
