@@ -1,0 +1,38 @@
+name: Smart Result System unit tests (no deployment)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/ResultsPortal.tsx'
+      - 'src/components/SmartResultReportCard.tsx'
+      - 'src/components/AdminTestResults.tsx'
+      - 'src/components/AdminStaffPermissions.tsx'
+      - 'src/services/resultMetrics.ts'
+      - 'src/services/resultMetrics.test.ts'
+      - 'docs/proposed-migrations/**'
+      - '.github/workflows/result-system-unit-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  result-unit-tests:
+    name: Verify result formatting and data safeguards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR source
+        uses: actions/checkout@v4
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+      - name: Run result unit tests
+        run: node --import tsx --test src/services/resultMetrics.test.ts
+      - name: Verify TypeScript
+        run: npm run lint
+      - name: Verify production-style build only
+        run: npm run build
