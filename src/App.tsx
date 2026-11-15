@@ -18,6 +18,7 @@ import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { StaffLearningWorkspace } from './components/StaffLearningWorkspace';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -45,7 +46,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'admin' | 'adminPreview';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'admin' | 'adminPreview' | 'staffWorkspace';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -61,6 +62,7 @@ const VALID_PAGES: PageId[] = [
   'studentDashboard',
   'admin',
   'adminPreview',
+  'staffWorkspace',
 ];
 
 interface HomeStudentSession {
@@ -205,12 +207,13 @@ const MainApp: React.FC = () => {
     '/student-dashboard': 'studentDashboard',
     '/admin': 'admin',
     '/admin-preview': 'adminPreview',
+    '/staff-workspace': 'staffWorkspace',
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/', admin: '/admin/', adminPreview: '/admin-preview/',
+    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/', admin: '/admin/', adminPreview: '/admin-preview/', staffWorkspace: '/staff-workspace/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -288,6 +291,7 @@ const MainApp: React.FC = () => {
         {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
+        {activePage === 'staffWorkspace' && <StaffLearningWorkspace />}
         {publishedCustomPage && <article data-studio-published-page={publishedCustomPage.slug} className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 sm:px-8">
           <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Krishan Sir · Published Learning Page</p>
           <h1 className="text-4xl font-extrabold tracking-tight text-sky-950">{publishedCustomPage.title}</h1>
