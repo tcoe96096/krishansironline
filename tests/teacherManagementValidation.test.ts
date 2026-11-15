@@ -42,3 +42,12 @@ for(const phone of ['abc1234567','+','123','+91\\\\1234567890']){
   assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone,experienceYears:null}),false,
     `Invalid phone accepted: ${phone}`);
 }
+
+
+for(const name of ['../resume.pdf','folder\\\\resume.pdf','.hidden.pdf',' resume.pdf','resume.pdf ','resume\n.pdf','a'.repeat(181)+'.pdf']){
+  assert.equal(validateTeacherResume({name,size:12000,type:'application/pdf'}),false,
+    `Unsafe resume filename accepted: ${JSON.stringify(name)}`);
+}
+assert.equal(validateTeacherResume({name:'My CV 2026.PDF',size:12000,type:'application/pdf'}),true);
+assert.equal(validateTeacherResume({name:'Resume.docx',size:12000,type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),true);
+assert.equal(validateTeacherResume({name:'Resume.docx',size:12000,type:'application/pdf'}),false);
