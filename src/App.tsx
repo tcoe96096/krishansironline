@@ -279,6 +279,7 @@ const MainApp: React.FC = () => {
       {/* Top Header with navigation to all pages */}
       {activePage !== 'admin' && activePage !== 'adminPreview' && <Header
         activeSection={activePage}
+        disableSticky={activePage === 'staffWorkspace'}
         onNavigate={navigateTo}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
