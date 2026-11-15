@@ -115,6 +115,11 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
            className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/>
        </label>
        <p className="mt-2 text-xs text-slate-600">Showing {visible.length} of {requests.length} loaded applications (latest 150). Search only filters loaded records.</p>
+       <section className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label="Teacher application directory">
+         <h4 className="text-sm font-extrabold text-slate-900">Teacher Application Directory</h4>
+         <p className="mt-1 text-xs text-slate-600">Read-only directory of loaded applications, not a verified employee roster. Employee IDs, qualifications and resume documents are not available from the current backend.</p>
+         <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[540px] text-left text-xs"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="p-2">Applicant</th><th className="p-2">Class / Subject</th><th className="p-2">Status</th><th className="p-2">Employee ID</th></tr></thead><tbody>{visible.map(req=><tr key={req.id} className="border-b border-slate-200 last:border-0"><td className="p-2"><span className="font-bold text-slate-900">{req.display_name}</span><span className="mt-1 block break-all font-mono text-[10px] text-slate-500">{req.applicant_id}</span></td><td className="p-2">Class {req.requested_class} · {req.subject}</td><td className="p-2">{req.status}</td><td className="p-2 text-amber-800">Not verified</td></tr>)}</tbody></table>{visible.length===0&&<p className="p-3 text-xs text-slate-600">No matching applications.</p>}</div>
+       </section>
        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-sky-950"><Clock3 size={16}/>Pending applications: {pending.length}</div>
        {!pending.length&&<p className="mt-3 rounded-xl bg-slate-50 p-4 text-xs text-slate-600">No pending Teacher enrollment requests.</p>}
        <div className="mt-3 space-y-3">
