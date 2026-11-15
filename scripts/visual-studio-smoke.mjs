@@ -10,6 +10,18 @@ page.on('pageerror', error => errors.push(error.message));
 try {
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded', timeout: 45000 });
 
+  // The Admin sidebar has one Website Studio entry and hides unfinished modules.
+  assert.equal(await page.getByRole('button',{name:'Legacy Site Settings',exact:true}).count(),0);
+  assert.equal(await page.getByRole('button',{name:'Help Desk',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Show planned modules (5)'}).click();
+  assert.equal(await page.getByRole('button',{name:'Help Desk',exact:true}).count(),1);
+  await page.getByRole('button',{name:'Hide planned modules'}).click();
+  const findModule=page.getByRole('searchbox',{name:'Search Admin modules'});
+  await findModule.fill('Website Studio');
+  assert.equal(await page.getByRole('button',{name:'Website Studio',exact:true}).count(),1);
+  await findModule.fill('');
+  console.log('PASS: Professional Admin navigation, optional planned modules and search');
+
   // The admin demo route exercises the actual editor without authentication or writes.
   await page.getByRole('button', { name: 'Website Studio', exact: true }).click();
   const editorTabs = page.getByRole('group', {name:'Website editor panels'});
