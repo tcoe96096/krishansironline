@@ -158,6 +158,13 @@ export const StaffLearningWorkspace: React.FC = () => {
           <Copy size={14}/> Copy Account ID
         </button>
       </div>
+      <div className="mt-4 rounded-xl border border-sky-200 bg-white p-3 text-xs text-slate-800" aria-label="Teacher employee profile status">
+        <h3 className="font-extrabold text-sky-950">Teacher Profile &amp; Employee ID</h3>
+        <p className="mt-1">Employee ID: <strong>Not issued / not verified</strong></p>
+        <p className="mt-1">Assigned class (current verified grant): <strong>{grant?.scope_class?'Class '+grant.scope_class:'No verified class-specific grant'}</strong></p>
+        <p className="mt-1">Material permissions: <strong>{grant?.is_active?grant.permissions.join(', ')||'None':'None verified'}</strong></p>
+        <p className="mt-2 text-slate-600">The new multi-class, multi-subject and Employee ID records will appear here only after approved server-side storage and authorization are activated. This screen does not infer assignments from unsubmitted preview selections.</p>
+      </div>
       {accountNotice&&<p role="status" className="mt-2 text-xs text-sky-900">{accountNotice}</p>}
     </section>
     {error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{error}</p>}
