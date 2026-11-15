@@ -6,6 +6,12 @@ Target: Draft PR #109, branch feature/smart-result-hub-stage-a-20261115
 Production merge: BLOCKED pending owner acceptance of the described incomplete features.
 Scope: Admin site controls for Result Cards, Student Report Delivery, Study Materials and Roles; connected Admin navigation.
 
+## Updated Preview status (after owner approval)
+
+**15 November 2026:** Isolated Preview database migrations for Teacher Enrollment, scoped Staff Grants, Study Materials, private Result Delivery and global Result Card Template **were successfully applied and rollback-tested** in `krishan-sir-lms-preview` only. Production is unchanged. The original snapshot below was captured **before activation** and is retained for comparison; its "missing database" statements are historical.
+
+The Admin UI now contains one **Website Studio** entry with Page Builder and Legacy Branding tabs, searchable grouped navigation, real Pending Student/Teacher counts and collapsed Planned modules. Full real-browser authenticated OAuth/role acceptance and a new owner-authorized Unified Preview deploy remain outstanding. See `docs/preview-activation-acceptance-2026-11-15.md` for specific migrated objects and tests.
+
 ## Verification evidence
 
 1. Inspected actual React component handlers, navigation props and responsive screen flow.
@@ -25,7 +31,7 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 | Logo / header / watermark / footer controls | Admin Card Design editor | Live card preview and print; optional browser-local storage | **Local Draft only**, not global |
 | Design Backup Import / Export | Working JSON buttons in Card Studio | Versioned file, strict design field whitelist and no score/student fields | **Working for local Draft only** |
 | Save Design per Admin Account | Account-keyed browser storage | Separate signed-in Admin keys; not shared across devices | **Local Draft only**, not global |
-| Super Admin Global Template Publisher | Button is visible, disabled until backend capability RPC confirms Super Admin | Audited publisher RPC + protected central template; local photo uploads excluded | **UI wired, NOT activated; no migration applied** |
+| Super Admin Global Template Publisher | Button is visible, disabled until backend capability RPC confirms Super Admin | Audited publisher RPC + protected central template; local photo uploads excluded | **Preview DB active; production not migrated; browser OAuth UAT outstanding** |
 | A4 Student Card PDF download | Print button | Browser print dialog / Save as PDF | Functional in supported browser; not a direct PDF file service |
 | Bulk CSV | Export button | Browser-generated with formula escaping | Functional, current filtered set only |
 | Bulk print | Button | Browser print dialog | Functional, current filtered set |
@@ -51,7 +57,7 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 - Sidebar/overview previously presented placeholder modules beside real modules without a status badge. Five unimplemented modules now visibly show "Planned".
 - Admin card designs now support validated JSON Export/Import, and browser-local drafts are scoped by signed-in Admin UUID rather than shared globally across accounts. Imported backups cannot carry grades, identities or role data.
 - A central audited Result Card design publishing migration is prepared only as an unapplied proposal: `docs/proposed-migrations/result_card_central_template_review_only.sql`. Uploaded logo/photo files remain local-preview-only until separate secure asset hosting is approved.
-- Student Result Hub now contains a defensive read path for a published central template. While Preview database tables are absent, the previously working local theme selection remains available. No global template is currently published; published changes require server-side Super Admin RPC and an audit reason.
+- Student Result Hub now contains a defensive read path for a published central template. While the respective database tables are absent (for example Production), the previously working local theme selection remains available. No global template is currently published; published changes require server-side Super Admin RPC and an audit reason.
 
 ## Remaining release blockers
 
@@ -65,8 +71,8 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 ## Safe next steps
 
 - CI validation for the exact latest PR head; then manual isolated Unified Preview deployment and actual card, print, navigation and responsive review.
-- Separate explicit owner approval before applying proposed backend migrations to **Preview** for testing. No production schema migration without new approval.
+- Owner-approved Preview-only migrations were applied and rollback-tested. Production migration and live Auth/RLS acceptance still require a separate release review.
 - Do not describe all features as editable or active until backend permissions and persistence are verified.
 - Keep Draft PR #109 open and unmerged until owner explicitly accepts the specific production impact and incomplete feature scope.
 
-Rollback: Stage A is frontend-only. Code rollback by reverting the PR; no executed backend schema migration.
+Rollback: Frontend remains a Draft PR. Five schema migrations were executed in the **isolated Preview** project; any schema rollback must separately preserve audit data and require approval. No Production schema migration.
