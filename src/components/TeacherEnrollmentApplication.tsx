@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { validateTeacherQualifications } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -35,6 +36,11 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [subject,setSubject] = useState<string>('History');
   const [classLevel,setClassLevel] = useState<string>('10');
   const [reason,setReason] = useState('');
+  const [requestedClasses,setRequestedClasses] = useState<string[]>(['10']);
+  const [requestedSubjects,setRequestedSubjects] = useState<string[]>(['History']);
+  const [qualification,setQualification] = useState('');
+  const [institution,setInstitution] = useState('');
+  const [graduationYear,setGraduationYear] = useState('');
   const [notice,setNotice] = useState('');
   const [error,setError] = useState('');
   const [reload,setReload] = useState(0);
@@ -63,6 +69,8 @@ export const TeacherEnrollmentApplication: React.FC = () => {
           setName(own.display_name);
           setSubject(own.subject);
           setClassLevel(own.requested_class);
+          setRequestedClasses([own.requested_class]);
+          setRequestedSubjects([own.subject]);
         }
       } catch { /* No fallback permissions: backend must be reviewed first. */ }
       finally {if(mounted)setLoading(false);}
@@ -79,6 +87,14 @@ export const TeacherEnrollmentApplication: React.FC = () => {
       reason.trim().length<12||reason.trim().length>1000) {
       setError('Enter a valid name, subject, class and reason (12–1000 characters).');
       return;
+    }
+    if(requestedClasses.length===0||requestedSubjects.length===0||
+       !requestedClasses.includes(classLevel)||!requestedSubjects.includes(subject)){
+      setError('Select at least one class and subject, including the primary class and subject.');return;
+    }
+    if((qualification.trim()||institution.trim()||graduationYear.trim())&&
+       !validateTeacherQualifications([{title:qualification,institution,year:Number(graduationYear)}])){
+      setError('Complete the qualification, institution and valid passing year, or leave all three blank.');return;
     }
     setBusy(true);setError('');setNotice('');
     try {
@@ -151,15 +167,31 @@ export const TeacherEnrollmentApplication: React.FC = () => {
              <input required minLength={2} maxLength={100} value={name} onChange={e=>setName(e.target.value)}
                className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700">Subject
-             <select value={subject} onChange={e=>setSubject(e.target.value)}
+             <select value={subject} onChange={e=>{setSubject(e.target.value);setRequestedSubjects(current=>current.includes(e.target.value)?current:[...current,e.target.value]);}}
                className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm">
                {subjects.map(s=><option key={s} value={s}>{s}</option>)}
              </select></label>
            <label className="text-xs font-bold text-slate-700">Requested Class
-             <select value={classLevel} onChange={e=>setClassLevel(e.target.value)}
+             <select value={classLevel} onChange={e=>{setClassLevel(e.target.value);setRequestedClasses(current=>current.includes(e.target.value)?current:[...current,e.target.value]);}}
                className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm">
                {classes.map(level=><option value={level} key={level}>Class {level}</option>)}
              </select></label>
+           <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-950 sm:col-span-2">
+             <p className="font-bold">Advanced Teacher Profile — Preview only</p>
+             <p className="mt-1">You can prepare multiple classes, subjects and qualifications here. The current approved backend accepts only one primary class and subject. Additional selections are NOT submitted or saved yet; Super Admin assignments require a separately reviewed backend.</p>
+           </div>
+           <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested classes (preview selection)</legend>
+             <div className="mt-2 flex flex-wrap gap-3">{classes.map(level=><label key={level} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedClasses.includes(level)} onChange={event=>setRequestedClasses(current=>event.target.checked?[...current,level]:current.filter(item=>item!==level))}/>Class {level}</label>)}</div>
+           </fieldset>
+           <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested subjects (preview selection)</legend>
+             <div className="mt-2 flex flex-wrap gap-3">{subjects.map(item=><label key={item} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedSubjects.includes(item)} onChange={event=>setRequestedSubjects(current=>event.target.checked?[...current,item]:current.filter(value=>value!==item))}/>{item}</label>)}</div>
+           </fieldset>
+           <label className="text-xs font-bold text-slate-700">Qualification (preview only)
+             <input maxLength={120} value={qualification} onChange={event=>setQualification(event.target.value)} placeholder="e.g. M.A. Political Science" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <label className="text-xs font-bold text-slate-700">Institution (preview only)
+             <input maxLength={160} value={institution} onChange={event=>setInstitution(event.target.value)} placeholder="University / Institution" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <label className="text-xs font-bold text-slate-700 sm:col-span-2">Passing year (preview only)
+             <input type="number" min={1950} max={new Date().getFullYear()} value={graduationYear} onChange={event=>setGraduationYear(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700 sm:col-span-2">Why are you requesting access?
              <textarea required minLength={12} maxLength={1000} rows={3} value={reason}
                onChange={e=>setReason(e.target.value)} placeholder="Describe your teaching role and why access is needed."
