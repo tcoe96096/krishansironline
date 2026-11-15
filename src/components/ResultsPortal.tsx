@@ -3,6 +3,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
+import { studyMaterialUrl } from '../services/learningLinks';
 import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import type { ResultReportTheme } from './SmartResultReportCard';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
@@ -231,7 +232,7 @@ export const ResultsPortal: React.FC = () => {
                   <p className="mt-3 text-sm leading-7 text-sky-100">{summary.latest === null
                     ? (en ? 'Start a practice test to establish your first progress record.' : 'पहला प्रगति रिकॉर्ड बनाने के लिए अभ्यास टेस्ट शुरू करें।')
                     : (en ? 'Review your latest test and revisit topics that need practice. Use your saved materials and test history.' : 'अपने पिछले टेस्ट की समीक्षा करें और जिन विषयों में अभ्यास चाहिए, उन्हें दोहराएँ।')}</p>
-                  <a href={import.meta.env.BASE_URL + 'online-tests/'} className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-sky-900 hover:bg-sky-50">{en ? 'Open practice tests' : 'अभ्यास टेस्ट खोलें'}<ArrowRight size={16}/></a>
+                  <div className="mt-6 flex flex-wrap gap-2"><a href={studyMaterialUrl(import.meta.env.BASE_URL, summary.chronological.length ? tests.find((test) => test.id === summary.chronological[summary.chronological.length-1].test_id) : null)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-sky-900 hover:bg-sky-50"><BookOpen size={16}/>{en ? 'Revise study materials' : 'अध्ययन सामग्री दोहराएँ'}</a><a href={import.meta.env.BASE_URL + 'online-tests/'} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/25 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">{en ? 'Practice tests' : 'अभ्यास टेस्ट'}<ArrowRight size={16}/></a></div>
                 </div>
               </div>
             ) : (
@@ -307,6 +308,7 @@ export const ResultsPortal: React.FC = () => {
                 <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-100"><X size={17}/>{en ? 'Close' : 'बंद करें'}</button>
               </div>
               <SmartResultReportCard data={resultCardData(selected)} onPrint={() => printResult(selected)}/>
+               <a href={studyMaterialUrl(import.meta.env.BASE_URL, tests.find((test)=>test.id===selected.test_id))} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-extrabold text-sky-900 hover:bg-sky-50"><BookOpen size={17}/>{en ? 'Study related chapters' : 'संबंधित अध्याय पढ़ें'}<ArrowRight size={16}/></a>
             </div>
           </div>
         )}
