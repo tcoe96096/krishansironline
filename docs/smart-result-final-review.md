@@ -45,6 +45,15 @@
 
 **Explicit gap:** the existing Academic Draft Editor currently stores local browser drafts; this change does not silently turn them into online student material, teacher-editable cloud records or published database rows. Upload/publish, assigned teacher login, private storage policy, material review/approval, scheduled release, and secure result correction are not production-ready. Grant verification and UI visibility alone do not replace server-side RLS tests.
 
+## Teacher Workspace + Super Admin Material Approval (added 15 Nov 2026)
+
+- New `/staff-workspace/` route permits **only a signed-in, explicitly delegated staff user** to create/update/delete own class-scoped material drafts and submit them for review. Every write is checked by backend RLS when the proposed schema has been separately approved and installed. It is **not active** on the current Preview/Production databases.
+- Admin Study Materials now includes an **approval panel** guarded by fresh `is_super_admin` server verification: approve/publish, return for revision or archive, with mandatory reason and database audit; protected demo has no write access. Approval remains disabled without the material tables and audit read policies.
+- The student Study Materials reader can display **published-only server materials** and external HTTPS resources alongside the existing public static chapters, if material publishing has been activated. Missing backend leaves the current static catalogue intact.
+- Browser regression now checks logged-out Teacher Workspace, Admin demo publish locks, Results-to-Study links, privacy and mobile layouts.
+- Deployment must test the following end-to-end workflow on **authorized Preview DB** before any live release: Super Admin assigns a Teacher scope → Teacher saves draft → Teacher submits for review → Super Admin approves with recorded reason → approved material becomes visible to students → role revocation blocks future writes.
+- Students must never see unpublished drafts, staff grants, change logs, answer keys or another student's results. Admin roles on existing tables still need RLS narrowing, and formal result edits / scheduled result release remain out of scope.
+
 ## Validation and release gate
 
 1. Latest commit: unit tests, TypeScript and Vite build must pass.
