@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { StaffRoleMatrix } from './StaffRoleMatrix';
 
 type StaffRecord = { user_id: string; role: 'admin' | 'super_admin'; created_at: string };
-type DelegatedRole = 'result_manager' | 'academic_admin' | 'teacher' | 'viewer';
+type DelegatedRole = 'result_manager' | 'academic_admin' | 'content_manager' | 'teacher' | 'viewer';
 type DelegatedGrant = {
   user_id: string; role: DelegatedRole; permissions: string[]; scope_class: string | null;
   scope_test_id: string | null; is_active: boolean; change_reason: string; updated_at: string;
@@ -17,9 +18,10 @@ type DelegatedGrant = {
 type GrantAudit = { id: number; operation: string; affected_user_id: string; actor_id: string; reason: string; created_at: string };
 const delegationCapabilities: Record<DelegatedRole, string[]> = {
   result_manager: ['results.read','results.export','results.correction.request','results.release.propose'],
-  academic_admin: ['results.read','tests.manage','results.correction.request'],
-  teacher: ['results.read','results.correction.request'],
-  viewer: ['results.read']
+  academic_admin: ['results.read','tests.manage','results.correction.request','materials.read','materials.draft.write','materials.review.propose'],
+  content_manager: ['materials.read','materials.draft.write','materials.review.propose'],
+  teacher: ['results.read','results.correction.request','materials.read','materials.draft.write'],
+  viewer: ['results.read','materials.read']
 };
 const validUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
@@ -48,6 +50,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
   const [reload, setReload] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [delegationReady, setDelegationReady] = useState(false);
+  const [materialBackendReady, setMaterialBackendReady] = useState(false);
   const [grants, setGrants] = useState<DelegatedGrant[]>([]);
   const [grantAudit, setGrantAudit] = useState<GrantAudit[]>([]);
   const [grantError, setGrantError] = useState('');
@@ -67,6 +70,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
       setGrants([]);
       setGrantAudit([]);
       setDelegationReady(false);
+      setMaterialBackendReady(false);
       setSuperAdmin(false);
       setLoading(false);
       return;
@@ -75,6 +79,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
     setError('');
     setSuperAdmin(false);
     setDelegationReady(false);
+    setMaterialBackendReady(false);
     setStaff([]);
     setGrants([]);
     setGrantAudit([]);
@@ -108,6 +113,8 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
             setGrants((grantsResult.data ?? []) as DelegatedGrant[]);
             setGrantAudit((auditResult.data ?? []) as GrantAudit[]);
             setDelegationReady(true);
+            const materialProbe = await client.from('study_material_items').select('id').limit(0);
+            if (active) setMaterialBackendReady(!materialProbe.error);
           } else {
             const failure = grantsResult.error || auditResult.error;
             if (!['42P01','PGRST205','PGRST204'].includes(failure?.code || '')) {
@@ -129,7 +136,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
     const reason = grantReason.trim();
     if (!validUuid(id)) { setGrantError('प्राप्तकर्ता का सही Account UUID आवश्यक है।'); return; }
     if (reason.length < 12) { setGrantError('बदलाव का कारण कम से कम 12 अक्षरों में लिखें।'); return; }
-    if (!grantPermissions.every((capability) => delegationCapabilities[grantRole].includes(capability))) {
+    if (!grantPermissions.every((capability) => delegationCapabilities[grantRole].includes(capability) && (materialBackendReady || !capability.startsWith('materials.')))) {
       setGrantError('इस भूमिका के लिए यह Permission अनुमत नहीं है।'); return;
     }
     setGrantBusy(true); setGrantError(''); setGrantNotice('');
@@ -204,7 +211,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
           {label:'Current Super Admin',value:loading ? '…' : roleCounts.superAdmins,icon:Shield},
           {label:'Current Admin',value:loading ? '…' : roleCounts.admins,icon:Users},
           {label:'Automated Modules',value:3,icon:Sparkles},
-          {label:'Pending Backend Controls',value:3,icon:Settings2}
+          {label:'Pending Backend Controls',value:materialBackendReady ? 2 : 3,icon:Settings2}
         ].map(({label,value,icon:Icon})=>(
           <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-900"><Icon size={20}/></span>
@@ -278,12 +285,14 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
         )}
       </div>
 
+      <StaffRoleMatrix materialBackendReady={materialBackendReady} resultBackendReady={delegationReady}/>
+
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold tracking-wide text-teal-800">SUPER ADMIN GOVERNANCE</p>
             <h3 className="mt-1 text-lg font-extrabold text-slate-900">Result Staff Delegation</h3>
-            <p className="mt-1 text-xs text-slate-600">Specific result duties only. Does not grant website-wide Admin privileges.</p>
+            <p className="mt-1 text-xs text-slate-600">Scoped Result grants, plus Study Material grants only after their separate backend is verified. No website-wide Admin elevation.</p>
           </div>
           <span className={'rounded-full px-3 py-1.5 text-xs font-bold ' + (delegationReady ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>
             {loading?'Checking…':delegationReady?'Backend verified':superAdmin?'Preview schema pending':'Super Admin only'}
@@ -313,18 +322,19 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
                 Delegated Role
                 <select value={grantRole} onChange={(event)=>{
                   const role=event.target.value as DelegatedRole;
-                  setGrantRole(role);setGrantPermissions(['results.read']);
+                  setGrantRole(role);setGrantPermissions(role==='content_manager'?['materials.read']:['results.read']);
                 }} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
                   <option value="viewer">Viewer (Read Only)</option>
                   <option value="teacher">Teacher / Evaluator</option>
                   <option value="academic_admin">Academic Admin</option>
                   <option value="result_manager">Result Manager</option>
+                  <option value="content_manager" disabled={!materialBackendReady}>Content Manager (requires Material backend)</option>
                 </select>
               </label>
               <fieldset className="space-y-2">
                 <legend className="text-xs font-bold text-slate-700">Allowed Capabilities</legend>
                 {delegationCapabilities[grantRole].map((capability)=><label key={capability} className="flex items-center gap-2 text-xs text-slate-700">
-                  <input type="checkbox" checked={grantPermissions.includes(capability)} onChange={(event)=>setGrantPermissions((old)=>event.target.checked?[...old,capability]:old.filter((c)=>c!==capability))}
+                  <input type="checkbox" disabled={!materialBackendReady && capability.startsWith("materials.")} checked={grantPermissions.includes(capability)} onChange={(event)=>setGrantPermissions((old)=>event.target.checked?[...old,capability]:old.filter((c)=>c!==capability))}
                     className="h-4 w-4 rounded border-slate-300"/>
                   {capability}
                 </label>)}
