@@ -3,7 +3,7 @@ import {
   Activity, ArrowDownToLine, ArrowRight, BarChart3, CalendarClock, CheckCircle2,
   ChevronLeft, ChevronRight, Clock3, ClipboardList, Download, Eye, FileBarChart2,
   FileDown, GraduationCap, LockKeyhole, Printer, RefreshCw, Search,
-  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save, Send
+  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save, Send, BookOpen
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
@@ -24,7 +24,11 @@ const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>
 ));
 const validPct = (value: number | null) => Number.isFinite(Number(value)) ? Number(value ?? 0) : 0;
 
-export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
+export const AdminTestResults: React.FC<{
+  demoMode?: boolean;
+  onOpenMaterials?: () => void;
+  onOpenStaff?: () => void;
+}> = ({ demoMode = false, onOpenMaterials, onOpenStaff }) => {
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [tests, setTests] = useState<TestInfo[]>([]);
   const [students, setStudents] = useState<StudentInfo[]>([]);
@@ -294,6 +298,40 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
           <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">READ-ONLY RECORDS</span>
         </div>
       </div>
+
+      <section aria-label="Result administration controls" className="rounded-3xl border border-sky-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-extrabold tracking-wider text-teal-700">ADMIN RESULT CONTROL BOARD</p>
+            <h3 className="mt-1 text-lg font-extrabold text-slate-900">Digital Report Card & Permissions</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-600">सभी प्रमुख Controls यहाँ से खोलें। जिनके लिए Backend Approval बाकी है, उन्हें Active बताकर नहीं दिखाया जाता।</p>
+          </div>
+          <span className="rounded-full bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-900">Draft · Preview</span>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" disabled={!completed.length || loading}
+            onClick={() => {setSelected(completed[0]);setShowCardDesigner(true);setDesignNotice('');}}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-40">
+            <SlidersHorizontal size={16}/> Open Digital Card Studio
+          </button>
+          {onOpenMaterials && <button type="button" onClick={onOpenMaterials}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">
+            <BookOpen size={16}/> Study Materials
+          </button>}
+          {onOpenStaff && <button type="button" onClick={onOpenStaff}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">
+            <ShieldCheck size={16}/> Staff Permissions
+          </button>}
+        </div>
+        {!loading && !completed.length && <p className="mt-3 text-xs text-amber-800">Card Studio खोलने के लिए पहले कोई Submitted Result होना चाहिए। बिना परिणाम के असली Report Card नहीं बनाया जाएगा।</p>}
+        <div className="mt-4 grid gap-2 text-[11px] font-semibold text-slate-700 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl bg-emerald-50 p-3"><p className="font-extrabold text-emerald-800">Working</p><p className="mt-1">Server score → Card / A4 Print</p></div>
+          <div className="rounded-xl bg-sky-50 p-3"><p className="font-extrabold text-sky-800">Local Draft</p><p className="mt-1">Theme, Logo, Photo & Footer editor</p></div>
+          <div className="rounded-xl bg-amber-50 p-3"><p className="font-extrabold text-amber-800">Backend-gated</p><p className="mt-1">Student Inbox Delivery / Role Grants</p></div>
+          <div className="rounded-xl bg-slate-100 p-3"><p className="font-extrabold text-slate-700">Not implemented</p><p className="mt-1">Approved Score Correction / Timed Release</p></div>
+        </div>
+        <p className="mt-3 text-[11px] text-slate-500">Local template edits change this browser's Admin preview and print output only. They do not publish a global student report design.</p>
+      </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h3 className="text-lg font-extrabold text-slate-900">Assessment Overview</h3><p className="text-xs text-slate-500">आँकड़े लोड हुए अधिकतम 1,000 नवीनतम प्रयासों पर आधारित हैं।</p></div>
