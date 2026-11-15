@@ -6,12 +6,13 @@ import { getPublishedWebsiteConfig } from '../services/siteConfigService';
 
 interface HeaderProps {
   activeSection: string;
+  disableSticky?: boolean;
   onNavigate: (section: string) => void;
   onOpenSearch: () => void;
   onOpenAuth: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth }) => {
+export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpenSearch, onOpenAuth, disableSticky = false }) => {
   const { language, toggleLanguage } = useLanguage();
   const { user, profile, profileLoading, isAdmin, signOut } = useAuth();
   const ownProfile = user && profile?.user_id === user.id ? profile : null;
@@ -57,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
   ];
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
   return (
-    <header className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
+    <header className={`${disableSticky ? 'relative' : 'sticky top-0'} z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
       <div className="bg-[#090d14] text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 min-h-[18px] flex items-center justify-center overflow-hidden">
           <div className="flex items-center justify-center gap-x-3 sm:gap-x-5 whitespace-nowrap text-[8px] sm:text-[10px] font-semibold tracking-wide text-slate-200">
