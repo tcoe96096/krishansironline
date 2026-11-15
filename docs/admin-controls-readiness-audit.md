@@ -23,6 +23,9 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 | Submitted student report View | Implemented | Submitted server results only | Functional, subject to account rights |
 | Premium card theme | 3 themes | Current page and print | Functional |
 | Logo / header / watermark / footer controls | Admin Card Design editor | Live card preview and print; optional browser-local storage | **Local Draft only**, not global |
+| Design Backup Import / Export | Working JSON buttons in Card Studio | Versioned file, strict design field whitelist and no score/student fields | **Working for local Draft only** |
+| Save Design per Admin Account | Account-keyed browser storage | Separate signed-in Admin keys; not shared across devices | **Local Draft only**, not global |
+| Super Admin Global Template Publisher | Review-only SQL proposal | Approved template would use audited RPC and immutable versions | **Not activated; no migration applied** |
 | A4 Student Card PDF download | Print button | Browser print dialog / Save as PDF | Functional in supported browser; not a direct PDF file service |
 | Bulk CSV | Export button | Browser-generated with formula escaping | Functional, current filtered set only |
 | Bulk print | Button | Browser print dialog | Functional, current filtered set |
@@ -46,6 +49,8 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 - Digital Card Studio was accessible only from the row View modal. Admin Results now has a direct shortcut and links to Study Materials / Staff Permissions; shortcut disables truthfully if no submitted result exists.
 - Missing/null submitted percentages were counted as 0 in admin aggregate results. Now missing percentages are excluded from statistics and displayed as unavailable. Explicit zero scores remain valid.
 - Sidebar/overview previously presented placeholder modules beside real modules without a status badge. Five unimplemented modules now visibly show "Planned".
+- Admin card designs now support validated JSON Export/Import, and browser-local drafts are scoped by signed-in Admin UUID rather than shared globally across accounts. Imported backups cannot carry grades, identities or role data.
+- A central audited Result Card design publishing migration is prepared only as an unapplied proposal: `docs/proposed-migrations/result_card_central_template_review_only.sql`. Uploaded logo/photo files remain local-preview-only until separate secure asset hosting is approved.
 
 ## Remaining release blockers
 
