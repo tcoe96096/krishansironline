@@ -396,7 +396,7 @@ export const ResultsPortal: React.FC = () => {
           </>
         )}
 
-        {selected && user && (
+        {selected && user && selected.student_id === user.id && selected.status === 'submitted' && (
           <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/75 p-3 sm:p-6" onClick={() => setSelected(null)}>
             <div role="dialog" aria-modal="true" aria-label={en ? 'Smart Result Report Card' : 'स्मार्ट परिणाम पत्र'} onClick={(event) => event.stopPropagation()} className="my-auto w-full max-w-2xl space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-lg">
