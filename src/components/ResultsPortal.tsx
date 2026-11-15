@@ -8,6 +8,7 @@ import { displayAttemptStatus } from '../services/attemptDisplayStatus';
 import { studyMaterialUrl } from '../services/learningLinks';
 import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import type { ResultReportTheme } from './SmartResultReportCard';
+import { normalizeReportCardTemplate, type ReportCardTemplateBackup } from '../services/reportCardTemplate';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import {
   Activity, ArrowRight, Award, BookOpen, CalendarDays, CheckCircle2, ChevronRight,
@@ -53,6 +54,7 @@ export const ResultsPortal: React.FC = () => {
   const [filter, setFilter] = useState<ResultFilter>('all');
   const [selected, setSelected] = useState<TestAttempt | null>(null);
   const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
+  const [publishedDesign, setPublishedDesign] = useState<ReportCardTemplateBackup | null>(null);
   const [shareNotice, setShareNotice] = useState('');
   const [linkNotice, setLinkNotice] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -65,6 +67,7 @@ export const ResultsPortal: React.FC = () => {
       setTests([]);
       setSelected(null);
       setLinkNotice(false);
+      setPublishedDesign(null);
       setLoading(false);
       setError('');
       return;
@@ -79,6 +82,23 @@ export const ResultsPortal: React.FC = () => {
     setSelected(null);
     setLinkNotice(false);
     setShareNotice('');
+    setPublishedDesign(null);
+    // Optional approved global design. Missing backend is safe: retain classic
+    // individual theme selector and never block access to the student's result.
+    void requireSupabase().from('result_card_templates')
+      .select('theme,options').eq('template_key','default').eq('is_published',true)
+      .maybeSingle()
+      .then(({data,error}) => {
+        if (!mounted || error || !data) return;
+        try {
+          const published = normalizeReportCardTemplate({
+            schema:'ksol.result-card.design',version:1,
+            theme:data.theme,options:data.options
+          });
+          setPublishedDesign(published);
+          setCardTheme(published.theme);
+        } catch { /* Ignore malformed template, never show private grades through it. */ }
+      });
     Promise.all([getMyTestAttempts(), getPublishedTests()])
       .then(([history, catalogue]) => {
         if (!mounted) return;
@@ -145,7 +165,8 @@ export const ResultsPortal: React.FC = () => {
       school: ownProfile?.school_name
     },
     isEnglish: en,
-    theme: cardTheme
+    theme: publishedDesign?.theme || cardTheme,
+    options: publishedDesign?.options
   });
 
   const shareMyResult = async (attempt: TestAttempt) => {
@@ -381,7 +402,8 @@ export const ResultsPortal: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-lg">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
                   {en ? 'Card design' : 'रिपोर्ट कार्ड थीम'}
-                  <select value={cardTheme} onChange={(event) => setCardTheme(event.target.value as ResultReportTheme)} className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400">
+                  <select value={publishedDesign?.theme || cardTheme} disabled={Boolean(publishedDesign)}
+                    onChange={(event) => setCardTheme(event.target.value as ResultReportTheme)} className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-70">
                     <option value="modern">{en ? 'Modern' : 'मॉडर्न'}</option>
                     <option value="classic">{en ? 'Classic' : 'क्लासिक'}</option>
                     <option value="minimal">{en ? 'Minimal' : 'मिनिमल'}</option>
@@ -394,6 +416,9 @@ export const ResultsPortal: React.FC = () => {
                   </button>
                 <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-100"><X size={17}/>{en ? 'Close' : 'बंद करें'}</button></div>
               </div>
+              {publishedDesign && <p role="status" className="rounded-xl bg-teal-50 p-3 text-xs font-semibold text-teal-900">
+                {en ? 'Official Result Card design approved by Super Admin.' : 'आधिकारिक रिजल्ट कार्ड डिज़ाइन सुपर एडमिन द्वारा स्वीकृत है।'}
+              </p>}
               {shareNotice && <p role="status" className="rounded-xl bg-teal-50 p-3 text-xs text-teal-800">{shareNotice}</p>}
               <SmartResultReportCard data={resultCardData(selected)} onPrint={() => printResult(selected)}/>
                <a href={studyMaterialUrl(import.meta.env.BASE_URL, tests.find((test)=>test.id===selected.test_id))} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-extrabold text-sky-900 hover:bg-sky-50"><BookOpen size={17}/>{en ? 'Study related chapters' : 'संबंधित अध्याय पढ़ें'}<ArrowRight size={16}/></a>
