@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
-import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes } from '../lib/teacherManagementValidation';
+import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes, validateTeacherProfile } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -38,6 +38,9 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [reason,setReason] = useState('');
   const [requestedClasses,setRequestedClasses] = useState<string[]>(['10']);
   const [requestedSubjects,setRequestedSubjects] = useState<string[]>(['History']);
+  const [contactEmail,setContactEmail] = useState('');
+  const [phone,setPhone] = useState('');
+  const [experienceYears,setExperienceYears] = useState('');
   const [qualification,setQualification] = useState('');
   const [institution,setInstitution] = useState('');
   const [graduationYear,setGraduationYear] = useState('');
@@ -53,7 +56,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     setNotice('');
     setError('');
     if (!user) return;
-    if(loadedFor!==user.id){setName(String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim());setLoadedFor(user.id);}
+    if(loadedFor!==user.id){setName(String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim());setContactEmail(user.email||'');setLoadedFor(user.id);}
     setLoading(true);
     void (async()=>{
       try {
@@ -91,6 +94,10 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     }
     if(!validateTeacherRequestedScopes(classLevel,subject,requestedClasses,requestedSubjects)){
       setError('Select at least one class and subject, including the primary class and subject.');return;
+    }
+    if(!validateTeacherProfile({displayName:name,contactEmail,phone,
+      experienceYears:experienceYears.trim()===''?null:Number(experienceYears)})){
+      setError('Check your profile name, email, phone and teaching experience (0–70 years).');return;
     }
     if(resumeFile&&!validateTeacherResume(resumeFile)){
       setError('Resume must be a PDF or DOCX file no larger than 5 MB.');return;
@@ -194,6 +201,12 @@ export const TeacherEnrollmentApplication: React.FC = () => {
            <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested subjects (preview selection)</legend>
              <div className="mt-2 flex flex-wrap gap-3">{subjects.map(item=><label key={item} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedSubjects.includes(item)} onChange={event=>setRequestedSubjects(current=>event.target.checked?[...current,item]:current.filter(value=>value!==item))}/>{item}</label>)}</div>
            </fieldset>
+           <label className="text-xs font-bold text-slate-700">Contact Email (preview only)
+             <input type="email" maxLength={254} value={contactEmail} onChange={event=>setContactEmail(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <label className="text-xs font-bold text-slate-700">Phone (preview only)
+             <input type="tel" maxLength={20} value={phone} onChange={event=>setPhone(event.target.value)} placeholder="+91 9876543210" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <label className="text-xs font-bold text-slate-700 sm:col-span-2">Teaching Experience in Years (preview only)
+             <input type="number" min={0} max={70} step={1} value={experienceYears} onChange={event=>setExperienceYears(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700">Qualification (preview only)
              <input maxLength={120} value={qualification} onChange={event=>setQualification(event.target.value)} placeholder="e.g. M.A. Political Science" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700">Institution (preview only)
@@ -215,7 +228,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950" aria-label="Application submission summary">
              <h3 className="font-extrabold">Before submitting — what KSOL will receive</h3>
              <p className="mt-2">Submitted to the current backend: <strong>{name.trim()||'Your name'} · Class {classLevel} · {subject}</strong> and your application reason.</p>
-             <p className="mt-1">Preview only, NOT submitted: <strong>{requestedClasses.length} selected classes, {requestedSubjects.length} selected subjects{qualification.trim()?', qualification':''}{resumeFile?', resume file':''}</strong>.</p>
+             <p className="mt-1">Preview only, NOT submitted: <strong>{requestedClasses.length} selected classes, {requestedSubjects.length} selected subjects{qualification.trim()?', qualification':''}{contactEmail.trim()||phone.trim()||experienceYears.trim()?', contact details / experience':''}{resumeFile?', resume file':''}</strong>.</p>
              <p className="mt-2 font-semibold">Your extra selections and resume will not be attached to this application. Super Admin will only see the primary class and subject until the secure extended backend is approved.</p>
            </div>
            <button type="submit" disabled={busy||reason.trim().length<12||name.trim().length<2}
