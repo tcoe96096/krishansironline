@@ -35,6 +35,18 @@ try {
   await page.getByRole('heading', { name: /Sign in to view your personal results|अपने परिणाम देखने के लिए लॉगिन करें/ }).waitFor();
   console.log('PASS: Performance insights are private behind student login');
 
+  await page.goto(base + '/study-materials/?class=10&subject=History', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', {name:/Chapter-Wise Revision Notes|अध्यायवार रिवीजन/}).waitFor();
+  const historyFilter=page.getByRole('button',{name:'History',exact:true});
+  assert.match(await historyFilter.getAttribute('class') || '',/bg-slate-900/);
+  console.log('PASS: Result-to-material deep links filter the public class and subject catalogue');
+
+  await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', {name:'Study Materials',exact:true}).click();
+  await page.getByRole('heading', {name:'Study Materials & Result Linking'}).waitFor();
+  await page.getByRole('button', {name:'Staff Permissions',exact:true}).click();
+  await page.getByRole('heading', {name:'Staff Control Board — Protected Demo'}).waitFor();
+  console.log('PASS: Study material control board and staff navigation are functional without exposing private records');
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Staff & Permissions', exact: true }).click();
   await page.getByRole('heading', { name: 'Staff Control Board — Protected Demo' }).waitFor();
