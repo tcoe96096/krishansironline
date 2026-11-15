@@ -37,7 +37,12 @@ export function validateTeacherQualifications(items:readonly TeacherQualificatio
 }
 
 export function validateTeacherResume(file:{name:string;size:number;type:string}):boolean {
-  const ext=file.name.toLowerCase().split('.').pop();
+  // Display-side checks only. Private server upload must still inspect actual bytes,
+  // allocate its own object key, scan content, and enforce authorization.
+  const name=file.name;
+  if(name.length<5||name.length>180||name!==name.trim()||
+     /[\\/\x00-\x1f\x7f]/.test(name)||name.startsWith('.'))return false;
+  const ext=name.toLowerCase().split('.').pop();
   const allowed=ext==='pdf'?['application/pdf']:ext==='docx'?
     ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:[];
   return allowed.includes(file.type)&&Number.isSafeInteger(file.size)&&file.size>0&&file.size<=5*1024*1024;
