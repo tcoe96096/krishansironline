@@ -54,7 +54,10 @@ test('non-submitted attempts never show a result card', () => {
 test('all three card themes render without database writes', () => {
   for (const theme of ['modern','classic','minimal'] as const) {
     const html = renderToStaticMarkup(React.createElement(SmartResultReportCard,{data:report({theme})}));
-    assert.match(html,/SMART RESULT REPORT/);
+    assert.match(html,/RESULT REPORT CARD/);
+    assert.match(html,/KRISHAN SIR ONLINE LEARNING/);
+    assert.match(html,/krishan-sir-approved-logo.webp/);
+    assert.match(html,/krishan-sir.png/);
     assert.match(html,/80\.0%/);
     assert.ok(html.includes('style='));
   }
