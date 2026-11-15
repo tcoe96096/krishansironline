@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 import { StaffRoleMatrix } from './StaffRoleMatrix';
+import { AdminTeacherEnrollmentReview } from './AdminTeacherEnrollmentReview';
 import { delegationCapabilities, grantIsWithinRole, type DelegatedRole } from '../services/staffGrantPolicy';
 
 type StaffRecord = { user_id: string; role: 'admin' | 'super_admin'; created_at: string };
@@ -293,13 +294,14 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
         <ol className="mt-4 grid gap-2 text-xs text-slate-700 sm:grid-cols-2">
           <li className="rounded-xl bg-slate-50 p-3"><strong>1. Teacher Google Sign-in:</strong> Teacher opens the workspace and signs in with their own Google account.</li>
           <li className="rounded-xl bg-slate-50 p-3"><strong>2. Verify identity:</strong> Teacher privately shares the displayed Account ID. Super Admin verifies who owns that account independently.</li>
-          <li className="rounded-xl bg-slate-50 p-3"><strong>3. Assign scoped role:</strong> Select Teacher, choose only necessary class and capabilities, record the reason, then Save after verified backend activation.</li>
+          <li className="rounded-xl bg-slate-50 p-3"><strong>3. Apply and approve:</strong> Teacher submits an application in the workspace; Super Admin checks Pending Teacher Requests and can approve the requested class (or use the verified manual grant editor).</li>
           <li className="rounded-xl bg-slate-50 p-3"><strong>4. Teacher workspace:</strong> The Teacher can draft, edit and request review only within assigned scope. Publication remains Super Admin approved.</li>
         </ol>
         {!delegationReady && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
           Role assignment is currently locked: audited delegated-grant tables and permission tests are not yet activated. No teacher is granted access by this guide.
         </p>}
       </section>
+      <AdminTeacherEnrollmentReview demoMode={demoMode}/>
       <StaffRoleMatrix materialBackendReady={materialBackendReady} resultBackendReady={delegationReady}/>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
