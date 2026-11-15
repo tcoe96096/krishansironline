@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
+import { escapeSpreadsheetCell } from '../services/resultMetrics';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
 import type { ResultReportTheme } from './SmartResultReportCard';
 
@@ -19,12 +20,6 @@ const PAGE_SIZE = 15;
 const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
 ));
-const csvSafe = (value: unknown): string => {
-  let text = String(value ?? '');
-  // Neutralize spreadsheet formula injection before quoting CSV values.
-  if (/^[\s]*[=+\-@]/.test(text) || /^[\t\r]/.test(text)) text = "'" + text;
-  return '"' + text.replace(/"/g, '""') + '"';
-};
 const validPct = (value: number | null) => Number.isFinite(Number(value)) ? Number(value ?? 0) : 0;
 
 export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
@@ -119,7 +114,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
           attempt.status === 'submitted' ? attempt.percentage : '', attempt.started_at, attempt.submitted_at];
       })
     ];
-    const csv = '\uFEFF' + data.map((row) => row.map(csvSafe).join(',')).join('\r\n');
+    const csv = '\uFEFF' + data.map((row) => row.map(escapeSpreadsheetCell).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.href = url;
