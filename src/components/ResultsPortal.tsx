@@ -47,6 +47,7 @@ export const ResultsPortal: React.FC = () => {
   const [filter, setFilter] = useState<ResultFilter>('all');
   const [selected, setSelected] = useState<TestAttempt | null>(null);
   const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
+  const [shareNotice, setShareNotice] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
@@ -115,6 +116,22 @@ export const ResultsPortal: React.FC = () => {
     isEnglish: en,
     theme: cardTheme
   });
+
+  const shareMyResult = async (attempt: TestAttempt) => {
+    if (!user || attempt.student_id !== user.id || attempt.status !== 'submitted') return;
+    const url = new URL(import.meta.env.BASE_URL + 'results/?resultId=' + encodeURIComponent(attempt.id), window.location.origin).href;
+    try {
+      if (navigator.share) {
+        await navigator.share({title:'Krishan Sir Online — My Result', text:'Sign in to view this private result.',url});
+        setShareNotice(en ? 'Share options opened. Recipient must log in as you.' : 'शेयर विकल्प खुले हैं। परिणाम देखने के लिए आपके विद्यार्थी खाते में लॉगिन आवश्यक है।');
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareNotice(en ? 'Private login link copied.' : 'निजी लॉगिन लिंक कॉपी हुआ।');
+      } else { window.prompt('Copy secure login link:',url); }
+    } catch (cause) {
+      if (!(cause instanceof Error && cause.name === 'AbortError')) setShareNotice(en ? 'Sharing unavailable. Try copy or print PDF.' : 'शेयर उपलब्ध नहीं है; लिंक कॉपी या PDF प्रिंट करें।');
+    }
+  };
 
   const printResult = (attempt: TestAttempt) => {
     if (!isCompleted(attempt) || !user || !openSmartResultPrint(resultCardData(attempt))) {
@@ -310,8 +327,14 @@ export const ResultsPortal: React.FC = () => {
                     <option value="minimal">{en ? 'Minimal' : 'मिनिमल'}</option>
                   </select>
                 </label>
-                <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-100"><X size={17}/>{en ? 'Close' : 'बंद करें'}</button>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => void shareMyResult(selected)}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-3 text-xs font-bold text-teal-900 hover:bg-teal-100">
+                    {en ? 'Share private link' : 'निजी लिंक भेजें'}
+                  </button>
+                <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-100"><X size={17}/>{en ? 'Close' : 'बंद करें'}</button></div>
               </div>
+              {shareNotice && <p role="status" className="rounded-xl bg-teal-50 p-3 text-xs text-teal-800">{shareNotice}</p>}
               <SmartResultReportCard data={resultCardData(selected)} onPrint={() => printResult(selected)}/>
                <a href={studyMaterialUrl(import.meta.env.BASE_URL, tests.find((test)=>test.id===selected.test_id))} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-extrabold text-sky-900 hover:bg-sky-50"><BookOpen size={17}/>{en ? 'Study related chapters' : 'संबंधित अध्याय पढ़ें'}<ArrowRight size={16}/></a>
             </div>
