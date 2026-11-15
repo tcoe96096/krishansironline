@@ -52,3 +52,15 @@ export function escapeSpreadsheetCell(value: unknown): string {
   }
   return '"' + text.replace(/"/g, '""') + '"';
 }
+
+// Student report links are navigation hints, never proof of authorization.
+// A student may only open an already-fetched, server-recorded submitted attempt
+// whose student_id matches the currently authenticated account.
+export function findOwnedSubmittedResult<
+  T extends { id: string; student_id: string; status: string }
+>(attempts: readonly T[], studentId: string | null | undefined, resultId: string | null): T | null {
+  if (!studentId || !resultId || !/^[0-9a-f-]{36}$/i.test(resultId)) return null;
+  return attempts.find((attempt) =>
+    attempt.id === resultId && attempt.student_id === studentId && attempt.status === 'submitted'
+  ) ?? null;
+}
