@@ -6,6 +6,9 @@ on:
     paths:
       - "src/components/ResultsPortal.tsx"
       - "src/components/AdminStaffPermissions.tsx"
+      - "src/components/AdminStudyMaterialControl.tsx"
+      - "src/components/StudyMaterialsView.tsx"
+      - "src/components/StaffRoleMatrix.tsx"
       - "src/components/AdminTestResults.tsx"
       - "src/components/SmartResultReportCard.tsx"
       - "scripts/smart-result-smoke.mjs"
