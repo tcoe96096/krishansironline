@@ -52,6 +52,7 @@ export const ResultsPortal: React.FC = () => {
   const [selected, setSelected] = useState<TestAttempt | null>(null);
   const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
   const [shareNotice, setShareNotice] = useState('');
+  const [linkNotice, setLinkNotice] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export const ResultsPortal: React.FC = () => {
       setInbox([]);
       setTests([]);
       setSelected(null);
+      setLinkNotice(false);
       setLoading(false);
       setError('');
       return;
@@ -73,6 +75,7 @@ export const ResultsPortal: React.FC = () => {
     setInbox([]);
     setTests([]);
     setSelected(null);
+    setLinkNotice(false);
     setShareNotice('');
     Promise.all([getMyTestAttempts(), getPublishedTests()])
       .then(([history, catalogue]) => {
@@ -94,6 +97,7 @@ export const ResultsPortal: React.FC = () => {
           const ownResult = findOwnedSubmittedResult(ownHistory, user.id, requestedResultId);
           if (ownResult) setTab('history');
           setSelected(ownResult ?? null);
+          setLinkNotice(!ownResult);
         }
       })
       .catch((cause) => {
@@ -236,6 +240,9 @@ export const ResultsPortal: React.FC = () => {
               <button type="button" onClick={() => setRefreshCount((n) => n + 1)} disabled={loading}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={15} className={loading ? 'animate-spin' : ''}/>{en ? 'Refresh data' : 'रिफ्रेश करें'}</button>
             </div>
+            {linkNotice && <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{en
+              ? 'This result link is not available for the signed-in account. Please open your own results below.'
+              : 'यह परिणाम लिंक इस लॉगिन खाते के लिए उपलब्ध नहीं है। नीचे अपने परिणाम खोलें।'}</p>}
             {inbox.length > 0 && (
               <section className="mt-5 rounded-2xl border border-teal-200 bg-white p-4 shadow-sm" aria-label="Private Result Inbox">
                 <div className="flex flex-wrap items-center justify-between gap-2">
