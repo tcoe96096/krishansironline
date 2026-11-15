@@ -76,8 +76,10 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
     finally{setBusy(false);}
   };
 
-  const pending=requests.filter(r=>r.status==='pending');
-  const history=requests.filter(r=>r.status!=='pending');
+  const query=search.trim().toLocaleLowerCase();
+  const visible=requests.filter(r=>!query||[r.display_name,r.applicant_id,r.subject,r.requested_class,r.status].some(value=>value.toLocaleLowerCase().includes(query)));
+  const pending=visible.filter(r=>r.status==='pending');
+  const history=visible.filter(r=>r.status!=='pending');
   return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-label="Teacher approval requests">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
@@ -101,6 +103,12 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
        Requests and approvals remain unavailable until the separate Preview migration and security tests are approved.
      </p>:
      <>
+       <label className="mt-4 block text-xs font-bold text-slate-700">Search teacher applications
+         <input type="search" value={search} onChange={event=>setSearch(event.target.value)}
+           placeholder="Name, account ID, subject, class or status"
+           className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/>
+       </label>
+       <p className="mt-2 text-xs text-slate-600">Showing {visible.length} of {requests.length} loaded applications (latest 150). Search only filters loaded records.</p>
        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-sky-950"><Clock3 size={16}/>Pending applications: {pending.length}</div>
        {!pending.length&&<p className="mt-3 rounded-xl bg-slate-50 p-4 text-xs text-slate-600">No pending Teacher enrollment requests.</p>}
        <div className="mt-3 space-y-3">
