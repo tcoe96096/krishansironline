@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
-import { validateTeacherQualifications } from '../lib/teacherManagementValidation';
+import { validateTeacherQualifications, validateTeacherResume } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -41,6 +41,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [qualification,setQualification] = useState('');
   const [institution,setInstitution] = useState('');
   const [graduationYear,setGraduationYear] = useState('');
+  const [resumeFile,setResumeFile] = useState<File|null>(null);
   const [notice,setNotice] = useState('');
   const [error,setError] = useState('');
   const [reload,setReload] = useState(0);
@@ -91,6 +92,9 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     if(requestedClasses.length===0||requestedSubjects.length===0||
        !requestedClasses.includes(classLevel)||!requestedSubjects.includes(subject)){
       setError('Select at least one class and subject, including the primary class and subject.');return;
+    }
+    if(resumeFile&&!validateTeacherResume(resumeFile)){
+      setError('Resume must be a PDF or DOCX file no larger than 5 MB.');return;
     }
     if((qualification.trim()||institution.trim()||graduationYear.trim())&&
        !validateTeacherQualifications([{title:qualification,institution,year:Number(graduationYear)}])){
@@ -190,6 +194,14 @@ export const TeacherEnrollmentApplication: React.FC = () => {
              <input maxLength={120} value={qualification} onChange={event=>setQualification(event.target.value)} placeholder="e.g. M.A. Political Science" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700">Institution (preview only)
              <input maxLength={160} value={institution} onChange={event=>setInstitution(event.target.value)} placeholder="University / Institution" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <div className="sm:col-span-2 rounded-xl border border-slate-200 p-3">
+             <label className="block text-xs font-bold text-slate-700" htmlFor="teacher-resume-preview">Resume PDF / DOCX (local preview only)</label>
+             <input id="teacher-resume-preview" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+               onChange={event=>{const file=event.target.files?.[0]||null;setResumeFile(file);if(file&&!validateTeacherResume(file)){setError('Resume must be PDF/DOCX and 5 MB or smaller.');}else{setError('');}}}
+               className="mt-2 block w-full text-xs text-slate-700"/>
+             <p className="mt-2 text-xs text-amber-800">Your selected file remains on this device. It is NOT uploaded, attached to your application or stored by KSOL until secure private document storage is separately approved.</p>
+             {resumeFile&&<p className="mt-1 text-xs font-semibold text-slate-700">Selected: {resumeFile.name} ({Math.ceil(resumeFile.size/1024)} KB) — {validateTeacherResume(resumeFile)?'Valid format':'Invalid format'}</p>}
+           </div>
            <label className="text-xs font-bold text-slate-700 sm:col-span-2">Passing year (preview only)
              <input type="number" min={1950} max={new Date().getFullYear()} value={graduationYear} onChange={event=>setGraduationYear(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
            <label className="text-xs font-bold text-slate-700 sm:col-span-2">Why are you requesting access?
