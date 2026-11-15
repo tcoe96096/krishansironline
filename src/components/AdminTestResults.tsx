@@ -3,7 +3,7 @@ import {
   Activity, ArrowDownToLine, ArrowRight, BarChart3, CalendarClock, CheckCircle2,
   ChevronLeft, ChevronRight, Clock3, ClipboardList, Download, Eye, FileBarChart2,
   FileDown, GraduationCap, LockKeyhole, Printer, RefreshCw, Search,
-  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X
+  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
@@ -42,6 +42,70 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     showInstitution: true, showMetrics: true, footerNote: ''
   });
   const [showCardDesigner, setShowCardDesigner] = useState(false);
+  const [deliveryNotice, setDeliveryNotice] = useState('');
+  const [designNotice, setDesignNotice] = useState('');
+
+  useEffect(() => {
+    if (demoMode) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('ksol.report-card-template.draft.v1') || 'null');
+      if (!saved || typeof saved !== 'object') return;
+      if (['modern','classic','minimal'].includes(saved.theme)) setCardTheme(saved.theme);
+      if (saved.options && typeof saved.options === 'object') setCardOptions(saved.options);
+    } catch { /* Never fail result loading because of a local layout draft. */ }
+  }, [demoMode]);
+
+  const saveCardDesign = () => {
+    try {
+      localStorage.setItem('ksol.report-card-template.draft.v1', JSON.stringify({ theme: cardTheme, options: cardOptions }));
+      setDesignNotice('Design saved locally on this device. It does not publish or change grades.');
+    } catch { setDesignNotice('Local storage unavailable. Try a smaller image or use another device.'); }
+  };
+  const loadImage = (file: File | undefined, field: 'logoImage' | 'portraitImage') => {
+    if (!file) return;
+    if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 2200000) {
+      setDesignNotice('PNG/JPG/WEBP images up to 2.2MB are supported.'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(reader.result)) {
+        setCardOptions(previous => ({...previous, [field]:reader.result as string}));
+        setDesignNotice('Image added to local design preview. Save Design to keep it on this device.');
+      }
+    };
+    reader.onerror = () => setDesignNotice('Image could not be loaded.');
+    reader.readAsDataURL(file);
+  };
+  const resultLink = (attempt: TestAttempt) => new URL(
+    import.meta.env.BASE_URL + 'results/?resultId=' + encodeURIComponent(attempt.id), window.location.origin
+  ).toString();
+  const copyStudentLink = async (attempt: TestAttempt) => {
+    const link = resultLink(attempt);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(link);
+      setDeliveryNotice('Secure student login link copied. Share it privately; grades are never included in the link.');
+    } catch {
+      window.prompt('Copy this student login link (recipient must sign in):', link);
+      setDeliveryNotice('Recipient must sign in with the matching student account. No report was sent automatically.');
+    }
+  };
+  const shareStudentLink = async (attempt: TestAttempt) => {
+    const link = resultLink(attempt);
+    if (!navigator.share) { await copyStudentLink(attempt); return; }
+    try {
+      await navigator.share({
+        title: 'Krishan Sir Online — Result available',
+        text: 'Your assessment result is ready. Sign in to your student account to view and download the report.',
+        url: link
+      });
+      setDeliveryNotice('Share sheet opened. Delivery depends on the application and recipient you selected.');
+    } catch (cause) {
+      if (!(cause instanceof Error && cause.name === 'AbortError')) {
+        setDeliveryNotice('Sharing was unavailable. Use Copy secure link instead.');
+      }
+    }
+  };
 
   const load = useCallback(async () => {
     if (demoMode) { setLoading(false); return; }
@@ -341,18 +405,52 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
               <div className="rounded-2xl border border-sky-200 bg-white p-4 shadow-lg">
                 <div className="flex flex-wrap justify-between gap-2">
                   <h4 className="text-sm font-extrabold text-sky-950">Report Card Design Editor</h4>
-                  <button type="button" onClick={()=>setCardOptions({showInstitution:true,showMetrics:true,footerNote:''})}
+                  <button type="button" onClick={()=>{setCardOptions({showInstitution:true,showMetrics:true,footerNote:'',showLogo:true,showPortrait:true,showSubjectTable:true,watermarkOpacity:8});setDesignNotice('Design reset for this preview.');}}
                     className="text-xs font-bold text-sky-800 underline">Reset design</button>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-slate-600">
                   Presentation-only Preview: marks, results, student details and server records are locked. Layout edits are not saved to the database.
                 </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-slate-700">Institution Heading
+                    <input maxLength={80} value={cardOptions.brandTitle || 'KRISHAN SIR ONLINE LEARNING'}
+                      onChange={e => setCardOptions(v=>({...v,brandTitle:e.target.value}))}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Tagline
+                    <input maxLength={110} value={cardOptions.tagline || 'STUDY • LEARN • PRACTICE • ACHIEVE'}
+                      onChange={e => setCardOptions(v=>({...v,tagline:e.target.value}))}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Upload Logo (Preview)
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>loadImage(e.target.files?.[0],'logoImage')}
+                      className="mt-1 block w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Upload Watermark Photo (Preview)
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>loadImage(e.target.files?.[0],'portraitImage')}
+                      className="mt-1 block w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700 sm:col-span-2">Watermark Lightness: {cardOptions.watermarkOpacity ?? 8}%
+                    <input type="range" min={0} max={18} value={cardOptions.watermarkOpacity ?? 8}
+                      onChange={e=>setCardOptions(v=>({...v,watermarkOpacity:Number(e.target.value)}))}
+                      className="mt-2 block w-full accent-teal-700"/>
+                  </label>
+                </div>
                 <div className="mt-3 flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
                     <input type="checkbox" checked={cardOptions.showInstitution !== false}
                       onChange={(e)=>setCardOptions(v=>({...v,showInstitution:e.target.checked}))}
                       className="h-4 w-4"/> Show Institution
                   </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showLogo !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showLogo:e.target.checked}))}/> Show Logo</label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showPortrait !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showPortrait:e.target.checked}))}/> Show Photo</label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showSubjectTable !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showSubjectTable:e.target.checked}))}/> Subject Table</label>
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
                     <input type="checkbox" checked={cardOptions.showMetrics !== false}
                       onChange={(e)=>setCardOptions(v=>({...v,showMetrics:e.target.checked}))}
@@ -366,6 +464,19 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                     placeholder="Example: Please review questions you answered incorrectly."
                     className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
                 </label>
+                <button type="button" onClick={saveCardDesign}
+                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-900 px-4 text-xs font-bold text-white hover:bg-sky-800"><Save size={15}/> Save Design (Local Draft)</button>
+                {designNotice && <p role="status" className="mt-2 text-xs text-teal-800">{designNotice}</p>}
+              </div>
+            )}
+            {selected.status === 'submitted' && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <button type="button" onClick={()=>void copyStudentLink(selected)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-sky-800 hover:bg-sky-50"><Copy size={15}/> Copy Secure Student Link</button>
+                <button type="button" onClick={()=>void shareStudentLink(selected)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white hover:bg-teal-800"><Share2 size={15}/> Share Digitally</button>
+                <span className="text-[11px] text-slate-500">Login required; no marks in link</span>
+                {deliveryNotice && <p role="status" className="w-full text-xs text-teal-800">{deliveryNotice}</p>}
               </div>
             )}
             {selected.status === 'submitted' ? (
