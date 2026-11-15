@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
-import { validateTeacherQualifications, validateTeacherResume } from '../lib/teacherManagementValidation';
+import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -89,8 +89,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
       setError('Enter a valid name, subject, class and reason (12–1000 characters).');
       return;
     }
-    if(requestedClasses.length===0||requestedSubjects.length===0||
-       !requestedClasses.includes(classLevel)||!requestedSubjects.includes(subject)){
+    if(!validateTeacherRequestedScopes(classLevel,subject,requestedClasses,requestedSubjects)){
       setError('Select at least one class and subject, including the primary class and subject.');return;
     }
     if(resumeFile&&!validateTeacherResume(resumeFile)){
