@@ -33,7 +33,8 @@ test('admin review actions require validated Super Admin, reason and confirmatio
 });
 
 test('SQL backend grants minimal class-scoped materials rights and never allows self-approval',()=>{
-  assert.ok(sql.startsWith('-- REVIEW ONLY'));
+  assert.ok(sql.includes('-- REVIEW ONLY'));
+  assert.ok(sql.startsWith('-- ACTIVATION UPDATE'));
   for(const anchor of [
     'security definer',"set search_path=''",
     "p_action not in ('approve','reject')",
