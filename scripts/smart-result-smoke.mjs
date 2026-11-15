@@ -48,6 +48,9 @@ try {
   console.log('PASS: Result-to-material deep links filter the public class and subject catalogue');
 
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button',{name:'Open notifications management'}).click();
+  await page.getByRole('heading',{name:'Communication',exact:true}).waitFor();
+  console.log('PASS: Admin notifications bell opens the actual Communication module');
   await page.getByRole('button', {name:'Study Materials',exact:true}).click();
   await page.getByRole('heading', {name:'Study Materials & Result Linking'}).waitFor();
   await page.getByRole('button', {name:'Staff Permissions',exact:true}).click();
