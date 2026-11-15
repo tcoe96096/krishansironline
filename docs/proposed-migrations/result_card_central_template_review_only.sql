@@ -1,3 +1,7 @@
+-- ACTIVATION UPDATE 2026-11-15: This reviewed SQL was activated in the ISOLATED
+-- krishan-sir-lms-preview database as preview_global_result_card_publisher_v2_20261115.
+-- ORIGINAL pre-approval warnings below are historical. This file is NOT a
+-- production migration and must not be auto-applied to Production.
 -- REVIEW ONLY — NOT APPLIED TO PREVIEW OR PRODUCTION
 -- Central published KSOL result-card template, versioned and Super Admin controlled.
 -- This file is deliberately NOT in supabase/migrations; separate explicit owner
