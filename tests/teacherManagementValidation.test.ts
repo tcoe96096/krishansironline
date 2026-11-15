@@ -1,5 +1,5 @@
 import {strict as assert} from 'node:assert';
-import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId} from '../src/lib/teacherManagementValidation';
+import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId,validateTeacherProfile,validateTeacherRequestedScopes} from '../src/lib/teacherManagementValidation';
 
 const a=normalizeTeacherAssignments([
   {classLevel:'10',subject:'History',workType:'materials.draft'},
@@ -17,3 +17,12 @@ assert.equal(validateTeacherResume({name:'resume.pdf',size:6*1024*1024,type:'app
 assert.equal(isValidTeacherEmployeeId('KSOL-T-A1B2C3D4'),true);
 assert.equal(isValidTeacherEmployeeId('KSOL-T-123'),false);
 console.log('Teacher Management v2 input validation: PASS (draft-only)');
+
+assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'teacher@example.org',phone:'+91 9876543210',experienceYears:5}),true);
+assert.equal(validateTeacherProfile({displayName:' ',contactEmail:'teacher@example.org',phone:'',experienceYears:null}),false);
+assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'invalid',phone:'',experienceYears:null}),false);
+assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone:'',experienceYears:-1}),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10','11'],['History','Political Science']),true);
+assert.equal(validateTeacherRequestedScopes('10','History',['11'],['History']),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10','10'],['History']),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10'],['History','invalid']),false);
