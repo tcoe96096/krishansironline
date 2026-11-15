@@ -100,7 +100,7 @@ export function parseReportCardTemplate(json: string): ReportCardTemplateBackup 
 
 /** Local draft is scoped to a verified admin's account ID on this device. */
 export function localReportDraftKey(userId: string): string {
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(userId))
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId))
     throw new Error('A valid signed-in account is required.');
   return 'ksol.report-card-template.draft.v2.' + userId.toLowerCase();
 }
