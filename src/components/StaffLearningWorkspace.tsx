@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { TeacherEnrollmentApplication } from './TeacherEnrollmentApplication';
 
 type StaffGrant = { user_id:string; role:string; permissions:string[]; scope_class:string|null; is_active:boolean };
 type Material = {
@@ -158,6 +159,7 @@ export const StaffLearningWorkspace: React.FC = () => {
     </section>
     {error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{error}</p>}
     {message&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">{message}</p>}
+    {!grant && <TeacherEnrollmentApplication/>}
     {!grant||!ready?<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><LockKeyhole className="text-amber-900"/><h2 className="mt-2 font-extrabold text-amber-950">Staff permission backend not activated</h2><p className="mt-2 text-sm text-amber-900">Super Admin must approve the scoped grant migration and assign your account. No draft editing is allowed yet.</p></div>:<>
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Your material drafts</h2><button onClick={()=>setReload(n=>n+1)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><RefreshCw size={15}/>Refresh</button></div>
