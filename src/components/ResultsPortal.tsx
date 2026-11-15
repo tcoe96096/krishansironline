@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
+import type { ResultReportTheme } from './SmartResultReportCard';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import {
   Activity, ArrowRight, Award, BookOpen, CalendarDays, CheckCircle2, ChevronRight,
@@ -40,6 +42,7 @@ export const ResultsPortal: React.FC = () => {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ResultFilter>('all');
   const [selected, setSelected] = useState<TestAttempt | null>(null);
+  const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
   const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
@@ -89,31 +92,24 @@ export const ResultsPortal: React.FC = () => {
     (!query.trim() || (nameOf(item.test_id) + ' ' + item.attempt_number).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   ), [attempts, filter, query, tests, en]);
 
+  const resultCardData = (attempt: TestAttempt) => ({
+    attempt,
+    title: nameOf(attempt.test_id),
+    subject: tests.find((test) => test.id === attempt.test_id)?.subject,
+    student: {
+      name: profile?.student_name || (en ? 'Student' : 'विद्यार्थी'),
+      classLevel: profile?.class_level,
+      rollNo: profile?.roll_no,
+      school: profile?.school_name
+    },
+    isEnglish: en,
+    theme: cardTheme
+  });
+
   const printResult = (attempt: TestAttempt) => {
-    if (!isCompleted(attempt) || !user) return;
-    const popup = window.open('', '_blank', 'width=850,height=950');
-    if (!popup) { setError(en ? 'Allow pop-ups to print the report.' : 'रिपोर्ट प्रिंट करने के लिए Pop-ups की अनुमति दें।'); return; }
-    popup.opener = null;
-    const incorrect = Math.max(0, Number(attempt.attempted_count || 0) - Number(attempt.correct_count || 0));
-    const documentHtml = [
-      '<!doctype html><html lang="', en ? 'en' : 'hi', '"><head><meta charset="utf-8"><title>Krishan Sir Result</title>',
-      '<style>body{font:16px system-ui,Arial,sans-serif;color:#0b2445;padding:42px;max-width:780px;margin:auto}',
-      'header{padding:26px;border-radius:18px;background:#092d63;color:white}h1{font-size:28px;margin:0}',
-      'small{color:#64748b}.score{font-size:44px;font-weight:800;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}',
-      '.cell{padding:15px;border:1px solid #cbd5e1;border-radius:12px}.cell b{display:block;font-size:22px}',
-      'footer{margin-top:36px;border-top:1px solid #ddd;padding-top:20px;font-size:12px;color:#475569}</style></head><body>',
-      '<header><h1>KRISHAN SIR ONLINE</h1><p>Individual Test Result · निजी परिणाम</p></header>',
-      '<h2>', htmlSafe(nameOf(attempt.test_id)), '</h2><p>', htmlSafe(profile?.student_name || 'Student'),
-      ' · ', htmlSafe(profile?.class_level || ''), ' · ', htmlSafe(dateOf(attempt.submitted_at)), '</p>',
-      '<div class="score">', htmlSafe(attempt.score), ' / ', htmlSafe(attempt.total_marks), '</div>',
-      '<div class="grid"><div class="cell"><b>', htmlSafe(formatPercent(attempt.percentage)), '</b>Percentage</div>',
-      '<div class="cell"><b>', htmlSafe(attempt.correct_count), '</b>Correct</div>',
-      '<div class="cell"><b>', incorrect, '</b>Incorrect</div></div>',
-      '<footer>Score is recorded by the Krishan Sir Online server. This is a learning-platform report, not an external board marksheet.</footer>',
-      '<script>window.onload=function(){window.print();};<\/script></body></html>'
-    ].join('');
-    popup.document.write(documentHtml);
-    popup.document.close();
+    if (!isCompleted(attempt) || !user || !openSmartResultPrint(resultCardData(attempt))) {
+      setError(en ? 'Allow pop-ups to print the report.' : 'रिपोर्ट प्रिंट करने के लिए Pop-ups की अनुमति दें।');
+    }
   };
 
   return (
@@ -292,27 +288,20 @@ export const ResultsPortal: React.FC = () => {
         )}
 
         {selected && user && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4" onClick={() => setSelected(null)}>
-            <div role="dialog" aria-modal="true" aria-labelledby="result-dialog-title" onClick={(event) => event.stopPropagation()} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-              <div className="flex items-start justify-between gap-2">
-                <div><p className="text-xs font-bold text-teal-700">KRISHAN SIR • RESULT REPORT</p><h3 id="result-dialog-title" className="mt-2 text-xl font-extrabold text-slate-900">{nameOf(selected.test_id)}</h3></div>
-                <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><X size={19}/></button>
+          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/75 p-3 sm:p-6" onClick={() => setSelected(null)}>
+            <div role="dialog" aria-modal="true" aria-label={en ? 'Smart Result Report Card' : 'स्मार्ट परिणाम पत्र'} onClick={(event) => event.stopPropagation()} className="my-auto w-full max-w-2xl space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-lg">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  {en ? 'Card design' : 'रिपोर्ट कार्ड थीम'}
+                  <select value={cardTheme} onChange={(event) => setCardTheme(event.target.value as ResultReportTheme)} className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    <option value="modern">{en ? 'Modern' : 'मॉडर्न'}</option>
+                    <option value="classic">{en ? 'Classic' : 'क्लासिक'}</option>
+                    <option value="minimal">{en ? 'Minimal' : 'मिनिमल'}</option>
+                  </select>
+                </label>
+                <button type="button" aria-label={en ? 'Close report' : 'रिपोर्ट बंद करें'} onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-100"><X size={17}/>{en ? 'Close' : 'बंद करें'}</button>
               </div>
-              <p className="mt-2 text-sm text-slate-500">{profile?.student_name} · {dateOf(selected.submitted_at)}</p>
-              <div className="mt-5 rounded-2xl bg-gradient-to-r from-sky-950 to-teal-800 p-5 text-white">
-                <p className="text-xs text-sky-100">{en ? 'Verified score' : 'सर्वर पर दर्ज अंक'}</p>
-                <p className="mt-1 text-4xl font-extrabold tabular-nums">{Number(selected.score ?? 0)}<span className="text-xl text-sky-200"> / {Number(selected.total_marks ?? 0)}</span></p>
-                <p className="mt-1 text-sm font-bold text-teal-200">{formatPercent(selected.percentage)}</p>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                {[
-                  { label: en ? 'Correct' : 'सही', value: selected.correct_count ?? 0, icon: CheckCircle2 },
-                  { label: en ? 'Incorrect' : 'गलत', value: Math.max(0, Number(selected.attempted_count ?? 0) - Number(selected.correct_count ?? 0)), icon: XCircle },
-                  { label: en ? 'Attempted' : 'प्रयास', value: selected.attempted_count ?? 0, icon: Activity }
-                ].map(({label,value,icon:Icon}) => <div key={label} className="rounded-xl bg-slate-50 p-3"><Icon size={16} className="mx-auto text-sky-700"/><p className="mt-2 text-xl font-bold text-slate-900">{value}</p><p className="text-[11px] text-slate-500">{label}</p></div>)}
-              </div>
-              <p className="mt-4 text-xs text-slate-500">{en ? 'This report uses the existing server-recorded assessment outcome. It is not an external board certificate.' : 'यह रिपोर्ट सर्वर पर दर्ज परिणाम पर आधारित है; किसी बाहरी बोर्ड का प्रमाणपत्र नहीं है।'}</p>
-              <button type="button" onClick={() => printResult(selected)} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#092d63] px-5 py-3 font-bold text-white hover:bg-sky-800"><Printer size={17}/>{en ? 'Print / Save as PDF' : 'प्रिंट / PDF सेव करें'}</button>
+              <SmartResultReportCard data={resultCardData(selected)} onPrint={() => printResult(selected)}/>
             </div>
           </div>
         )}
