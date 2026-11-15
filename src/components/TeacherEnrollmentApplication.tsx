@@ -213,6 +213,12 @@ export const TeacherEnrollmentApplication: React.FC = () => {
              <textarea required minLength={12} maxLength={1000} rows={3} value={reason}
                onChange={e=>setReason(e.target.value)} placeholder="Describe your teaching role and why access is needed."
                className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm"/></label>
+           <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950" aria-label="Application submission summary">
+             <h3 className="font-extrabold">Before submitting — what KSOL will receive</h3>
+             <p className="mt-2">Submitted to the current backend: <strong>{name.trim()||'Your name'} · Class {classLevel} · {subject}</strong> and your application reason.</p>
+             <p className="mt-1">Preview only, NOT submitted: <strong>{requestedClasses.length} selected classes, {requestedSubjects.length} selected subjects{qualification.trim()?', qualification':''}{resumeFile?', resume file':''}</strong>.</p>
+             <p className="mt-2 font-semibold">Your extra selections and resume will not be attached to this application. Super Admin will only see the primary class and subject until the secure extended backend is approved.</p>
+           </div>
            <button type="submit" disabled={busy||reason.trim().length<12||name.trim().length<2}
              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sky-900 px-4 text-sm font-bold text-white disabled:opacity-50">
              <Send size={16}/>{busy?'Submitting…':'Request Teacher Access'}
