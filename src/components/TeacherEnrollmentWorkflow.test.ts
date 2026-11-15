@@ -55,3 +55,13 @@ test('draft SQL is not an applied production migration',()=>{
   assert.ok(workflow.includes('TeacherEnrollmentWorkflow.test.ts'));
   assert.ok(sql.includes('NOT executed'));
 });
+
+test('public account buttons navigate to the correct workspace instead of reopening login',()=>{
+  const header=source('./Header.tsx');
+  assert.ok(header.includes("const accountDestination = isAdmin ? 'admin' : isStudentAccount ? 'studentDashboard' : 'staffWorkspace'"));
+  assert.ok(header.includes("if (user) handleNavClick(accountDestination); else onOpenAuth();"));
+  assert.ok(header.includes('Open account workspace'));
+  assert.ok(header.includes('Teacher / Staff Account'));
+  assert.ok(header.includes('{isStudentAccount && <button role="menuitem"'));
+  assert.ok(header.includes('profile?.user_id === user.id'));
+});
