@@ -10,6 +10,8 @@ on:
       - 'src/components/AdminStaffPermissions.tsx'
       - 'src/services/resultMetrics.ts'
       - 'src/services/resultMetrics.test.ts'
+      - 'src/services/reportCardTemplate.ts'
+      - 'src/services/reportCardTemplate.test.ts'
       - 'src/services/learningLinks.ts'
       - 'src/services/learningLinks.test.ts'
       - 'src/services/staffGrantPolicy.ts'
@@ -47,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
       - name: Run result unit tests
-        run: node --import tsx --test src/services/resultMetrics.test.ts src/components/SmartResultReportCard.test.tsx src/services/attemptDisplayStatus.test.ts src/services/learningLinks.test.ts src/services/staffGrantPolicy.test.ts src/components/AdminTestResults.test.tsx
+        run: node --import tsx --test src/services/resultMetrics.test.ts src/components/SmartResultReportCard.test.tsx src/services/attemptDisplayStatus.test.ts src/services/learningLinks.test.ts src/services/staffGrantPolicy.test.ts src/components/AdminTestResults.test.tsx src/services/reportCardTemplate.test.ts
       - name: Verify TypeScript
         run: npm run lint
       - name: Verify production-style build only
