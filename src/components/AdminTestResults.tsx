@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
+import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
+import type { ResultReportTheme } from './SmartResultReportCard';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
@@ -38,6 +40,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
   const [sort, setSort] = useState<Sort>('latest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<TestAttempt | null>(null);
+  const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
 
   const load = useCallback(async () => {
     if (demoMode) { setLoading(false); return; }
@@ -309,25 +312,52 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4" onClick={() => setSelected(null)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="admin-result-title" onClick={(event) => event.stopPropagation()} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-            <div className="flex items-start justify-between gap-3">
-              <div><p className="text-[11px] font-extrabold text-teal-700">ADMIN • RESULT DETAILS</p><h3 id="admin-result-title" className="mt-2 text-xl font-extrabold text-slate-900">{titleOf(testById.get(selected.test_id))}</h3></div>
-              <button type="button" aria-label="Close details" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20}/></button>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/75 p-3 sm:p-6" onClick={() => setSelected(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Student result details" onClick={(event) => event.stopPropagation()} className="my-auto w-full max-w-2xl space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-lg">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                Report Theme
+                <select value={cardTheme} onChange={(event) => setCardTheme(event.target.value as ResultReportTheme)} className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs">
+                  <option value="modern">Modern Digital</option>
+                  <option value="classic">Classic Academic</option>
+                  <option value="minimal">Minimal Pro</option>
+                </select>
+              </label>
+              <button type="button" onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><X size={17}/> Close</button>
             </div>
-            <p className="mt-3 text-sm font-bold text-slate-800">{studentById.get(selected.student_id)?.student_name || 'विद्यार्थी विवरण अनुपलब्ध'}</p>
-            <p className="mt-1 text-xs text-slate-500">रोल: {studentById.get(selected.student_id)?.roll_no || '—'} · Attempt #{selected.attempt_number}</p>
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              {[
-                { label: 'स्थिति', value: statusName(selected.status) },
-                { label: 'जमा दिनांक', value: dateText(selected.submitted_at) },
-                { label: 'अंक', value: selected.status === 'submitted' ? String(selected.score) + ' / ' + selected.total_marks : '—' },
-                { label: 'प्रतिशत', value: selected.status === 'submitted' ? pctText(selected.percentage) : '—' },
-                { label: 'सही उत्तर', value: selected.status === 'submitted' ? String(selected.correct_count ?? 0) : '—' },
-                { label: 'प्रयास किए', value: selected.status === 'submitted' ? String(selected.attempted_count ?? 0) : '—' }
-              ].map(({label,value}) => <div key={label} className="rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 font-extrabold text-slate-900">{value}</p></div>)}
-            </div>
-            <button type="button" onClick={() => printReport([selected])} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800"><Printer size={17}/> Print / Save PDF</button>
+            {selected.status === 'submitted' ? (
+              <SmartResultReportCard
+                data={{
+                  attempt: selected,
+                  title: titleOf(testById.get(selected.test_id)),
+                  subject: testById.get(selected.test_id)?.subject,
+                  student: {
+                    name: studentById.get(selected.student_id)?.student_name || 'विद्यार्थी',
+                    rollNo: studentById.get(selected.student_id)?.roll_no,
+                    classLevel: studentById.get(selected.student_id)?.class_level,
+                    school: studentById.get(selected.student_id)?.school_name
+                  },
+                  theme: cardTheme
+                }}
+                onPrint={() => {
+                  const student = studentById.get(selected.student_id);
+                  if (!openSmartResultPrint({
+                    attempt: selected, title: titleOf(testById.get(selected.test_id)),
+                    subject: testById.get(selected.test_id)?.subject,
+                    student: {
+                      name: student?.student_name || 'विद्यार्थी', rollNo: student?.roll_no,
+                      classLevel: student?.class_level, school: student?.school_name
+                    }, theme: cardTheme
+                  })) setError('Print window blocked. कृपया Pop-ups Allow करें।');
+                }}
+              />
+            ) : (
+              <div className="rounded-2xl bg-white p-6 shadow-lg">
+                <h3 className="text-lg font-extrabold text-slate-900">{titleOf(testById.get(selected.test_id))}</h3>
+                <p className="mt-3 text-sm text-slate-600">Result status: <strong>{statusName(selected.status)}</strong></p>
+                <p className="mt-2 text-xs text-slate-500">इस प्रयास का पूरा परिणाम अभी नहीं है। बिना Submit के कोई अंक या Result Card तैयार नहीं किया जाएगा।</p>
+              </div>
+            )}
           </div>
         </div>
       )}
