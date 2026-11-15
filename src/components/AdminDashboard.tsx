@@ -56,9 +56,12 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite, demoMode = fa
     let active=true;
     setVerifiedRole('checking');
     if (demoMode || !user || !isAdmin) return;
-    void requireSupabase().rpc('is_super_admin')
-      .then(({data,error}) => {if(active&&!error)setVerifiedRole(data===true?'super_admin':'admin');})
-      .catch(() => {if(active)setVerifiedRole('checking');});
+    void (async () => {
+      try {
+        const {data,error}=await requireSupabase().rpc('is_super_admin');
+        if(active&&!error)setVerifiedRole(data===true?'super_admin':'admin');
+      }catch {if(active)setVerifiedRole('checking');}
+    })();
     return () => {active=false;};
   },[demoMode,user?.id,isAdmin]);
   const handleAdminLogin = async () => {
