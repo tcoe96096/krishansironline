@@ -19,6 +19,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   const [requests,setRequests]=useState<TeacherRequest[]>([]);
   const [reason,setReason]=useState('');
   const [selected,setSelected]=useState<string|null>(null);
+  const [showHistory,setShowHistory]=useState(false);
   const [notice,setNotice]=useState('');
   const [error,setError]=useState('');
   const [reload,setReload]=useState(0);
@@ -76,6 +77,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   };
 
   const pending=requests.filter(r=>r.status==='pending');
+  const history=requests.filter(r=>r.status!=='pending');
   return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-label="Teacher approval requests">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
@@ -106,6 +108,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
            <div className="flex flex-wrap items-start justify-between gap-2">
              <div>
                <h4 className="text-sm font-extrabold text-slate-900">{req.display_name}</h4>
+               <p className="mt-1 text-xs font-semibold text-sky-900">Status: Pending · Submitted: {new Date(req.created_at).toLocaleString()}</p>
                <p className="mt-1 text-xs text-slate-600">Class {req.requested_class} · {req.subject}</p>
                <p className="mt-1 break-all font-mono text-[11px] text-slate-500">Account: {req.applicant_id}</p>
                <p className="mt-2 text-xs text-slate-700">{req.reason}</p>
@@ -133,6 +136,15 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
              </div>
            </div>}
          </article>)}
+       </div>
+       <div className="mt-5 border-t border-slate-200 pt-4">
+         <button type="button" onClick={()=>setShowHistory(v=>!v)} aria-expanded={showHistory} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-sky-900">{showHistory?'Hide':'Show'} previous requests ({history.length})</button>
+         {showHistory&&<div className="mt-3 space-y-2">{history.map(req=><article key={req.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+           <p className="font-bold text-slate-900">{req.display_name} · {req.status.toUpperCase()}</p>
+           <p className="mt-1">Class {req.requested_class} · {req.subject} · Submitted {new Date(req.created_at).toLocaleString()}</p>
+           <p className="mt-1 break-all font-mono">Account ID: {req.applicant_id}</p>
+           {req.review_reason&&<p className="mt-1">Decision note: {req.review_reason}</p>}
+         </article>)}{history.length===0&&<p className="text-xs text-slate-500">No previous applications.</p>}</div>}
        </div>
      </>}
     {error&&<p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-xs text-rose-900">{error}</p>}
