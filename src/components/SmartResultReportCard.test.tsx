@@ -85,3 +85,41 @@ test('result report printing escapes student-provided markup before inserting HT
 test('non-submitted report never attempts opening a print window',()=>{
   assert.equal(openSmartResultPrint(report({attempt:{...submitted,status:'in_progress'}})),false);
 });
+
+test('admin design options change presentation only, not server-recorded grades', () => {
+  const original = report();
+  const customized = report({
+    options: {showInstitution:false,showMetrics:false,footerNote:'Keep revising every day.'}
+  });
+  const standardHtml = renderToStaticMarkup(React.createElement(SmartResultReportCard,{data:original}));
+  const customHtml = renderToStaticMarkup(React.createElement(SmartResultReportCard,{data:customized}));
+  assert.match(standardHtml,/Example School/);
+  assert.ok(!customHtml.includes('Example School'));
+  assert.ok(!customHtml.includes('>Incorrect<'));
+  assert.match(customHtml,/Keep revising every day/);
+  assert.match(customHtml,/80\.0%/);
+  assert.match(customHtml,/32/);
+  assert.equal(original.attempt.score,customized.attempt.score);
+});
+
+test('customized print note is HTML-escaped and does not change scores', () => {
+  const written:string[]=[];
+  const previous=(globalThis as unknown as {window?:unknown}).window;
+  (globalThis as unknown as {window?:unknown}).window={
+    open:()=>({opener:null,document:{write:(text:string)=>written.push(text),close:()=>{}}})
+  };
+  try {
+    const success = openSmartResultPrint(report({
+      options:{showInstitution:false,showMetrics:false,footerNote:'Review <img src=x onerror=alert(1)>'}
+    }));
+    assert.equal(success,true);
+    const output=written.join('');
+    assert.ok(!output.includes('Example School'));
+    assert.ok(!output.includes('<div class="metrics">'));
+    assert.match(output,/Review &lt;img src=x onerror=alert\(1\)&gt;/);
+    assert.match(output,/32/);
+    assert.match(output,/80\.0%/);
+  }finally{
+    (globalThis as unknown as {window?:unknown}).window=previous;
+  }
+});
