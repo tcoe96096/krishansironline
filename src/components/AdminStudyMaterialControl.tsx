@@ -3,6 +3,7 @@ import { BookOpen, ClipboardList, ExternalLink, GraduationCap, LockKeyhole, Sear
 import { STUDY_CHAPTERS } from '../data/portalData';
 import { getPublishedTests, type PublishedTest } from '../services/testService';
 import { studyMaterialUrl } from '../services/learningLinks';
+import { AdminMaterialReview } from './AdminMaterialReview';
 
 type Props = {
   onOpenAcademic: () => void;
@@ -74,6 +75,7 @@ export const AdminStudyMaterialControl: React.FC<Props> = ({ onOpenAcademic, onO
           {!shown.length && <p className="p-5 text-sm text-slate-500">No chapters matched these filters.</p>}
         </div>
       </div>
+      <AdminMaterialReview demoMode={demoMode}/>
       <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5">
         <h3 className="flex items-center gap-2 text-sm font-bold text-sky-950"><ShieldCheck size={18}/> Role separation & permissions</h3>
         <p className="mt-2 text-xs leading-6 text-sky-900">Super Admin controls staff grants and publishing; Admin manages assigned operations; Teacher prepares assigned content; Students view published content and their own learning progress. The new materials database authorization remains a review-only proposal until its security checks pass.</p>
