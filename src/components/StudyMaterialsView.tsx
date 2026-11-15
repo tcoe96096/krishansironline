@@ -6,6 +6,7 @@ import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { studyFiltersFromSearch } from '../services/learningLinks';
+import { PublishedMaterialLibrary } from './PublishedMaterialLibrary';
 import { getMyLearningProgressForMaterial, saveMyLearningProgress } from '../services/learningProgressService';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
 
@@ -142,6 +143,8 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             />
           </div>
         </div>
+
+        <PublishedMaterialLibrary classLevel={selectedClass} subject={selectedSubject} english={language==='en'}/>
 
         {/* Class Level Selector Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-slate-200 mb-6 scrollbar-none">
