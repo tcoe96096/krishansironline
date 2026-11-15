@@ -5,6 +5,13 @@ import type { TestAttempt } from '../services/testService';
 
 /** Display-only report: values come from a previously graded, server-recorded attempt. */
 export type ResultReportTheme = 'modern' | 'classic' | 'minimal';
+/** Presentation-only editing; never overrides student identity, grades or recorded answers. */
+export type ResultReportOptions = {
+  showInstitution?: boolean;
+  showMetrics?: boolean;
+  footerNote?: string;
+};
+
 export type ResultReportStudent = {
   name: string;
   rollNo?: string | null;
@@ -18,6 +25,7 @@ export type ResultReportData = {
   student: ResultReportStudent;
   theme?: ResultReportTheme;
   isEnglish?: boolean;
+  options?: ResultReportOptions;
 };
 
 const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => (
@@ -44,6 +52,10 @@ export function openSmartResultPrint(data: ResultReportData): boolean {
   const en = Boolean(data.isEnglish);
   const style = themeStyles[data.theme || 'modern'];
   const attempt = data.attempt;
+  const options = data.options || {};
+  const showInstitution = options.showInstitution !== false;
+  const showMetrics = options.showMetrics !== false;
+  const footerNote = String(options.footerNote || '').trim().slice(0, 180);
   const metrics = submittedMetrics(attempt);
   if (!metrics) return false;
   const { correct, attempted, incorrect } = metrics;
@@ -70,20 +82,23 @@ export function openSmartResultPrint(data: ResultReportData): boolean {
     '<div class="columns"><div class="panel"><small>', en ? 'Student name' : 'विद्यार्थी का नाम', '</small><b>', escapeHtml(data.student.name || '—'), '</b></div>',
     '<div class="panel"><small>', en ? 'Roll number' : 'रोल नंबर', '</small><b>', escapeHtml(data.student.rollNo || '—'), '</b></div>',
     '<div class="panel"><small>', en ? 'Class / Course' : 'कक्षा / कोर्स', '</small><b>', escapeHtml(data.student.classLevel || '—'), '</b></div>',
-    '<div class="panel"><small>', en ? 'School / Institution' : 'विद्यालय / संस्थान', '</small><b>', escapeHtml(data.student.school || '—'), '</b></div></div>',
+    ...(showInstitution ? ['<div class="panel"><small>', en ? 'School / Institution' : 'विद्यालय / संस्थान', '</small><b>', escapeHtml(data.student.school || '—'), '</b></div>'] : []), '</div>',
     '<div class="score"><small>', en ? 'SERVER-RECORDED SCORE' : 'सर्वर पर दर्ज प्राप्तांक', '</small><div><strong>',
     escapeHtml(attempt.score ?? '—'), '</strong><span> / ', escapeHtml(attempt.total_marks ?? '—'), '</span></div>',
     '<b style="color:var(--accent);margin-top:7px">', escapeHtml(percentageLabel(attempt.percentage)), '</b></div>',
-    '<div class="metrics"><div class="metric"><small>', en ? 'Correct' : 'सही', '</small><strong>', correct, '</strong></div>',
-    '<div class="metric"><small>', en ? 'Incorrect' : 'गलत', '</small><strong>', incorrect, '</strong></div>',
-    '<div class="metric"><small>', en ? 'Attempted' : 'प्रयास', '</small><strong>', attempted, '</strong></div>',
-    '<div class="metric"><small>', en ? 'Attempt number' : 'प्रयास क्रम', '</small><strong>', escapeHtml(attempt.attempt_number), '</strong></div></div>',
+...(showMetrics ? [
+      '<div class="metrics"><div class="metric"><small>', en ? 'Correct' : 'सही', '</small><strong>', correct, '</strong></div>',
+      '<div class="metric"><small>', en ? 'Incorrect' : 'गलत', '</small><strong>', incorrect, '</strong></div>',
+      '<div class="metric"><small>', en ? 'Attempted' : 'प्रयास', '</small><strong>', attempted, '</strong></div>',
+      '<div class="metric"><small>', en ? 'Attempt number' : 'प्रयास क्रम', '</small><strong>', escapeHtml(attempt.attempt_number), '</strong></div></div>'
+    ] : []),
     '<div class="panel"><div class="columns"><div><small>', en ? 'Subject' : 'विषय', '</small><b>', escapeHtml(data.subject || '—'), '</b></div>',
     '<div><small>', en ? 'Submitted on' : 'जमा करने की तारीख', '</small><b>', escapeHtml(dateText(attempt.submitted_at, en)), '</b></div></div></div>',
     '<div class="footer">', en ? 'Internal attempt reference' : 'आंतरिक प्रयास संदर्भ', ': ', escapeHtml(attempt.id),
     '<p>', en ? 'Automatically generated from this student’s recorded assessment. This is not a government, university, or external board certificate.'
       : 'यह रिपोर्ट वेबसाइट पर दर्ज विद्यार्थी के परीक्षा परिणाम से स्वतः तैयार हुई है। यह किसी सरकारी, विश्वविद्यालय या बाहरी बोर्ड का प्रमाणपत्र नहीं है।',
-    '</p></div><script>window.onload=function(){window.print();};<\/script></body></html>'
+    '</p>', ...(footerNote ? ['<p>', escapeHtml(footerNote), '</p>'] : []),
+    '</div><script>window.onload=function(){window.print();};<\/script></body></html>'
   ].join('');
   popup.document.write(doc);
   popup.document.close();
@@ -94,7 +109,10 @@ export const SmartResultReportCard: React.FC<{
   data: ResultReportData;
   onPrint?: () => void;
 }> = ({ data, onPrint }) => {
-  const { attempt, student, title, subject, theme = 'modern', isEnglish: en = false } = data;
+  const { attempt, student, title, subject, theme = 'modern', isEnglish: en = false, options = {} } = data;
+  const showInstitution = options.showInstitution !== false;
+  const showMetrics = options.showMetrics !== false;
+  const footerNote = String(options.footerNote || '').trim().slice(0, 180);
   const style = themeStyles[theme];
   if (attempt.status !== 'submitted') return null;
   const metrics = submittedMetrics(attempt);
@@ -111,7 +129,8 @@ export const SmartResultReportCard: React.FC<{
       <div className="space-y-5 p-5 sm:p-7">
         <div className="grid grid-cols-2 gap-3 text-sm">
           {[{k: en ? 'Student' : 'विद्यार्थी', v: student.name}, {k: en ? 'Roll No.' : 'रोल नंबर', v: student.rollNo},
-            {k: en ? 'Class' : 'कक्षा', v: student.classLevel}, {k: en ? 'Institution' : 'संस्थान', v: student.school},
+            {k: en ? 'Class' : 'कक्षा', v: student.classLevel},
+            ...(showInstitution ? [{k: en ? 'Institution' : 'संस्थान', v: student.school}] : []),
             {k: en ? 'Subject' : 'विषय', v: subject}, {k: en ? 'Date' : 'तारीख', v: dateText(attempt.submitted_at,en)}
           ].map((item) => <div key={item.k} className="min-w-0"><p className="text-[11px] font-semibold text-slate-500">{item.k}</p><p className="mt-1 truncate font-bold text-slate-900" title={item.v || '—'}>{item.v || '—'}</p></div>)}
         </div>
@@ -123,17 +142,18 @@ export const SmartResultReportCard: React.FC<{
           </div>
           <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full" style={{width:percentBarWidth(attempt.percentage),background:style.accent}}/></div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        {showMetrics && <div className="grid grid-cols-3 gap-2 text-center">
           {[{label: en ? 'Correct' : 'सही',v:correct,icon:CheckCircle2},
             {label:en ? 'Incorrect' : 'गलत',v:incorrect,icon:XCircle},
             {label:en ? 'Attempted' : 'प्रयास',v:attempted,icon:Target}].map(({label,v,icon:Icon}) =>
             <div key={label} className="rounded-xl bg-slate-50 p-3"><Icon size={18} className="mx-auto text-slate-500"/><p className="mt-2 text-lg font-extrabold text-slate-900">{v}</p><p className="text-[11px] text-slate-500">{label}</p></div>)}
-        </div>
+        </div>}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-[11px] text-slate-500">
           <span className="inline-flex items-center gap-1"><ShieldCheck size={15}/> {en ? 'Server-recorded result' : 'सर्वर पर दर्ज परिणाम'}</span>
-          <span>{en ? 'Attempt' : 'प्रयास'} #{attempt.attempt_number}</span>
+          <span>{en ? 'Attempt' : 'प्रयास'} #{attempt.attempt_number} · {en ? 'Ref' : 'संदर्भ'} {attempt.id.slice(-8)}</span>
         </div>
         <p className="text-[11px] text-slate-500">{en ? 'Platform assessment report, not an external board certificate.' : 'यह प्लेटफॉर्म की परीक्षा रिपोर्ट है, बाहरी बोर्ड का प्रमाणपत्र नहीं।'}</p>
+        {footerNote && <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-700">{footerNote}</p>}
         <button type="button" onClick={onPrint || (() => openSmartResultPrint(data))}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800" style={{background:style.main}}>
           <Printer size={17}/>{en ? 'Print / Save as PDF' : 'प्रिंट / PDF सेव करें'}
