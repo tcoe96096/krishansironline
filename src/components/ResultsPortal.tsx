@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
+import { displayAttemptStatus } from '../services/attemptDisplayStatus';
+import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import type { ResultReportTheme } from './SmartResultReportCard';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import {
@@ -11,7 +13,7 @@ import {
 } from 'lucide-react';
 
 type ResultTab = 'history' | 'insights' | 'external';
-type ResultFilter = 'all' | 'submitted' | 'in_progress' | 'expired';
+type ResultFilter = 'all' | DisplayAttemptStatus;
 const officialPortals = [
   { id: 'cbse', name: 'CBSE Results', hi: 'सीबीएसई परिणाम', subtitle: 'Central Board of Secondary Education', url: 'https://results.cbse.nic.in/' },
   { id: 'nta', name: 'National Testing Agency', hi: 'राष्ट्रीय परीक्षा एजेंसी', subtitle: 'NTA official examinations portal', url: 'https://www.nta.ac.in/' },
@@ -27,7 +29,8 @@ const statusStyle: Record<ResultFilter, string> = {
   all: 'bg-slate-100 text-slate-700',
   submitted: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   in_progress: 'bg-amber-50 text-amber-800 border-amber-200',
-  expired: 'bg-slate-100 text-slate-600 border-slate-200'
+  expired: 'bg-slate-100 text-slate-600 border-slate-200',
+  overdue: 'bg-orange-50 text-orange-800 border-orange-200'
 };
 
 export const ResultsPortal: React.FC = () => {
@@ -87,10 +90,11 @@ export const ResultsPortal: React.FC = () => {
     const latest = chronological.length ? Number(chronological[chronological.length - 1].percentage ?? 0) : null;
     return { average, best, latest, chronological };
   }, [completed]);
+  const nowEpochMs = Date.now();
   const filtered = useMemo(() => attempts.filter((item) =>
-    (filter === 'all' || item.status === filter) &&
+    (filter === 'all' || displayAttemptStatus(item, nowEpochMs) === filter) &&
     (!query.trim() || (nameOf(item.test_id) + ' ' + item.attempt_number).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  ), [attempts, filter, query, tests, en]);
+  ), [attempts, filter, query, tests, en, nowEpochMs]);
 
   const resultCardData = (attempt: TestAttempt) => ({
     attempt,
@@ -250,6 +254,7 @@ export const ResultsPortal: React.FC = () => {
                         <option value="submitted">{en ? 'Completed' : 'पूर्ण'}</option>
                         <option value="in_progress">{en ? 'In progress' : 'जारी'}</option>
                         <option value="expired">{en ? 'Expired' : 'समय समाप्त'}</option>
+                        <option value="overdue">{en ? 'Overdue (pending sync)' : 'अवधि पार (लंबित)'}</option>
                       </select>
                     </label>
                   </div>
@@ -263,8 +268,8 @@ export const ResultsPortal: React.FC = () => {
                   </div> : filtered.map((item) => (
                     <article key={item.id} className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4 transition hover:border-sky-200 hover:bg-sky-50/40 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0 flex-1">
-                        <span className={'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ' + statusStyle[item.status]}>
-                          {item.status === 'submitted' ? (en ? 'Completed' : 'पूर्ण') : item.status === 'in_progress' ? (en ? 'In progress' : 'जारी') : (en ? 'Expired' : 'समय समाप्त')}
+                        <span className={'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ' + statusStyle[displayAttemptStatus(item, nowEpochMs)]}>
+                          {displayAttemptStatus(item, nowEpochMs) === 'submitted' ? (en ? 'Completed' : 'पूर्ण') : displayAttemptStatus(item, nowEpochMs) === 'in_progress' ? (en ? 'In progress' : 'जारी') : displayAttemptStatus(item, nowEpochMs) === 'overdue' ? (en ? 'Overdue — not finalized' : 'अवधि पार — लंबित') : (en ? 'Expired' : 'समय समाप्त')}
                         </span>
                         <h4 className="mt-2 text-base font-extrabold text-slate-900">{nameOf(item.test_id)}</h4>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -278,7 +283,7 @@ export const ResultsPortal: React.FC = () => {
                           <p className="text-xs font-bold text-teal-700">{formatPercent(item.percentage)}</p>
                         </div>
                         <button type="button" onClick={() => setSelected(item)} className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-sky-900 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800">{en ? 'View report' : 'रिपोर्ट देखें'}<ChevronRight size={16}/></button>
-                      </div> : <a href={import.meta.env.BASE_URL + 'online-tests/'} className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 hover:bg-slate-50">{item.status === 'in_progress' ? (en ? 'Open test' : 'टेस्ट खोलें') : (en ? 'View tests' : 'टेस्ट देखें')}<ArrowRight size={15}/></a>}
+                      </div> : <a href={import.meta.env.BASE_URL + 'online-tests/'} className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-sky-800 hover:bg-slate-50">{displayAttemptStatus(item, nowEpochMs) === 'in_progress' ? (en ? 'Open test' : 'टेस्ट खोलें') : (en ? 'View tests' : 'टेस्ट देखें')}<ArrowRight size={15}/></a>}
                     </article>
                   ))}
                 </div>
