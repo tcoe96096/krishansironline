@@ -1,3 +1,7 @@
+-- ACTIVATION UPDATE 2026-11-15: This reviewed SQL was activated in the ISOLATED
+-- krishan-sir-lms-preview database as preview_study_material_scoped_authoring_20261115.
+-- ORIGINAL pre-approval warnings below are historical. This file is NOT a
+-- production migration and must not be auto-applied to Production.
 -- REVIEW-ONLY: unified Result + Study Material delegated authorization.
 -- Prerequisite: docs/proposed-migrations/result_staff_delegation_review_only.sql
 -- NOT a deployed migration; do not run on Production or Preview without owner approval.
