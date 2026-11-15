@@ -8,9 +8,14 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 import { StaffRoleMatrix } from './StaffRoleMatrix';
+import { delegationCapabilities, grantIsWithinRole, type DelegatedRole } from '../services/staffGrantPolicy';
 
 type StaffRecord = { user_id: string; role: 'admin' | 'super_admin'; created_at: string };
-import { delegationCapabilities, grantIsWithinRole, type DelegatedRole } from '../services/staffGrantPolicy';
+type DelegatedGrant = {
+  user_id: string; role: DelegatedRole; permissions: string[]; scope_class: string | null;
+  scope_test_id: string | null; is_active: boolean; change_reason: string; updated_at: string;
+};
+type GrantAudit = { id: number; operation: string; affected_user_id: string; actor_id: string; reason: string; created_at: string };
 const validUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 const modules = [
