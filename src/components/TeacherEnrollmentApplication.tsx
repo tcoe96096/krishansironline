@@ -150,6 +150,11 @@ export const TeacherEnrollmentApplication: React.FC = () => {
       <p className="mt-1 break-all">Account ID: <span className="font-mono">{user.id}</span></p>
       <p className="mt-2 text-slate-600">Your application is linked to this account ID. The Super Admin verifies your identity independently.</p>
     </div>
+    <div className="mt-3 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 sm:grid-cols-2" aria-label="Teacher identity and employee ID status">
+      <div><p className="font-bold text-slate-900">Login Identity</p><p className="mt-1 break-all">{accountEmail||'Authenticated account'}</p></div>
+      <div><p className="font-bold text-slate-900">Employee ID</p><p className="mt-1 text-amber-800">Not issued / not verified</p></div>
+      <p className="sm:col-span-2 text-slate-600">A unique Employee ID will be shown only after the approved server-side issuance workflow is implemented and verified. Application approval alone does not create a verified Employee ID in this preview.</p>
+    </div>
     {loading?<p className="mt-3 flex items-center gap-2 text-xs text-slate-600"><Loader2 size={15} className="animate-spin"/>Checking enrollment availability…</p>:
      !backendReady?<p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">
        Teacher application backend is awaiting separate approval and activation. Copy your Account ID above
