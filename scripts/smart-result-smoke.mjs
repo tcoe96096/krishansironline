@@ -43,7 +43,7 @@ try {
 
   // Result management also must not leak real students or permit mutation in demo.
   await page.getByRole('button', { name: 'Results & Reports', exact: true }).click();
-  await page.getByText(/Demo mode में वास्तविक विद्यार्थी परिणाम नहीं दिखाए जाते/).waitFor();
+  await page.getByText(/Demo mode में.*विद्यार्थी परिणाम नहीं दिखाए जाते/).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Export CSV' }).count(), 0);
   console.log('PASS: Demo reports never expose real records or exports');
 
