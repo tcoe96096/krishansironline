@@ -1,3 +1,7 @@
+-- ACTIVATION UPDATE 2026-11-15: This reviewed SQL was activated in the ISOLATED
+-- krishan-sir-lms-preview database as preview_teacher_enrollment_audited_requests_20261115.
+-- ORIGINAL pre-approval warnings below are historical. This file is NOT a
+-- production migration and must not be auto-applied to Production.
 -- REVIEW ONLY: teacher self-application + audited Super Admin approval.
 -- NOT executed; keep outside supabase/migrations/ pending explicit Preview approval.
 -- Prerequisites, in order: result_staff_delegation_review_only.sql and
