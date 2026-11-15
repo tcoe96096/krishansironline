@@ -60,3 +60,16 @@ test('student results and private inbox are filtered during render for active ac
   assert.ok(portalSource.includes("selected.status === 'submitted'"));
   assert.ok(portalSource.includes('visibleInbox = useMemo('));
 });
+
+test('teacher login, account reference and super admin enrollment guide are wired without self-assigning roles', () => {
+  const auth = readFileSync(new URL('../context/AuthContext.tsx', import.meta.url),'utf8');
+  const staff = readFileSync(new URL('./StaffLearningWorkspace.tsx', import.meta.url),'utf8');
+  const admin = readFileSync(new URL('./AdminStaffPermissions.tsx', import.meta.url),'utf8');
+  assert.ok(auth.includes("'staff-workspace'"));
+  assert.ok(auth.includes("const redirectTo = new URL(base + destination + '/', window.location.origin).toString()"));
+  assert.ok(staff.includes("signInWithGoogle('staff-workspace')"));
+  assert.ok(staff.includes('Copy Account ID'));
+  assert.ok(staff.includes('The Super Admin must independently verify your identity'));
+  assert.ok(admin.includes('How to Add a New Teacher'));
+  assert.ok(admin.includes('Role assignment is currently locked'));
+});
