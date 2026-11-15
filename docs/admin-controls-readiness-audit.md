@@ -25,7 +25,7 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 | Logo / header / watermark / footer controls | Admin Card Design editor | Live card preview and print; optional browser-local storage | **Local Draft only**, not global |
 | Design Backup Import / Export | Working JSON buttons in Card Studio | Versioned file, strict design field whitelist and no score/student fields | **Working for local Draft only** |
 | Save Design per Admin Account | Account-keyed browser storage | Separate signed-in Admin keys; not shared across devices | **Local Draft only**, not global |
-| Super Admin Global Template Publisher | Review-only SQL proposal | Approved template would use audited RPC and immutable versions | **Not activated; no migration applied** |
+| Super Admin Global Template Publisher | Button is visible, disabled until backend capability RPC confirms Super Admin | Audited publisher RPC + protected central template; local photo uploads excluded | **UI wired, NOT activated; no migration applied** |
 | A4 Student Card PDF download | Print button | Browser print dialog / Save as PDF | Functional in supported browser; not a direct PDF file service |
 | Bulk CSV | Export button | Browser-generated with formula escaping | Functional, current filtered set only |
 | Bulk print | Button | Browser print dialog | Functional, current filtered set |
@@ -51,6 +51,7 @@ Scope: Admin site controls for Result Cards, Student Report Delivery, Study Mate
 - Sidebar/overview previously presented placeholder modules beside real modules without a status badge. Five unimplemented modules now visibly show "Planned".
 - Admin card designs now support validated JSON Export/Import, and browser-local drafts are scoped by signed-in Admin UUID rather than shared globally across accounts. Imported backups cannot carry grades, identities or role data.
 - A central audited Result Card design publishing migration is prepared only as an unapplied proposal: `docs/proposed-migrations/result_card_central_template_review_only.sql`. Uploaded logo/photo files remain local-preview-only until separate secure asset hosting is approved.
+- Student Result Hub now contains a defensive read path for a published central template. While Preview database tables are absent, the previously working local theme selection remains available. No global template is currently published; published changes require server-side Super Admin RPC and an audit reason.
 
 ## Remaining release blockers
 
