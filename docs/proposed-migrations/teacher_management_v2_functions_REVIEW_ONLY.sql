@@ -22,6 +22,10 @@ BEGIN
     BEGIN
       UPDATE public.teacher_profiles SET employee_id=v_id,updated_at=now()
         WHERE user_id=p_teacher_user_id AND employee_id IS NULL;
+      INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason,details)
+        VALUES(auth.uid(),p_teacher_user_id,'employee_id.issued',
+          'Super Admin issued employee ID for approved teacher',
+          jsonb_build_object('employee_id',v_id));
       RETURN v_id;
     EXCEPTION WHEN unique_violation THEN
       -- Retry unpredictable identifiers only if another profile has the same ID.
@@ -87,6 +91,6 @@ REVOKE ALL ON FUNCTION public.teacher_v2_set_assignment(uuid,text,text,text,text
 COMMIT;
 -- SECURITY GATES BEFORE ANY EXECUTE GRANT:
 -- Verify public.is_super_admin() uses auth.uid() and cannot be spoofed.
--- Add approved grant policies, audited employee-ID issuance, and negative RLS tests.
+-- Add approved grant policies and negative RLS tests.
 -- Explicitly grant EXECUTE to authenticated ONLY after independent security review.
 -- Do not wire frontend RPC calls until that approval is complete.
