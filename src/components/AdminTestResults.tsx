@@ -3,7 +3,7 @@ import {
   Activity, ArrowDownToLine, ArrowRight, BarChart3, CalendarClock, CheckCircle2,
   ChevronLeft, ChevronRight, Clock3, ClipboardList, Download, Eye, FileBarChart2,
   FileDown, GraduationCap, LockKeyhole, Printer, RefreshCw, Search,
-  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save
+  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save, Send
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
@@ -43,6 +43,8 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
   });
   const [showCardDesigner, setShowCardDesigner] = useState(false);
   const [deliveryNotice, setDeliveryNotice] = useState('');
+  const [inAppDeliveryAvailable, setInAppDeliveryAvailable] = useState(false);
+  const [noticeSending, setNoticeSending] = useState(false);
   const [designNotice, setDesignNotice] = useState('');
 
   useEffect(() => {
@@ -75,6 +77,38 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     };
     reader.onerror = () => setDesignNotice('Image could not be loaded.');
     reader.readAsDataURL(file);
+  };
+  useEffect(() => {
+    let active = true;
+    if (demoMode || !selected || selected.status !== 'submitted') {
+      setInAppDeliveryAvailable(false); return;
+    }
+    // Do not offer a nonfunctional Send action unless the private backend
+    // exists AND this session is server-verified as Super Admin.
+    void (async () => {
+      try {
+        const client = requireSupabase();
+        const [role, inbox] = await Promise.all([
+          client.rpc('is_super_admin'),
+          client.from('result_delivery_notices').select('id').limit(1)
+        ]);
+        if (active) setInAppDeliveryAvailable(!role.error && role.data === true && !inbox.error);
+      } catch { if (active) setInAppDeliveryAvailable(false); }
+    })();
+    return () => { active = false; };
+  }, [demoMode,selected?.id,selected?.status]);
+
+  const sendInAppResult = async (attempt: TestAttempt) => {
+    if (!inAppDeliveryAvailable || noticeSending || attempt.status !== 'submitted') return;
+    setNoticeSending(true); setDeliveryNotice('');
+    try {
+      const client = requireSupabase();
+      const {error: deliveryError} = await client.rpc('send_result_to_student',{p_attempt_id:attempt.id});
+      if (deliveryError) throw deliveryError;
+      setDeliveryNotice('Result delivered to this student’s private in-app inbox. No marks were sent publicly.');
+    } catch (cause) {
+      setDeliveryNotice(cause instanceof Error ? cause.message : 'Private inbox delivery failed.');
+    } finally { setNoticeSending(false); }
   };
   const resultLink = (attempt: TestAttempt) => new URL(
     import.meta.env.BASE_URL + 'results/?resultId=' + encodeURIComponent(attempt.id), window.location.origin
@@ -475,7 +509,13 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-sky-800 hover:bg-sky-50"><Copy size={15}/> Copy Secure Student Link</button>
                 <button type="button" onClick={()=>void shareStudentLink(selected)}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white hover:bg-teal-800"><Share2 size={15}/> Share Digitally</button>
-                <span className="text-[11px] text-slate-500">Login required; no marks in link</span>
+                {inAppDeliveryAvailable && (
+                  <button type="button" disabled={noticeSending} onClick={()=>void sendInAppResult(selected)}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-sky-900 px-3 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-50">
+                    <Send size={15}/>{noticeSending?'Sending…':'Send to Student Inbox'}
+                  </button>
+                )}
+                <span className="text-[11px] text-slate-500">{inAppDeliveryAvailable?'Secure student inbox active':'Secure link sharing active · Personalized inbox requires backend activation'}</span>
                 {deliveryNotice && <p role="status" className="w-full text-xs text-teal-800">{deliveryNotice}</p>}
               </div>
             )}
