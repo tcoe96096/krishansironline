@@ -55,7 +55,7 @@ export function validateTeacherProfile(input:TeacherProfileInput):boolean {
   const email=input.contactEmail.trim();
   const phone=input.phone.trim();
   return name.length>=2&&name.length<=160&&
-    (email===''||(email.length<=254&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)))&&
+    (email===''||(email.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))&&
     (phone===''||(phone.length<=20&&/^\\+?[0-9 ()-]{7,20}$/.test(phone)))&&
     (input.experienceYears===null||(Number.isInteger(input.experienceYears)&&input.experienceYears>=0&&input.experienceYears<=70));
 }
