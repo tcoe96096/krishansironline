@@ -10,6 +10,7 @@ on:
       - 'src/components/AdminStaffPermissions.tsx'
       - 'src/services/resultMetrics.ts'
       - 'src/services/resultMetrics.test.ts'
+      - 'src/components/SmartResultReportCard.test.tsx'
       - 'docs/proposed-migrations/**'
       - '.github/workflows/result-system-unit-tests.yml'
   workflow_dispatch:
@@ -31,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
       - name: Run result unit tests
-        run: node --import tsx --test src/services/resultMetrics.test.ts
+        run: node --import tsx --test src/services/resultMetrics.test.ts src/components/SmartResultReportCard.test.tsx
       - name: Verify TypeScript
         run: npm run lint
       - name: Verify production-style build only
