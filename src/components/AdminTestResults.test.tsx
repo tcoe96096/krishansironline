@@ -52,3 +52,11 @@ test('notification bell and report navigation point to functional admin modules'
   assert.equal(dashboardSource.includes('bg-amber-500" />'),false);
 
 });
+
+test('student results and private inbox are filtered during render for active account', () => {
+  const portalSource = readFileSync(new URL('./ResultsPortal.tsx', import.meta.url), 'utf8');
+  assert.ok(portalSource.includes('loadedAttempts.filter(a => a.student_id === user.id)'));
+  assert.ok(portalSource.includes('selected.student_id === user.id'));
+  assert.ok(portalSource.includes("selected.status === 'submitted'"));
+  assert.ok(portalSource.includes('visibleInbox = useMemo('));
+});
