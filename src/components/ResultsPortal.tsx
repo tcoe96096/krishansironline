@@ -3,6 +3,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
+import { findOwnedSubmittedResult, percentageLabel } from '../services/resultMetrics';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
 import { studyMaterialUrl } from '../services/learningLinks';
 import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
@@ -26,7 +27,7 @@ const htmlSafe = (value: unknown): string => String(value ?? '').replace(/[&<>"'
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character] || character
 ));
 
-const formatPercent = (value: number | null | undefined) => Number(value ?? 0).toFixed(1) + '%';
+const formatPercent = percentageLabel;
 const isCompleted = (attempt: TestAttempt) => attempt.status === 'submitted';
 const statusStyle: Record<ResultFilter, string> = {
   all: 'bg-slate-100 text-slate-700',
@@ -76,7 +77,10 @@ export const ResultsPortal: React.FC = () => {
     Promise.all([getMyTestAttempts(), getPublishedTests()])
       .then(([history, catalogue]) => {
         if (!mounted) return;
-        setAttempts(history);
+        // Defence in depth: even if a service query is accidentally widened,
+        // never put another student's records into the active account's UI.
+        const ownHistory = history.filter((attempt) => attempt.student_id === user.id);
+        setAttempts(ownHistory);
         setTests(catalogue);
         // Optional private inbox: absent until the separately authorized backend
         // migration is installed. RLS must restrict rows to the recipient.
@@ -87,9 +91,7 @@ export const ResultsPortal: React.FC = () => {
         // A shared result URL is only a navigation hint. RLS and ownership determine access.
         const requestedResultId = new URLSearchParams(window.location.search).get('resultId');
         if (requestedResultId) {
-          const ownResult = history.find((attempt) =>
-            attempt.id === requestedResultId && attempt.student_id === user.id && attempt.status === 'submitted'
-          );
+          const ownResult = findOwnedSubmittedResult(ownHistory, user.id, requestedResultId);
           if (ownResult) setTab('history');
           setSelected(ownResult ?? null);
         }
@@ -111,11 +113,13 @@ export const ResultsPortal: React.FC = () => {
 
   const completed = useMemo(() => attempts.filter(isCompleted), [attempts]);
   const summary = useMemo(() => {
-    const values = completed.map((item) => Number(item.percentage || 0)).filter(Number.isFinite);
+    const values = completed.map((item) => item.percentage)
+      .filter((value): value is number => value != null && Number.isFinite(value));
     const average = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
     const best = values.length ? Math.max(...values) : null;
     const chronological = [...completed].sort((a, b) => +new Date(a.submitted_at || a.started_at) - +new Date(b.submitted_at || b.started_at));
-    const latest = chronological.length ? Number(chronological[chronological.length - 1].percentage ?? 0) : null;
+    const latestValue = chronological.length ? chronological[chronological.length - 1].percentage : null;
+    const latest = latestValue != null && Number.isFinite(latestValue) ? latestValue : null;
     return { average, best, latest, chronological };
   }, [completed]);
   const nowEpochMs = Date.now();
