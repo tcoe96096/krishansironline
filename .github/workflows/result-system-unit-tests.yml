@@ -23,6 +23,7 @@ on:
       - 'src/components/StudyMaterialsView.tsx'
       - 'src/components/AdminDashboard.tsx'
       - 'src/components/SmartResultReportCard.test.tsx'
+      - 'src/components/AdminTestResults.test.tsx'
       - 'src/services/attemptDisplayStatus.ts'
       - 'src/services/attemptDisplayStatus.test.ts'
       - 'docs/proposed-migrations/**'
@@ -46,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
       - name: Run result unit tests
-        run: node --import tsx --test src/services/resultMetrics.test.ts src/components/SmartResultReportCard.test.tsx src/services/attemptDisplayStatus.test.ts src/services/learningLinks.test.ts src/services/staffGrantPolicy.test.ts
+        run: node --import tsx --test src/services/resultMetrics.test.ts src/components/SmartResultReportCard.test.tsx src/services/attemptDisplayStatus.test.ts src/services/learningLinks.test.ts src/services/staffGrantPolicy.test.ts src/components/AdminTestResults.test.tsx
       - name: Verify TypeScript
         run: npm run lint
       - name: Verify production-style build only
