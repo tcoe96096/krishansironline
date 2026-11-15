@@ -73,6 +73,11 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
     }
     setLoading(true);
     setError('');
+    setSuperAdmin(false);
+    setDelegationReady(false);
+    setStaff([]);
+    setGrants([]);
+    setGrantAudit([]);
     void (async () => {
       try {
         const client = requireSupabase();
@@ -308,7 +313,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
                 Delegated Role
                 <select value={grantRole} onChange={(event)=>{
                   const role=event.target.value as DelegatedRole;
-                  setGrantRole(role);setGrantPermissions([...delegationCapabilities[role]]);
+                  setGrantRole(role);setGrantPermissions(['results.read']);
                 }} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
                   <option value="viewer">Viewer (Read Only)</option>
                   <option value="teacher">Teacher / Evaluator</option>
