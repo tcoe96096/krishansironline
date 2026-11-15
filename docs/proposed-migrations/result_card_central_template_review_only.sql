@@ -100,6 +100,16 @@ create trigger audit_result_card_template
 before insert or update on public.result_card_templates
 for each row execute function private.audit_result_card_template();
 
+-- A read-only capability probe lets the UI suppress the Publish button until
+-- this entire reviewed backend is installed; the publish RPC still rechecks.
+create or replace function public.can_publish_result_card_template()
+returns boolean language sql stable security invoker set search_path=''
+as $capability$
+  select auth.uid() is not null and public.is_super_admin();
+$capability$;
+revoke all on function public.can_publish_result_card_template() from public,anon;
+grant execute on function public.can_publish_result_card_template() to authenticated;
+
 create or replace function public.publish_result_card_template(
   p_theme text, p_options jsonb, p_reason text
 )
