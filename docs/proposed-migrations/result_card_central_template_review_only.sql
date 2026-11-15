@@ -113,64 +113,72 @@ grant execute on function public.can_publish_result_card_template() to authentic
 create or replace function public.publish_result_card_template(
   p_theme text, p_options jsonb, p_reason text
 )
-returns integer language plpgsql security definer set search_path=''
-as $body$
+returns integer
+language plpgsql security definer set search_path = ''
+as $publish$
 declare
   v_actor uuid := auth.uid();
-  v_key text;
-  v_value jsonb;
   v_new_version integer;
 begin
   if v_actor is null or not public.is_super_admin() then
-    raise exception 'Only Super Admin may publish a result-card design'
-      using errcode='42501';
+    raise exception 'Super Admin publishing permission required' using errcode='42501';
   end if;
-
   if p_theme is null or p_theme not in ('modern','classic','minimal') then
-    raise exception 'Unsupported design theme' using errcode='22023';
+    raise exception 'Unknown theme' using errcode='22023';
   end if;
-  if p_options is null or jsonb_typeof(p_options) <> 'object'
-    or octet_length(p_options::text) > 3000 then
-    raise exception 'Invalid or oversized design options' using errcode='22023';
+  if p_options is null or jsonb_typeof(p_options) <> 'object' then
+    raise exception 'Design options must be an object' using errcode='22023';
   end if;
-  if length(btrim(coalesce(p_reason,''))) not between 12 and 1000 then
-    raise exception 'Publish reason must contain 12-1000 characters'
-      using errcode='22023';
+  if octet_length(p_options::text) > 3000 then
+    raise exception 'Design options too large' using errcode='22023';
   end if;
-  for v_key,v_value in select key,value from jsonb_each(p_options)
-  loop
-    if v_key in ('showInstitution','showMetrics','showLogo','showPortrait','showSubjectTable') then
-      if jsonb_typeof(v_value) <> 'boolean' then
-        raise exception 'Invalid boolean design option: %',v_key using errcode='22023';
-      end if;
-    elsif v_key in ('brandTitle','tagline','footerNote') then
-      if jsonb_typeof(v_value) <> 'string' or
-        length(v_value #>> '{}') >
-          case when v_key='brandTitle' then 80 when v_key='tagline' then 110 else 180 end
-      then
-        raise exception 'Invalid or oversized text option: %',v_key using errcode='22023';
-      end if;
-    elsif v_key='watermarkOpacity' then
-      if jsonb_typeof(v_value) <> 'number' or
-        (v_value #>> '{}')::numeric not between 0 and 18 then
-        raise exception 'Invalid watermark percentage' using errcode='22023';
-      end if;
-    else
-      raise exception 'Unsupported or private data field: %',v_key using errcode='22023';
+  if p_reason is null or length(btrim(p_reason)) < 12
+     or length(btrim(p_reason)) > 1000 then
+    raise exception 'A reason of 12 to 1000 characters is required' using errcode='22023';
+  end if;
+  if exists (
+    select 1 from jsonb_each(p_options) e
+    where e.key not in (
+      'showInstitution','showMetrics','showLogo','showPortrait','showSubjectTable',
+      'brandTitle','tagline','footerNote','watermarkOpacity'
+    )
+  ) then
+    raise exception 'Design contains an unknown or private data field' using errcode='22023';
+  end if;
+  if exists (
+    select 1 from jsonb_each(p_options) e
+    where e.key in ('showInstitution','showMetrics','showLogo','showPortrait','showSubjectTable')
+      and jsonb_typeof(e.value) <> 'boolean'
+  ) then
+    raise exception 'Invalid visibility setting' using errcode='22023';
+  end if;
+  if exists (
+    select 1 from jsonb_each(p_options) e
+    where (e.key='brandTitle' and (jsonb_typeof(e.value)<>'string' or length(e.value #>> '{}')>80))
+       or (e.key='tagline' and (jsonb_typeof(e.value)<>'string' or length(e.value #>> '{}')>110))
+       or (e.key='footerNote' and (jsonb_typeof(e.value)<>'string' or length(e.value #>> '{}')>180))
+  ) then
+    raise exception 'Invalid design text length' using errcode='22023';
+  end if;
+  if p_options ? 'watermarkOpacity' then
+    if jsonb_typeof(p_options->'watermarkOpacity') <> 'number' then
+      raise exception 'Invalid watermark format' using errcode='22023';
     end if;
-  end loop;
-
+    if (p_options->>'watermarkOpacity')::numeric < 0
+       or (p_options->>'watermarkOpacity')::numeric > 18 then
+      raise exception 'Invalid watermark percentage' using errcode='22023';
+    end if;
+  end if;
   insert into public.result_card_templates
     (template_key,theme,options,change_reason,updated_by)
-  values ('default',p_theme,p_options,btrim(p_reason),v_actor)
-  on conflict(template_key) do update
-    set theme=excluded.theme,options=excluded.options,
+    values ('default',p_theme,p_options,btrim(p_reason),v_actor)
+  on conflict (template_key) do update
+    set theme=excluded.theme, options=excluded.options,
         change_reason=excluded.change_reason
   returning version into v_new_version;
-
   return v_new_version;
 end;
-$body$;
+$publish$;
 revoke all on function public.publish_result_card_template(text,jsonb,text) from public,anon;
 grant execute on function public.publish_result_card_template(text,jsonb,text) to authenticated;
 
