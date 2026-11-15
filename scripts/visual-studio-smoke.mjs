@@ -12,9 +12,9 @@ try {
 
   // The Admin sidebar has one Website Studio entry and hides unfinished modules.
   assert.equal(await page.getByRole('button',{name:'Legacy Site Settings',exact:true}).count(),0);
-  assert.equal(await page.getByRole('button',{name:'Help Desk',exact:true}).count(),0);
+  assert.equal(await page.getByRole('button',{name:/Help Desk/}).count(),0);
   await page.getByRole('button',{name:'Show planned modules (5)'}).click();
-  assert.equal(await page.getByRole('button',{name:'Help Desk',exact:true}).count(),1);
+  assert.equal(await page.getByRole('button',{name:/Help Desk/}).count(),1);
   await page.getByRole('button',{name:'Hide planned modules'}).click();
   const findModule=page.getByRole('searchbox',{name:'Search Admin modules'});
   await findModule.fill('Website Studio');
