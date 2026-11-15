@@ -67,6 +67,14 @@ export const ResultsPortal: React.FC = () => {
         if (!mounted) return;
         setAttempts(history);
         setTests(catalogue);
+        // A shared result URL is only a navigation hint. RLS and ownership determine access.
+        const requestedResultId = new URLSearchParams(window.location.search).get('resultId');
+        if (requestedResultId) {
+          const ownResult = history.find((attempt) =>
+            attempt.id === requestedResultId && attempt.student_id === user.id && attempt.status === 'submitted'
+          );
+          setSelected(ownResult ?? null);
+        }
         // Only an attempt already returned for this authenticated student can open.
         // Guessing another student's resultId never fetches their record.
         const requested = new URLSearchParams(window.location.search).get('resultId');
