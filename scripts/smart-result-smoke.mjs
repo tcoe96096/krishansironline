@@ -20,6 +20,12 @@ try {
   assert.equal(await page.getByText('Verified score').count(), 0);
   console.log('PASS: Unauthenticated user sees sign-in boundary and no private grades');
 
+  // A private shared URL must not bypass the authentication boundary.
+  await page.goto(base + '/results/?resultId=cc527c3c-0899-42c0-a23e-120267f96e41', {waitUntil:'domcontentloaded'});
+  await page.getByRole('heading',{name:/Sign in to view your personal results|अपने परिणाम देखने के लिए लॉगिन करें/}).waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0);
+  console.log('PASS: Guessing a result link does not open an unauthenticated private report');
+
   // No API import/scraping: outbound links must point to official domains, with safe opener behavior.
   await page.getByRole('button', { name: /External Results|अन्य परीक्षा परिणाम/ }).click();
   const cbse = page.locator('a[href="https://results.cbse.nic.in/"]');
