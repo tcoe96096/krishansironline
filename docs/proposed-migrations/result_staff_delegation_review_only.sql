@@ -19,8 +19,8 @@ create table if not exists public.result_staff_grants (
   scope_test_id text null,
   is_active boolean not null default true,
   change_reason text not null check (length(btrim(change_reason)) between 12 and 1000),
-  assigned_by uuid not null,
-  updated_by uuid not null,
+  assigned_by uuid not null default auth.uid(),
+  updated_by uuid not null default auth.uid(),
   assigned_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint result_role_allowed_capabilities check (
