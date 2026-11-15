@@ -11,7 +11,7 @@ import { escapeSpreadsheetCell } from '../services/resultMetrics';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
 import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
-import type { ResultReportTheme } from './SmartResultReportCard';
+import type { ResultReportTheme, ResultReportOptions } from './SmartResultReportCard';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
@@ -38,6 +38,10 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<TestAttempt | null>(null);
   const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
+  const [cardOptions, setCardOptions] = useState<ResultReportOptions>({
+    showInstitution: true, showMetrics: true, footerNote: ''
+  });
+  const [showCardDesigner, setShowCardDesigner] = useState(false);
 
   const load = useCallback(async () => {
     if (demoMode) { setLoading(false); return; }
@@ -323,8 +327,47 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                   <option value="minimal">Minimal Pro</option>
                 </select>
               </label>
-              <button type="button" onClick={() => setSelected(null)} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><X size={17}/> Close</button>
+              <div className="flex items-center gap-2">
+                {selected.status === 'submitted' && (
+                  <button type="button" aria-expanded={showCardDesigner} onClick={() => setShowCardDesigner(v => !v)}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-3 text-xs font-bold text-sky-900 hover:bg-sky-100">
+                    <SlidersHorizontal size={16}/> Card Design
+                  </button>
+                )}
+                <button type="button" onClick={() => {setSelected(null);setShowCardDesigner(false);}} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><X size={17}/> Close</button>
+              </div>
             </div>
+            {selected.status === 'submitted' && showCardDesigner && (
+              <div className="rounded-2xl border border-sky-200 bg-white p-4 shadow-lg">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <h4 className="text-sm font-extrabold text-sky-950">Report Card Design Editor</h4>
+                  <button type="button" onClick={()=>setCardOptions({showInstitution:true,showMetrics:true,footerNote:''})}
+                    className="text-xs font-bold text-sky-800 underline">Reset design</button>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Presentation-only Preview: marks, results, student details and server records are locked. Layout edits are not saved to the database.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" checked={cardOptions.showInstitution !== false}
+                      onChange={(e)=>setCardOptions(v=>({...v,showInstitution:e.target.checked}))}
+                      className="h-4 w-4"/> Show Institution
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" checked={cardOptions.showMetrics !== false}
+                      onChange={(e)=>setCardOptions(v=>({...v,showMetrics:e.target.checked}))}
+                      className="h-4 w-4"/> Show Answer Metrics
+                  </label>
+                </div>
+                <label className="mt-4 block text-xs font-bold text-slate-700">
+                  Optional report footer note (max. 180 characters)
+                  <textarea maxLength={180} rows={2} value={cardOptions.footerNote || ''}
+                    onChange={(e)=>setCardOptions(v=>({...v,footerNote:e.target.value}))}
+                    placeholder="Example: Please review questions you answered incorrectly."
+                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
+                </label>
+              </div>
+            )}
             {selected.status === 'submitted' ? (
               <SmartResultReportCard
                 data={{
@@ -337,7 +380,8 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                     classLevel: studentById.get(selected.student_id)?.class_level,
                     school: studentById.get(selected.student_id)?.school_name
                   },
-                  theme: cardTheme
+                  theme: cardTheme,
+                  options: cardOptions
                 }}
                 onPrint={() => {
                   const student = studentById.get(selected.student_id);
@@ -347,7 +391,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                     student: {
                       name: student?.student_name || 'विद्यार्थी', rollNo: student?.roll_no,
                       classLevel: student?.class_level, school: student?.school_name
-                    }, theme: cardTheme
+                    }, theme: cardTheme, options: cardOptions
                   })) setError('Print window blocked. कृपया Pop-ups Allow करें।');
                 }}
               />
