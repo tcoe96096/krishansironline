@@ -8,12 +8,14 @@ import {
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
 import { escapeSpreadsheetCell } from '../services/resultMetrics';
+import { displayAttemptStatus } from '../services/attemptDisplayStatus';
+import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
 import type { ResultReportTheme } from './SmartResultReportCard';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
-type Status = 'all' | 'submitted' | 'in_progress' | 'expired';
+type Status = 'all' | DisplayAttemptStatus;
 type Sort = 'latest' | 'highest' | 'lowest';
 const PAGE_SIZE = 15;
 
@@ -72,6 +74,8 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     typeof test.title === 'string' ? test.title : (test.title.hi || test.title.en || test.id);
   const allClasses = useMemo(() => Array.from(new Set(tests.map((t) => t.class_level).concat(students.map((s) => s.class_level)))).filter(Boolean).sort(), [tests, students]);
 
+  const nowEpochMs = Date.now();
+  const shownStatus = (attempt: TestAttempt) => displayAttemptStatus(attempt, nowEpochMs);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
     const collection = attempts.filter((attempt) => {
@@ -80,7 +84,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
       const searchable = [student?.student_name, student?.roll_no, student?.school_name,
         student?.class_level, test?.subject, titleOf(test), attempt.attempt_number]
         .filter((item) => item != null).join(' ').toLocaleLowerCase();
-      return (status === 'all' || attempt.status === status) &&
+      return (status === 'all' || displayAttemptStatus(attempt, nowEpochMs) === status) &&
         (testFilter === 'all' || attempt.test_id === testFilter) &&
         (classFilter === 'all' || student?.class_level === classFilter || test?.class_level === classFilter) &&
         (!normalized || searchable.includes(normalized));
@@ -88,16 +92,16 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     if (sort === 'highest') collection.sort((a, b) => (b.status === 'submitted' ? validPct(b.percentage) : -1) - (a.status === 'submitted' ? validPct(a.percentage) : -1));
     if (sort === 'lowest') collection.sort((a, b) => (a.status === 'submitted' ? validPct(a.percentage) : 101) - (b.status === 'submitted' ? validPct(b.percentage) : 101));
     return collection;
-  }, [attempts, testById, studentById, query, status, testFilter, classFilter, sort]);
+  }, [attempts, testById, studentById, query, status, testFilter, classFilter, sort, nowEpochMs]);
   const completed = useMemo(() => attempts.filter((a) => a.status === 'submitted'), [attempts]);
   const average = completed.length ? completed.reduce((sum, a) => sum + validPct(a.percentage), 0) / completed.length : null;
   const best = completed.length ? Math.max(...completed.map((a) => validPct(a.percentage))) : null;
   const paginationCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const statusName = (value: TestAttempt['status']) => value === 'submitted' ? 'पूर्ण' : value === 'expired' ? 'समय समाप्त' : 'जारी';
-  const statusBadge = (value: TestAttempt['status']) => value === 'submitted'
+  const statusName = (value: DisplayAttemptStatus) => value === 'submitted' ? 'पूर्ण' : value === 'expired' ? 'समय समाप्त' : value === 'overdue' ? 'अवधि पार — रिकॉर्ड लंबित' : 'जारी';
+  const statusBadge = (value: DisplayAttemptStatus) => value === 'submitted'
     ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-    : value === 'in_progress' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-100 text-slate-600';
+    : value === 'in_progress' ? 'border-amber-200 bg-amber-50 text-amber-800' : value === 'overdue' ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-slate-200 bg-slate-100 text-slate-600';
   const pctText = (value: number | null) => Number(value ?? 0).toFixed(1) + '%';
   const dateText = (value: string | null) => value ? new Date(value).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
@@ -109,7 +113,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
         const student = studentById.get(attempt.student_id);
         const test = testById.get(attempt.test_id);
         return [student?.student_name, student?.roll_no, student?.class_level, student?.school_name,
-          titleOf(test), test?.subject, attempt.attempt_number, attempt.status,
+          titleOf(test), test?.subject, attempt.attempt_number, shownStatus(attempt),
           attempt.status === 'submitted' ? attempt.score : '', attempt.status === 'submitted' ? attempt.total_marks : '',
           attempt.status === 'submitted' ? attempt.percentage : '', attempt.started_at, attempt.submitted_at];
       })
@@ -131,7 +135,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
       const student = studentById.get(item.student_id);
       const test = testById.get(item.test_id);
       const cells = [student?.student_name, student?.roll_no, student?.class_level, titleOf(test),
-        item.attempt_number, statusName(item.status), item.status === 'submitted' ? item.score : '—',
+        item.attempt_number, statusName(shownStatus(item)), item.status === 'submitted' ? item.score : '—',
         item.status === 'submitted' ? item.total_marks : '—',
         item.status === 'submitted' ? pctText(item.percentage) : '—', dateText(item.submitted_at || item.started_at)];
       return '<tr>' + cells.map((cell) => '<td>' + escapeHtml(cell) + '</td>').join('') + '</tr>';
@@ -225,11 +229,12 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center justify-between"><h3 className="text-base font-extrabold text-slate-900">Attempt Lifecycle</h3><CalendarClock size={20} className="text-sky-800"/></div>
-          <p className="mt-1 text-xs text-slate-500">Database में दर्ज वास्तविक Attempt Status।</p>
+          <p className="mt-1 text-xs text-slate-500">Server records के आधार पर स्थिति। समय सीमा पार हुए अधूरे प्रयास अलग दिखते हैं; Database Records नहीं बदले जाते।</p>
           <div className="mt-5 space-y-4">
             {[
               { label: 'Submitted', count: completed.length, cls: 'bg-emerald-500' },
-              { label: 'In progress', count: attempts.filter((a) => a.status === 'in_progress').length, cls: 'bg-amber-400' },
+              { label: 'In progress', count: attempts.filter((a) => shownStatus(a) === 'in_progress').length, cls: 'bg-amber-400' },
+              { label: 'Overdue (not synced)', count: attempts.filter((a) => shownStatus(a) === 'overdue').length, cls: 'bg-orange-400' },
               { label: 'Expired', count: attempts.filter((a) => a.status === 'expired').length, cls: 'bg-slate-400' }
             ].map((item) => <div key={item.label}>
               <div className="mb-1 flex justify-between text-xs font-semibold text-slate-700"><span>{item.label}</span><span>{item.count}</span></div>
@@ -258,7 +263,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
             <span className="sr-only">Search results</span>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="विद्यार्थी, रोल, स्कूल, टेस्ट…" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
           </label>
-          <label><span className="sr-only">Result status</span><select value={status} onChange={(event) => setStatus(event.target.value as Status)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी स्थितियाँ</option><option value="submitted">पूर्ण</option><option value="in_progress">जारी</option><option value="expired">समय समाप्त</option></select></label>
+          <label><span className="sr-only">Result status</span><select value={status} onChange={(event) => setStatus(event.target.value as Status)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी स्थितियाँ</option><option value="submitted">पूर्ण</option><option value="in_progress">जारी</option><option value="expired">समय समाप्त</option><option value="overdue">अवधि पार (लंबित)</option></select></label>
           <label><span className="sr-only">Class filter</span><select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी कक्षाएँ</option>{allClasses.map((c) => <option key={c} value={c}>कक्षा {c}</option>)}</select></label>
           <label><span className="sr-only">Test filter</span><select value={testFilter} onChange={(event) => setTestFilter(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी टेस्ट</option>{tests.map((test) => <option key={test.id} value={test.id}>{titleOf(test)}</option>)}</select></label>
           <label><span className="sr-only">Sort results</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="latest">नवीनतम</option><option value="highest">अधिक अंक</option><option value="lowest">कम अंक</option></select></label>
@@ -283,7 +288,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
                 return <tr key={attempt.id} className="transition hover:bg-sky-50/50">
                   <td className="px-4 py-3"><p className="font-bold text-slate-900">{student?.student_name || 'विद्यार्थी विवरण अनुपलब्ध'}</p><p className="mt-1 text-[11px] text-slate-500">रोल: {student?.roll_no || '—'} · कक्षा {student?.class_level || '—'}</p></td>
                   <td className="px-4 py-3"><p className="max-w-[240px] truncate font-bold text-slate-800" title={titleOf(test)}>{titleOf(test)}</p><p className="mt-1 text-[11px] text-slate-500">{test?.subject || '—'} · Attempt #{attempt.attempt_number}</p></td>
-                  <td className="px-4 py-3"><span className={'inline-flex rounded-full border px-2 py-1 font-bold ' + statusBadge(attempt.status)}>{statusName(attempt.status)}</span></td>
+                  <td className="px-4 py-3"><span className={'inline-flex rounded-full border px-2 py-1 font-bold ' + statusBadge(shownStatus(attempt))}>{statusName(shownStatus(attempt))}</span></td>
                   <td className="px-4 py-3 font-extrabold tabular-nums text-slate-900">{attempt.status === 'submitted' ? <>{attempt.score ?? 0}/{attempt.total_marks ?? 0}<p className="mt-1 text-[11px] font-semibold text-teal-700">{pctText(attempt.percentage)}</p></> : '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{dateText(attempt.submitted_at || attempt.started_at)}</td>
                   <td className="px-4 py-3"><button type="button" onClick={() => setSelected(attempt)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-sky-800 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700"><Eye size={14}/> View</button></td>
@@ -349,7 +354,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
             ) : (
               <div className="rounded-2xl bg-white p-6 shadow-lg">
                 <h3 className="text-lg font-extrabold text-slate-900">{titleOf(testById.get(selected.test_id))}</h3>
-                <p className="mt-3 text-sm text-slate-600">Result status: <strong>{statusName(selected.status)}</strong></p>
+                <p className="mt-3 text-sm text-slate-600">Result status: <strong>{statusName(shownStatus(selected))}</strong></p>
                 <p className="mt-2 text-xs text-slate-500">इस प्रयास का पूरा परिणाम अभी नहीं है। बिना Submit के कोई अंक या Result Card तैयार नहीं किया जाएगा।</p>
               </div>
             )}
