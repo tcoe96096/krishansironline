@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
-import { escapeSpreadsheetCell } from '../services/resultMetrics';
+import { escapeSpreadsheetCell, percentageLabel } from '../services/resultMetrics';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
 import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
@@ -22,7 +22,10 @@ const PAGE_SIZE = 15;
 const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
 ));
-const validPct = (value: number | null) => Number.isFinite(Number(value)) ? Number(value ?? 0) : 0;
+const knownPct = (value: number | null | undefined): value is number =>
+  value != null && Number.isFinite(value);
+const sortPct = (value: number | null | undefined, missing: number) =>
+  knownPct(value) ? value : missing;
 
 export const AdminTestResults: React.FC<{
   demoMode?: boolean;
@@ -195,20 +198,22 @@ export const AdminTestResults: React.FC<{
         (classFilter === 'all' || student?.class_level === classFilter || test?.class_level === classFilter) &&
         (!normalized || searchable.includes(normalized));
     });
-    if (sort === 'highest') collection.sort((a, b) => (b.status === 'submitted' ? validPct(b.percentage) : -1) - (a.status === 'submitted' ? validPct(a.percentage) : -1));
-    if (sort === 'lowest') collection.sort((a, b) => (a.status === 'submitted' ? validPct(a.percentage) : 101) - (b.status === 'submitted' ? validPct(b.percentage) : 101));
+    if (sort === 'highest') collection.sort((a, b) => (b.status === 'submitted' ? sortPct(b.percentage, -1) : -1) - (a.status === 'submitted' ? sortPct(a.percentage, -1) : -1));
+    if (sort === 'lowest') collection.sort((a, b) => (a.status === 'submitted' ? sortPct(a.percentage, 101) : 101) - (b.status === 'submitted' ? sortPct(b.percentage, 101) : 101));
     return collection;
   }, [attempts, testById, studentById, query, status, testFilter, classFilter, sort, nowEpochMs]);
   const completed = useMemo(() => attempts.filter((a) => a.status === 'submitted'), [attempts]);
-  const average = completed.length ? completed.reduce((sum, a) => sum + validPct(a.percentage), 0) / completed.length : null;
-  const best = completed.length ? Math.max(...completed.map((a) => validPct(a.percentage))) : null;
+  const completedPercentages = completed.map((attempt) => attempt.percentage).filter(knownPct);
+  const average = completedPercentages.length
+    ? completedPercentages.reduce((sum, value) => sum + value, 0) / completedPercentages.length : null;
+  const best = completedPercentages.length ? Math.max(...completedPercentages) : null;
   const paginationCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const statusName = (value: DisplayAttemptStatus) => value === 'submitted' ? 'पूर्ण' : value === 'expired' ? 'समय समाप्त' : value === 'overdue' ? 'अवधि पार — रिकॉर्ड लंबित' : 'जारी';
   const statusBadge = (value: DisplayAttemptStatus) => value === 'submitted'
     ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
     : value === 'in_progress' ? 'border-amber-200 bg-amber-50 text-amber-800' : value === 'overdue' ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-slate-200 bg-slate-100 text-slate-600';
-  const pctText = (value: number | null) => Number(value ?? 0).toFixed(1) + '%';
+  const pctText = percentageLabel;
   const dateText = (value: string | null) => value ? new Date(value).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
   const exportCsv = () => {
@@ -266,8 +271,9 @@ export const AdminTestResults: React.FC<{
   const testPerformance = useMemo(() => {
     const groups = new Map<string, { test: string; sum: number; count: number }>();
     completed.forEach((attempt) => {
+      if (!knownPct(attempt.percentage)) return;
       const previous = groups.get(attempt.test_id) || { test: titleOf(testById.get(attempt.test_id)), sum: 0, count: 0 };
-      previous.sum += validPct(attempt.percentage);
+      previous.sum += attempt.percentage;
       previous.count += 1;
       groups.set(attempt.test_id, previous);
     });
@@ -325,7 +331,7 @@ export const AdminTestResults: React.FC<{
         </div>
         {!loading && !completed.length && <p className="mt-3 text-xs text-amber-800">Card Studio खोलने के लिए पहले कोई Submitted Result होना चाहिए। बिना परिणाम के असली Report Card नहीं बनाया जाएगा।</p>}
         <div className="mt-4 grid gap-2 text-[11px] font-semibold text-slate-700 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl bg-emerald-50 p-3"><p className="font-extrabold text-emerald-800">Working</p><p className="mt-1">Server score → Card / A4 Print</p></div>
+          <div className="rounded-xl bg-emerald-50 p-3"><p className="font-extrabold text-emerald-800">Code ready</p><p className="mt-1">Submitted score → Card / A4 Print</p></div>
           <div className="rounded-xl bg-sky-50 p-3"><p className="font-extrabold text-sky-800">Local Draft</p><p className="mt-1">Theme, Logo, Photo & Footer editor</p></div>
           <div className="rounded-xl bg-amber-50 p-3"><p className="font-extrabold text-amber-800">Backend-gated</p><p className="mt-1">Student Inbox Delivery / Role Grants</p></div>
           <div className="rounded-xl bg-slate-100 p-3"><p className="font-extrabold text-slate-700">Not implemented</p><p className="mt-1">Approved Score Correction / Timed Release</p></div>
@@ -429,7 +435,7 @@ export const AdminTestResults: React.FC<{
                   <td className="px-4 py-3"><p className="font-bold text-slate-900">{student?.student_name || 'विद्यार्थी विवरण अनुपलब्ध'}</p><p className="mt-1 text-[11px] text-slate-500">रोल: {student?.roll_no || '—'} · कक्षा {student?.class_level || '—'}</p></td>
                   <td className="px-4 py-3"><p className="max-w-[240px] truncate font-bold text-slate-800" title={titleOf(test)}>{titleOf(test)}</p><p className="mt-1 text-[11px] text-slate-500">{test?.subject || '—'} · Attempt #{attempt.attempt_number}</p></td>
                   <td className="px-4 py-3"><span className={'inline-flex rounded-full border px-2 py-1 font-bold ' + statusBadge(shownStatus(attempt))}>{statusName(shownStatus(attempt))}</span></td>
-                  <td className="px-4 py-3 font-extrabold tabular-nums text-slate-900">{attempt.status === 'submitted' ? <>{attempt.score ?? 0}/{attempt.total_marks ?? 0}<p className="mt-1 text-[11px] font-semibold text-teal-700">{pctText(attempt.percentage)}</p></> : '—'}</td>
+                  <td className="px-4 py-3 font-extrabold tabular-nums text-slate-900">{attempt.status === 'submitted' ? <>{attempt.score ?? '—'}/{attempt.total_marks ?? '—'}<p className="mt-1 text-[11px] font-semibold text-teal-700">{pctText(attempt.percentage)}</p></> : '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{dateText(attempt.submitted_at || attempt.started_at)}</td>
                   <td className="px-4 py-3"><button type="button" onClick={() => setSelected(attempt)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-sky-800 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700"><Eye size={14}/> View</button></td>
                 </tr>;
