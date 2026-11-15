@@ -30,6 +30,10 @@ The original proposal files remain in `docs/proposed-migrations/` (outside `supa
 - Super Admin publishes a safe, design-only Global Card Template with reason and version: student can see the published style, **not** the private template audit.
 - Super Admin sends a submitted, eligible result to the corresponding student: student sees one private notification and marks it read successfully. Neither result scores nor student identity are included in a shareable URL.
 - Final database read verified **zero** durable Teacher Applications, Grants, Materials, Result Inbox Notices, and Global Card Templates. Existing eight Preview student profiles and eight test attempts remained in place.
+- Real Preview role revocation was simulated: after Super Admin changed the grant to inactive, Teacher class-scoped INSERT was denied immediately, with no surviving active grant.
+- Two-student isolation was simulated using separate signed-in JWT claims in a rolled-back transaction: the recipient could see their own submitted attempt and private inbox; another student could not.
+- Direct API privileges checked: authenticated users may call Teacher application and review RPCs but unauthenticated `anon` may not; authenticated clients cannot INSERT teacher requests directly. These endpoints still independently enforce their own actor/role rules.
+- PostgREST schema cache reload was requested after the reviewed Preview migrations to expose the new RPCs/tables to the Data API.
 
 ## Frontend integration
 Draft PR #109 contains:
