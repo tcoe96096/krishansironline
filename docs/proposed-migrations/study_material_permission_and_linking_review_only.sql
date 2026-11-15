@@ -160,8 +160,9 @@ create or replace function private.audit_study_material_change()
 returns trigger
 language plpgsql security definer set search_path=''
 as $body$
-declare v_actor uuid := auth.uid();
-declare v_id uuid;
+declare
+  v_actor uuid := auth.uid();
+  v_id uuid;
 begin
   if v_actor is null then raise exception 'Authentication required' using errcode='42501'; end if;
   if tg_op='DELETE' then
