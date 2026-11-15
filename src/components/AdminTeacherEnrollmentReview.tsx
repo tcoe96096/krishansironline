@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { normalizeTeacherAssignments, TEACHER_CLASSES, TEACHER_SUBJECTS, TEACHER_WORK_TYPES, type TeacherAssignmentInput } from '../lib/teacherManagementValidation';
 
 type TeacherRequest = {
   id:string;applicant_id:string;display_name:string;subject:string;
@@ -21,6 +22,10 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   const [selected,setSelected]=useState<string|null>(null);
   const [showHistory,setShowHistory]=useState(false);
   const [search,setSearch]=useState('');
+  const [assignmentDraft,setAssignmentDraft]=useState<TeacherAssignmentInput[]>([]);
+  const [assignmentClass,setAssignmentClass]=useState<string>('10');
+  const [assignmentSubject,setAssignmentSubject]=useState<string>('History');
+  const [assignmentWork,setAssignmentWork]=useState<string>('materials.draft');
   const [notice,setNotice]=useState('');
   const [error,setError]=useState('');
   const [reload,setReload]=useState(0);
@@ -28,7 +33,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   useEffect(()=>{
     let mounted=true;
     setBackendReady(false);setSuperAdmin(false);setRequests([]);
-    setSelected(null);setReason('');setError('');setNotice('');
+    setSelected(null);setReason('');setAssignmentDraft([]);setError('');setNotice('');
     if(demoMode||!user||!isAdmin)return;
     setLoading(true);
     void (async()=>{
@@ -122,10 +127,21 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
                <p className="mt-1 break-all font-mono text-[11px] text-slate-500">Account: {req.applicant_id}</p>
                <p className="mt-2 text-xs text-slate-700">{req.reason}</p>
              </div>
-             <button type="button" onClick={()=>{setSelected(req.id);setReason('');setError('');}}
+             <button type="button" onClick={()=>{setSelected(req.id);setReason('');setAssignmentDraft([]);setError('');}}
                className="rounded-lg border border-sky-200 px-3 py-2 text-xs font-bold text-sky-900">Review Request</button>
            </div>
            {selected===req.id&&<div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3">
+             <div className="rounded-xl border border-sky-200 bg-white p-3 text-xs text-slate-800" aria-label="Teacher assignment planner">
+               <p className="font-extrabold text-sky-950">Multiple Assignment Planner — Draft Only</p>
+               <p className="mt-1 text-slate-600">Prepare class, subject and work combinations. These selections remain in this browser session and are NOT saved or granted on approval. Existing approval still grants only the primary class's material rights.</p>
+               <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                 <label>Class<select aria-label="Assignment class" value={assignmentClass} onChange={e=>setAssignmentClass(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2">{TEACHER_CLASSES.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
+                 <label>Subject<select aria-label="Assignment subject" value={assignmentSubject} onChange={e=>setAssignmentSubject(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2">{TEACHER_SUBJECTS.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
+                 <label>Work<select aria-label="Assignment work" value={assignmentWork} onChange={e=>setAssignmentWork(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2">{TEACHER_WORK_TYPES.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
+               </div>
+               <button type="button" className="mt-2 rounded-lg border border-sky-200 px-3 py-2 font-bold text-sky-900" onClick={()=>setAssignmentDraft(current=>normalizeTeacherAssignments([...current,{classLevel:assignmentClass,subject:assignmentSubject,workType:assignmentWork}]))}>Add draft assignment</button>
+               <div className="mt-2 space-y-1">{assignmentDraft.map((item,index)=><div key={JSON.stringify(item)} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 p-2"><span>Class {item.classLevel} · {item.subject} · {item.workType}</span><button type="button" className="font-bold text-rose-800" aria-label={`Remove assignment ${index+1}`} onClick={()=>setAssignmentDraft(current=>current.filter((_,i)=>i!==index))}>Remove</button></div>)}</div>
+             </div>
              <p className="text-xs font-semibold text-slate-700">Verify account identity outside this form, then enter audit reason.</p>
              <label className="text-xs font-bold text-slate-700">Mandatory Decision Reason
                <textarea required rows={2} minLength={12} maxLength={1000} value={reason}
