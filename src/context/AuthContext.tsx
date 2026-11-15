@@ -214,14 +214,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
+          .in('role', ['admin', 'super_admin'])
+          .limit(1);
         if (!active) return;
         if (error) {
           console.error('Unable to verify admin role:', error.message);
           setIsAdmin(false);
         } else {
-          setIsAdmin(Boolean(data));
+          setIsAdmin(Array.isArray(data) && data.some((item) => item.role === 'admin' || item.role === 'super_admin'));
         }
       } finally {
         if (active) setAdminLoading(false);
