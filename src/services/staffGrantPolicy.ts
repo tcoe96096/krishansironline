@@ -5,7 +5,7 @@ export const delegationCapabilities: Record<DelegatedRole, readonly string[]> = 
   result_manager: ['results.read','results.export','results.correction.request','results.release.propose'],
   academic_admin: ['results.read','tests.manage','results.correction.request','materials.read','materials.draft.write','materials.review.propose'],
   content_manager: ['materials.read','materials.draft.write','materials.review.propose'],
-  teacher: ['results.read','results.correction.request','materials.read','materials.draft.write'],
+  teacher: ['results.read','results.correction.request','materials.read','materials.draft.write','materials.review.propose'],
   viewer: ['results.read','materials.read']
 };
 
