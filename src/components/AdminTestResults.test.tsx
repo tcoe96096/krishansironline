@@ -37,4 +37,8 @@ test('notification bell and report navigation point to functional admin modules'
   assert.ok(dashboardSource.includes("onOpenMaterials={() => setActive('materials')}"));
   assert.ok(dashboardSource.includes("onOpenStaff={() => setActive('staff')}"));
   assert.ok(dashboardSource.includes('"Admin Account"'));
+  assert.ok(dashboardSource.includes('placeholderModuleIds'));
+  assert.ok(dashboardSource.includes('Planned · UI only'));
+  assert.equal(dashboardSource.includes('bg-amber-500" />'),false);
+
 });
