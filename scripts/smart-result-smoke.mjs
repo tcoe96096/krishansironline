@@ -60,7 +60,7 @@ try {
   console.log('PASS: Super Admin approval writes unavailable in demo');
 
   // Result management also must not leak real students or permit mutation in demo.
-  await page.getByRole('button', { name: 'Results & Reports', exact: true }).click();
+  await page.getByRole('navigation').getByRole('button', { name: 'Results & Reports', exact: true }).click();
   await page.getByRole('heading', { name: 'Result Management — Protected Preview' }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Export CSV' }).count(), 0);
   console.log('PASS: Demo reports never expose real records or exports');
