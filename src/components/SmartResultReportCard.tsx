@@ -74,7 +74,7 @@ export function openSmartResultPrint(data: ResultReportData): boolean {
     '.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.metric{border:1px solid #dae1ea;border-radius:12px;padding:13px}',
     '.metric strong{display:block;font-size:22px;color:var(--main)}small{color:#52627b;font-size:12px}',
     '.footer{margin-top:28px;padding-top:15px;border-top:1px solid #cbd5e1;font-size:11px;color:#617086}',
-    '@media print{body{padding:0;max-width:none}.header,.score{-webkit-print-color-adjust:exact;print-color-adjust:exact}}',
+    '@page{size:A4 portrait;margin:14mm}@media print{body{padding:0;max-width:none;font-size:12px}.header,.score{-webkit-print-color-adjust:exact;print-color-adjust:exact}.panel,.score,.metric{break-inside:avoid}}',
     '</style></head><body>',
     '<div class="header"><div class="eyebrow">KRISHAN SIR ONLINE · SMART RESULT SYSTEM</div>',
     '<h1>', en ? 'Individual Assessment Report' : 'व्यक्तिगत परीक्षा परिणाम पत्र', '</h1>',
