@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { BookOpen, FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 
