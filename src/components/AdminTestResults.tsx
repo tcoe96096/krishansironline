@@ -6,6 +6,10 @@ import {
   ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save, Send, BookOpen
 } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import {
+  defaultReportCardTemplate, localReportDraftKey, parseReportCardTemplate, serializeReportCardTemplate
+} from '../services/reportCardTemplate';
 import type { TestAttempt } from '../services/testService';
 import { escapeSpreadsheetCell, percentageLabel } from '../services/resultMetrics';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
@@ -32,6 +36,7 @@ export const AdminTestResults: React.FC<{
   onOpenMaterials?: () => void;
   onOpenStaff?: () => void;
 }> = ({ demoMode = false, onOpenMaterials, onOpenStaff }) => {
+  const { user } = useAuth();
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [tests, setTests] = useState<TestInfo[]>([]);
   const [students, setStudents] = useState<StudentInfo[]>([]);
@@ -44,10 +49,8 @@ export const AdminTestResults: React.FC<{
   const [sort, setSort] = useState<Sort>('latest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<TestAttempt | null>(null);
-  const [cardTheme, setCardTheme] = useState<ResultReportTheme>('modern');
-  const [cardOptions, setCardOptions] = useState<ResultReportOptions>({
-    showInstitution: true, showMetrics: true, footerNote: ''
-  });
+  const [cardTheme, setCardTheme] = useState<ResultReportTheme>(defaultReportCardTemplate.theme);
+  const [cardOptions, setCardOptions] = useState<ResultReportOptions>({...defaultReportCardTemplate.options});
   const [showCardDesigner, setShowCardDesigner] = useState(false);
   const [deliveryNotice, setDeliveryNotice] = useState('');
   const [inAppDeliveryAvailable, setInAppDeliveryAvailable] = useState(false);
@@ -55,20 +58,62 @@ export const AdminTestResults: React.FC<{
   const [designNotice, setDesignNotice] = useState('');
 
   useEffect(() => {
-    if (demoMode) return;
+    // Never reuse another administrator's stored design on a shared browser.
+    setCardTheme(defaultReportCardTemplate.theme);
+    setCardOptions({...defaultReportCardTemplate.options});
+    setDesignNotice('');
+    setSelected(null);
+    setShowCardDesigner(false);
+    if (demoMode || !user?.id) return;
     try {
-      const saved = JSON.parse(localStorage.getItem('ksol.report-card-template.draft.v1') || 'null');
-      if (!saved || typeof saved !== 'object') return;
-      if (['modern','classic','minimal'].includes(saved.theme)) setCardTheme(saved.theme);
-      if (saved.options && typeof saved.options === 'object') setCardOptions(saved.options);
-    } catch { /* Never fail result loading because of a local layout draft. */ }
-  }, [demoMode]);
+      const saved = localStorage.getItem(localReportDraftKey(user.id));
+      if (saved) {
+        const parsed = parseReportCardTemplate(saved);
+        setCardTheme(parsed.theme);
+        setCardOptions(parsed.options);
+      }
+    } catch { /* Missing or legacy drafts are not trusted; defaults are safe. */ }
+  }, [demoMode,user?.id]);
 
   const saveCardDesign = () => {
+    if (demoMode || !user) { setDesignNotice('Admin sign-in is required.'); return; }
     try {
-      localStorage.setItem('ksol.report-card-template.draft.v1', JSON.stringify({ theme: cardTheme, options: cardOptions }));
-      setDesignNotice('Design saved locally on this device. It does not publish or change grades.');
-    } catch { setDesignNotice('Local storage unavailable. Try a smaller image or use another device.'); }
+      localStorage.setItem(localReportDraftKey(user.id),serializeReportCardTemplate(cardTheme,cardOptions));
+      setDesignNotice('Design saved for this admin on this browser. NOT published to students.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Local draft unavailable. Try a smaller image.');
+    }
+  };
+
+  const exportCardDesign = () => {
+    if (demoMode || !user) return;
+    try {
+      const json = serializeReportCardTemplate(cardTheme,cardOptions);
+      const url = URL.createObjectURL(new Blob([json],{type:'application/json;charset=utf-8'}));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ksol-report-card-design-v1.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setDesignNotice('Design-only JSON exported. Contains no student scores or personal results.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Cannot export this design.');
+    }
+  };
+
+  const importCardDesign = async (file: File | undefined) => {
+    if (demoMode || !user || !file) return;
+    if (file.size > 6500000) {setDesignNotice('Backup must be smaller than 6.5 MB.');return;}
+    try {
+      const parsed = parseReportCardTemplate(await file.text());
+      setCardTheme(parsed.theme);
+      setCardOptions(parsed.options);
+      setDesignNotice('Design imported for preview only. Press Save Draft to keep it on this device.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Invalid backup. No changes made.');
+    }
   };
   const loadImage = (file: File | undefined, field: 'logoImage' | 'portraitImage') => {
     if (!file) return;
@@ -542,8 +587,17 @@ export const AdminTestResults: React.FC<{
                     placeholder="Example: Please review questions you answered incorrectly."
                     className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
                 </label>
-                <button type="button" onClick={saveCardDesign}
-                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-900 px-4 text-xs font-bold text-white hover:bg-sky-800"><Save size={15}/> Save Design (Local Draft)</button>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={saveCardDesign}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-900 px-4 text-xs font-bold text-white hover:bg-sky-800"><Save size={15}/> Save Design (Local Draft)</button>
+                  <button type="button" onClick={exportCardDesign}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-200 px-4 text-xs font-bold text-sky-900 hover:bg-sky-50"><Download size={15}/> Export Design JSON</button>
+                  <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-sky-200 px-4 text-xs font-bold text-sky-900 hover:bg-sky-50">
+                    <FileDown size={15}/> Import Design JSON
+                    <input type="file" accept=".json,application/json" className="sr-only"
+                      onChange={event => {void importCardDesign(event.target.files?.[0]);event.target.value='';}}/>
+                  </label>
+                </div>
                 {designNotice && <p role="status" className="mt-2 text-xs text-teal-800">{designNotice}</p>}
               </div>
             )}
