@@ -33,3 +33,12 @@ for(const contactEmail of ['teacher name@example.org','teacher\\name@example.org
     `Invalid email was accepted: ${contactEmail}`);
 }
 assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'teacher+tag@example.co.in',phone:'',experienceYears:0}),true);
+
+for(const phone of ['+91 9876543210','9876543210','(012) 345-6789']){
+  assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone,experienceYears:null}),true,
+    `Valid phone rejected: ${phone}`);
+}
+for(const phone of ['abc1234567','+','123','+91\\\\1234567890']){
+  assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone,experienceYears:null}),false,
+    `Invalid phone accepted: ${phone}`);
+}
