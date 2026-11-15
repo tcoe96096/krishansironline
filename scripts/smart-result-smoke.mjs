@@ -76,6 +76,8 @@ try {
 
   await page.goto(base + '/staff-workspace/', { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', {name:'Teacher & Content Workspace'}).waitFor();
+  assert.equal(await page.getByRole('button', {name:'Sign in with Google'}).count(),1);
+  assert.equal(await page.getByRole('button', {name:'Copy Account ID'}).count(),0);
   assert.equal(await page.getByRole('button', {name:'Save private draft'}).count(),0);
   console.log('PASS: Staff workspace remains protected without a verified login and grant');
 
