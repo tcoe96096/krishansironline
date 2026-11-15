@@ -41,7 +41,9 @@ export function validateTeacherResume(file:{name:string;size:number;type:string}
   // allocate its own object key, scan content, and enforce authorization.
   const name=file.name;
   if(name.length<5||name.length>180||name!==name.trim()||
-     /[\\/\x00-\x1f\x7f]/.test(name)||name.startsWith('.'))return false;
+     /[\\/\x00-\x1f\x7f\u0080-\u009f\u202a-\u202e\u2066-\u2069]/u.test(name)||
+     name.startsWith('.')||/[. ]$/.test(name)||/[. ]\./.test(name)||
+     /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name))return false;
   const ext=name.toLowerCase().split('.').pop();
   const allowed=ext==='pdf'?['application/pdf']:ext==='docx'?
     ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:[];
