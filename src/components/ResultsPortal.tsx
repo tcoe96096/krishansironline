@@ -66,6 +66,11 @@ export const ResultsPortal: React.FC = () => {
         if (!mounted) return;
         setAttempts(history);
         setTests(catalogue);
+        // Only an attempt already returned for this authenticated student can open.
+        // Guessing another student's resultId never fetches their record.
+        const requested = new URLSearchParams(window.location.search).get('resultId');
+        const owned = requested ? history.find((attempt) => attempt.id === requested && attempt.status === 'submitted') : null;
+        if (owned) { setTab('history'); setSelected(owned); }
       })
       .catch((cause) => {
         if (mounted) setError(cause instanceof Error ? cause.message : 'Results are unavailable');
