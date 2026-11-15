@@ -51,3 +51,11 @@ for(const name of ['../resume.pdf','folder\\\\resume.pdf','.hidden.pdf',' resume
 assert.equal(validateTeacherResume({name:'My CV 2026.PDF',size:12000,type:'application/pdf'}),true);
 assert.equal(validateTeacherResume({name:'Resume.docx',size:12000,type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),true);
 assert.equal(validateTeacherResume({name:'Resume.docx',size:12000,type:'application/pdf'}),false);
+
+// Cross-platform filename and Unicode direction-spoofing regressions.
+for(const name of ['CON.pdf','nul.docx','COM1.pdf','LPT9.docx','resume .pdf','resume..pdf','resume. .pdf','resume\u202Efdp.exe.pdf','resume\u2066.pdf','resume\u0085.pdf']) {
+  assert.equal(validateTeacherResume({name,size:12000,type:name.toLowerCase().endsWith('.docx')?
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'application/pdf'}),false,
+    `Unsafe or spoofed resume filename accepted: ${JSON.stringify(name)}`);
+}
+assert.equal(validateTeacherResume({name:'Teaching CV (final).pdf',size:12000,type:'application/pdf'}),true);
