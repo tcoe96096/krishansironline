@@ -44,8 +44,12 @@ export const ResultsPortal: React.FC = () => {
   const en = language === 'en';
   // Guard against stale profile data while authentication accounts are switching.
   const ownProfile = profile?.user_id === user?.id ? profile : null;
-  const [attempts, setAttempts] = useState<TestAttempt[]>([]);
+  const [loadedAttempts, setAttempts] = useState<TestAttempt[]>([]);
+  // Derive visible records during render, not only after session-change effects.
+  // Prevent even a one-frame leak if a shared device switches student accounts.
+  const attempts = useMemo(() => user ? loadedAttempts.filter(a => a.student_id === user.id) : [], [loadedAttempts,user?.id]);
   const [inbox, setInbox] = useState<ResultInboxNotice[]>([]);
+  const visibleInbox = useMemo(() => inbox.filter(notice => attempts.some(a => a.id === notice.attempt_id && a.status === 'submitted')), [inbox,attempts]);
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -266,15 +270,15 @@ export const ResultsPortal: React.FC = () => {
             {linkNotice && <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{en
               ? 'This result link is not available for the signed-in account. Please open your own results below.'
               : 'यह परिणाम लिंक इस लॉगिन खाते के लिए उपलब्ध नहीं है। नीचे अपने परिणाम खोलें।'}</p>}
-            {inbox.length > 0 && (
+            {visibleInbox.length > 0 && (
               <section className="mt-5 rounded-2xl border border-teal-200 bg-white p-4 shadow-sm" aria-label="Private Result Inbox">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-base font-extrabold text-slate-900">{en ? 'Your Private Result Inbox' : 'आपका निजी परिणाम इनबॉक्स'}</h3>
-                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">{inbox.filter(n=>!n.read_at).length} {en ? 'new' : 'नए'}</span>
+                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">{visibleInbox.filter(n=>!n.read_at).length} {en ? 'new' : 'नए'}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">{en ? 'Results delivered to your account. Nobody else can open your report.' : 'आपके विद्यार्थी खाते में भेजे गए निजी परिणाम। दूसरे विद्यार्थी इन्हें नहीं देख सकते।'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {inbox.map((notice) => {
+                  {visibleInbox.map((notice) => {
                     const attempt = attempts.find((item)=>item.id===notice.attempt_id && item.status==='submitted');
                     if (!attempt) return null;
                     return <button key={notice.id} type="button"
