@@ -51,6 +51,16 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite, demoMode = fa
   const { user, isAdmin, adminLoading, loading, signOut, signInWithGoogle } = useAuth();
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [verifiedRole, setVerifiedRole] = useState<'super_admin'|'admin'|'checking'>('checking');
+  useEffect(() => {
+    let active=true;
+    setVerifiedRole('checking');
+    if (demoMode || !user || !isAdmin) return;
+    void requireSupabase().rpc('is_super_admin')
+      .then(({data,error}) => {if(active&&!error)setVerifiedRole(data===true?'super_admin':'admin');})
+      .catch(() => {if(active)setVerifiedRole('checking');});
+    return () => {active=false;};
+  },[demoMode,user?.id,isAdmin]);
   const handleAdminLogin = async () => {
     setLoginBusy(true);
     setLoginError('');
@@ -162,7 +172,7 @@ export const AdminDashboard: React.FC<Props> = ({ onBackToWebsite, demoMode = fa
       <div className={`min-h-screen transition-[padding] duration-200 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[278px]'}`}>
         <header className="relative z-20 flex h-[76px] items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-7">
           <div className="flex min-w-0 items-center gap-3"><button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu className="h-5 w-5" /></button><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-sky-700">ADMIN CONTROL CENTER</p><h1 className="truncate text-base font-extrabold text-slate-900 sm:text-lg">{selected.label}</h1></div></div>
-          <div className="flex items-center gap-2 sm:gap-4"><div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 md:flex"><ShieldCheck className="h-4 w-4 text-emerald-600" />{demoMode ? "Design Demo · No live access" : "Admin verified"}</div><button type="button" onClick={() => {setActive('communication');setSidebarOpen(false);}} className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Open notifications management" title="Open notifications management"><Bell className="h-5 w-5" /></button><div className="hidden h-8 w-px bg-slate-200 sm:block" /><div className="hidden text-right sm:block"><p className="text-xs font-bold text-slate-800">{demoMode ? "Dashboard Preview" : "Admin Account"}</p><p className="max-w-[150px] truncate text-[10px] text-slate-500">{demoMode ? "Sample interface · No live data" : user?.email}</p></div>{!demoMode && <button onClick={() => void signOut()} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700" title="Sign out"><LogOut className="h-4 w-4" /></button>}</div>
+          <div className="flex items-center gap-2 sm:gap-4"><div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 md:flex"><ShieldCheck className="h-4 w-4 text-emerald-600" />{demoMode ? "Design Demo · No live access" : verifiedRole==='super_admin' ? 'Super Admin verified' : verifiedRole==='admin' ? 'Admin verified' : 'Verifying role…'}</div><button type="button" onClick={() => {setActive('communication');setSidebarOpen(false);}} className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Open notifications management" title="Open notifications management"><Bell className="h-5 w-5" /></button><div className="hidden h-8 w-px bg-slate-200 sm:block" /><div className="hidden text-right sm:block"><p className="text-xs font-bold text-slate-800">{demoMode ? "Dashboard Preview" : verifiedRole==='super_admin' ? 'Super Admin Account' : "Admin Account"}</p><p className="max-w-[150px] truncate text-[10px] text-slate-500">{demoMode ? "Sample interface · No live data" : user?.email}</p></div>{!demoMode && <button onClick={() => void signOut()} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700" title="Sign out"><LogOut className="h-4 w-4" /></button>}</div>
         </header>
 
         <main className="mx-auto max-w-[1600px] p-4 sm:p-7">
