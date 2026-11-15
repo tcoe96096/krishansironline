@@ -33,6 +33,18 @@
 - Background PDF generation, verification token, external exam APIs, notifications, result import.
 - NSF provider not identified or integrated; official external links only.
 
+## Result ⇄ Study Materials integration (new development code, 15 Nov 2026)
+
+- The **Student Result Hub** now opens the real study-material catalogue from completed result cards and the learning-insights panel. Only recognized class and subject query filters are accepted; no student identity or grade is included in the link.
+- The Study Materials reader honors safe shareable class/subject URL filters without changing database permissions or saved progress.
+- The **Admin Study Materials** menu is now a working catalogue/control screen rather than a placeholder. Search, class filter, opening published chapter routes, linking to matching published practice tests, navigating to Academic Draft Editor, Results and Staff Permission Board are wired.
+- A unified Super Admin / Admin / Teacher / Student permission matrix is visible, with current versus future rights distinguished and all guarded staff writes still fail closed.
+- New **Content Manager** and material-specific grant choices are only available when the new backend schema can be probed; old Result grant behavior remains separate.
+- Shared staff grant capability validation now has regression tests, including duplicate grants, unsupported roles, and pre-backend material-grant denial.
+- New additive **review-only** SQL at `docs/proposed-migrations/study_material_permission_and_linking_review_only.sql` specifies class-scoped material drafts, author ownership, Super Admin publishing, published-only student reads and append-only audit trigger. It is not yet an active migration.
+
+**Explicit gap:** the existing Academic Draft Editor currently stores local browser drafts; this change does not silently turn them into online student material, teacher-editable cloud records or published database rows. Upload/publish, assigned teacher login, private storage policy, material review/approval, scheduled release, and secure result correction are not production-ready. Grant verification and UI visibility alone do not replace server-side RLS tests.
+
 ## Validation and release gate
 
 1. Latest commit: unit tests, TypeScript and Vite build must pass.
