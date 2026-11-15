@@ -1,3 +1,7 @@
+-- ACTIVATION UPDATE 2026-11-15: This reviewed SQL was activated in the ISOLATED
+-- krishan-sir-lms-preview database as preview_result_staff_scoped_grants_20261115.
+-- ORIGINAL pre-approval warnings below are historical. This file is NOT a
+-- production migration and must not be auto-applied to Production.
 -- PROPOSED / REVIEW-ONLY SQL
 -- Smart Result Studio: Super Admin-controlled, auditable delegated RESULT permissions.
 -- DO NOT RUN against production. This file is intentionally outside supabase/migrations.
