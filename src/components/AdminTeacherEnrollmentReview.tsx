@@ -20,6 +20,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   const [reason,setReason]=useState('');
   const [selected,setSelected]=useState<string|null>(null);
   const [showHistory,setShowHistory]=useState(false);
+  const [search,setSearch]=useState('');
   const [notice,setNotice]=useState('');
   const [error,setError]=useState('');
   const [reload,setReload]=useState(0);
