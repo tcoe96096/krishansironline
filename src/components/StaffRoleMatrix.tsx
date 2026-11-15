@@ -29,6 +29,7 @@ export const StaffRoleMatrix: React.FC<{ materialBackendReady: boolean; resultBa
         <tbody className="divide-y divide-slate-100">{rows.map((row)=><tr key={row.feature}><th scope="row" className="px-3 py-3 font-bold text-slate-800">{row.feature}</th><td className="px-3 py-3 text-sky-900">{row.superAdmin}</td><td className="px-3 py-3 text-slate-700">{row.admin}</td><td className="px-3 py-3 text-slate-700">{row.teacher}</td><td className="px-3 py-3 text-slate-700">{row.student}</td></tr>)}</tbody>
       </table>
     </div>
+    <a href={import.meta.env.BASE_URL+'staff-workspace/'} className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-sky-200 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">Open Teacher / Staff Workspace</a>
     <div className="mt-4 grid gap-2 sm:grid-cols-3">
       <p className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><ClipboardList size={18} className="text-sky-800"/>Test submission → automatic grading</p>
       <p className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><BookOpen size={18} className="text-sky-800"/>Result → related study chapters</p>
