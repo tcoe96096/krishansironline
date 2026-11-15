@@ -4,6 +4,12 @@
 
 **Safe boundary:** Recommendations only for removing/consolidating old controls. No live feature deleted, PR merged, Production deployed or database schema altered. Do not merge Draft PR #109 into Production until owner approval and the Preview DB/security acceptance tests below.
 
+## Implementation update: Preview-only activation after approval
+
+**Implemented in Draft PR #109:** a single Admin **Website Studio** navigation entry containing Page Builder and protected Branding & Site Settings tabs; grouped Dashboard/Academics/Assessments/People & Access/Communication, searchable sidebar, hidden Planned modules and real Student/Teacher pending counts. The old Website Settings editor is preserved inside the tab—not deleted or silently disconnected. The standalone private ADVANCE Studio remains independent; no unsafe import, live-publishing or schema conversion is assumed.
+
+**Preview Database:** all five approved migrations—Staff Grants, Study Materials, Teacher Enrollment, Private Student Result Delivery, Global Card Template—were applied to `krishan-sir-lms-preview` only. Permission/ownership/status tests passed in rolled-back authenticated role simulations. Full browser login with real Google staff accounts, OAuth redirect allowlisting and device acceptance **are not yet complete**. Production and `main` remain unchanged. See `docs/preview-activation-acceptance-2026-11-15.md`.
+
 ## Executive recommendation
 
 **Choose a single owner for web publishing, not three independent visual editors.**
@@ -133,10 +139,10 @@ Suggested sidebar groups:
 - [x] Student role/teacher/admin login button routing fix authored in Draft PR.
 - [x] Teacher request and Super Admin review UI authored; backend controls deliberately gated.
 - [x] No old live feature deleted and no Production DB changes.
-- [ ] New teacher backend reviewed/applied to isolated Preview with explicit approval.
+- [x] Teacher/material/result template/inbox backend applied to isolated Preview after owner approval and tested through rollback SQL role simulations.
 - [ ] Authenticated end-to-end tests with four roles, OAuth allowlists, RLS and audit.
-- [ ] Single-source Website Studio integration, migration and disable legacy UI.
+- [x] Single Admin Website Studio entry with Page Builder / Branding tabs and preserved legacy data; **full ADVANCE Studio schema integration and single Publish Manager still pending**.
 - [ ] Full real-browser visual audits on desktop/mobile with actual admin credentials.
 - [ ] Separate owner approval and plan for Production merge.
 
-**Decision needed only after frontend/security review:** choose canonical editor path and explicitly authorize **Preview-only** migrations/security validation. Until then this repo cannot honestly be described as "all permissions active" or "fully merged".
+**Current boundary:** Preview database setup is done, and a consolidated Admin entry is wired. A real authenticated browser acceptance run, standalone ADVANCE Studio integration and safe single Publish workflow remain release gates. This PR cannot honestly be described as fully published or merged.
