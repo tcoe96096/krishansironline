@@ -21,7 +21,7 @@ alter table public.result_staff_grants
         when 'result_manager' then array['results.read','results.export','results.correction.request','results.release.propose']::text[]
         when 'academic_admin' then array['results.read','tests.manage','results.correction.request','materials.read','materials.draft.write','materials.review.propose']::text[]
         when 'content_manager' then array['materials.read','materials.draft.write','materials.review.propose']::text[]
-        when 'teacher' then array['results.read','results.correction.request','materials.read','materials.draft.write']::text[]
+        when 'teacher' then array['results.read','results.correction.request','materials.read','materials.draft.write','materials.review.propose']::text[]
         when 'viewer' then array['results.read','materials.read']::text[]
         else array[]::text[]
       end
@@ -36,6 +36,7 @@ create table if not exists public.study_material_items (
   subject text not null check (length(btrim(subject)) between 2 and 120),
   title text not null check (length(btrim(title)) between 3 and 200),
   description text not null default '',
+  review_note text not null default '' check (length(review_note) <= 1000),
   kind text not null check (kind in ('notes','pdf','video','presentation','link')),
   resource_url text null check (resource_url is null or (resource_url like 'https://%' and length(resource_url) <= 2000)),
   linked_test_id text null references public.tests(id) on delete set null,
@@ -134,6 +135,28 @@ with check (
   )
 );
 
+drop policy if exists "Scoped staff submit own drafts for review" on public.study_material_items;
+create policy "Scoped staff submit own drafts for review" on public.study_material_items
+for update to authenticated
+using (
+  status='draft' and created_by=(select auth.uid())
+  and exists (
+    select 1 from public.result_staff_grants g
+    where g.user_id=(select auth.uid()) and g.is_active
+    and 'materials.review.propose'=any(g.permissions)
+    and (g.scope_class is null or g.scope_class=study_material_items.class_level)
+  )
+)
+with check (
+  status='pending_review' and created_by=(select auth.uid())
+  and exists (
+    select 1 from public.result_staff_grants g
+    where g.user_id=(select auth.uid()) and g.is_active
+    and 'materials.review.propose'=any(g.permissions)
+    and (g.scope_class is null or g.scope_class=study_material_items.class_level)
+  )
+);
+
 drop policy if exists "Owner may delete only own drafts" on public.study_material_items;
 create policy "Owner may delete only own drafts" on public.study_material_items
 for delete to authenticated
@@ -178,6 +201,24 @@ begin
   else
     if new.id is distinct from old.id or new.created_by is distinct from old.created_by then
       raise exception 'Material ownership cannot change' using errcode='42501';
+    end if;
+  end if;
+
+  if tg_op='UPDATE' then
+    -- A delegated reviewer may only propose the state transition, not mutate content
+    -- at the same time or elevate directly to a published state.
+    if old.status='draft' and new.status='pending_review'
+      and not public.is_super_admin()
+      and (old.class_level,old.subject,old.title,old.description,old.kind,old.resource_url,old.linked_test_id)
+        is distinct from
+          (new.class_level,new.subject,new.title,new.description,new.kind,new.resource_url,new.linked_test_id)
+    then raise exception 'Submit for review without editing other fields' using errcode='42501';
+    end if;
+    if new.status in ('published','archived') and new.status is distinct from old.status then
+      if not public.is_super_admin() then raise exception 'Only Super Admin publishes or archives' using errcode='42501'; end if;
+      if length(btrim(new.review_note)) < 12 then
+        raise exception 'A review reason of at least 12 characters is required' using errcode='22023';
+      end if;
     end if;
   end if;
 
