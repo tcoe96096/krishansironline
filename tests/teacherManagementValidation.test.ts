@@ -26,3 +26,10 @@ assert.equal(validateTeacherRequestedScopes('10','History',['10','11'],['History
 assert.equal(validateTeacherRequestedScopes('10','History',['11'],['History']),false);
 assert.equal(validateTeacherRequestedScopes('10','History',['10','10'],['History']),false);
 assert.equal(validateTeacherRequestedScopes('10','History',['10'],['History','invalid']),false);
+
+// Regression: a literal backslash or whitespace must not be accepted as an email character.
+for(const contactEmail of ['teacher name@example.org','teacher\\name@example.org','teacher@example org','teacher@example\\org','teacher@exampleorg']){
+  assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail,phone:'',experienceYears:null}),false,
+    `Invalid email was accepted: ${contactEmail}`);
+}
+assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'teacher+tag@example.co.in',phone:'',experienceYears:0}),true);
