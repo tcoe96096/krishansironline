@@ -47,3 +47,27 @@ export function validateTeacherResume(file:{name:string;size:number;type:string}
 export function isValidTeacherEmployeeId(value:string):boolean {
   return /^KSOL-T-[A-Z0-9]{8,16}$/.test(value);
 }
+
+/** Draft-only profile validation. The server must independently revalidate all fields. */
+export type TeacherProfileInput = {displayName:string;contactEmail:string;phone:string;experienceYears:number|null};
+export function validateTeacherProfile(input:TeacherProfileInput):boolean {
+  const name=input.displayName.trim();
+  const email=input.contactEmail.trim();
+  const phone=input.phone.trim();
+  return name.length>=2&&name.length<=160&&
+    (email===''||(email.length<=254&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)))&&
+    (phone===''||(phone.length<=20&&/^\\+?[0-9 ()-]{7,20}$/.test(phone)))&&
+    (input.experienceYears===null||(Number.isInteger(input.experienceYears)&&input.experienceYears>=0&&input.experienceYears<=70));
+}
+
+/** Keep the primary request inside the requested scopes; no privileges are assigned here. */
+export function validateTeacherRequestedScopes(primaryClass:string,primarySubject:string,
+  requestedClasses:readonly string[],requestedSubjects:readonly string[]):boolean {
+  return requestedClasses.length>=1&&requestedClasses.length<=TEACHER_CLASSES.length&&
+    requestedSubjects.length>=1&&requestedSubjects.length<=TEACHER_SUBJECTS.length&&
+    new Set(requestedClasses).size===requestedClasses.length&&
+    new Set(requestedSubjects).size===requestedSubjects.length&&
+    requestedClasses.every(value=>TEACHER_CLASSES.some(item=>item===value))&&
+    requestedSubjects.every(value=>TEACHER_SUBJECTS.some(item=>item===value))&&
+    requestedClasses.includes(primaryClass)&&requestedSubjects.includes(primarySubject);
+}
