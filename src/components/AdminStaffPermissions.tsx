@@ -10,19 +10,7 @@ import { requireSupabase } from '../lib/supabase';
 import { StaffRoleMatrix } from './StaffRoleMatrix';
 
 type StaffRecord = { user_id: string; role: 'admin' | 'super_admin'; created_at: string };
-type DelegatedRole = 'result_manager' | 'academic_admin' | 'content_manager' | 'teacher' | 'viewer';
-type DelegatedGrant = {
-  user_id: string; role: DelegatedRole; permissions: string[]; scope_class: string | null;
-  scope_test_id: string | null; is_active: boolean; change_reason: string; updated_at: string;
-};
-type GrantAudit = { id: number; operation: string; affected_user_id: string; actor_id: string; reason: string; created_at: string };
-const delegationCapabilities: Record<DelegatedRole, string[]> = {
-  result_manager: ['results.read','results.export','results.correction.request','results.release.propose'],
-  academic_admin: ['results.read','tests.manage','results.correction.request','materials.read','materials.draft.write','materials.review.propose'],
-  content_manager: ['materials.read','materials.draft.write','materials.review.propose'],
-  teacher: ['results.read','results.correction.request','materials.read','materials.draft.write'],
-  viewer: ['results.read','materials.read']
-};
+import { delegationCapabilities, grantIsWithinRole, type DelegatedRole } from '../services/staffGrantPolicy';
 const validUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 const modules = [
@@ -136,7 +124,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
     const reason = grantReason.trim();
     if (!validUuid(id)) { setGrantError('प्राप्तकर्ता का सही Account UUID आवश्यक है।'); return; }
     if (reason.length < 12) { setGrantError('बदलाव का कारण कम से कम 12 अक्षरों में लिखें।'); return; }
-    if (!grantPermissions.every((capability) => delegationCapabilities[grantRole].includes(capability) && (materialBackendReady || !capability.startsWith('materials.')))) {
+    if (!grantIsWithinRole(grantRole, grantPermissions, materialBackendReady)) {
       setGrantError('इस भूमिका के लिए यह Permission अनुमत नहीं है।'); return;
     }
     setGrantBusy(true); setGrantError(''); setGrantNotice('');
@@ -352,7 +340,7 @@ export const AdminStaffPermissions: React.FC<{ demoMode?: boolean }> = ({ demoMo
                   onChange={(event)=>setGrantReason(event.target.value)} placeholder="State why this person needs this permission."
                   className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-sm"/>
               </label>
-              <button type="submit" disabled={grantBusy || !validUuid(targetUserId.trim()) || grantReason.trim().length < 12}
+              <button type="submit" disabled={grantBusy || !grantIsWithinRole(grantRole,grantPermissions,materialBackendReady) || !validUuid(targetUserId.trim()) || grantReason.trim().length < 12}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800 disabled:opacity-40">
                 <ShieldCheck size={18}/>{grantBusy?'Saving…':'Save Audited Role Grant'}
               </button>
