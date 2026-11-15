@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { requireSupabase } from '../lib/supabase';
 import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
 import { displayAttemptStatus } from '../services/attemptDisplayStatus';
 import { studyMaterialUrl } from '../services/learningLinks';
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 type ResultTab = 'history' | 'insights' | 'external';
+type ResultInboxNotice = {id:string;attempt_id:string;sent_at:string;read_at:string|null};
 type ResultFilter = 'all' | DisplayAttemptStatus;
 const officialPortals = [
   { id: 'cbse', name: 'CBSE Results', hi: 'सीबीएसई परिणाम', subtitle: 'Central Board of Secondary Education', url: 'https://results.cbse.nic.in/' },
@@ -39,6 +41,7 @@ export const ResultsPortal: React.FC = () => {
   const { user, profile } = useAuth();
   const en = language === 'en';
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
+  const [inbox, setInbox] = useState<ResultInboxNotice[]>([]);
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,6 +57,7 @@ export const ResultsPortal: React.FC = () => {
     let mounted = true;
     if (!user) {
       setAttempts([]);
+      setInbox([]);
       setTests([]);
       setSelected(null);
       setLoading(false);
@@ -67,6 +71,12 @@ export const ResultsPortal: React.FC = () => {
         if (!mounted) return;
         setAttempts(history);
         setTests(catalogue);
+        // Optional private inbox: absent until the separately authorized backend
+        // migration is installed. RLS must restrict rows to the recipient.
+        void requireSupabase().from('result_delivery_notices')
+          .select('id,attempt_id,sent_at,read_at')
+          .order('sent_at',{ascending:false}).limit(30)
+          .then(({data,error}) => { if (mounted && !error) setInbox((data ?? []) as ResultInboxNotice[]); });
         // A shared result URL is only a navigation hint. RLS and ownership determine access.
         const requestedResultId = new URLSearchParams(window.location.search).get('resultId');
         if (requestedResultId) {
@@ -219,6 +229,32 @@ export const ResultsPortal: React.FC = () => {
               <button type="button" onClick={() => setRefreshCount((n) => n + 1)} disabled={loading}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={15} className={loading ? 'animate-spin' : ''}/>{en ? 'Refresh data' : 'रिफ्रेश करें'}</button>
             </div>
+            {inbox.length > 0 && (
+              <section className="mt-5 rounded-2xl border border-teal-200 bg-white p-4 shadow-sm" aria-label="Private Result Inbox">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-base font-extrabold text-slate-900">{en ? 'Your Private Result Inbox' : 'आपका निजी परिणाम इनबॉक्स'}</h3>
+                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">{inbox.filter(n=>!n.read_at).length} {en ? 'new' : 'नए'}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{en ? 'Results delivered to your account. Nobody else can open your report.' : 'आपके विद्यार्थी खाते में भेजे गए निजी परिणाम। दूसरे विद्यार्थी इन्हें नहीं देख सकते।'}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {inbox.map((notice) => {
+                    const attempt = attempts.find((item)=>item.id===notice.attempt_id && item.status==='submitted');
+                    if (!attempt) return null;
+                    return <button key={notice.id} type="button"
+                      onClick={() => {
+                        setSelected(attempt);
+                        if (!notice.read_at) {
+                          void requireSupabase().from('result_delivery_notices').update({read_at:new Date().toISOString()}).eq('id',notice.id)
+                            .then(({error}) => { if (!error) setInbox(old=>old.map(n=>n.id===notice.id?{...n,read_at:new Date().toISOString()}:n)); });
+                        }
+                      }}
+                      className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-left text-xs font-bold text-teal-900 hover:bg-teal-100">
+                      {nameOf(attempt.test_id)} · {dateOf(notice.sent_at)} {notice.read_at?'':'• New'}
+                    </button>;
+                  })}
+                </div>
+              </section>
+            )}
             {error && <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>}
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
