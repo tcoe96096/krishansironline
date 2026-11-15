@@ -53,11 +53,22 @@ try {
   assert.equal(await page.getByRole('button', { name: /Save Audited Role Grant/ }).count(), 0);
   console.log('PASS: Staff roles and write actions remain protected in demo mode');
 
+  // A published material can be browsed in demo, but approval must never be usable.
+  await page.getByRole('button', {name:'Study Materials',exact:true}).click();
+  await page.getByRole('heading', {name:'Super Admin Content Approval'}).waitFor();
+  assert.equal(await page.getByRole('button', {name:'Publish',exact:true}).count(),0);
+  console.log('PASS: Super Admin approval writes unavailable in demo');
+
   // Result management also must not leak real students or permit mutation in demo.
   await page.getByRole('button', { name: 'Results & Reports', exact: true }).click();
   await page.getByRole('heading', { name: 'Result Management — Protected Preview' }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Export CSV' }).count(), 0);
   console.log('PASS: Demo reports never expose real records or exports');
+
+  await page.goto(base + '/staff-workspace/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', {name:'Teacher & Content Workspace'}).waitFor();
+  assert.equal(await page.getByRole('button', {name:'Save private draft'}).count(),0);
+  console.log('PASS: Staff workspace remains protected without a verified login and grant');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(base + '/results/', { waitUntil: 'domcontentloaded' });
