@@ -1,5 +1,6 @@
 import React from 'react';
-import { Award, CheckCircle2, FileCheck2, GraduationCap, Printer, ShieldCheck, Target, XCircle } from 'lucide-react';
+import { CheckCircle2, GraduationCap, Printer, ShieldCheck, Target, XCircle } from 'lucide-react';
+import { percentageLabel, percentBarWidth, submittedMetrics } from '../services/resultMetrics';
 import type { TestAttempt } from '../services/testService';
 
 /** Display-only report: values come from a previously graded, server-recorded attempt. */
@@ -22,10 +23,6 @@ export type ResultReportData = {
 const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
 ));
-const safePercent = (value: unknown) => {
-  const percent = Number(value);
-  return Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)).toFixed(1) + '%' : '—';
-};
 const dateText = (value: string | null, en: boolean) => value
   ? new Date(value).toLocaleDateString(en ? 'en-IN' : 'hi-IN', { day: '2-digit', month: 'short', year: 'numeric' })
   : '—';
@@ -47,9 +44,9 @@ export function openSmartResultPrint(data: ResultReportData): boolean {
   const en = Boolean(data.isEnglish);
   const style = themeStyles[data.theme || 'modern'];
   const attempt = data.attempt;
-  const correct = Math.max(0, Number(attempt.correct_count || 0));
-  const attempted = Math.max(0, Number(attempt.attempted_count || 0));
-  const incorrect = Math.max(0, attempted - correct);
+  const metrics = submittedMetrics(attempt);
+  if (!metrics) return false;
+  const { correct, attempted, incorrect } = metrics;
   const doc = [
     '<!doctype html><html lang="', en ? 'en' : 'hi', '"><head><meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
@@ -76,7 +73,7 @@ export function openSmartResultPrint(data: ResultReportData): boolean {
     '<div class="panel"><small>', en ? 'School / Institution' : 'विद्यालय / संस्थान', '</small><b>', escapeHtml(data.student.school || '—'), '</b></div></div>',
     '<div class="score"><small>', en ? 'SERVER-RECORDED SCORE' : 'सर्वर पर दर्ज प्राप्तांक', '</small><div><strong>',
     escapeHtml(attempt.score ?? '—'), '</strong><span> / ', escapeHtml(attempt.total_marks ?? '—'), '</span></div>',
-    '<b style="color:var(--accent);margin-top:7px">', escapeHtml(safePercent(attempt.percentage)), '</b></div>',
+    '<b style="color:var(--accent);margin-top:7px">', escapeHtml(percentageLabel(attempt.percentage)), '</b></div>',
     '<div class="metrics"><div class="metric"><small>', en ? 'Correct' : 'सही', '</small><strong>', correct, '</strong></div>',
     '<div class="metric"><small>', en ? 'Incorrect' : 'गलत', '</small><strong>', incorrect, '</strong></div>',
     '<div class="metric"><small>', en ? 'Attempted' : 'प्रयास', '</small><strong>', attempted, '</strong></div>',
@@ -100,9 +97,9 @@ export const SmartResultReportCard: React.FC<{
   const { attempt, student, title, subject, theme = 'modern', isEnglish: en = false } = data;
   const style = themeStyles[theme];
   if (attempt.status !== 'submitted') return null;
-  const correct = Math.max(0, Number(attempt.correct_count ?? 0));
-  const attempted = Math.max(0, Number(attempt.attempted_count ?? 0));
-  const incorrect = Math.max(0, attempted - correct);
+  const metrics = submittedMetrics(attempt);
+  if (!metrics) return null;
+  const { correct, attempted, incorrect } = metrics;
   return (
     <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-lg shadow-slate-900/10">
       <div className="relative overflow-hidden p-6 text-white sm:p-8" style={{ background: style.main }}>
@@ -122,9 +119,9 @@ export const SmartResultReportCard: React.FC<{
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div><p className="text-xs font-bold text-slate-600">{en ? 'Total Score' : 'कुल प्राप्तांक'}</p>
               <p className="mt-1 text-3xl font-extrabold tabular-nums" style={{color:style.main}}>{attempt.score ?? '—'} <span className="text-base text-slate-500">/ {attempt.total_marks ?? '—'}</span></p></div>
-            <div className="text-right"><p className="text-xs font-semibold text-slate-600">{en ? 'Percentage' : 'प्रतिशत'}</p><p className="mt-1 text-2xl font-extrabold" style={{color:style.accent}}>{safePercent(attempt.percentage)}</p></div>
+            <div className="text-right"><p className="text-xs font-semibold text-slate-600">{en ? 'Percentage' : 'प्रतिशत'}</p><p className="mt-1 text-2xl font-extrabold" style={{color:style.accent}}>{percentageLabel(attempt.percentage)}</p></div>
           </div>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full" style={{width:safePercent(attempt.percentage).replace('%','') + '%',background:style.accent}}/></div>
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full" style={{width:percentBarWidth(attempt.percentage),background:style.accent}}/></div>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[{label: en ? 'Correct' : 'सही',v:correct,icon:CheckCircle2},
