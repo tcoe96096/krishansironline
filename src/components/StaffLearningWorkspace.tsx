@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink } from 'lucide-react';
+import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
 
@@ -20,6 +20,7 @@ export const StaffLearningWorkspace: React.FC = () => {
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState('');
   const [error,setError] = useState('');
+  const [accountNotice,setAccountNotice] = useState('');
   const [reload,setReload] = useState(0);
   const [items,setItems] = useState<Material[]>([]);
   const [draft,setDraft] = useState(emptyDraft);
@@ -53,6 +54,17 @@ export const StaffLearningWorkspace: React.FC = () => {
     })();
     return()=>{mounted=false;};
   },[user?.id,reload]);
+
+  const copyAccountId = async () => {
+    if (!user) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard is unavailable');
+      await navigator.clipboard.writeText(user.id);
+      setAccountNotice('Account ID copied. Send it privately to your Super Admin for identity verification and assignment.');
+    } catch {
+      setAccountNotice('Select and copy the Account ID above, then send it privately to your Super Admin.');
+    }
+  };
 
   const canEdit=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.draft.write'));
   const canReview=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.review.propose'));
@@ -119,7 +131,7 @@ export const StaffLearningWorkspace: React.FC = () => {
   };
 
   if(authLoading||loading)return <main className="mx-auto max-w-5xl p-10 text-sm text-slate-600">Checking your staff permissions securely…</main>;
-  if(!user)return <main className="mx-auto max-w-xl space-y-4 p-8"><UserRound className="text-sky-800"/><h1 className="text-2xl font-extrabold">Teacher & Content Workspace</h1><p className="text-sm text-slate-600">Log in with the Google account that Super Admin has assigned a staff role.</p><button onClick={()=>void signInWithGoogle()} className="rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Sign in with Google</button></main>;
+  if(!user)return <main className="mx-auto max-w-xl space-y-4 p-8"><UserRound className="text-sky-800"/><h1 className="text-2xl font-extrabold">Teacher & Content Workspace</h1><p className="text-sm text-slate-600">Log in with the Google account that Super Admin has assigned a staff role.</p><button onClick={()=>void signInWithGoogle('staff-workspace')} className="rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Sign in with Google</button></main>;
   return <main className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6">
     <header className="rounded-3xl bg-gradient-to-r from-[#061e42] to-[#087f8c] p-6 text-white">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-teal-200"><ShieldCheck size={18}/> Server-authorized Workspace</p>
@@ -131,6 +143,19 @@ export const StaffLearningWorkspace: React.FC = () => {
         <a href={import.meta.env.BASE_URL+'study-materials/'} className="rounded-full border border-white/30 px-3 py-1.5 hover:bg-white/10">Open student materials <ExternalLink size={12} className="inline"/></a>
       </div>
     </header>
+    <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+      <h2 className="text-sm font-extrabold text-sky-950">Teacher Enrollment · Account Reference</h2>
+      <p className="mt-1 text-xs leading-5 text-sky-900">Google sign-in identifies your account; it never grants Teacher privileges automatically. The Super Admin must independently verify your identity and approve a scoped role.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input aria-label="Your teacher account ID" readOnly value={user.id}
+          className="min-w-0 flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 font-mono text-xs text-slate-700"/>
+        <button type="button" onClick={()=>void copyAccountId()}
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-sky-900 px-3 text-xs font-bold text-white hover:bg-sky-800">
+          <Copy size={14}/> Copy Account ID
+        </button>
+      </div>
+      {accountNotice&&<p role="status" className="mt-2 text-xs text-sky-900">{accountNotice}</p>}
+    </section>
     {error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{error}</p>}
     {message&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">{message}</p>}
     {!grant||!ready?<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><LockKeyhole className="text-amber-900"/><h2 className="mt-2 font-extrabold text-amber-950">Staff permission backend not activated</h2><p className="mt-2 text-sm text-amber-900">Super Admin must approve the scoped grant migration and assign your account. No draft editing is allowed yet.</p></div>:<>
