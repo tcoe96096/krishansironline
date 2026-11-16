@@ -18,7 +18,7 @@ BEGIN
   END IF;
   IF v_id IS NOT NULL THEN RETURN v_id; END IF;
   FOR v_attempt IN 1..10 LOOP
-    v_id := 'KSOL-T-' || upper(encode(gen_random_bytes(6),'hex'));
+    v_id := 'KSOL-T-' || upper(substring(replace(pg_catalog.gen_random_uuid()::text,'-','') from 1 for 12));
     BEGIN
       UPDATE public.teacher_profiles SET employee_id=v_id,updated_at=now()
         WHERE user_id=p_teacher_user_id AND employee_id IS NULL;
