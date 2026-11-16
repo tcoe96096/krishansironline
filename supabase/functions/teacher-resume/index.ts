@@ -37,7 +37,8 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
    const result=await admin.storage.from(bucket).download(path);
    if(result.error)throw result.error;
    // Proxy bytes: no bearer URL that survives a later access revocation.
-   return new Response(result.data,{headers:{...headers,'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="teacher-resume"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+   const extension=path.endsWith('.docx')?'docx':'pdf';
+   return new Response(result.data,{headers:{...headers,'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename="teacher-resume.${extension}"`,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
   }
   const form=await body.formData(),file=form.get('file');
   if(!(file instanceof File)||!validateTeacherResume(file))return json(400,{error:'Invalid PDF/DOCX resume'},headers);

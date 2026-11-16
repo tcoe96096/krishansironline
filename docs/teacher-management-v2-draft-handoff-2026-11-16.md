@@ -31,7 +31,7 @@ No migration was executed, even locally. SQL parser checks do not establish data
 - `npm test`: **53 passed**, zero failed (legacy unit tests, validation, RPC contract tests and static security checks).
 - `npm run lint`: passed.
 - `npm run build`: passed; existing Vite config/chunk-size warnings remain.
-- `deno test --node-modules-dir=auto --allow-env supabase/functions/teacher-resume/index.test.ts`: **13 passed**, zero failed. Mocked API tests cover origin/auth, missing configuration, oversized body, filename and structural spoofing, absent scanner, malformed/mismatched/malware scanner receipts, verified receipt, denied download, stale finalization and private-object cleanup. No live storage writes.
+- `deno test --node-modules-dir=auto --allow-env supabase/functions/teacher-resume/index.test.ts`: **14 passed**, zero failed. Mocked API tests cover origin/auth, missing configuration, oversized body, filename and structural spoofing, absent scanner, malformed/mismatched/malware scanner receipts, verified receipt, authorized download with preserved document extension, denied download, stale finalization and private-object cleanup. No live storage writes.
 - `scripts/teacher-management-smoke.mjs`: passed with synthetic session and intercepted mock APIs. Covers mobile profile/qualifications/scopes, failed save, submission lock, withdrawal, inactive backend, upload gate, ordinary Admin boundary, Super Admin verification/approval, assignment grant/revoke, rejection and suspension.
 - Existing `scripts/smart-result-smoke.mjs`: passed (14 reported checks).
 - Existing `scripts/visual-studio-smoke.mjs`: passed (14 reported checks).

@@ -87,3 +87,14 @@ Deno.test('missing server configuration returns unavailable instead of throwing'
  try{assert((await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test'}}))).status===503,'service unavailable');}
  finally{if(url)Deno.env.set('SUPABASE_URL',url);}
 });
+Deno.test('authorized download proxies private bytes with the document extension',()=>setup(async calls=>{
+ Deno.env.set('SUPABASE_ANON_KEY','test-anon');const normal=globalThis.fetch;
+ globalThis.fetch=async(input,init)=>{
+  const url=String(input instanceof Request?input.url:input);
+  if(url.includes('resume_path'))return new Response(JSON.stringify(`${id}/44444444-4444-4444-8444-444444444444.docx`),{headers:{'Content-Type':'application/json'}});
+  if(url.includes('/storage/')){calls.push(url);return new Response('private-docx-bytes',{headers:{'Content-Type':'application/octet-stream'}});}
+  return normal(input,init);
+ };
+ const result=await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test','Content-Type':'application/json'},body:JSON.stringify({documentId:'44444444-4444-4444-8444-444444444444'})}));
+ assert(result.status===200,'download allowed');assert(result.headers.get('Content-Disposition')?.includes('teacher-resume.docx'),'extension preserved');assert(result.headers.get('Cache-Control')==='no-store','no private caching');assert(await result.text()==='private-docx-bytes','proxy returned authorized bytes');
+}));

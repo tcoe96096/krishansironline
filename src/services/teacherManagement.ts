@@ -21,9 +21,9 @@ export async function uploadTeacherResume(file:File,revision:number){
  if(error||!data?.documentId)throw new Error('Resume verification failed. No attachment confirmed.');
  return data.documentId as string;
 }
-export async function downloadTeacherResume(documentId:string){
+export async function downloadTeacherResume(documentId:string,originalFilename:string){
  if(!teacherResumeEnabled)throw new Error('Private resume download awaits activation.');
  const {data,error}=await requireSupabase().functions.invoke('teacher-resume',{body:{documentId}});
  if(error||!(data instanceof Blob))throw new Error('Private document access denied.');
- const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='teacher-resume';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download=/[.]docx$/i.test(originalFilename)?'teacher-resume.docx':'teacher-resume.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
