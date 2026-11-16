@@ -115,3 +115,12 @@ assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','materials.dra
 assert.equal(validateTeacherRequestedWorkTypes(['publish.production']),false);
 assert.equal(validateTeacherRequestedWorkTypes([,] as any),false);
 assert.equal(validateTeacherRequestedWorkTypes(null as any),false);
+
+// Qualifications are personal records: reject invisible controls and forged multiline labels.
+for(const title of ['M.A.\nAdmin','M.A.\u200B','M.A.\u202E']) {
+  assert.equal(validateTeacherQualifications([{title,institution:'University',year:2020}]),false);
+}
+for(const institution of ['University\nAdmin','University\u200D','University\u2066']) {
+  assert.equal(validateTeacherQualifications([{title:'M.A.',institution,year:2020}]),false);
+}
+assert.equal(validateTeacherQualifications([{title:'M.A. History',institution:'State University',year:2020}]),true);
