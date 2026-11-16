@@ -57,7 +57,7 @@ export function validateTeacherResume(file:{name:string;size:number;type:string}
 
 /** Display validation only; employee IDs must be issued atomically server-side. */
 export function isValidTeacherEmployeeId(value:string):boolean {
-  return /^KSOL-T-[A-Z0-9]{8,16}$/.test(value);
+  return typeof value==='string'&&/^KSOL-T-[A-Z0-9]{8,16}$/.test(value);
 }
 
 /** Draft-only profile validation. The server must independently revalidate all fields. */
@@ -67,7 +67,7 @@ export function validateTeacherProfile(input:TeacherProfileInput):boolean {
   const name=input.displayName.trim();
   const email=input.contactEmail.trim();
   const phone=input.phone.trim();
-  return name.length>=2&&name.length<=160&&
+  return name.length>=2&&name.length<=160&&!/[\x00-\x1f\x7f-\x9f\p{Cf}]/u.test(name)&&
     (email===''||(email.length<=254&&/^[^\s@\\]+@[^\s@\\]+\.[^\s@\\]+$/.test(email)))&&
     (phone===''||(phone.length<=20&&/^\+?[0-9 ()-]{7,20}$/.test(phone)))&&
     (input.experienceYears===null||(Number.isInteger(input.experienceYears)&&input.experienceYears>=0&&input.experienceYears<=70));
