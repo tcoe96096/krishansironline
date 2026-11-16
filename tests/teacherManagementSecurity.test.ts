@@ -78,3 +78,13 @@ test('approval requires a verified nonempty assignment before employee ID issuan
  assert.ok(review.indexOf("p_decision='approve' AND jsonb_array_length(p_assignments)=0")<review.indexOf('teacher_v2_issue_employee_id(p_user_id)'));
  assert.ok(review.includes('p_verified IS DISTINCT FROM true'));
 });
+
+test('frontend displays the same fail-closed v2 legacy boundary as proposed SQL',()=>{
+ const client=readFileSync('src/lib/teacherManagementValidation.ts','utf8');
+ const integration=read('integration');
+ assert.ok(client.includes('return profile!==null;'));
+ assert.ok(integration.includes('IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid()) THEN'));
+ assert.ok(integration.includes("status='approved') THEN RETURN false; END IF;"));
+ const ui=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
+ assert.ok(ui.includes("disabled={busy||!verified||scopes.length===0||reason.trim().length<12}"));
+});
