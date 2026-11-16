@@ -86,3 +86,10 @@ export function validateTeacherRequestedScopes(primaryClass:string,primarySubjec
     Array.from(requestedSubjects).every(value=>TEACHER_SUBJECTS.some(item=>item===value))&&
     requestedClasses.includes(primaryClass)&&requestedSubjects.includes(primarySubject);
 }
+
+/** Validate requested work preferences only; this never grants any permission. */
+export function validateTeacherRequestedWorkTypes(workTypes:readonly string[]):boolean {
+  return Array.isArray(workTypes)&&workTypes.length<=TEACHER_WORK_TYPES.length&&
+    new Set(workTypes).size===workTypes.length&&
+    Array.from(workTypes).every(value=>typeof value==='string'&&TEACHER_WORK_TYPES.some(item=>item===value));
+}
