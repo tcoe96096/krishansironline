@@ -43,6 +43,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [phone,setPhone] = useState('');
   const [experienceYears,setExperienceYears] = useState('');
   const [qualification,setQualification] = useState('');
+  const [extraQualifications,setExtraQualifications] = useState<{title:string;institution:string;year:string}[]>([]);
   const [institution,setInstitution] = useState('');
   const [graduationYear,setGraduationYear] = useState('');
   const [resumeFile,setResumeFile] = useState<File|null>(null);
@@ -56,12 +57,12 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     setBackendReady(false);
     setNotice('');
     setError('');
-    if (!user) {setLoadedFor(null);setResumeFile(null);setPhone('');setQualification('');setInstitution('');setGraduationYear('');setExperienceYears('');setReason('');setRequestedWorkTypes([]);return;}
+    if (!user) {setLoadedFor(null);setResumeFile(null);setPhone('');setQualification('');setInstitution('');setGraduationYear('');setExtraQualifications([]);setExperienceYears('');setReason('');setRequestedWorkTypes([]);return;}
     if(loadedFor!==user.id){
       // Never carry one account's unsaved private profile or resume into another account.
       setName(String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim());
       setContactEmail(user.email||'');setPhone('');setExperienceYears('');
-      setQualification('');setInstitution('');setGraduationYear('');setResumeFile(null);
+      setQualification('');setInstitution('');setGraduationYear('');setExtraQualifications([]);setResumeFile(null);
       setReason('');setSubject('History');setClassLevel('10');
       setRequestedClasses(['10']);setRequestedSubjects(['History']);setRequestedWorkTypes([]);
       setLoadedFor(user.id);
@@ -114,8 +115,11 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     if(resumeFile&&!validateTeacherResume(resumeFile)){
       setError('Resume must be a PDF or DOCX file no larger than 5 MB.');return;
     }
-    if((qualification.trim()||institution.trim()||graduationYear.trim())&&
-       !validateTeacherQualifications([{title:qualification,institution,year:Number(graduationYear)}])){
+    const qualifications = [
+      ...(qualification.trim()||institution.trim()||graduationYear.trim() ? [{title:qualification,institution,year:Number(graduationYear)}] : []),
+      ...extraQualifications.map(item=>({title:item.title,institution:item.institution,year:Number(item.year)}))
+    ];
+    if(!validateTeacherQualifications(qualifications)){
       setError('Complete the qualification, institution and valid passing year, or leave all three blank.');return;
     }
     setBusy(true);setError('');setNotice('');
@@ -237,6 +241,16 @@ export const TeacherEnrollmentApplication: React.FC = () => {
            </div>
            <label className="text-xs font-bold text-slate-700 sm:col-span-2">Passing year (preview only)
              <input type="number" min={1950} max={new Date().getFullYear()} value={graduationYear} onChange={event=>setGraduationYear(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
+           <fieldset className="sm:col-span-2 rounded-xl border border-slate-200 p-3"><legend className="text-xs font-bold text-slate-700">Additional qualifications (preview only — not saved)</legend>
+             {extraQualifications.map((item,index)=><div key={index} className="mt-2 grid gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-3">
+               <input aria-label={`Qualification ${index+2}`} placeholder="Qualification" maxLength={120} value={item.title} onChange={e=>setExtraQualifications(current=>current.map((value,i)=>i===index?{...value,title:e.target.value}:value))} className="rounded border p-2 text-sm"/>
+               <input aria-label={`Institution ${index+2}`} placeholder="Institution" maxLength={160} value={item.institution} onChange={e=>setExtraQualifications(current=>current.map((value,i)=>i===index?{...value,institution:e.target.value}:value))} className="rounded border p-2 text-sm"/>
+               <input aria-label={`Passing year ${index+2}`} type="number" min={1950} max={new Date().getFullYear()} placeholder="Year" value={item.year} onChange={e=>setExtraQualifications(current=>current.map((value,i)=>i===index?{...value,year:e.target.value}:value))} className="rounded border p-2 text-sm"/>
+               <button type="button" onClick={()=>setExtraQualifications(current=>current.filter((_,i)=>i!==index))} className="rounded border px-3 py-2 text-xs text-rose-800">Remove qualification</button>
+             </div>)}
+             <button type="button" disabled={extraQualifications.length>=19} onClick={()=>setExtraQualifications(current=>[...current,{title:'',institution:'',year:''}])} className="mt-2 rounded border border-sky-300 px-3 py-2 text-xs font-bold text-sky-900 disabled:opacity-50">+ Add qualification</button>
+             <p className="mt-1 text-xs text-amber-800">Qualifications are local preview data only and are not submitted to the backend.</p>
+           </fieldset>
            <label className="text-xs font-bold text-slate-700 sm:col-span-2">Why are you requesting access?
              <textarea required minLength={12} maxLength={1000} rows={3} value={reason}
                onChange={e=>setReason(e.target.value)} placeholder="Describe your teaching role and why access is needed."
@@ -244,7 +258,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
            <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950" aria-label="Application submission summary">
              <h3 className="font-extrabold">Before submitting — what KSOL will receive</h3>
              <p className="mt-2">Submitted to the current backend: <strong>{name.trim()||'Your name'} · Class {classLevel} · {subject}</strong> and your application reason.</p>
-             <p className="mt-1">Preview only, NOT submitted: <strong>{requestedClasses.length} selected classes, {requestedSubjects.length} selected subjects{qualification.trim()?', qualification':''}{contactEmail.trim()||phone.trim()||experienceYears.trim()?', contact details / experience':''}{resumeFile?', resume file':''}</strong>.</p>
+             <p className="mt-1">Preview only, NOT submitted: <strong>{requestedClasses.length} selected classes, {requestedSubjects.length} selected subjects{qualification.trim()||extraQualifications.length?', qualifications':''}{contactEmail.trim()||phone.trim()||experienceYears.trim()?', contact details / experience':''}{resumeFile?', resume file':''}</strong>.</p>
              <p className="mt-2 font-semibold">Your extra selections and resume will not be attached to this application. Super Admin will only see the primary class and subject until the secure extended backend is approved.</p>
            </div>
            <button type="submit" disabled={busy||reason.trim().length<12||name.trim().length<2}
