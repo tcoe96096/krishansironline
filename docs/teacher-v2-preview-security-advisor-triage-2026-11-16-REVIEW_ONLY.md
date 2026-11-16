@@ -72,3 +72,15 @@ Read-only inspection of six additional functions:
 - `submit_test_attempt()`: rechecks student eligibility, fetches attempt by `id` **and** `student_id=auth.uid()`, and checks attempt status.
 
 These are static code observations, not execution as an ordinary student/teacher. Ten of 18 advisor-listed functions now have targeted body inspection. Remaining eight and live negative-role tests pending. Note: existing Preview enrollment is the legacy single-class/single-subject flow; Teacher Management v2 multi-assignment is still Draft only.
+
+## Final eight flagged RPCs — static body review 2026-11-16 14:48 UTC
+- `admin_get_test_for_edit`: requires `auth.uid()` and `is_admin()` before returning test plus **private answer key**. High-value negative test: teacher/student denied.
+- `admin_publish_site_config`: requires `auth.uid()` and `is_admin()`, then publishes site draft. **Owner decision:** should ordinary Admin be able to publish global site changes?
+- `admin_save_site_config`: requires `auth.uid()` and `is_admin()`, validates JSON object, writes draft.
+- `admin_save_test`: requires `auth.uid()` and `is_admin()`, validates test payload and answer key before writing.
+- `admin_set_test_published`: requires `auth.uid()` and `is_admin()`, checks answer key before publication.
+- `get_student_purge_settings`: requires `is_admin()` before returning retention settings.
+- `publish_result_card_template`: requires `auth.uid()` and `is_super_admin()`, validates theme/options and reason.
+- `save_student_purge_settings`: requires `is_super_admin()`, validates retention window/time and checks scheduler Vault credential presence before enabling schedule. No Vault values were read.
+
+**Status:** All 18 advisor-listed SECURITY DEFINER functions now have initial source-body guard review; this does not establish safe behavior for all inputs or user roles. Negative tests, deeper function call graph review, backup/restore evidence and final owner permission approval remain pending. No SQL writes or Auth changes made.
