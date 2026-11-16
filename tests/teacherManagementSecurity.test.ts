@@ -88,3 +88,13 @@ test('frontend displays the same fail-closed v2 legacy boundary as proposed SQL'
  const ui=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
  assert.ok(ui.includes("disabled={busy||!verified||scopes.length===0||reason.trim().length<12}"));
 });
+
+test('isolated Preview acceptance suite tests legacy-only continuity and pending v2 fail-closed',()=>{
+ const acceptance=read('acceptance');
+ const legacyOnly=acceptance.indexOf('pre-v2 legacy-only class-10 grant unexpectedly denied');
+ const profile=acceptance.indexOf('SELECT public.teacher_v2_save_application(');
+ const pendingDenied=acceptance.indexOf('pending applicant bypassed v2 review with residual legacy grant');
+ assert.ok(legacyOnly>=0&&legacyOnly<profile, 'legacy-only grant test must precede first profile');
+ assert.ok(pendingDenied>profile, 'pending deny must follow creation of a v2 profile');
+ assert.ok(!acceptance.includes('existing legacy grant lost during v2 application'));
+});
