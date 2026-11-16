@@ -1,5 +1,5 @@
 import {strict as assert} from 'node:assert';
-import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId,validateTeacherProfile,validateTeacherRequestedScopes} from '../src/lib/teacherManagementValidation';
+import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId,validateTeacherProfile,validateTeacherRequestedScopes,validateTeacherRequestedWorkTypes} from '../src/lib/teacherManagementValidation';
 
 const a=normalizeTeacherAssignments([
   {classLevel:'10',subject:'History',workType:'materials.draft'},
@@ -108,3 +108,10 @@ for(const phone of ['-------','(------)','+------','12--34--','1234567890123456'
     `Phone with invalid digit count accepted: ${JSON.stringify(phone)}`);
 }
 assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone:'+91 (987) 654-3210',experienceYears:null}),true);
+
+assert.equal(validateTeacherRequestedWorkTypes([]),true);
+assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','result.review']),true);
+assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','materials.draft']),false);
+assert.equal(validateTeacherRequestedWorkTypes(['publish.production']),false);
+assert.equal(validateTeacherRequestedWorkTypes([,] as any),false);
+assert.equal(validateTeacherRequestedWorkTypes(null as any),false);
