@@ -54,6 +54,7 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
 try{
  await page.goto(base+'/staff-workspace/');const panel=page.getByRole('region',{name:'Teacher Management v2',exact:true});
  await panel.getByLabel('Full name',{exact:true}).fill('Test Teacher');
+ assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),1,'Legacy enrollment remains available before v2 profile creation');
  await panel.getByLabel('Contact email',{exact:true}).fill('teacher@example.test');
  await panel.getByRole('button',{name:'Add qualification',exact:true}).click();
  await panel.getByLabel('title 1',{exact:true}).fill('MA History');await panel.getByLabel('institution 1',{exact:true}).fill('Test University');
@@ -63,6 +64,7 @@ try{
  assert.equal(await panel.getByText('Profile draft saved.',{exact:true}).count(),0);
  denySave=false;await panel.getByRole('button',{name:'Save profile draft',exact:true}).click();
  await panel.getByText('Employee ID:',{exact:false}).waitFor();
+ await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).waitFor({state:'detached'});
  if(process.env.TEACHER_TEST_RESUME_ENABLED==='true'){
   const upload=panel.getByLabel('Upload private PDF/DOCX resume (5 MiB maximum)',{exact:true});
   assert.equal(await upload.isDisabled(),false);
@@ -144,6 +146,7 @@ try{
  assert.equal(profile.employee_id,null);
  await page.goto(base+'/staff-workspace/');
  await panel.getByText('Last review note: Qualification documents require correction',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),0,'Rejected v2 applicants must not see duplicate enrollment');
  legacyGrant=true;await page.reload();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0,'Rejected v2 applicants must not inherit residual legacy grants');
  const restoredApproved={...profile,status:'approved',employee_id:'KSOL-T-123456ABCDEF'};
@@ -152,6 +155,7 @@ try{
  // A v2 lookup that fails authorization must never route through legacy grants.
  denySnapshot=true;await page.reload();
  await page.getByText('Staff access could not be verified',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),0,'Denied v2 lookup must not expose legacy application');
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  denySnapshot=false;profile=restoredApproved;
  await page.reload();await panel.getByText('Employee ID:',{exact:false}).waitFor();
