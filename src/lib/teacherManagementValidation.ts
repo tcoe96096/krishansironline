@@ -32,7 +32,7 @@ export function normalizeTeacherAssignments(inputs:readonly TeacherAssignmentInp
 export function validateTeacherQualifications(items:readonly TeacherQualificationInput[]):boolean {
   if(!Array.isArray(items)||items.length>20)return false;
   const currentYear=new Date().getUTCFullYear();
-  return items.every(item=>item!==null&&typeof item==='object'&&typeof item.title==='string'&&typeof item.institution==='string'&&item.title.trim().length>=2&&item.title.trim().length<=120&&
+  return Array.from(items).every(item=>item!==null&&typeof item==='object'&&typeof item.title==='string'&&typeof item.institution==='string'&&item.title.trim().length>=2&&item.title.trim().length<=120&&
     item.institution.trim().length>=2&&item.institution.trim().length<=160&&
     Number.isInteger(item.year)&&item.year>=1950&&item.year<=currentYear);
 }
@@ -46,7 +46,7 @@ export function validateTeacherResume(file:{name:string;size:number;type:string}
   // This is defense-in-depth only; the server must generate the actual storage key.
   if(name!==name.normalize('NFKC')||/\p{Cf}/u.test(name))return false;
   if(name.length<5||name.length>180||name!==name.trim()||
-     /[\\/\x00-\x1f\x7f\u0080-\u009f\u202a-\u202e\u2066-\u2069]/u.test(name)||
+     /[\\/:*?"<>|\x00-\x1f\x7f\u0080-\u009f\u202a-\u202e\u2066-\u2069]/u.test(name)||
      name.startsWith('.')||/[. ]$/.test(name)||/[. ]\./.test(name)||
      /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name))return false;
   const ext=name.toLowerCase().split('.').pop();
@@ -81,7 +81,7 @@ export function validateTeacherRequestedScopes(primaryClass:string,primarySubjec
     requestedSubjects.length>=1&&requestedSubjects.length<=TEACHER_SUBJECTS.length&&
     new Set(requestedClasses).size===requestedClasses.length&&
     new Set(requestedSubjects).size===requestedSubjects.length&&
-    requestedClasses.every(value=>TEACHER_CLASSES.some(item=>item===value))&&
-    requestedSubjects.every(value=>TEACHER_SUBJECTS.some(item=>item===value))&&
+    Array.from(requestedClasses).every(value=>TEACHER_CLASSES.some(item=>item===value))&&
+    Array.from(requestedSubjects).every(value=>TEACHER_SUBJECTS.some(item=>item===value))&&
     requestedClasses.includes(primaryClass)&&requestedSubjects.includes(primarySubject);
 }
