@@ -133,3 +133,19 @@ test('private resume bucket provisioner is fail-closed and never opens Storage c
  assert.ok(!/DELETE\s+FROM\s+storage\.objects|UPDATE\s+storage\.objects/i.test(bucket));
  assert.ok(!resume.includes('INSERT INTO storage.buckets'));
 });
+
+test('Analytics review can be granted independently but neither frontend nor SQL grants assessment authoring',()=>{
+ const funcs=read('functions');
+ const editor=readFileSync('src/components/TeacherManagementV2.tsx','utf8');
+ const admin=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
+ const assessment=funcs.indexOf("p_work_type='assessment.draft'");
+ const analytics=funcs.indexOf("p_work_type='result.review'");
+ assert.ok(assessment>=0&&analytics>assessment);
+ assert.ok(funcs.slice(assessment,analytics).includes("private.teacher_v2_feature_enabled('advanced_assignments')"));
+ assert.ok(funcs.slice(analytics,analytics+190).includes("private.teacher_v2_feature_enabled('result_analytics')"));
+ assert.ok(editor.includes("allowAnalytics?:boolean"));
+ assert.ok(editor.includes("type==='result.review'?allowAnalytics:teacherAdvancedEnabled"));
+ assert.ok(editor.includes('<TeacherScopeEditor value={scopes} onChange={setScopes} allowAnalytics={resultAnalyticsOpen}/>'));
+ assert.ok(admin.includes('setAnalyticsAssignmentsOpen(teacherAnalyticsEnabled&&caps.analytics===true)'));
+ assert.equal((admin.match(/allowAnalytics={analyticsAssignmentsOpen}/g)||[]).length,2);
+});
