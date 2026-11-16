@@ -98,3 +98,10 @@ test('isolated Preview acceptance suite tests legacy-only continuity and pending
  assert.ok(pendingDenied>profile, 'pending deny must follow creation of a v2 profile');
  assert.ok(!acceptance.includes('existing legacy grant lost during v2 application'));
 });
+
+test('Core Beta hides teacher result-summary action while the RPC EXECUTE grant is revoked',()=>{
+ const service=readFileSync('src/services/teacherManagement.ts','utf8');
+ const view=readFileSync('src/components/TeacherManagementV2.tsx','utf8');
+ assert.ok(service.includes('export const teacherResultSummaryEnabled = false;'));
+ assert.ok(view.includes("a.work_type==='result.review'&&teacherResultSummaryEnabled&&<button"));
+});
