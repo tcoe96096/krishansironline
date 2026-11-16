@@ -102,6 +102,17 @@ try{
  await directory.getByText(/KSOL-T-123456ABCDEF/).waitFor();
  assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,true);
  assert.deepEqual(writes.at(-1).args.p_assignments,[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
+ // A new v2-only teacher with no legacy grant must see a usable, scoped editor.
+ await page.goto(base+'/staff-workspace/');
+ await page.getByRole('heading',{name:'Create study material draft',exact:true}).waitFor();
+ const materialClass=page.getByLabel('Class',{exact:true});
+ const materialSubject=page.getByLabel('Subject',{exact:true});
+ assert.equal(await materialClass.inputValue(),'10');
+ assert.equal(await materialSubject.inputValue(),'History');
+ assert.deepEqual(await materialClass.locator('option').allTextContents(),['10']);
+ assert.deepEqual(await materialSubject.locator('option').allTextContents(),['History']);
+ await page.goto(base+'/admin/');
+ await page.getByRole('button',{name:'Staff & Permissions',exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
  await directory.getByLabel('Assignment class',{exact:true}).selectOption('11');
