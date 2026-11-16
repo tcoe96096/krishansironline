@@ -1,3 +1,7 @@
+> Current release scope: [minimal Core Beta](teacher-management-v2-minimal-beta-launch-approval.md), five core SQL files only, no advanced integrations. [Privacy revision](teacher-management-v2-result-privacy-review.md) is review-only and excluded. Preview recovery is blocked by missing managed-backup evidence or secure DB backup access; no SQL/deployment has occurred. Earlier evidence below describes the prior implementation head.
+
+> Current security gate: [Preview preflight is on HOLD](reviews/teacher-management-v2-preflight-review-2026-11-16.md). No v2 SQL was applied. Local recovery tests passed, but managed backup/restore readiness is unverified; aggregate-result small-cohort privacy also needs acceptance. The [all-teacher Production Beta plan](teacher-management-v2-production-beta-plan.md) is preparation only.
+
 # Teacher Management v2 draft handoff — 16 November 2026
 
 PR: https://github.com/tcoe96096/krishansironline/pull/109

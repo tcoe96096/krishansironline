@@ -1,3 +1,4 @@
+import {teacherResumeUiEnabled} from '../lib/teacherBetaFlags';
 import {createTeacherClient} from './teacherManagementClient';
 import { requireSupabase } from '../lib/supabase';
 import { validateTeacherResume, type TeacherProfileInput, type TeacherQualificationInput, type TeacherAssignmentInput } from '../lib/teacherManagementValidation';
@@ -13,7 +14,7 @@ const api=createTeacherClient((name,args)=>requireSupabase().rpc(name,args));
 export const teacherCall=api.call;
 export const saveTeacherApplication=api.save;
 
-export const teacherResumeEnabled = import.meta.env.VITE_TEACHER_RESUME_ENABLED==='true';
+export const teacherResumeEnabled = teacherResumeUiEnabled;
 export async function uploadTeacherResume(file:File,revision:number){
  if(!teacherResumeEnabled||!validateTeacherResume(file))throw new Error('Private resume upload is unavailable or file is invalid.');
  const body=new FormData();body.append('file',file);body.append('revision',String(revision));

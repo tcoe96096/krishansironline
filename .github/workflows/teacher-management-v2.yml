@@ -35,7 +35,10 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://teacher-test.supabase.test
           VITE_SUPABASE_PUBLISHABLE_KEY: test-key
-          VITE_TEACHER_RESUME_ENABLED: 'true'
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
         run: |
           npm run dev -- --port 4174 --host 127.0.0.1 > /tmp/teacher-vite.log 2>&1 &
           for i in $(seq 1 30); do
@@ -45,4 +48,28 @@ jobs:
           exit 1
       - run: node scripts/teacher-management-smoke.mjs
         env:
-          TEACHER_TEST_RESUME_ENABLED: 'true'
+          TEACHER_TEST_RESUME_ENABLED: 'false'
+      - name: Verify target guards and data-preserving artifact assembly (no SQL/network)
+        run: python3 scripts/test_teacher_beta_guardrails.py
+      - name: Build isolated core-only Teacher Beta artifact (no publish)
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: npm run build:teacher-beta
+      - name: Start local core-only artifact
+        run: |
+          npm run preview:teacher-beta -- --port 4177 --host 127.0.0.1 > /tmp/teacher-core-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4177/teacher-beta/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Test core-only profile and authorization UI with mocked APIs
+        env:
+          TEACHER_TEST_BASE_URL: http://127.0.0.1:4177/teacher-beta
+          TEACHER_TEST_PORTAL: 'true'
+        run: node scripts/teacher-management-smoke.mjs

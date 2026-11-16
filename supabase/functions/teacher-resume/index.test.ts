@@ -4,7 +4,7 @@ const origin='https://school.example.test';
 function assert(value:unknown,message:string){if(!value)throw new Error(message);}
 async function setup(run:(calls:string[])=>Promise<void>){
  const previous=globalThis.fetch;const calls:string[]=[];
- Deno.env.set('TEACHER_APP_ORIGIN',origin);Deno.env.set('SUPABASE_URL','https://api.example.test');Deno.env.set('SUPABASE_SERVICE_ROLE_KEY','service-test');
+ Deno.env.set('TEACHER_RESUME_ENABLED','true');Deno.env.set('TEACHER_APP_ORIGIN',origin);Deno.env.set('SUPABASE_URL','https://api.example.test');Deno.env.set('SUPABASE_SERVICE_ROLE_KEY','service-test');
  Deno.env.delete('TEACHER_RESUME_SCANNER_URL');Deno.env.delete('TEACHER_RESUME_SCANNER_KEY');
  globalThis.fetch=async(input)=>{
   const url=String(input instanceof Request?input.url:input);calls.push(url);
@@ -83,7 +83,7 @@ Deno.test('a forged PDF signature is rejected before scanner or storage',()=>set
  assert(result.status===422,'structure denied');assert(!calls.some(x=>x.includes('/storage/')),'no upload');
 }));
 Deno.test('missing server configuration returns unavailable instead of throwing',async()=>{
- Deno.env.set('TEACHER_APP_ORIGIN',origin);const url=Deno.env.get('SUPABASE_URL');Deno.env.delete('SUPABASE_URL');
+ Deno.env.set('TEACHER_RESUME_ENABLED','true');Deno.env.set('TEACHER_APP_ORIGIN',origin);const url=Deno.env.get('SUPABASE_URL');Deno.env.delete('SUPABASE_URL');
  try{assert((await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test'}}))).status===503,'service unavailable');}
  finally{if(url)Deno.env.set('SUPABASE_URL',url);}
 });
@@ -97,4 +97,9 @@ Deno.test('authorized download proxies private bytes with the document extension
  };
  const result=await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test','Content-Type':'application/json'},body:JSON.stringify({documentId:'44444444-4444-4444-8444-444444444444'})}));
  assert(result.status===200,'download allowed');assert(result.headers.get('Content-Disposition')?.includes('teacher-resume.docx'),'extension preserved');assert(result.headers.get('Cache-Control')==='no-store','no private caching');assert(await result.text()==='private-docx-bytes','proxy returned authorized bytes');
+}));
+Deno.test('resume service disabled by default rejects before authentication or storage calls',()=>setup(async calls=>{
+ Deno.env.delete('TEACHER_RESUME_ENABLED');
+ const response=await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test'},body:'disabled'}));
+ assert(response.status===503,'disabled service denied');assert(calls.length===0,'no backend call');
 }));

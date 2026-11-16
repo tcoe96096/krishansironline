@@ -2,10 +2,12 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 const base=process.env.TEACHER_TEST_BASE_URL||'http://127.0.0.1:4174';
+const adminNavLabel=process.env.TEACHER_TEST_PORTAL==='true'?'Teacher Directory':'Staff & Permissions';
 const id='11111111-1111-4111-8111-111111111111';
 const browser=await chromium.launch({headless:true});
 const context=await browser.newContext({viewport:{width:390,height:844}});
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const requestPaths=[];page.on('request',r=>requestPaths.push(new URL(r.url()).pathname));
 let profile=null,active=true,denySave=false,admin=false,superAdmin=false,legacyGrant=false;const writes=[];
 await context.addInitScript(({id})=>{
  const user={id,email:'teacher@example.test',aud:'authenticated',role:'authenticated',user_metadata:{name:'Test Teacher'},app_metadata:{provider:'google'}};
@@ -16,7 +18,8 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  const req=route.request(),url=new URL(req.url());let data=null,status=200;
  if(url.pathname.includes('/rpc/')){
  const op=url.pathname.split('/').at(-1),args=req.postDataJSON()||{};
- if(op==='teacher_v2_snapshot'){if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
+ if(op==='teacher_v2_beta_capabilities')data={registration:true,materials:false,analytics:false,resumes:false,advanced:false};
+ else if(op==='teacher_v2_snapshot'){if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
  else if(op==='teacher_v2_save_application'){
   writes.push({op,args});if(denySave){status=403;data={code:'42501'};}else{
    profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
@@ -69,17 +72,17 @@ try{
  assert.equal(writes.at(-1).args.p_expected_revision,2);assert.equal(writes.at(-1).args.p_submit,true);assert.equal(writes.at(-1).args.p_qualifications[0].title,'MA History');
  assert.equal(writes.at(-1).args.p_scopes[0].workType,'materials.draft');
  await panel.getByRole('button',{name:'Withdraw to edit'}).click();await panel.getByRole('button',{name:'Submit v2 application',exact:true}).waitFor();
- active=false;await page.reload();await panel.getByText(/await owner-approved backend activation/).waitFor();
+ active=false;await page.reload();await panel.getByText(/awaiting owner-approved backend activation/).waitFor();
  assert.equal(await panel.getByRole('button',{name:'Submit v2 application',exact:true}).count(),0);
  assert.equal(await panel.locator('input[type=file]').count(),0);
  assert.equal(await page.getByRole('button',{name:/publish|edit marks/i}).count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
  // Ordinary Admin must not receive the v2 directory. Super Admin reviews explicitly.
- await page.setViewportSize({width:1440,height:1000});admin=true;await page.goto(base+'/admin/');await page.getByRole('button',{name:'Staff & Permissions',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});admin=true;await page.goto(base+'/admin/');await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
  const directory=page.getByRole('region',{name:'Teacher Directory v2',exact:true});
  assert.equal(await directory.getByRole('button',{name:'Review profile and access',exact:true}).count(),0);
  superAdmin=true;active=true;profile.submitted_at='2026-11-16T10:00:00Z';await page.reload();
- await page.getByRole('button',{name:'Staff & Permissions',exact:true}).click();
+ await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
@@ -90,17 +93,17 @@ try{
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
- await directory.getByRole('button',{name:'Grant class 10 · History · materials.draft',exact:true}).click();
+ await directory.getByRole('button',{name:'Assign class 10 · History',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Revoke the assignment for a work change');
- await directory.getByRole('button',{name:'Revoke assignment',exact:true}).click();
+ await directory.getByRole('button',{name:'Revoke assignment',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
  assert.equal(writes.at(-1).args.p_action,'revoke');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Access suspended for role review');
  await directory.getByRole('button',{name:'Suspend teacher and revoke access'}).click();await directory.getByRole('heading',{name:/Test Teacher · suspended/}).waitFor();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Teacher identity reverified after suspension');
- await directory.getByRole('button',{name:'Restore teacher status without assignments',exact:true}).click();
+ await directory.getByRole('button',{name:'Restore teacher status without assignments',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
  await directory.getByRole('heading',{name:/Test Teacher · approved/}).waitFor();
  assert.equal(profile.employee_id,'KSOL-T-123456ABCDEF');
  assert.equal(profile.assignments.every(a=>a.status==='revoked'),true);
@@ -109,17 +112,27 @@ try{
  await directory.getByRole('button',{name:'Refresh directory',exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Qualification documents require correction');
- await directory.getByRole('button',{name:'Reject application',exact:true}).click();
+ await directory.getByRole('button',{name:'Reject application',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
  await directory.getByRole('heading',{name:/Test Teacher · rejected/}).waitFor();
  assert.equal(writes.at(-1).args.p_decision,'reject');
  assert.equal(profile.employee_id,null);
  await page.goto(base+'/staff-workspace/');
  await panel.getByText('Last review note: Qualification documents require correction',{exact:true}).waitFor();
  legacyGrant=true;await page.reload();
- await page.getByRole('heading',{name:'Create study material draft',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Basic Teacher Dashboard',exact:true}).waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
+ assert.equal(await panel.locator('input[type=file]').count(),0);
+ assert.equal(await panel.getByRole('button',{name:'Review result summary'}).count(),0);
  profile.status='approved';profile.employee_id='KSOL-T-123456ABCDEF';
  await page.reload();await panel.getByText('Employee ID:',{exact:false}).waitFor();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
+ if(process.env.TEACHER_TEST_PORTAL==='true'){
+  for(const forbidden of ['result_staff_grants','study_material_items','test_attempts','teacher_v2_result_summary','teacher-resume'])assert.equal(requestPaths.some(path=>path.includes(forbidden)),false,forbidden);
+  const loggedOut=await browser.newContext();const anonymousPage=await loggedOut.newPage();
+  await anonymousPage.goto(base+'/');await anonymousPage.getByRole('heading',{name:'Teacher Google Login',exact:true}).waitFor();
+  assert.equal(await anonymousPage.getByRole('button',{name:'Submit v2 application',exact:true}).count(),0);
+  await loggedOut.close();
+ }
  assert.deepEqual(errors,[]);
  console.log('PASS: teacher v2 mobile registration, multiple qualifications/scopes, failed save, pending lock, withdrawal, inactive backend, upload gate, Admin denial, approval, assignment grant/revoke, rejection notes, suspension, restoration without revived grants and publication boundary (mock API).');
 }finally{await browser.close();}

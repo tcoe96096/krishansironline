@@ -10,6 +10,7 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
  const headers={'Access-Control-Allow-Origin':origin||'null','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'POST, OPTIONS','Vary':'Origin'};
  if(!origin||req.headers.get('Origin')!==origin)return json(403,{error:'Origin denied'},headers);
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
+ if(Deno.env.get('TEACHER_RESUME_ENABLED')!=='true')return json(503,{error:'Resumes disabled'},headers);
  if(req.method!=='POST')return json(405,{error:'Method denied'},headers);
  let uploadedPath:string|null=null;
  const url=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

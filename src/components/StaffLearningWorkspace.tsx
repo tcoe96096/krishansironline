@@ -1,3 +1,4 @@
+import {teacherBetaEnabled,teacherAdvancedEnabled} from '../lib/teacherBetaFlags';
 import React, { useEffect, useState } from 'react';
 import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +39,7 @@ export const StaffLearningWorkspace: React.FC = () => {
     setLoading(true);setError('');setMessage('');setReady(false);setItems([]);setGrant(null);setV2Profile(null);
     void (async()=>{
       try{
+        if(teacherBetaEnabled&&!teacherAdvancedEnabled){setReady(true);return;}
         const client=requireSupabase();
         const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch(()=>null);
         if(!mounted)return;
@@ -177,8 +179,8 @@ export const StaffLearningWorkspace: React.FC = () => {
     {error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{error}</p>}
     {message&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">{message}</p>}
     <TeacherManagementV2 key={user.id}/>
-    {!grant && <TeacherEnrollmentApplication/>}
-    {!grant||!ready?<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6" role="status"><LockKeyhole className="text-amber-900"/><h2 className="mt-2 font-extrabold text-amber-950">{error ? "Staff access could not be verified" : !grant ? "Teacher access awaiting Super Admin approval" : "Study material access is unavailable"}</h2><p className="mt-2 text-sm text-amber-900">{error ? "The staff permission service returned an error or denied access. No editing permission has been granted. Contact Super Admin to verify the preview backend and your account permissions." : !grant ? "Your account does not have an active Teacher grant. Submit or check your Teacher Enrollment request above; Super Admin must verify and approve it before you can edit materials." : "Your staff role exists, but the study material service could not be loaded. Editing remains disabled until access is verified."}</p></div>:<>
+    {!teacherBetaEnabled&&!grant && <TeacherEnrollmentApplication/>}
+    {teacherBetaEnabled&&!teacherAdvancedEnabled?<section className="rounded-2xl border bg-white p-5"><h2 className="font-bold">Basic Teacher Dashboard</h2><p>Your verified profile, qualifications, Employee ID and assignments appear above. Advanced tools, uploads and result analytics are disabled in this Beta.</p></section>:!grant||!ready?<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6" role="status"><LockKeyhole className="text-amber-900"/><h2 className="mt-2 font-extrabold text-amber-950">{error ? "Staff access could not be verified" : !grant ? "Teacher access awaiting Super Admin approval" : "Study material access is unavailable"}</h2><p className="mt-2 text-sm text-amber-900">{error ? "The staff permission service returned an error or denied access. No editing permission has been granted. Contact Super Admin to verify the preview backend and your account permissions." : !grant ? "Your account does not have an active Teacher grant. Submit or check your Teacher Enrollment request above; Super Admin must verify and approve it before you can edit materials." : "Your staff role exists, but the study material service could not be loaded. Editing remains disabled until access is verified."}</p></div>:<>
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Your material drafts</h2><button onClick={()=>setReload(n=>n+1)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><RefreshCw size={15}/>Refresh</button></div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">

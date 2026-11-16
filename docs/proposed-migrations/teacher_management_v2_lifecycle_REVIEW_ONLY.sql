@@ -6,6 +6,7 @@ RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE v_actor uuid:=auth.uid(); v_profile public.teacher_profiles; v_revision integer; q jsonb; s jsonb;
 BEGIN
  IF v_actor IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501'; END IF;
+ IF NOT private.teacher_v2_feature_enabled('registration') THEN RAISE EXCEPTION 'Teacher registration disabled' USING ERRCODE='42501'; END IF;
  -- Serialize even first submissions; profile updates and approval lock the same account.
  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_actor::text,0));
  SELECT * INTO v_profile FROM public.teacher_profiles WHERE user_id=v_actor FOR UPDATE;
@@ -69,10 +70,16 @@ BEGIN
  SELECT * INTO p FROM public.teacher_profiles WHERE user_id=p_user_id FOR UPDATE;
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Application changed; reload before review'; END IF;
  IF p_decision='approve' AND p_verified IS DISTINCT FROM true THEN RAISE EXCEPTION 'Identity verification required'; END IF;
+ IF p_decision='approve' AND NOT private.teacher_v2_feature_enabled('registration') THEN RAISE EXCEPTION 'Teacher approval disabled' USING ERRCODE='42501'; END IF;
  UPDATE public.teacher_profiles SET decision_reason=btrim(p_reason),reviewed_at=now(),status=CASE WHEN p_decision='approve' THEN 'approved' ELSE 'rejected' END,
  approved_by=CASE WHEN p_decision='approve' THEN auth.uid() END,approved_at=CASE WHEN p_decision='approve' THEN now() END,
  submitted_at=NULL,revision=revision+1,updated_at=now() WHERE user_id=p_user_id;
  IF p_decision='approve' THEN
+  -- Core Beta has no dependency on the optional legacy material schema.
+  -- Transitioned accounts must not retain a legacy route around v2 revocation.
+  IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
+   UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
+  END IF;
   v_id:=public.teacher_v2_issue_employee_id(p_user_id);
   FOR s IN SELECT value FROM jsonb_array_elements(p_assignments) LOOP
    PERFORM public.teacher_v2_set_assignment(p_user_id,s->>'classLevel',s->>'subject',s->>'workType','grant',p_reason);
@@ -92,7 +99,9 @@ BEGIN
  IF NOT FOUND THEN RAISE EXCEPTION 'Approved teacher required'; END IF;
  UPDATE public.teacher_assignments SET status='revoked',revoked_by=auth.uid(),revoked_at=now() WHERE teacher_user_id=p_user_id AND status='active';
  -- Close the legacy path too. This does not grant any new legacy rights.
- UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
+ IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
+  UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
+ END IF;
  INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason) VALUES(auth.uid(),p_user_id,'teacher.suspended',p_reason);
  RETURN true;
 END $$;

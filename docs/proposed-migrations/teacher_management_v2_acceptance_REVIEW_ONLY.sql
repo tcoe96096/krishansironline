@@ -2,6 +2,8 @@
 -- Run only AFTER approved schema/profile/functions/lifecycle/integration/resume bundle.
 -- Every fixture and side effect rolls back. Never run against Production.
 BEGIN;
+-- Full-feature regression fixture ONLY: temporary flags roll back; not Beta launch settings.
+UPDATE private.teacher_beta_features SET enabled=true WHERE feature IN ('registration','material_authoring','advanced_assignments');
 INSERT INTO auth.users(id,email) VALUES
  ('11111111-1111-4111-8111-111111111111','teacher-v2-acceptance@example.invalid'),
  ('22222222-2222-4222-8222-222222222222','other-v2-acceptance@example.invalid'),

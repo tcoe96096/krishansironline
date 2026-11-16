@@ -60,6 +60,10 @@ BEGIN
     OR p_action IS NULL OR p_action NOT IN ('grant','revoke') THEN
     RAISE EXCEPTION 'Invalid assignment scope or action';
   END IF;
+  IF p_action='grant' AND NOT private.teacher_v2_feature_enabled('registration') THEN
+    RAISE EXCEPTION 'Teacher assignment grants disabled' USING ERRCODE='42501'; END IF;
+  IF p_action='grant' AND p_work_type IN ('assessment.draft','result.review') AND NOT private.teacher_v2_feature_enabled('advanced_assignments') THEN
+    RAISE EXCEPTION 'Advanced assignment grants disabled' USING ERRCODE='42501'; END IF;
   SELECT status INTO v_status FROM public.teacher_profiles
     WHERE user_id=p_teacher_user_id FOR UPDATE;
   IF NOT FOUND THEN

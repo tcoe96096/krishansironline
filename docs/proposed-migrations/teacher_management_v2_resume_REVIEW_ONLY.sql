@@ -6,6 +6,7 @@ ALTER TABLE public.teacher_resume_documents ADD COLUMN sha256 text CHECK (sha256
 CREATE OR REPLACE FUNCTION public.teacher_v2_reserve_resume(p_user_id uuid,p_revision integer)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 BEGIN
+ IF NOT coalesce((SELECT enabled FROM private.teacher_beta_features WHERE feature='resume_uploads'),false) THEN RAISE EXCEPTION 'Resumes disabled' USING ERRCODE='42501'; END IF;
  UPDATE public.teacher_profiles SET resume_upload_after=now()+interval '1 minute' WHERE user_id=p_user_id AND revision=p_revision AND status='pending' AND submitted_at IS NULL AND (resume_upload_after IS NULL OR resume_upload_after<=now());
  IF NOT FOUND THEN RAISE EXCEPTION 'Upload not permitted'; END IF;
  RETURN true;
@@ -14,6 +15,7 @@ CREATE OR REPLACE FUNCTION public.teacher_v2_finalize_resume(p_user_id uuid,p_re
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE p public.teacher_profiles; v_id uuid;
 BEGIN
+ IF NOT coalesce((SELECT enabled FROM private.teacher_beta_features WHERE feature='resume_uploads'),false) THEN RAISE EXCEPTION 'Resumes disabled' USING ERRCODE='42501'; END IF;
  SELECT * INTO p FROM public.teacher_profiles WHERE user_id=p_user_id FOR UPDATE;
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NOT NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Profile changed during upload'; END IF;
  IF p_path NOT LIKE p_user_id::text||'/%' OR p_path ~ '(^/|\.\.|//)' OR p_sha256 !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Invalid verified object'; END IF;
@@ -29,6 +31,7 @@ CREATE OR REPLACE FUNCTION public.teacher_v2_resume_path(p_document_id uuid)
 RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 DECLARE v_path text;
 BEGIN
+ IF NOT private.teacher_v2_feature_enabled('resume_uploads') THEN RAISE EXCEPTION 'Resumes disabled' USING ERRCODE='42501'; END IF;
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501'; END IF;
  SELECT storage_path INTO v_path FROM public.teacher_resume_documents WHERE id=p_document_id AND verification_status='verified' AND (teacher_user_id=auth.uid() OR public.is_super_admin());
  IF v_path IS NULL THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;

@@ -4,3 +4,5 @@ dist/
 .env.*
 !.env.example
 work/
+teacher-beta-dist/
+__pycache__/
