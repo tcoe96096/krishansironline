@@ -6,7 +6,7 @@ const id='11111111-1111-4111-8111-111111111111';
 const browser=await chromium.launch({headless:true});
 const context=await browser.newContext({viewport:{width:390,height:844}});
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
-let profile=null,active=true,denySave=false,admin=false,superAdmin=false,legacyGrant=false;const writes=[];
+let profile=null,active=true,denySave=false,denySnapshot=false,admin=false,superAdmin=false,legacyGrant=false;const writes=[];
 await context.addInitScript(({id})=>{
  const user={id,email:'teacher@example.test',aud:'authenticated',role:'authenticated',user_metadata:{name:'Test Teacher'},app_metadata:{provider:'google'}};
  const token=btoa(JSON.stringify({alg:'HS256',typ:'JWT'}))+'.'+btoa(JSON.stringify({sub:id,exp:Math.floor(Date.now()/1000)+3600}))+'.test';
@@ -16,7 +16,7 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  const req=route.request(),url=new URL(req.url());let data=null,status=200;
  if(url.pathname.includes('/rpc/')){
  const op=url.pathname.split('/').at(-1),args=req.postDataJSON()||{};
- if(op==='teacher_v2_snapshot'){if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
+ if(op==='teacher_v2_snapshot'){if(denySnapshot){status=403;data={code:'42501'};}else if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
  else if(op==='teacher_v2_save_application'){
   writes.push({op,args});if(denySave){status=403;data={code:'42501'};}else{
    profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
@@ -149,7 +149,11 @@ try{
  const restoredApproved={...profile,status:'approved',employee_id:'KSOL-T-123456ABCDEF'};
  profile=null;await page.reload();
  await page.getByRole('heading',{name:'Create study material draft',exact:true}).waitFor();
- profile=restoredApproved;
+ // A v2 lookup that fails authorization must never route through legacy grants.
+ denySnapshot=true;await page.reload();
+ await page.getByText('Staff access could not be verified',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
+ denySnapshot=false;profile=restoredApproved;
  await page.reload();await panel.getByText('Employee ID:',{exact:false}).waitFor();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0,'Approved v2 profiles without material scope must not inherit residual legacy grants');
  assert.deepEqual(errors,[]);
