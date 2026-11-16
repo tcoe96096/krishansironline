@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
-import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes, validateTeacherProfile } from '../lib/teacherManagementValidation';
+import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes, validateTeacherProfile, TEACHER_WORK_TYPES } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -38,6 +38,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
   const [reason,setReason] = useState('');
   const [requestedClasses,setRequestedClasses] = useState<string[]>(['10']);
   const [requestedSubjects,setRequestedSubjects] = useState<string[]>(['History']);
+  const [requestedWorkTypes,setRequestedWorkTypes] = useState<string[]>([]);
   const [contactEmail,setContactEmail] = useState('');
   const [phone,setPhone] = useState('');
   const [experienceYears,setExperienceYears] = useState('');
@@ -193,13 +194,17 @@ export const TeacherEnrollmentApplication: React.FC = () => {
              </select></label>
            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-950 sm:col-span-2">
              <p className="font-bold">Advanced Teacher Profile — Preview only</p>
-             <p className="mt-1">You can prepare multiple classes, subjects and qualifications here. The current approved backend accepts only one primary class and subject. Additional selections are NOT submitted or saved yet; Super Admin assignments require a separately reviewed backend.</p>
+             <p className="mt-1">You can prepare multiple classes, subjects and qualifications here. The current approved backend accepts only one primary class and subject. Additional class, subject and work selections are NOT submitted or saved yet; Super Admin assignments require a separately reviewed backend.</p>
            </div>
            <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested classes (preview selection)</legend>
              <div className="mt-2 flex flex-wrap gap-3">{classes.map(level=><label key={level} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedClasses.includes(level)} onChange={event=>setRequestedClasses(current=>event.target.checked?[...current,level]:current.filter(item=>item!==level))}/>Class {level}</label>)}</div>
            </fieldset>
            <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested subjects (preview selection)</legend>
              <div className="mt-2 flex flex-wrap gap-3">{subjects.map(item=><label key={item} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedSubjects.includes(item)} onChange={event=>setRequestedSubjects(current=>event.target.checked?[...current,item]:current.filter(value=>value!==item))}/>{item}</label>)}</div>
+           </fieldset>
+           <fieldset className="sm:col-span-2"><legend className="text-xs font-bold text-slate-700">Requested work permissions (preview selection — not saved)</legend>
+             <p className="mt-1 text-xs text-slate-600">These preferences do not grant access. Only Super Admin can assign approved work permissions after server activation.</p>
+             <div className="mt-2 flex flex-wrap gap-3">{TEACHER_WORK_TYPES.map(work=><label key={work} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={requestedWorkTypes.includes(work)} onChange={event=>setRequestedWorkTypes(current=>event.target.checked?[...current,work]:current.filter(item=>item!==work))}/>{work.replace('.', ' · ')}</label>)}</div>
            </fieldset>
            <label className="text-xs font-bold text-slate-700">Contact Email (preview only)
              <input type="email" maxLength={254} value={contactEmail} onChange={event=>setContactEmail(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"/></label>
