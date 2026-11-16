@@ -12,10 +12,11 @@ export type TeacherAssignmentInput = {classLevel:string;subject:string;workType:
 export type TeacherQualificationInput = {title:string;institution:string;year:number};
 
 export function normalizeTeacherAssignments(inputs:readonly TeacherAssignmentInput[]):TeacherAssignmentInput[] {
-  if(inputs.length>60)throw new Error('Too many teacher assignments.');
+  if(!Array.isArray(inputs)||inputs.length>60)throw new Error('Invalid teacher assignments.');
   const seen=new Set<string>();
   const normalized:TeacherAssignmentInput[]=[];
   for(const input of inputs){
+    if(!input||typeof input.classLevel!=='string'||typeof input.subject!=='string'||typeof input.workType!=='string')throw new Error('Invalid teacher assignment.');
     const classLevel=input.classLevel.trim();
     const subject=input.subject.trim();
     const workType=input.workType.trim();
@@ -29,9 +30,9 @@ export function normalizeTeacherAssignments(inputs:readonly TeacherAssignmentInp
 }
 
 export function validateTeacherQualifications(items:readonly TeacherQualificationInput[]):boolean {
-  if(items.length>20)return false;
+  if(!Array.isArray(items)||items.length>20)return false;
   const currentYear=new Date().getUTCFullYear();
-  return items.every(item=>item.title.trim().length>=2&&item.title.trim().length<=120&&
+  return items.every(item=>item!==null&&typeof item==='object'&&typeof item.title==='string'&&typeof item.institution==='string'&&item.title.trim().length>=2&&item.title.trim().length<=120&&
     item.institution.trim().length>=2&&item.institution.trim().length<=160&&
     Number.isInteger(item.year)&&item.year>=1950&&item.year<=currentYear);
 }
@@ -39,6 +40,7 @@ export function validateTeacherQualifications(items:readonly TeacherQualificatio
 export function validateTeacherResume(file:{name:string;size:number;type:string}):boolean {
   // Display-side checks only. Private server upload must still inspect actual bytes,
   // allocate its own object key, scan content, and enforce authorization.
+  if(!file||typeof file.name!=='string'||typeof file.size!=='number'||typeof file.type!=='string')return false;
   const name=file.name;
   // Reject compatibility-spoofed filenames and invisible format characters before upload.
   // This is defense-in-depth only; the server must generate the actual storage key.
@@ -61,6 +63,7 @@ export function isValidTeacherEmployeeId(value:string):boolean {
 /** Draft-only profile validation. The server must independently revalidate all fields. */
 export type TeacherProfileInput = {displayName:string;contactEmail:string;phone:string;experienceYears:number|null};
 export function validateTeacherProfile(input:TeacherProfileInput):boolean {
+  if(!input||typeof input.displayName!=='string'||typeof input.contactEmail!=='string'||typeof input.phone!=='string')return false;
   const name=input.displayName.trim();
   const email=input.contactEmail.trim();
   const phone=input.phone.trim();
@@ -73,6 +76,7 @@ export function validateTeacherProfile(input:TeacherProfileInput):boolean {
 /** Keep the primary request inside the requested scopes; no privileges are assigned here. */
 export function validateTeacherRequestedScopes(primaryClass:string,primarySubject:string,
   requestedClasses:readonly string[],requestedSubjects:readonly string[]):boolean {
+  if(!Array.isArray(requestedClasses)||!Array.isArray(requestedSubjects)||typeof primaryClass!=='string'||typeof primarySubject!=='string')return false;
   return requestedClasses.length>=1&&requestedClasses.length<=TEACHER_CLASSES.length&&
     requestedSubjects.length>=1&&requestedSubjects.length<=TEACHER_SUBJECTS.length&&
     new Set(requestedClasses).size===requestedClasses.length&&
