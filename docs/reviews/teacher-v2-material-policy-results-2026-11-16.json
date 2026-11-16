@@ -1,0 +1,696 @@
+{
+  "project_ref": "zgpkmfqioqvincmgyfpi",
+  "remote_changes": false,
+  "engine": "PostgreSQL 17.12 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "image": "postgres:17-alpine@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7",
+  "checks_per_phase": 2014,
+  "total_checks": 8056,
+  "failures": 0,
+  "differences": [
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/read/draft/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/insert/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/edit/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/delete/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/read/pending_review/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/read/archived/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_approved_multi",
+      "case": "12/Political Science/submit",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_revoked_assignments",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_suspended_active_legacy",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/History/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_draft_only",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/History/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/History/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/History/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_review_only",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/read/draft/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/insert/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/edit/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/delete/draft",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/read/pending_review/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/read/archived/True",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_new_without_legacy",
+      "case": "10/History/submit",
+      "old": false,
+      "proposed": true
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/submit",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/History/move-to/10/Geography",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/read/draft/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/insert/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/edit/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/delete/draft",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/read/pending_review/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/read/archived/True",
+      "old": true,
+      "proposed": false
+    },
+    {
+      "actor": "v2_result_only",
+      "case": "10/Geography/submit",
+      "old": true,
+      "proposed": false
+    }
+  ],
+  "before": {
+    "policies": [
+      {
+        "policyname": "Owner may delete only own drafts",
+        "cmd": "DELETE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+        "with_check": null
+      },
+      {
+        "policyname": "Owner or super admin reads review drafts",
+        "cmd": "SELECT",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.read'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+        "with_check": null
+      },
+      {
+        "policyname": "Published material is readable",
+        "cmd": "SELECT",
+        "roles": [
+          "anon",
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(status = 'published'::text)",
+        "with_check": null
+      },
+      {
+        "policyname": "Scoped editors create drafts",
+        "cmd": "INSERT",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "with_check": "(( SELECT is_super_admin() AS is_super_admin) OR ((created_by = ( SELECT auth.uid() AS uid)) AND (status = 'draft'::text) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))"
+      },
+      {
+        "policyname": "Scoped editors update only own drafts",
+        "cmd": "UPDATE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+        "with_check": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))"
+      },
+      {
+        "policyname": "Scoped staff submit own drafts for review",
+        "cmd": "UPDATE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.review.propose'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level))))))",
+        "with_check": "((status = 'pending_review'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.review.propose'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level))))))"
+      }
+    ],
+    "rows": 608,
+    "material_hash": "56c640578a4c412f80cf29f22a00efd8",
+    "profiles": 10,
+    "profile_hash": "8b379e261d722c44192ecd7a68acc64a",
+    "assignment_hash": "5c0fbe9b86f70c880fdab52730432880",
+    "audit_rows": 0,
+    "triggers": [
+      "CREATE TRIGGER audit_study_material_change BEFORE INSERT OR DELETE OR UPDATE ON public.study_material_items FOR EACH ROW EXECUTE FUNCTION private.audit_study_material_change()"
+    ]
+  },
+  "after": {
+    "policies": [
+      {
+        "policyname": "Published material is readable",
+        "cmd": "SELECT",
+        "roles": [
+          "anon",
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(status = 'published'::text)",
+        "with_check": null
+      },
+      {
+        "policyname": "V2 create own draft",
+        "cmd": "INSERT",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "with_check": "(is_super_admin() OR ((created_by = auth.uid()) AND (status = 'draft'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.draft.write'::text)))"
+      },
+      {
+        "policyname": "V2 delete own draft",
+        "cmd": "DELETE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(is_super_admin() OR ((created_by = auth.uid()) AND (status = 'draft'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.draft.write'::text)))",
+        "with_check": null
+      },
+      {
+        "policyname": "V2 read own material",
+        "cmd": "SELECT",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(is_super_admin() OR ((created_by = auth.uid()) AND teacher_v2_material_permission(class_level, subject, 'materials.read'::text)))",
+        "with_check": null
+      },
+      {
+        "policyname": "V2 submit own draft",
+        "cmd": "UPDATE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "((created_by = auth.uid()) AND (status = 'draft'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.review.propose'::text))",
+        "with_check": "((created_by = auth.uid()) AND (status = 'pending_review'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.review.propose'::text))"
+      },
+      {
+        "policyname": "V2 update own draft",
+        "cmd": "UPDATE",
+        "roles": [
+          "authenticated"
+        ],
+        "permissive": "PERMISSIVE",
+        "qual": "(is_super_admin() OR ((created_by = auth.uid()) AND (status = 'draft'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.draft.write'::text)))",
+        "with_check": "(is_super_admin() OR ((created_by = auth.uid()) AND (status = 'draft'::text) AND teacher_v2_material_permission(class_level, subject, 'materials.draft.write'::text)))"
+      }
+    ],
+    "rows": 608,
+    "material_hash": "56c640578a4c412f80cf29f22a00efd8",
+    "profiles": 10,
+    "profile_hash": "8b379e261d722c44192ecd7a68acc64a",
+    "assignment_hash": "5c0fbe9b86f70c880fdab52730432880",
+    "audit_rows": 0,
+    "triggers": [
+      "CREATE TRIGGER audit_study_material_change BEFORE INSERT OR DELETE OR UPDATE ON public.study_material_items FOR EACH ROW EXECUTE FUNCTION private.audit_study_material_change()"
+    ]
+  },
+  "atomic_abort_passed": true,
+  "policy_rollback_passed": true,
+  "synthetic_dump_restore_passed": true,
+  "synthetic_dump_sha256": "b75738736e8eb92298565bd224ebcb1cecee798addc7b8e78278ebd31a947bf1",
+  "managed_preview_backup_verified": false,
+  "small_cohort_privacy_review": {
+    "synthetic_summary": [
+      {
+        "test_id": "local-test-10",
+        "submitted_count": 1,
+        "average_percentage": 87.0
+      }
+    ],
+    "finding": "An authorized scoped result reviewer sees the exact score when only one attempt is present; owner confidentiality decision/redaction required before Beta."
+  }
+}
