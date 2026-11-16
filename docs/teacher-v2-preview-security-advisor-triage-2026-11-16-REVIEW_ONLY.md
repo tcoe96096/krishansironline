@@ -60,3 +60,15 @@ Read-only inspection of actual `pg_get_functiondef` excerpts, not just regular-e
 - `admin_cancel_studio_publish`: checks authenticated `public.is_admin()` before cancelling pending schedule.
 
 **Review question before Production:** `is_admin()` is intentionally broader than `is_super_admin()`; verify whether Admin is supposed to schedule/cancel global site publishing under the owner's permission model. Do not silently change this authorization rule. Remaining 14 functions and role-based negative tests are pending.
+
+## Further function-body review — 2026-11-16 14:47 UTC
+Read-only inspection of six additional functions:
+
+- `is_admin()`: Boolean role lookup against `user_roles`, accepts `admin` or `super_admin`, requires `auth.uid()`.
+- `is_super_admin()`: Boolean role lookup against `user_roles`, requires `super_admin` and `auth.uid()`.
+- `submit_teacher_enrollment()`: checks login, field bounds, existing platform roles, existing active delegated grants and duplicate/pending applications; applicant ID derived from `auth.uid()`.
+- `withdraw_teacher_enrollment()`: updates only pending requests whose `applicant_id=auth.uid()` and records audit.
+- `start_test_attempt()`: requires approved, active student profile, matching class, published test and attempt limit; attempts keyed to `auth.uid()`.
+- `submit_test_attempt()`: rechecks student eligibility, fetches attempt by `id` **and** `student_id=auth.uid()`, and checks attempt status.
+
+These are static code observations, not execution as an ordinary student/teacher. Ten of 18 advisor-listed functions now have targeted body inspection. Remaining eight and live negative-role tests pending. Note: existing Preview enrollment is the legacy single-class/single-subject flow; Teacher Management v2 multi-assignment is still Draft only.
