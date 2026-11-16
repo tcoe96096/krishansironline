@@ -17,7 +17,7 @@ export function TeacherScopeEditor({value,onChange}:{value:TeacherAssignmentInpu
  <p className="text-xs text-slate-600">Requests require Super Admin approval. Basic Beta assignments do not enable advanced tools or marks editing.</p></fieldset>;
 }
 
-export function TeacherManagementV2(){
+export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>void}={}){
  const inFlight=useRef(false);
  const {user}=useAuth();const [snapshot,setSnapshot]=useState<TeacherSnapshot|null>(null),[ready,setReady]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0);
  const [registrationOpen,setRegistrationOpen]=useState(false);
@@ -28,7 +28,7 @@ export function TeacherManagementV2(){
  if(user&&teacherBetaEnabled)void teacherCall<{registration:boolean}>('teacher_v2_beta_capabilities').then(caps=>{if(current)setRegistrationOpen(caps.registration===true);return teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id});}).then(p=>{if(!current)return;setSnapshot(p);setReady(true);if(p){setName(p.display_name);setEmail(p.contact_email||'');setPhone(p.phone||'');setYears(p.experience_years===null?'':String(p.experience_years));setReason(p.application_reason||'');setQualifications(p.qualifications);setScopes(p.requested_scopes);}}).catch(()=>{if(current)setReady(false);});return()=>{current=false;};},[user?.id,reload]);
  if(!user)return null;
  if(!teacherBetaEnabled)return <section aria-label="Teacher Management v2" className="rounded-2xl border bg-white p-5"><h2 className="font-bold">Teacher Management v2</h2><p>Basic Teacher Beta awaits owner-approved activation.</p></section>;
- const act=async(action:()=>Promise<unknown>,message:string,refresh=true)=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setNotice('');try{await action();if(refresh)setReload(n=>n+1);setNotice(message);}catch(e){setError(e instanceof Error?e.message:'Operation failed.');}finally{inFlight.current=false;setBusy(false);}};
+ const act=async(action:()=>Promise<unknown>,message:string,refresh=true)=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setNotice('');try{await action();if(refresh){setReload(n=>n+1);onProfileChanged?.();}setNotice(message);}catch(e){setError(e instanceof Error?e.message:'Operation failed.');}finally{inFlight.current=false;setBusy(false);}};
  const dirty=!!snapshot&&(name!==snapshot.display_name||email!==(snapshot.contact_email||'')||phone!==(snapshot.phone||'')||years!==(snapshot.experience_years===null?'':String(snapshot.experience_years))||reason!==(snapshot.application_reason||'')||JSON.stringify(qualifications)!==JSON.stringify(snapshot.qualifications)||JSON.stringify(scopes)!==JSON.stringify(snapshot.requested_scopes));
  const locked=!!snapshot&&(snapshot.status==='approved'||snapshot.status==='suspended'||!!snapshot.submitted_at);
  return <section aria-label="Teacher Management v2" className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="text-lg font-bold">Teacher Management v2</h2>{ready&&<button disabled={busy} onClick={()=>{if(!dirty||window.confirm('Discard unsaved profile edits and reload the saved profile?')){setNotice('');setReload(n=>n+1);}}}>Refresh teacher profile</button>}

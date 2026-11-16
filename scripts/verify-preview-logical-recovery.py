@@ -16,7 +16,7 @@ def preview_connection(value):
     if u.scheme not in ('postgres','postgresql') or not (direct or pooler) or u.path not in ('','/postgres'):raise ValueError('Only the exact isolated Preview database is allowed')
     if not u.password:raise ValueError('A securely configured Preview DB credential is required')
     if parse_qs(u.query).get('sslmode',['require'])[0] not in ('require','verify-ca','verify-full'):raise ValueError('TLS is required')
-    return {'PGHOST':host,'PGPORT':str(u.port or 5432),'PGUSER':user,'PGPASSWORD':unquote(u.password),'PGDATABASE':'postgres','PGSSLMODE':'require','PGOPTIONS':'-c default_transaction_read_only=on -c statement_timeout=120000'}
+    return {'PGHOST':host,'PGPORT':str(u.port or 5432),'PGUSER':user,'PGPASSWORD':unquote(u.password),'PGDATABASE':'postgres','PGSSLMODE':parse_qs(u.query).get('sslmode',['require'])[0],'PGOPTIONS':'-c default_transaction_read_only=on -c statement_timeout=120000'}
 
 class RecoveryCommandError(RuntimeError):
     def __init__(self,details):

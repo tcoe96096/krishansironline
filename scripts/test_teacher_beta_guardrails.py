@@ -10,6 +10,7 @@ class RecoveryGuardTests(unittest.TestCase):
   good=f'postgresql://postgres:test-only@db.{recovery.TARGET}.supabase.co:5432/postgres?sslmode=require'
   self.assertEqual(recovery.preview_connection(good)['PGHOST'],f'db.{recovery.TARGET}.supabase.co')
   self.assertIn('default_transaction_read_only=on',recovery.preview_connection(good)['PGOPTIONS'])
+  self.assertEqual(recovery.preview_connection(good.replace('sslmode=require','sslmode=verify-full'))['PGSSLMODE'],'verify-full')
   self.assertNotIn('test-only',str({k:v for k,v in recovery.preview_connection(good).items() if k!='PGPASSWORD'}))
  def test_production_and_ambiguous_targets_are_rejected(self):
   for url in ['postgresql://postgres:x@db.production.supabase.co/postgres',f'postgresql://postgres:x@db.{recovery.TARGET}.supabase.co.evil.test/postgres',f'postgresql://postgres:x@db.{recovery.TARGET}.supabase.co/other',f'postgresql://postgres:x@db.{recovery.TARGET}.supabase.co/postgres?sslmode=disable','postgresql://postgres:x@localhost/postgres']:

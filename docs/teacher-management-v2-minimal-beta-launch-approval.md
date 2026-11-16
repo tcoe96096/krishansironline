@@ -55,7 +55,7 @@ internally; they confer no v2 material-write access while its server feature is 
 | Migration integrity | SQL syntax parsing; historical local atomic-abort and data-hash checks | New five-file core bundle applied ONLY after Preview hold is cleared; rollback-only minimal acceptance and fixture cleanup |
 | Recovery | Historical local policy rollback + synthetic dump restore passed | Confirm usable managed Preview recovery OR separately approve/test a disposable-environment rebuild recovery path; current hold is NOT lifted automatically |
 
-The six previously green CI checks were for `77c6e71`. The current candidate has 83 non-SQL unit/contract tests, 15 mocked resume-service tests and 5 target/artifact guard tests; exact-head CI evidence is tracked in PR #109. New flags/privacy SQL and
+The six previously green CI checks were for `77c6e71`. The current candidate has 84 non-SQL unit/contract tests, 15 mocked resume-service tests and 5 target/artifact guard tests; exact-head CI evidence is tracked in PR #109. New flags/privacy SQL and
 this launch candidate require green checks on their exact new head. No runtime DB test is claimed for the revised SQL: recovery-gated Preview execution is conditionally authorized, but the missing recovery evidence/access currently prevents it. Analytics privacy runtime acceptance is not required to launch because
 its module is excluded and its feature is denied.
 
