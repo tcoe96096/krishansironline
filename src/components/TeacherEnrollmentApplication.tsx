@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Loader2, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
-import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes, validateTeacherProfile, TEACHER_WORK_TYPES } from '../lib/teacherManagementValidation';
+import { validateTeacherQualifications, validateTeacherResume, validateTeacherRequestedScopes, validateTeacherRequestedWorkTypes, validateTeacherProfile, TEACHER_WORK_TYPES } from '../lib/teacherManagementValidation';
 
 type TeacherApplication = {
   id: string;
@@ -95,6 +95,9 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     }
     if(!validateTeacherRequestedScopes(classLevel,subject,requestedClasses,requestedSubjects)){
       setError('Select at least one class and subject, including the primary class and subject.');return;
+    }
+    if(!validateTeacherRequestedWorkTypes(requestedWorkTypes)){
+      setError('Select only the listed work types; duplicate or unsupported requests are not allowed.');return;
     }
     if(!validateTeacherProfile({displayName:name,contactEmail,phone,
       experienceYears:experienceYears.trim()===''?null:Number(experienceYears)})){
