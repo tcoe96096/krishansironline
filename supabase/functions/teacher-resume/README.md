@@ -21,3 +21,28 @@ POST JSON `{documentId}` downloads via fresh owner/Super Admin authorization.
 No public or signed download URLs. Retention cleanup after five uploads and
 scanner integration acceptance remain rollout blockers. Function tests must run
 in a local/mock environment; do not deploy to test without owner approval.
+
+## Private bucket provisioner (review only)
+
+`docs/proposed-migrations/teacher_management_v2_resume_bucket_REVIEW_ONLY.sql` now
+documents a fail-closed, **not executed** bucket provisioner. It requires the
+approved v2 resume metadata function, rejects unreviewed client Storage object
+policies, configures `teacher-resumes-private` as private with a 5 MiB limit
+and exactly PDF/DOCX MIME allowlist, then verifies the resulting configuration.
+No `storage.objects` rows/policies are created or changed. Use Storage API
+for bytes, never direct SQL against object metadata.
+
+Before enabling uploads on an independently approved Preview deployment:
+1. Install and validate the v2 core + resume schema without opening feature gates.
+2. Provision and verify the bucket; recheck direct `anon` / `authenticated`
+   Storage LIST/GET/POST/DELETE denial for arbitrary object paths.
+3. Configure and test the independent HTTPS document scanner with *test files*
+   only, including failure/timeout, malicious/malformed file rejection and
+   matching cryptographic digest receipts. Do not expose scanner credentials
+   or server keys to the browser.
+4. Deploy the `teacher-resume` function only after positive/negative owner,
+   Super Admin and unrelated-user tests; confirm orphan cleanup and retention.
+5. Then, and only then, open the server-side `resume_uploads` flag and
+   publish the reviewed frontend flag. Missing any dependency must fail closed.
+
+This file is a proposal, **not** evidence that storage/scanning is live.
