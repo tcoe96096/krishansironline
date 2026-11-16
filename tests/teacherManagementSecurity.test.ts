@@ -58,3 +58,14 @@ test('Core Beta denies direct authenticated result-summary RPC execution until f
  const executable=summary.split('\n').filter(line=>/^\s*GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.teacher_v2_result_summary\s*\(/i.test(line));
  assert.deepEqual(executable,[], 'result-summary must remain inaccessible even if UI flags are bypassed');
 });
+
+test('v2 material access fails closed for pending, rejected and suspended profiles even with legacy grants',()=>{
+ const integration=read('integration');
+ const permission=integration.slice(integration.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_material_permission'),integration.indexOf('REVOKE ALL ON FUNCTION public.teacher_v2_material_permission'));
+ assert.ok(permission.includes('IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid()) THEN'));
+ assert.ok(permission.includes("IF NOT EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid() AND status='approved') THEN RETURN false; END IF;"));
+ assert.ok(permission.includes('teacher_v2_has_active_assignment(p_class,p_subject'));
+ const legacy=permission.indexOf('RETURN EXISTS(SELECT 1 FROM public.result_staff_grants');
+ assert.ok(legacy>permission.indexOf('END IF;'), 'legacy fallback must be outside v2 profile branch');
+ assert.ok(permission.slice(0,legacy).includes("status='approved'"));
+});
