@@ -59,3 +59,11 @@ for(const name of ['CON.pdf','nul.docx','COM1.pdf','LPT9.docx','resume .pdf','re
     `Unsafe or spoofed resume filename accepted: ${JSON.stringify(name)}`);
 }
 assert.equal(validateTeacherResume({name:'Teaching CV (final).pdf',size:12000,type:'application/pdf'}),true);
+
+// Unicode compatibility and invisible-character filename spoofing regressions.
+for(const name of ['ＣＯＮ.pdf','resume\u200B.pdf','resume\u200D.pdf','resume\u00AD.pdf','resume\uFEFF.pdf','resume\u202Epdf.docx']) {
+  assert.equal(validateTeacherResume({name,size:12000,type:name.endsWith('.docx')?
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'application/pdf'}),false,
+    `Unicode-spoofed resume filename accepted: ${JSON.stringify(name)}`);
+}
+assert.equal(validateTeacherResume({name:'Résumé 2026.pdf',size:12000,type:'application/pdf'}),true);
