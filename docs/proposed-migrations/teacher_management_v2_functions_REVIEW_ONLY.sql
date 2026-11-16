@@ -104,7 +104,7 @@ REVOKE ALL ON FUNCTION public.teacher_v2_set_assignment(uuid,text,text,text,text
 CREATE OR REPLACE FUNCTION public.teacher_v2_has_active_assignment(
  p_class_level text,p_subject text,p_work_type text
 ) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = '' AS $
+SET search_path = '' AS $$
 DECLARE v_actor uuid;
 BEGIN
   v_actor := auth.uid();
@@ -122,7 +122,7 @@ BEGIN
       AND a.work_type=p_work_type
   );
 END;
-$;
+$$;
 REVOKE ALL ON FUNCTION public.teacher_v2_has_active_assignment(text,text,text)
   FROM PUBLIC, anon, authenticated;
 COMMIT;
