@@ -1,5 +1,7 @@
 -- REVIEW ONLY. NOT EXECUTED. Preview hold remains. Requires fresh owner approval.
--- Apply after schema/profile/functions/lifecycle/integration; no automatic migration.
+-- Apply after core schema/beta_flags/profile/functions/lifecycle. Study Material
+-- policy integration is NOT required for isolated fixed-cohort analytics.
+-- This optional module has separate Preview and release acceptance gates.
 -- Replaces the historical raw-count/raw-average RPC. No test_attempts policy changes.
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS private;
