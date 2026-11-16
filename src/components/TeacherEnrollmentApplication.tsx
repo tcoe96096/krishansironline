@@ -56,7 +56,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
     setBackendReady(false);
     setNotice('');
     setError('');
-    if (!user) return;
+    if (!user) {setLoadedFor(null);setResumeFile(null);setPhone('');setQualification('');setInstitution('');setGraduationYear('');setExperienceYears('');setReason('');setRequestedWorkTypes([]);return;}
     if(loadedFor!==user.id){
       // Never carry one account's unsaved private profile or resume into another account.
       setName(String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim());
