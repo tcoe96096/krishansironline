@@ -39,3 +39,14 @@ test('teacher review notes are persisted with their timestamp and are server con
  assert.ok(lifecycle.includes('decision_reason=btrim(p_reason),reviewed_at=now()'));
  assert.ok(!/GRANT\s+(INSERT|UPDATE)\s+ON\s+public\.teacher_profiles/i.test(lifecycle));
 });
+
+test('result summary suppresses cohorts below five distinct students and requires scoped access',()=>{
+ const integration=read('integration');
+ const summary=integration.slice(integration.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary'));
+ assert.ok(summary.includes("teacher_v2_has_active_assignment(p_class,p_subject,'result.review')"));
+ assert.ok(summary.includes('count(DISTINCT a.student_id) >= 5'));
+ assert.ok(summary.includes('ELSE NULL::bigint'));
+ assert.ok(summary.includes('ELSE NULL::numeric'));
+ assert.ok(summary.includes("a.status='submitted'"));
+ assert.ok(!/GRANT EXECUTE ON FUNCTION public.teacher_v2_result_summary\(text,text\) TO anon/.test(summary));
+});
