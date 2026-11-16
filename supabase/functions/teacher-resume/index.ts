@@ -1,5 +1,6 @@
 // DRAFT ONLY. No deployment or storage activation is authorized.
-import {createClient} from 'npm:@supabase/supabase-js@2.57.0';
+import {createClient,type SupabaseClient} from 'npm:@supabase/supabase-js@2.119.0';
+import {hasSafeResumeStructure} from '../../../src/lib/teacherResumeStructure.ts';
 import {validateTeacherResume} from '../../../src/lib/teacherManagementValidation.ts';
 const bucket='teacher-resumes-private';
 const maxBytes=5*1024*1024;
@@ -12,8 +13,10 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
  if(req.method!=='POST')return json(405,{error:'Method denied'},headers);
  let uploadedPath:string|null=null;
  const url=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
- const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+ let admin:SupabaseClient|null=null;
  try{
+  if(!url||!key)return json(503,{error:'Resume service unavailable'},headers);
+  admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
   const token=req.headers.get('Authorization')?.replace(/^Bearer /,'');
   if(!token)return json(401,{error:'Authentication required'},headers);
   const {data:{user},error:authError}=await admin.auth.getUser(token);
@@ -46,6 +49,7 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
   const reservation=await admin.rpc('teacher_v2_reserve_resume',{p_user_id:user.id,p_revision:revision});
   if(reservation.error)return json(429,{error:'Upload unavailable; wait before retrying'},headers);
   const fileBytes=new Uint8Array(await file.arrayBuffer());
+  if(!hasSafeResumeStructure(fileBytes,file.type))return json(422,{error:'Document structure rejected'},headers);
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',fileBytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
   // Scanner must verify bytes, PDF structure / DOCX XML package, archive expansion
   // limits, no macros/encryption, and malware. An unavailable scanner fails closed.
@@ -53,18 +57,23 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
   if(!scanner?.startsWith('https://')||!scannerKey)throw new Error('Private scanner unavailable');
   const scan=await fetch(scanner,{method:'POST',redirect:'error',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${scannerKey}`,'Content-Type':file.type,'X-Content-SHA256':digest},body:fileBytes});
   if(!scan.ok)throw new Error('Verification unavailable');
-  const verification=await scan.json();
+  const scanReader=scan.body?.getReader();
+  if(!scanReader)throw new Error('Invalid scanner response');
+  const scanChunks:Uint8Array[]=[];let scanSize=0;
+  for(;;){const part=await scanReader.read();if(part.done)break;scanSize+=part.value.length;if(scanSize>16384){await scanReader.cancel();throw new Error('Invalid scanner response');}scanChunks.push(part.value);}
+  const scanBytes=new Uint8Array(scanSize);let scanOffset=0;for(const part of scanChunks){scanBytes.set(part,scanOffset);scanOffset+=part.length;}
+  const verification=JSON.parse(new TextDecoder().decode(scanBytes));
   if(verification.clean!==true||verification.validDocument!==true||verification.sha256!==digest||verification.contentType!==file.type)return json(422,{error:'Document verification failed'},headers);
   const path=`${user.id}/${crypto.randomUUID()}.${file.type==='application/pdf'?'pdf':'docx'}`;
   const upload=await admin.storage.from(bucket).upload(path,fileBytes,{contentType:file.type,upsert:false});
   if(upload.error)throw upload.error;
   uploadedPath=path;
   const finalized=await admin.rpc('teacher_v2_finalize_resume',{p_user_id:user.id,p_revision:revision,p_path:path,p_filename:file.name,p_content_type:file.type,p_size:file.size,p_sha256:digest});
-  if(finalized.error)throw finalized.error;
+  if(finalized.error||typeof finalized.data!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(finalized.data))throw new Error('Attachment not confirmed');
   uploadedPath=null;
   return json(200,{documentId:finalized.data},headers);
  }catch{
-  if(uploadedPath)await admin.storage.from(bucket).remove([uploadedPath]);
+  if(uploadedPath&&admin){try{await admin.storage.from(bucket).remove([uploadedPath]);}catch{/* Private orphan cleanup must be retried by the approved retention worker. */}}
   return json(400,{error:'Resume operation failed; no verified document was attached'},headers);
  }
 }
