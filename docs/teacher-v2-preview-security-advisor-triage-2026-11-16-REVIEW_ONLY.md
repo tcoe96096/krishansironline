@@ -42,3 +42,11 @@ Advisor references:
 - https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
 - https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 - https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+## Read-only privilege verification — 2026-11-16 14:45 UTC
+Queried `pg_proc`, `pg_get_functiondef` (only Boolean text-match indicators, not function bodies), `has_function_privilege`, `pg_class`, and `pg_policy` in the isolated Preview database. No SQL writes.
+
+- **All 18** advisor-listed SECURITY DEFINER functions: `authenticated EXECUTE=true`, `anon EXECUTE=false`.
+- All 18 contain an authentication/authorization-related token (`auth.uid`, `auth.jwt`, `is_admin`, or `is_super_admin`), but token presence does **not** prove effective enforcement; 16/18 have a denial-like text token, while `is_admin` and `is_super_admin` are Boolean helpers. This is a static heuristic only; negative-role runtime tests remain mandatory.
+- `student_purge_settings`, `student_purge_settings_audit`, and `test_answer_keys`: RLS enabled, zero policies; **no SELECT/INSERT/UPDATE/DELETE privileges for authenticated**, and **no SELECT for anon**. This supports intentional private-table design. Do not add broad policies without evidence.
+- This verification does **not** confirm PITR/backup or recovery readiness and does not authorize migrations.
