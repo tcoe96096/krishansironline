@@ -50,3 +50,11 @@ test('result summary suppresses cohorts below five distinct students and require
  assert.ok(summary.includes("a.status='submitted'"));
  assert.ok(!/GRANT EXECUTE ON FUNCTION public.teacher_v2_result_summary\(text,text\) TO anon/.test(summary));
 });
+
+test('Core Beta denies direct authenticated result-summary RPC execution until fixed-cohort privacy approval',()=>{
+ const integration=read('integration');
+ const summary=integration.slice(integration.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary'));
+ assert.ok(summary.includes('REVOKE ALL ON FUNCTION public.teacher_v2_result_summary(text,text) FROM PUBLIC,anon,authenticated;'));
+ const executable=summary.split('\n').filter(line=>/^\s*GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.teacher_v2_result_summary\s*\(/i.test(line));
+ assert.deepEqual(executable,[], 'result-summary must remain inaccessible even if UI flags are bypassed');
+});
