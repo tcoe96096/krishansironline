@@ -6,10 +6,16 @@ test('teacher Beta and all advanced features default off',()=>{
  assert.deepEqual(deriveTeacherBetaFlags({}),{core:false,advanced:false,analytics:false,resumes:false});
  assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false});
 });
-test('minimal all-teacher Beta cannot expose uploads or analytics even with stray advanced env values',()=>{
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:false,resumes:false});
+test('core Beta can opt into resumes and analytics separately without enabling advanced work permissions',()=>{
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:true});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:true,advanced:false,analytics:false,resumes:true});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:false});
 });
-test('advanced features need explicit nested flags; partial or truthy strings never enable them',()=>{
+test('advanced flag alone never unlocks private documents or analytics, and core remains master off-switch',()=>{
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_ADVANCED_ENABLED:'true'}),{core:true,advanced:true,analytics:false,resumes:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false});
+});
+test('feature flags require explicit exact true; partial or truthy strings never enable them',()=>{
  const enabled=deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'});
  assert.deepEqual(enabled,{core:true,advanced:true,analytics:true,resumes:true});
  assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'1'}).core,false);
