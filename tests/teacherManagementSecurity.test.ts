@@ -69,3 +69,12 @@ test('v2 material access fails closed for pending, rejected and suspended profil
  assert.ok(legacy>permission.indexOf('END IF;'), 'legacy fallback must be outside v2 profile branch');
  assert.ok(permission.slice(0,legacy).includes("status='approved'"));
 });
+
+test('approval requires a verified nonempty assignment before employee ID issuance',()=>{
+ const lifecycle=read('lifecycle');
+ const review=lifecycle.slice(lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_review'),lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_suspend'));
+ assert.ok(review.includes("p_decision='approve' AND jsonb_array_length(p_assignments)=0"));
+ assert.ok(review.includes('Approval requires at least one verified class, subject and work assignment'));
+ assert.ok(review.indexOf("p_decision='approve' AND jsonb_array_length(p_assignments)=0")<review.indexOf('teacher_v2_issue_employee_id(p_user_id)'));
+ assert.ok(review.includes('p_verified IS DISTINCT FROM true'));
+});
