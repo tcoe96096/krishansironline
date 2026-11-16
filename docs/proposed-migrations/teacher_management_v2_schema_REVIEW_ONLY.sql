@@ -4,8 +4,8 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.teacher_profiles (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   employee_id text UNIQUE,
-  -- Employee identity must never be allocated to an unapproved account.
-  CONSTRAINT teacher_employee_id_requires_approval CHECK (employee_id IS NULL OR status = 'approved'),
+  -- Employee identity is retained after suspension; never issue to pending/rejected accounts.
+  CONSTRAINT teacher_employee_id_requires_approval CHECK (employee_id IS NULL OR status IN ('approved','suspended')),
   display_name text NOT NULL CHECK (char_length(trim(display_name)) BETWEEN 2 AND 160),
   contact_email text,
   phone text,
