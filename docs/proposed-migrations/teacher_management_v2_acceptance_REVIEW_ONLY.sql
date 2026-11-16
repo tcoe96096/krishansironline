@@ -12,6 +12,12 @@ INSERT INTO public.result_staff_grants(user_id,role,permissions,scope_class,chan
 VALUES('11111111-1111-4111-8111-111111111111','teacher',ARRAY['materials.read','materials.draft.write'],'10','Existing approved legacy teacher fixture');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+-- A truly legacy-only teacher retains approved class-10 access before v2 enrollment.
+DO $ BEGIN
+ IF NOT public.teacher_v2_material_permission('10','History','materials.draft.write') THEN
+  RAISE EXCEPTION 'FAIL: pre-v2 legacy-only class-10 grant unexpectedly denied';
+ END IF;
+END $;
 SELECT public.teacher_v2_save_application(
  '{"displayName":"Acceptance Teacher","contactEmail":"teacher@example.invalid","phone":"","experienceYears":2}',
  '[{"title":"MA History","institution":"Acceptance University","year":2020},{"title":"BEd","institution":"Acceptance College","year":2022}]',
@@ -44,7 +50,11 @@ DO $$ BEGIN
   DELETE FROM public.teacher_audit_events;RAISE EXCEPTION 'FAIL: audit tampering';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  IF public.teacher_v2_has_active_assignment('10','History','materials.draft') THEN RAISE EXCEPTION 'FAIL: pending v2 assignment'; END IF;
- IF NOT public.teacher_v2_material_permission('10','History','materials.draft.write') THEN RAISE EXCEPTION 'FAIL: existing legacy grant lost during v2 application'; END IF;
+ -- Once a v2 profile exists, even a pending applicant MUST NOT inherit a stale
+ -- legacy grant. Approved v2 scopes are the only way to regain authoring rights.
+ IF public.teacher_v2_material_permission('10','History','materials.draft.write') THEN
+  RAISE EXCEPTION 'FAIL: pending applicant bypassed v2 review with residual legacy grant';
+ END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
 DO $$ BEGIN
