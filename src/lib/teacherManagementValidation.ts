@@ -32,8 +32,11 @@ export function normalizeTeacherAssignments(inputs:readonly TeacherAssignmentInp
 export function validateTeacherQualifications(items:readonly TeacherQualificationInput[]):boolean {
   if(!Array.isArray(items)||items.length>20)return false;
   const currentYear=new Date().getUTCFullYear();
-  return Array.from(items).every(item=>item!==null&&typeof item==='object'&&typeof item.title==='string'&&typeof item.institution==='string'&&item.title.trim().length>=2&&item.title.trim().length<=120&&
+  return Array.from(items).every(item=>item!==null&&typeof item==='object'&&typeof item.title==='string'&&typeof item.institution==='string'&&
+    item.title.trim().length>=2&&item.title.trim().length<=120&&
     item.institution.trim().length>=2&&item.institution.trim().length<=160&&
+    !/[\x00-\x1f\x7f-\x9f\p{Cf}]/u.test(item.title)&&
+    !/[\x00-\x1f\x7f-\x9f\p{Cf}]/u.test(item.institution)&&
     Number.isInteger(item.year)&&item.year>=1950&&item.year<=currentYear);
 }
 
