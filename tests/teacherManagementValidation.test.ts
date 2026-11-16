@@ -81,3 +81,14 @@ assert.equal(validateTeacherProfile(null as any),false);
 assert.equal(validateTeacherProfile({displayName:null,contactEmail:'',phone:'',experienceYears:null} as any),false);
 assert.equal(validateTeacherRequestedScopes('10','History',null as any,['History']),false);
 assert.equal(validateTeacherRequestedScopes('10','History',['10'],[null] as any),false);
+
+// Sparse arrays must not bypass validation through Array.prototype.every.
+assert.equal(validateTeacherQualifications(new Array(1) as any),false);
+assert.equal(validateTeacherQualifications([, {title:'M.A.',institution:'University',year:2020}] as any),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10',,] as any,['History']),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10'],['History',,] as any),false);
+// Windows alternate data streams and forbidden path characters must not pass filename checks.
+for(const name of ['resume:stream.pdf','resume?.pdf','resume*.pdf','resume|draft.pdf','resume<draft>.pdf','resume"draft.pdf']) {
+  assert.equal(validateTeacherResume({name,size:12000,type:'application/pdf'}),false,
+    `Unsafe Windows filename accepted: ${JSON.stringify(name)}`);
+}
