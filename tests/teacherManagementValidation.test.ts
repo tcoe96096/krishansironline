@@ -92,3 +92,12 @@ for(const name of ['resume:stream.pdf','resume?.pdf','resume*.pdf','resume|draft
   assert.equal(validateTeacherResume({name,size:12000,type:'application/pdf'}),false,
     `Unsafe Windows filename accepted: ${JSON.stringify(name)}`);
 }
+
+// Untrusted JSON can supply non-string IDs; invisible name controls must be rejected.
+for(const value of [null,123,{},['KSOL-T-A1B2C3D4']]) {
+  assert.equal(isValidTeacherEmployeeId(value as any),false);
+}
+for(const displayName of ['Teacher\\nAdmin','Teacher\\u200BAdmin','Teacher\\u202EAdmin']) {
+  assert.equal(validateTeacherProfile({displayName,contactEmail:'',phone:'',experienceYears:null}),false);
+}
+assert.equal(validateTeacherProfile({displayName:'Dr. Teacher',contactEmail:'',phone:'',experienceYears:null}),true);
