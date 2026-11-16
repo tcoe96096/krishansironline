@@ -52,5 +52,8 @@ BEGIN
  WHERE t.class_level=p_class AND t.subject=p_subject GROUP BY t.id ORDER BY t.id LIMIT 100;
 END $$;
 REVOKE ALL ON FUNCTION public.teacher_v2_result_summary(text,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.teacher_v2_result_summary(text,text) TO authenticated;
+-- Core Beta privacy gate: keep this RPC inaccessible to authenticated users.
+-- A UI feature flag alone does not prevent direct RPC calls. Grant EXECUTE only in a
+-- separately reviewed migration after fixed-cohort privacy and inference tests pass.
+-- No authenticated EXECUTE grant in this Core Beta migration.
 COMMIT;
