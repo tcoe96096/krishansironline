@@ -57,7 +57,7 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
 try{
  await page.goto(base+'/staff-workspace/');const panel=page.getByRole('region',{name:'Teacher Management v2',exact:true});
  await panel.getByLabel('Full name',{exact:true}).fill('Test Teacher');
- assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),1,'Legacy enrollment remains available before v2 profile creation');
+ assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),0,'Core Beta presents exactly one v2 registration flow');
  await panel.getByLabel('Contact email',{exact:true}).fill('teacher@example.test');
  await panel.getByRole('button',{name:'Add qualification',exact:true}).click();
  await panel.getByLabel('title 1',{exact:true}).fill('MA History');await panel.getByLabel('institution 1',{exact:true}).fill('Test University');
