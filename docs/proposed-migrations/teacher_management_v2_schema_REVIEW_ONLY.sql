@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS public.teacher_profiles (
   employee_id text UNIQUE,
   -- Employee identity is retained after suspension; never issue to pending/rejected accounts.
   display_name text NOT NULL CHECK (char_length(trim(display_name)) BETWEEN 2 AND 160),
-  contact_email text,
-  phone text,
+  contact_email text CHECK (contact_email IS NULL OR char_length(contact_email) <= 254),
+  phone text CHECK (phone IS NULL OR char_length(phone) <= 20),
   experience_years integer CHECK (experience_years BETWEEN 0 AND 70),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','suspended','rejected')),
   approved_by uuid REFERENCES auth.users(id),
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_audit_events (
   teacher_user_id uuid NOT NULL REFERENCES public.teacher_profiles(user_id),
   action text NOT NULL,
   reason text NOT NULL CHECK (char_length(trim(reason)) BETWEEN 12 AND 1000),
-  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(details) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 -- Default-deny policies: no client-side table access until audited server RPCs and
