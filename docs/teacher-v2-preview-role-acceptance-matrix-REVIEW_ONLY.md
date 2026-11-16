@@ -39,3 +39,16 @@ Created 2026-11-16. **No live account testing or database changes performed.** E
 
 ## Open decision
 Current `is_admin()` includes `admin` and `super_admin`. Existing `admin_publish_site_config` and scheduled publishing RPCs allow both. Decide whether global site publishing must instead be Super Admin-only. **Do not change live permissions until owner confirms.**
+
+## Live policy reconciliation — 2026-11-16 14:53 UTC
+Read-only `pg_policies` inspection of Preview `public.study_material_items` confirms six policies: five scoped draft/review authoring policies named in the proposed integration's DROP statements, plus `Published material is readable` (`SELECT` for `anon,authenticated`, `status='published'`). The proposed v2 SQL leaves that public published-read policy intact.
+
+**Compatibility tests to add before migration:**
+1. Existing legacy teacher with active `result_staff_grants`: preserve permitted own draft create/read/update/review flow after v2 integration, until an explicit v2 transition occurs.
+2. Approved v2 teacher: class + subject + work-type assignment must control own draft operations; verify assignment revocation immediately denies access even if legacy grants remain.
+3. Suspended v2 teacher: deny draft and review access despite old grants.
+4. Rejected/pending v2 applicant who has any residual active legacy grant: investigate fallback behavior in `teacher_v2_material_permission`; the current proposal selects legacy fallback when no employee ID and status not approved/suspended. **Review before activation**; do not assume rejected applications cannot have residual grants.
+5. Public/anonymous users can still read only published materials via the unchanged published-read policy; they must not see drafts or pending review.
+6. Ensure UPDATE transition from draft to pending_review succeeds only with the review permission, and fails without it; verify row SELECT visibility required for PostgREST UPDATE behavior.
+
+No policies were modified. This is review evidence, not live post-migration acceptance.
