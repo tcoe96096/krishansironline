@@ -4,6 +4,8 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.teacher_profiles (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   employee_id text UNIQUE,
+  -- Employee identity must never be allocated to an unapproved account.
+  CONSTRAINT teacher_employee_id_requires_approval CHECK (employee_id IS NULL OR status = 'approved'),
   display_name text NOT NULL CHECK (char_length(trim(display_name)) BETWEEN 2 AND 160),
   contact_email text,
   phone text,
@@ -26,10 +28,11 @@ CREATE TABLE IF NOT EXISTS public.teacher_qualifications (
 CREATE TABLE IF NOT EXISTS public.teacher_resume_documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   teacher_user_id uuid NOT NULL REFERENCES public.teacher_profiles(user_id) ON DELETE CASCADE,
-  storage_path text NOT NULL UNIQUE,
-  original_filename text NOT NULL,
+  storage_path text NOT NULL UNIQUE CHECK (char_length(storage_path) BETWEEN 12 AND 512),
+  original_filename text NOT NULL CHECK (char_length(trim(original_filename)) BETWEEN 5 AND 180),
   content_type text NOT NULL CHECK (content_type IN ('application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document')),
   size_bytes integer NOT NULL CHECK (size_bytes BETWEEN 1 AND 5242880),
+  CONSTRAINT teacher_resume_storage_key_no_traversal CHECK (storage_path !~ '(^/|\\.\\.|//|\\\\)'),
   verification_status text NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
   uploaded_at timestamptz NOT NULL DEFAULT now()
 );
