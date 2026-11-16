@@ -14,7 +14,12 @@ CREATE TABLE IF NOT EXISTS public.teacher_profiles (
   approved_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT teacher_employee_id_format CHECK (employee_id IS NULL OR employee_id ~ '^KSOL-T-[A-Z0-9]{8,16}
+  CONSTRAINT teacher_employee_id_format CHECK (employee_id IS NULL OR employee_id ~ '^KSOL-T-[A-Z0-9]{8,16}$'),
+  CONSTRAINT teacher_employee_id_requires_approval CHECK (employee_id IS NULL OR status IN ('approved','suspended')),
+  CONSTRAINT teacher_profile_approval_metadata CHECK (
+    (status IN ('pending','rejected') AND approved_by IS NULL AND approved_at IS NULL)
+    OR (status IN ('approved','suspended') AND approved_by IS NOT NULL AND approved_at IS NOT NULL)
+  )
 );
 CREATE TABLE IF NOT EXISTS public.teacher_qualifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
