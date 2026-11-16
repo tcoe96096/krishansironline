@@ -124,7 +124,7 @@ export const TeacherEnrollmentApplication: React.FC = () => {
         p_display_name:name.trim(),p_subject:subject,p_class_level:classLevel,p_reason:reason.trim()
       });
       if(submitError)throw submitError;
-      setNotice('Request submitted. You can track its status here. Super Admin approval is required before any Teacher access.');
+      setNotice('Primary class and subject request submitted. Preview-only profile, resume and additional class/subject/work preferences were NOT saved. Super Admin approval is required before any Teacher access.');
       setReason('');
       setReload(v=>v+1);
     } catch(cause) {
