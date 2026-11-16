@@ -52,3 +52,10 @@ Read-only `pg_policies` inspection of Preview `public.study_material_items` conf
 6. Ensure UPDATE transition from draft to pending_review succeeds only with the review permission, and fails without it; verify row SELECT visibility required for PostgREST UPDATE behavior.
 
 No policies were modified. This is review evidence, not live post-migration acceptance.
+
+## Identified pre-migration authorization edge — 2026-11-16 14:54 UTC
+**BLOCKER FOR PREVIEW MIGRATION PENDING RESOLUTION:** Proposed `teacher_v2_material_permission` switches to v2-only assignment checks only when `teacher_profiles.employee_id IS NOT NULL` **or** profile status is `approved`/`suspended`. For `pending`/`rejected` profiles, it falls back to an active legacy `result_staff_grants` row. The v2 lifecycle review function does not deactivate legacy grants when rejecting an application. Consequently, an account that is both a pending/rejected v2 applicant and a holder of a residual active legacy grant **could retain study-material permissions**. This is a conditional code-path finding, not evidence that such an account exists in Preview.
+
+**Proposed remediation (review-only, not applied):** Define an explicit, audited transition for pre-existing legacy staff before v2 application, then fail closed for *all* identities present in `teacher_profiles` unless `status='approved'` and a matching active v2 assignment exists. Keep legacy fallback only for identities with **no** v2 profile. Add tests for pending/rejected + legacy grant, suspended + legacy grant, legacy-only teacher, and newly approved teacher. Do not alter Production or Preview policies without owner-approved migration and tested rollback.
+
+**Separate review question:** `teacher_v2_review` permits approval with an empty assignment array, which creates an approved teacher and employee ID but no teaching scopes. Confirm whether zero-scope approval is intentional (safe by default, but may surprise administrators).
