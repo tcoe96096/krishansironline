@@ -13,11 +13,11 @@ VALUES('11111111-1111-4111-8111-111111111111','teacher',ARRAY['materials.read','
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
 -- A truly legacy-only teacher retains approved class-10 access before v2 enrollment.
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT public.teacher_v2_material_permission('10','History','materials.draft.write') THEN
   RAISE EXCEPTION 'FAIL: pre-v2 legacy-only class-10 grant unexpectedly denied';
  END IF;
-END $;
+END $$;
 SELECT public.teacher_v2_save_application(
  '{"displayName":"Acceptance Teacher","contactEmail":"teacher@example.invalid","phone":"","experienceYears":2}',
  '[{"title":"MA History","institution":"Acceptance University","year":2020},{"title":"BEd","institution":"Acceptance College","year":2022}]',
