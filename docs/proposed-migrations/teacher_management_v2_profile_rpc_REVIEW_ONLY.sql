@@ -14,7 +14,7 @@ BEGIN
      OR p_display_name ~ '[[:cntrl:]]'
      OR (p_contact_email IS NOT NULL AND (
           char_length(p_contact_email) > 254 OR
-          (p_contact_email <> '' AND p_contact_email !~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$')))
+          (p_contact_email <> '' AND p_contact_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$')))
      OR (p_phone IS NOT NULL AND (char_length(p_phone)>20 OR p_phone ~ '[^0-9+ ()-]'))
      OR (p_experience_years IS NOT NULL AND p_experience_years NOT BETWEEN 0 AND 70)
   THEN
