@@ -6,7 +6,7 @@ BEGIN;
 CREATE OR REPLACE FUNCTION public.teacher_v2_issue_employee_id(p_teacher_user_id uuid)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = '' AS $$
-DECLARE v_id text; v_status text; v_attempt integer;
+DECLARE v_id text; v_status text; v_attempt integer; v_constraint text;
 BEGIN
   IF auth.uid() IS NULL OR COALESCE(public.is_super_admin(),false) IS NOT TRUE THEN
     RAISE EXCEPTION 'Super Admin authorization required' USING ERRCODE='42501';
@@ -28,8 +28,12 @@ BEGIN
           jsonb_build_object('employee_id',v_id));
       RETURN v_id;
     EXCEPTION WHEN unique_violation THEN
-      -- Retry unpredictable identifiers only if another profile has the same ID.
-      NULL;
+      -- Never mask unrelated uniqueness failures in audit or future schema changes.
+      GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+      IF v_constraint <> 'teacher_profiles_employee_id_key' THEN
+        RAISE;
+      END IF;
+      -- Retry only an actual Employee ID collision; the subtransaction rolled back.
     END;
   END LOOP;
   RAISE EXCEPTION 'Could not allocate unique teacher employee ID';
