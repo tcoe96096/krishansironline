@@ -35,13 +35,19 @@ CREATE POLICY "V2 delete own draft" ON public.study_material_items FOR DELETE TO
 -- Existing private audit trigger remains: only Super Admin publishes and links must
 -- match the material's class. No test, result, delivery or website policy is widened.
 -- Read-only aggregate review; no student identity, answers, marks writes or delivery.
+-- Privacy rule: suppress counts and averages for fewer than five DISTINCT students
+-- per test, not five attempts. Do not expose small cohorts via zero/NULL counts.
+-- This per-test threshold does not alone prove resistance to overlapping cohort
+-- inference across other endpoints; review all aggregate endpoints before activation.
 CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary(p_class text,p_subject text)
 RETURNS TABLE(test_id text,submitted_count bigint,average_percentage numeric)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 BEGIN
  IF auth.uid() IS NULL OR NOT public.teacher_v2_has_active_assignment(p_class,p_subject,'result.review') THEN
   RAISE EXCEPTION 'Scoped result review required' USING ERRCODE='42501'; END IF;
- RETURN QUERY SELECT t.id,count(a.id),round(avg(a.percentage),2)
+ RETURN QUERY SELECT t.id,
+   CASE WHEN count(DISTINCT a.student_id) >= 5 THEN count(a.id) ELSE NULL::bigint END,
+   CASE WHEN count(DISTINCT a.student_id) >= 5 THEN round(avg(a.percentage),2) ELSE NULL::numeric END
  FROM public.tests t LEFT JOIN public.test_attempts a ON a.test_id=t.id AND a.status='submitted'
  WHERE t.class_level=p_class AND t.subject=p_subject GROUP BY t.id ORDER BY t.id LIMIT 100;
 END $$;
