@@ -31,7 +31,10 @@ test('server flags gate profile writes, approval/grants and advanced material ac
  assert.ok(read('lifecycle').includes("IF NOT private.teacher_v2_feature_enabled('registration')"));
  assert.ok(read('lifecycle').includes("p_decision='approve' AND NOT private.teacher_v2_feature_enabled('registration')"));
  assert.ok(read('functions').includes("p_action='grant' AND NOT private.teacher_v2_feature_enabled('registration')"));
+ assert.ok(read('functions').includes("p_work_type='assessment.draft'"));
  assert.ok(read('functions').includes("NOT private.teacher_v2_feature_enabled('advanced_assignments')"));
+ assert.ok(read('functions').includes("p_work_type='result.review'"));
+ assert.ok(read('functions').includes("NOT private.teacher_v2_feature_enabled('result_analytics')"));
  assert.ok(read('integration').includes("IF NOT private.teacher_v2_feature_enabled('material_authoring') THEN RETURN false"));
  assert.ok(!read('integration').includes('CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary'));
 });
