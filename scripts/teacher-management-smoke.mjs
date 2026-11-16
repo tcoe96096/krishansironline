@@ -24,7 +24,18 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
  else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
- else if(op==='teacher_v2_review'){writes.push({op,args});profile.status=args.p_decision==='approve'?'approved':'rejected';profile.employee_id=args.p_decision==='approve'?'KSOL-T-123456ABCDEF':null;profile.submitted_at=null;profile.decision_reason=args.p_reason;data=profile.employee_id;}
+ else if(op==='teacher_v2_review'){
+  writes.push({op,args});
+  if(args.p_decision==='approve'&&(!args.p_verified||!Array.isArray(args.p_assignments)||args.p_assignments.length===0)){
+   status=400;data={code:'22023'};
+  }else{
+   profile.status=args.p_decision==='approve'?'approved':'rejected';
+   profile.employee_id=args.p_decision==='approve'?'KSOL-T-123456ABCDEF':null;
+   profile.submitted_at=null;profile.decision_reason=args.p_reason;
+   profile.assignments=args.p_decision==='approve'?args.p_assignments.map((s,i)=>({id:'review-'+i,class_level:s.classLevel,subject:s.subject,work_type:s.workType,status:'active'})):[];
+   data=profile.employee_id;
+  }
+ }
  else if(op==='teacher_v2_suspend'){writes.push({op,args});profile.status='suspended';profile.decision_reason=args.p_reason;profile.assignments.forEach(a=>a.status='revoked');data=true;}
  else if(op==='teacher_v2_restore'){writes.push({op,args});profile.status='approved';profile.decision_reason=args.p_reason;data=true;}
  else if(op==='teacher_v2_set_assignment'){
@@ -84,16 +95,23 @@ try{
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
  await directory.getByLabel('Identity independently verified').check();
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Verification alone must not approve an empty-scope teacher');
+ await directory.getByRole('button',{name:'Add scope',exact:true}).click();
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false);
  const reviewedRevision=profile.revision;page.on('dialog',dialog=>dialog.accept());await directory.getByRole('button',{name:'Approve verified teacher'}).click();
  await directory.getByText(/KSOL-T-123456ABCDEF/).waitFor();
  assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,true);
+ assert.deepEqual(writes.at(-1).args.p_assignments,[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
+ await directory.getByLabel('Assignment class',{exact:true}).selectOption('11');
+ await directory.getByLabel('Assignment subject',{exact:true}).selectOption('Political Science');
+ await directory.getByLabel('Assignment work',{exact:true}).selectOption('materials.review');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
- await directory.getByRole('button',{name:'Grant class 10 · History · materials.draft',exact:true}).click();
+ await directory.getByRole('button',{name:'Grant class 11 · Political Science · materials.review',exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Revoke the assignment for a work change');
- await directory.getByRole('button',{name:'Revoke assignment',exact:true}).click();
+ await directory.getByRole('button',{name:'Revoke assignment',exact:true}).last().click();
  assert.equal(writes.at(-1).args.p_action,'revoke');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Access suspended for role review');
@@ -116,10 +134,13 @@ try{
  await page.goto(base+'/staff-workspace/');
  await panel.getByText('Last review note: Qualification documents require correction',{exact:true}).waitFor();
  legacyGrant=true;await page.reload();
+ assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0,'Rejected v2 applicants must not inherit residual legacy grants');
+ const restoredApproved={...profile,status:'approved',employee_id:'KSOL-T-123456ABCDEF'};
+ profile=null;await page.reload();
  await page.getByRole('heading',{name:'Create study material draft',exact:true}).waitFor();
- profile.status='approved';profile.employee_id='KSOL-T-123456ABCDEF';
+ profile=restoredApproved;
  await page.reload();await panel.getByText('Employee ID:',{exact:false}).waitFor();
- assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
+ assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0,'Approved v2 profiles without material scope must not inherit residual legacy grants');
  assert.deepEqual(errors,[]);
  console.log('PASS: teacher v2 mobile registration, multiple qualifications/scopes, failed save, pending lock, withdrawal, inactive backend, upload gate, Admin denial, approval, assignment grant/revoke, rejection notes, suspension, restoration without revived grants and publication boundary (mock API).');
 }finally{await browser.close();}
