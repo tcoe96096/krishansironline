@@ -40,6 +40,9 @@ export function validateTeacherResume(file:{name:string;size:number;type:string}
   // Display-side checks only. Private server upload must still inspect actual bytes,
   // allocate its own object key, scan content, and enforce authorization.
   const name=file.name;
+  // Reject compatibility-spoofed filenames and invisible format characters before upload.
+  // This is defense-in-depth only; the server must generate the actual storage key.
+  if(name!==name.normalize('NFKC')||/\p{Cf}/u.test(name))return false;
   if(name.length<5||name.length>180||name!==name.trim()||
      /[\\/\x00-\x1f\x7f\u0080-\u009f\u202a-\u202e\u2066-\u2069]/u.test(name)||
      name.startsWith('.')||/[. ]$/.test(name)||/[. ]\./.test(name)||
