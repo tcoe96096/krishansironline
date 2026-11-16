@@ -6,14 +6,17 @@ import {teacherCall,saveTeacherApplication,teacherResumeEnabled,teacherResultSum
 import {TEACHER_CLASSES,TEACHER_SUBJECTS,TEACHER_WORK_TYPES,type TeacherAssignmentInput,type TeacherQualificationInput} from '../lib/teacherManagementValidation';
 
 const field='rounded border border-slate-300 p-2 text-sm w-full';
-export function TeacherScopeEditor({value,onChange}:{value:TeacherAssignmentInput[];onChange:(v:TeacherAssignmentInput[])=>void}){
+export function TeacherScopeEditor({value,onChange,allowAnalytics=false}:{value:TeacherAssignmentInput[];onChange:(v:TeacherAssignmentInput[])=>void;allowAnalytics?:boolean}){
  const [level,setLevel]=useState('10'),[subject,setSubject]=useState('History'),[work,setWork]=useState('materials.draft');
- return <fieldset className="space-y-2"><legend>{teacherAdvancedEnabled?'Classes, subjects and work':'Classes and subjects'}</legend><div className="grid gap-2 sm:grid-cols-3">
+ // The analytics selection is independently controlled by both the frontend and
+ // the server-owned capability; enabling analytics never grants assessment editing.
+ const permittedWorkTypes=TEACHER_WORK_TYPES.filter(type=>type==='materials.draft'||(type==='result.review'?allowAnalytics:teacherAdvancedEnabled));
+ return <fieldset className="space-y-2"><legend>{permittedWorkTypes.length>1?'Classes, subjects and work':'Classes and subjects'}</legend><div className="grid gap-2 sm:grid-cols-3">
  <select aria-label="Assignment class" className={field} value={level} onChange={e=>setLevel(e.target.value)}>{TEACHER_CLASSES.map(x=><option key={x}>{x}</option>)}</select>
  <select aria-label="Assignment subject" className={field} value={subject} onChange={e=>setSubject(e.target.value)}>{TEACHER_SUBJECTS.map(x=><option key={x}>{x}</option>)}</select>
- {teacherAdvancedEnabled&&<select aria-label="Assignment work" className={field} value={work} onChange={e=>setWork(e.target.value)}>{TEACHER_WORK_TYPES.map(x=><option key={x}>{x}</option>)}</select>}</div>
- <button type="button" disabled={value.length>=60} onClick={()=>{if(!value.some(x=>x.classLevel===level&&x.subject===subject&&x.workType===work))onChange([...value,{classLevel:level,subject,workType:work}]);}}>Add scope</button>
- {value.map((x,i)=><p key={i}>Class {x.classLevel} · {x.subject}{teacherAdvancedEnabled?' · '+x.workType:''} <button type="button" aria-label={`Remove scope ${i+1}`} onClick={()=>onChange(value.filter((_,n)=>n!==i))}>Remove</button></p>)}
+ {permittedWorkTypes.length>1&&<select aria-label="Assignment work" className={field} value={permittedWorkTypes.includes(work as typeof permittedWorkTypes[number])?work:'materials.draft'} onChange={e=>setWork(e.target.value)}>{permittedWorkTypes.map(x=><option key={x}>{x}</option>)}</select>}</div>
+ <button type="button" disabled={value.length>=60} onClick={()=>{const selectedWork=permittedWorkTypes.includes(work as typeof permittedWorkTypes[number])?work:'materials.draft';if(!value.some(x=>x.classLevel===level&&x.subject===subject&&x.workType===selectedWork))onChange([...value,{classLevel:level,subject,workType:selectedWork}]);}}>Add scope</button>
+ {value.map((x,i)=><p key={i}>Class {x.classLevel} · {x.subject}{permittedWorkTypes.length>1?' · '+x.workType:''} <button type="button" aria-label={`Remove scope ${i+1}`} onClick={()=>onChange(value.filter((_,n)=>n!==i))}>Remove</button></p>)}
  <p className="text-xs text-slate-600">Requests require Super Admin approval. Basic Beta assignments do not enable advanced tools or marks editing.</p></fieldset>;
 }
 
@@ -53,7 +56,7 @@ export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>vo
  <fieldset><legend>Qualifications</legend>{qualifications.map((q,i)=><div className="my-2 grid gap-2 sm:grid-cols-4" key={i}>
  {(['title','institution','year'] as const).map(key=><input key={key} className={field} aria-label={`${key} ${i+1}`} type={key==='year'?'number':'text'} value={q[key]} onChange={e=>setQualifications(current=>current.map((item,n)=>n===i?{...item,[key]:key==='year'?Number(e.target.value):e.target.value}:item))}/>)}
  <button type="button" onClick={()=>setQualifications(qualifications.filter((_,n)=>n!==i))}>Remove qualification</button></div>)}<button type="button" disabled={qualifications.length>=20} onClick={()=>setQualifications([...qualifications,{title:'',institution:'',year:new Date().getFullYear()}])}>Add qualification</button></fieldset>
- <TeacherScopeEditor value={scopes} onChange={setScopes}/>
+ <TeacherScopeEditor value={scopes} onChange={setScopes} allowAnalytics={resultAnalyticsOpen}/>
  <label className="block">Application reason<textarea className={field} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
  {resumeUploadOpen&&snapshot&&!locked&&<label className="block">Upload private PDF/DOCX resume (5 MiB maximum)<input disabled={busy||dirty} type="file" accept=".pdf,.docx" onChange={e=>{const file=e.target.files?.[0];if(file)void act(()=>uploadTeacherResume(file,snapshot.revision),'Verified resume attached.');e.target.value='';}}/></label>}
  {dirty&&<p className="text-xs text-amber-800">Save your profile edits before uploading a resume.</p>}
