@@ -33,7 +33,7 @@ export function TeacherManagementV2(){
  {summaries.map(s=><p key={s.test_id}>Test {s.test_id}: {s.submitted_count} submissions · Average {s.average_percentage??'Unavailable'}%</p>)}
  {snapshot.resumes.map(d=><p key={d.id}>{d.original_filename} · {d.verification_status} {teacherResumeEnabled&&<button disabled={busy} onClick={()=>void act(()=>downloadTeacherResume(d.id),'Resume downloaded.')}>Download private resume</button>}</p>)}
  {snapshot.submitted_at&&<button disabled={busy} onClick={()=>void act(()=>teacherCall('teacher_v2_withdraw'),'Application withdrawn.')}>Withdraw to edit</button>}</div>}
- {!locked&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,true),'Application submitted for independent verification.');}}>
+ {!locked&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,true,snapshot?.revision??null),'Application submitted for independent verification.');}}>
  <label className="block">Full name<input className={field} required maxLength={160} value={name} onChange={e=>setName(e.target.value)}/></label>
  <label className="block">Contact email<input className={field} type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <label className="block">Phone<input className={field} maxLength={20} value={phone} onChange={e=>setPhone(e.target.value)}/></label>
@@ -45,6 +45,6 @@ export function TeacherManagementV2(){
  <label className="block">Application reason<textarea className={field} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
  {teacherResumeEnabled&&snapshot&&!locked&&<label className="block">Upload private PDF/DOCX resume (5 MiB maximum)<input disabled={busy} type="file" accept=".pdf,.docx" onChange={e=>{const file=e.target.files?.[0];if(file)void act(()=>uploadTeacherResume(file,snapshot.revision),'Verified resume attached.');e.target.value='';}}/></label>}
  <p className="text-xs text-amber-800">Private PDF/DOCX resume upload requires separately approved storage and server verification. {teacherResumeEnabled?'Uploads are verified by the private service before attachment.':'Files cannot be uploaded yet.'}</p>
- <div className="flex gap-4"><button type="button" disabled={busy} onClick={()=>void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,false),'Profile draft saved.')}>Save profile draft</button><button disabled={busy} type="submit">Submit v2 application</button></div></form>}
+ <div className="flex gap-4"><button type="button" disabled={busy} onClick={()=>void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,false,snapshot?.revision??null),'Profile draft saved.')}>Save profile draft</button><button disabled={busy} type="submit">Submit v2 application</button></div></form>}
  </>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</section>;
 }

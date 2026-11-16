@@ -1,7 +1,7 @@
 -- REVIEW ONLY. NOT EXECUTED. Owner approval required before any activation.
 -- Order: schema, profile_rpc, functions, lifecycle, integration. No automatic migration.
 BEGIN;
-CREATE OR REPLACE FUNCTION public.teacher_v2_save_application(p_profile jsonb,p_qualifications jsonb,p_scopes jsonb,p_reason text,p_submit boolean DEFAULT false)
+CREATE OR REPLACE FUNCTION public.teacher_v2_save_application(p_profile jsonb,p_qualifications jsonb,p_scopes jsonb,p_reason text,p_submit boolean DEFAULT false,p_expected_revision integer DEFAULT NULL)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE v_actor uuid:=auth.uid(); v_profile public.teacher_profiles; v_revision integer; q jsonb; s jsonb;
 BEGIN
@@ -9,6 +9,10 @@ BEGIN
  -- Serialize even first submissions; profile updates and approval lock the same account.
  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_actor::text,0));
  SELECT * INTO v_profile FROM public.teacher_profiles WHERE user_id=v_actor FOR UPDATE;
+ IF (v_profile.user_id IS NOT NULL AND p_expected_revision IS DISTINCT FROM v_profile.revision)
+ OR (v_profile.user_id IS NULL AND p_expected_revision IS NOT NULL) THEN
+  RAISE EXCEPTION 'Profile changed; reload before saving' USING ERRCODE='40001';
+ END IF;
  IF FOUND AND (v_profile.status IN ('approved','suspended') OR v_profile.submitted_at IS NOT NULL) THEN
   RAISE EXCEPTION 'Withdraw pending application before editing; approved profiles are locked' USING ERRCODE='42501';
  END IF;
@@ -119,6 +123,6 @@ BEGIN
  RETURN QUERY SELECT * FROM public.teacher_audit_events WHERE teacher_user_id=p_user_id ORDER BY created_at DESC,id LIMIT 100;
 END $$;
 -- Explicit grants form part of the review bundle, NOT an activated capability.
-REVOKE ALL ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid),public.teacher_v2_set_assignment(uuid,text,text,text,text,text) TO authenticated;
+REVOKE ALL ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid),public.teacher_v2_set_assignment(uuid,text,text,text,text,text) TO authenticated;
 COMMIT;

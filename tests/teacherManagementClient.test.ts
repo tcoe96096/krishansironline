@@ -8,7 +8,7 @@ test('atomic application payload preserves all qualifications and scoped work wi
  const calls:{name:string;args:Record<string,unknown>}[]=[];
  const client=createTeacherClient(async(name,args)=>{calls.push({name,args});return {data:4,error:null};});
  assert.equal(await client.save(profile,qualifications,scopes,' Please approve this teacher ',true),4);
- assert.deepEqual(calls,[{name:'teacher_v2_save_application',args:{p_profile:profile,p_qualifications:qualifications,p_scopes:scopes,p_reason:'Please approve this teacher',p_submit:true}}]);
+ assert.deepEqual(calls,[{name:'teacher_v2_save_application',args:{p_profile:profile,p_qualifications:qualifications,p_scopes:scopes,p_reason:'Please approve this teacher',p_submit:true,p_expected_revision:null}}]);
 });
 test('invalid data, publication escalation and empty submissions never call the backend',async()=>{
  let calls=0;const client=createTeacherClient(async()=>{calls++;return {data:null,error:null};});
@@ -29,4 +29,12 @@ test('draft saves accept empty preferences and backend failures never claim succ
 test('empty success response cannot claim a persisted profile',async()=>{
  const client=createTeacherClient(async()=>({data:null,error:null}));
  await assert.rejects(client.save(profile,[],[],'',false),/not confirmed/);
+});
+test('saved profile revision accompanies updates and a conflict requests reload',async()=>{
+ let payload:Record<string,unknown>|undefined;
+ const client=createTeacherClient(async(_name,args)=>{payload=args;return {data:5,error:null};});
+ await client.save(profile,[],[],'',false,4);assert.equal(payload?.p_expected_revision,4);
+ const conflict=createTeacherClient(async()=>({data:null,error:{code:'40001'}}));
+ await assert.rejects(conflict.save(profile,[],[],'',false,4),/Refresh before saving/);
+ await assert.rejects(client.save(profile,[],[],'',false,-1),/Invalid profile revision/);
 });
