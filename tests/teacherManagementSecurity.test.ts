@@ -97,9 +97,22 @@ test('isolated Preview acceptance suite tests legacy-only continuity and pending
  assert.ok(!acceptance.includes('existing legacy grant lost during v2 application'));
 });
 
-test('Core Beta hides teacher result-summary action while the RPC EXECUTE grant is revoked',()=>{
+test('optional analytics and private resumes require independent server-owned capabilities',()=>{
  const service=readFileSync('src/services/teacherManagement.ts','utf8');
  const view=readFileSync('src/components/TeacherManagementV2.tsx','utf8');
- assert.ok(service.includes('export const teacherResultSummaryEnabled = false;'));
- assert.ok(view.includes("a.work_type==='result.review'&&teacherResultSummaryEnabled&&<button"));
+ const admin=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
+ assert.ok(service.includes('export const teacherResultSummaryEnabled = teacherAnalyticsEnabled;'));
+ assert.ok(view.includes('setResultAnalyticsOpen(teacherResultSummaryEnabled&&teacherAnalyticsEnabled&&caps.analytics===true)'));
+ assert.ok(view.includes("resultAnalyticsOpen&&a.status==='active'&&a.work_type==='result.review'&&<button"));
+ assert.ok(view.includes('setResumeUploadOpen(teacherResumeEnabled&&caps.resumes===true)'));
+ assert.ok(view.includes('{resumeUploadOpen&&snapshot&&!locked&&<label'));
+ assert.ok(view.includes('{resumeUploadOpen&&<button'));
+ assert.ok(admin.includes('setResumeDownloadsOpen(teacherResumeEnabled&&caps.resumes===true)'));
+ assert.ok(admin.includes('{resumeDownloadsOpen&&<button'));
+});
+test('minimal beta still revokes historical analytics RPC and never automatically installs private modules',()=>{
+ const integration=read('integration'),flags=read('beta_flags');
+ assert.ok(!integration.includes('CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary'));
+ assert.ok(flags.includes("'teacher_v2_result_summary(text,text)'"));
+ assert.ok(flags.includes('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC,anon,authenticated,service_role'));
 });
