@@ -67,3 +67,17 @@ for(const name of ['ＣＯＮ.pdf','resume\u200B.pdf','resume\u200D.pdf','resume
     `Unicode-spoofed resume filename accepted: ${JSON.stringify(name)}`);
 }
 assert.equal(validateTeacherResume({name:'Résumé 2026.pdf',size:12000,type:'application/pdf'}),true);
+
+// Runtime boundary regressions: untrusted JSON and file metadata can violate TypeScript types.
+assert.throws(()=>normalizeTeacherAssignments(null as any));
+assert.throws(()=>normalizeTeacherAssignments([null] as any));
+assert.throws(()=>normalizeTeacherAssignments([{classLevel:10,subject:'History',workType:'materials.draft'}] as any));
+assert.equal(validateTeacherQualifications(null as any),false);
+assert.equal(validateTeacherQualifications([null] as any),false);
+assert.equal(validateTeacherQualifications([{title:12,institution:'University',year:2020}] as any),false);
+assert.equal(validateTeacherResume(null as any),false);
+assert.equal(validateTeacherResume({name:null,size:12000,type:'application/pdf'} as any),false);
+assert.equal(validateTeacherProfile(null as any),false);
+assert.equal(validateTeacherProfile({displayName:null,contactEmail:'',phone:'',experienceYears:null} as any),false);
+assert.equal(validateTeacherRequestedScopes('10','History',null as any,['History']),false);
+assert.equal(validateTeacherRequestedScopes('10','History',['10'],[null] as any),false);
