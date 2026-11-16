@@ -58,8 +58,13 @@ BEGIN
   END IF;
   SELECT status INTO v_status FROM public.teacher_profiles
     WHERE user_id=p_teacher_user_id FOR UPDATE;
-  IF NOT FOUND OR v_status<>'approved' THEN
-    RAISE EXCEPTION 'Teacher profile is not approved' USING ERRCODE='42501';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Teacher profile does not exist' USING ERRCODE='42501';
+  END IF;
+  -- Suspended or rejected teachers must never receive new grants, but their
+  -- existing grants must remain revocable by Super Admin for incident response.
+  IF p_action='grant' AND v_status<>'approved' THEN
+    RAISE EXCEPTION 'Only approved teachers can receive assignments' USING ERRCODE='42501';
   END IF;
   IF p_action='grant' THEN
     SELECT id INTO v_assignment_id FROM public.teacher_assignments
