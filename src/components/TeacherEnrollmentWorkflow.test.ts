@@ -66,3 +66,11 @@ test('public account buttons navigate to the correct workspace instead of reopen
   assert.ok(header.includes('{isStudentAccount && <button role="menuitem"'));
   assert.ok(header.includes('profile?.user_id === user.id'));
 });
+
+test('v2 application keeps one teacher registration flow and fail-closes on lookup denial',()=>{
+ const teacherV2=source('./TeacherManagementV2.tsx');
+ assert.ok(workspace.includes('{!grant&&!v2Profile&&!error && <TeacherEnrollmentApplication/>}'));
+ assert.ok(workspace.includes('<TeacherManagementV2 key={user.id} onProfileChanged={()=>setReload(n=>n+1)}/>'));
+ assert.ok(teacherV2.includes('onProfileChanged?.()'));
+ assert.ok(workspace.includes("Teacher v2 profile is recorded. Complete the approved v2 review process"));
+});
