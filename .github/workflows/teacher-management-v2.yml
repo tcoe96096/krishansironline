@@ -73,3 +73,22 @@ jobs:
           TEACHER_TEST_BASE_URL: http://127.0.0.1:4177/teacher-beta
           TEACHER_TEST_PORTAL: 'true'
         run: node scripts/teacher-management-smoke.mjs
+      - name: Start separate legacy-material regression fixture (never a release build)
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'true'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: |
+          npm run dev -- --port 4178 --host 127.0.0.1 > /tmp/teacher-legacy-regression.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4178/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Preserve scoped editor and failed-v2-lookup security regressions (mock only)
+        env:
+          TEACHER_TEST_BASE_URL: http://127.0.0.1:4178
+        run: node scripts/teacher-material-legacy-safety-smoke.mjs

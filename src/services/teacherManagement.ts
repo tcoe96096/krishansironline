@@ -14,6 +14,8 @@ const api=createTeacherClient((name,args)=>requireSupabase().rpc(name,args));
 export const teacherCall=api.call;
 export const saveTeacherApplication=api.save;
 
+// Core Beta analytics stays closed until a separately approved privacy release.
+export const teacherResultSummaryEnabled = false;
 export const teacherResumeEnabled = teacherResumeUiEnabled;
 export async function uploadTeacherResume(file:File,revision:number){
  if(!teacherResumeEnabled||!validateTeacherResume(file))throw new Error('Private resume upload is unavailable or file is invalid.');

@@ -22,10 +22,10 @@
     },
     {
       "file": "docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql",
-      "sha256": "ec44b705031be692de13add39b7f349701c883fbdaa0652dc945e4568c7b7371"
+      "sha256": "caa6e8de2725cb427f1701e2e82d3280deecd6f767bb65532b812e201e7e2609"
     }
   ],
-  "query_sha256": "980b023bef9aca39b379f96db5b58bae27c3c4f3c6e4f79ebd0423108256cb3d",
+  "query_sha256": "b1f50591edfa80eaf6cdd7ea37ea436553e165e742c15a2a15132fe81587b71e",
   "advanced_features": "all false",
   "production_target_supported": false
 }

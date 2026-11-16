@@ -29,3 +29,11 @@ test('server flags gate profile writes, approval/grants and advanced material ac
  assert.ok(read('integration').includes("IF NOT private.teacher_v2_feature_enabled('material_authoring') THEN RETURN false"));
  assert.ok(!read('integration').includes('CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary'));
 });
+test('core enrollment requires Super Admin legacy transition without weakening the existing grant audit',()=>{
+ const sql=readFileSync('docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql','utf8');
+ assert.ok(sql.includes("IF to_regclass('public.result_staff_grants') IS NOT NULL THEN"));
+ assert.ok(sql.includes('Super Admin must close legacy staff access before v2 enrollment'));
+ assert.ok(sql.includes('Legacy grant cannot bypass a v2 profile'));
+ assert.ok(!sql.includes('UPDATE public.result_staff_grants SET is_active=false WHERE user_id=v_actor'));
+ assert.ok(sql.includes("p_decision='approve' AND jsonb_array_length(p_assignments)=0"));
+});

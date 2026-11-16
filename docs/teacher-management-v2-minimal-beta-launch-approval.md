@@ -23,7 +23,7 @@ assessment authoring; advanced material authoring/review from v2; arbitrary mark
 editing, publication, exports and website editing. Existing authorized legacy
 features outside the v2 Beta are not widened. After v2 approval, assignment records
 never fall back to broad legacy grants, even when advanced tools are disabled.
-Existing legacy authors therefore need to understand the reduced basic-Beta
+Existing legacy authors must have Super Admin close their active legacy grant before creating a v2 profile. Applicants cannot close it themselves. They therefore need to understand the reduced basic-Beta
 workspace before transitioning; approval does not preserve their old authoring UI.
 
 ## Flags — implemented in this draft, not active
@@ -40,7 +40,7 @@ workspace before transitioning; approval does not preserve their old authoring U
 
 Every flag defaults off. Frontend flags control availability, not authorization.
 Clients cannot mutate server flags. Server gates enforce profile submissions,
-approval/grants and advanced resource access in the optional integration. Core approval disables an existing legacy grant only if that optional table exists, preventing a legacy bypass; it has no dependency on that table. Revocation, suspension and own-profile
+approval/grants and advanced resource access in the optional integration. Core enrollment never changes a Super Admin-owned grant on behalf of an applicant. Existing legacy staff must have Super Admin close that grant before entering v2; a conditional legacy trigger blocks reactivation for every v2 profile state. No legacy table is required for new installations. Revocation, suspension and own-profile
 reads remain available for incident handling when registration is closed.
 Basic class/subject records use the existing `materials.draft` assignment value
 internally; they confer no v2 material-write access while its server feature is off.
@@ -55,7 +55,7 @@ internally; they confer no v2 material-write access while its server feature is 
 | Migration integrity | SQL syntax parsing; historical local atomic-abort and data-hash checks | New five-file core bundle applied ONLY after Preview hold is cleared; rollback-only minimal acceptance and fixture cleanup |
 | Recovery | Historical local policy rollback + synthetic dump restore passed | Confirm usable managed Preview recovery OR separately approve/test a disposable-environment rebuild recovery path; current hold is NOT lifted automatically |
 
-The six previously green CI checks were for `77c6e71`. The current candidate has 75 non-SQL unit/contract tests, 15 mocked resume-service tests and 5 target/artifact guard tests; exact-head CI evidence is tracked in PR #109. New flags/privacy SQL and
+The six previously green CI checks were for `77c6e71`. The current candidate has 83 non-SQL unit/contract tests, 15 mocked resume-service tests and 5 target/artifact guard tests; exact-head CI evidence is tracked in PR #109. New flags/privacy SQL and
 this launch candidate require green checks on their exact new head. No runtime DB test is claimed for the revised SQL: recovery-gated Preview execution is conditionally authorized, but the missing recovery evidence/access currently prevents it. Analytics privacy runtime acceptance is not required to launch because
 its module is excluded and its feature is denied.
 
@@ -240,3 +240,15 @@ The latest owner instruction conditionally authorizes isolated Preview migration
 and acceptance once recovery is verified. Production SQL, publishing, deployment
 and merge still require separate final approval. No missing check is waived by
 speed or by the absence of important personal data in the test environment.
+
+## Concurrent-branch security work retained
+
+The branch advanced after `77c6e71`. This candidate retains the incoming fixes:
+all v2 profile states fail closed rather than falling back to legacy grants; denied
+v2 lookups never restore legacy access; approval requires a nonempty verified
+scope; material editor class/subject defaults/options remain scoped in the separate
+advanced workspace; and Core analytics has a constant-off guard as well as server
+revocation. Historical 77c6e71 policy/recovery figures are not runtime proof of this
+stricter merged candidate. Its updated SQL remains unexecuted under the recovery
+hold. Existing legacy subjects must be verified before transition; no automatic
+mapping from class-wide Social Science access to narrower subject grants is made.

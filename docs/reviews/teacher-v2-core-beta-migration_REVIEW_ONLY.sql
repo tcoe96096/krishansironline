@@ -361,6 +361,24 @@ REVOKE ALL ON FUNCTION public.teacher_v2_has_active_assignment(text,text,text)
 -- REVIEW ONLY. NOT EXECUTED. Owner approval required before any activation.
 -- Order: schema, profile_rpc, functions, lifecycle, integration. No automatic migration.
 
+-- Optional legacy boundary: only installed when that old module already exists.
+-- Same per-account lock as enrollment prevents a grant/review transition race
+-- under the API's READ COMMITTED transactions. Runtime concurrency tests required.
+CREATE OR REPLACE FUNCTION private.teacher_v2_guard_legacy_grant()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(NEW.user_id::text,0));
+ IF NEW.is_active AND EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=NEW.user_id) THEN
+  RAISE EXCEPTION 'Legacy grant cannot bypass a v2 profile' USING ERRCODE='42501'; END IF;
+ RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION private.teacher_v2_guard_legacy_grant() FROM PUBLIC,anon,authenticated,service_role;
+DO $$ BEGIN
+ IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
+  EXECUTE 'CREATE TRIGGER teacher_v2_no_legacy_grant BEFORE INSERT OR UPDATE ON public.result_staff_grants FOR EACH ROW EXECUTE FUNCTION private.teacher_v2_guard_legacy_grant()';
+ END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.teacher_v2_save_application(p_profile jsonb,p_qualifications jsonb,p_scopes jsonb,p_reason text,p_submit boolean DEFAULT false,p_expected_revision integer DEFAULT NULL)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE v_actor uuid:=auth.uid(); v_profile public.teacher_profiles; v_revision integer; q jsonb; s jsonb;
@@ -382,6 +400,11 @@ BEGIN
  OR jsonb_array_length(p_scopes)>60 OR p_submit IS NULL
  OR (p_submit AND (p_reason IS NULL OR char_length(btrim(p_reason)) NOT BETWEEN 12 AND 1000 OR jsonb_array_length(p_scopes)=0)) THEN
  RAISE EXCEPTION 'Invalid application' USING ERRCODE='22023'; END IF;
+ -- Never let an applicant change a Super Admin-owned legacy grant.
+ IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
+  PERFORM 1 FROM public.result_staff_grants WHERE user_id=v_actor AND is_active FOR UPDATE;
+  IF FOUND THEN RAISE EXCEPTION 'Super Admin must close legacy staff access before v2 enrollment' USING ERRCODE='42501'; END IF;
+ END IF;
  -- Rejected applicants may revise. No privileged fields are taken from client JSON.
  IF v_profile.status='rejected' THEN UPDATE public.teacher_profiles SET status='pending' WHERE user_id=v_actor; END IF;
  PERFORM public.teacher_v2_save_profile(p_profile->>'displayName',p_profile->>'contactEmail',p_profile->>'phone',(p_profile->>'experienceYears')::integer);
@@ -431,6 +454,11 @@ BEGIN
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Application changed; reload before review'; END IF;
  IF p_decision='approve' AND p_verified IS DISTINCT FROM true THEN RAISE EXCEPTION 'Identity verification required'; END IF;
  IF p_decision='approve' AND NOT private.teacher_v2_feature_enabled('registration') THEN RAISE EXCEPTION 'Teacher approval disabled' USING ERRCODE='42501'; END IF;
+ -- Never issue an approved employee identity with zero authorized work scopes.
+ -- Legacy class-10 teachers require explicit verified subject mapping before approval.
+ IF p_decision='approve' AND jsonb_array_length(p_assignments)=0 THEN
+  RAISE EXCEPTION 'Approval requires at least one verified class, subject and work assignment' USING ERRCODE='22023';
+ END IF;
  UPDATE public.teacher_profiles SET decision_reason=btrim(p_reason),reviewed_at=now(),status=CASE WHEN p_decision='approve' THEN 'approved' ELSE 'rejected' END,
  approved_by=CASE WHEN p_decision='approve' THEN auth.uid() END,approved_at=CASE WHEN p_decision='approve' THEN now() END,
  submitted_at=NULL,revision=revision+1,updated_at=now() WHERE user_id=p_user_id;
@@ -438,7 +466,7 @@ BEGIN
   -- Core Beta has no dependency on the optional legacy material schema.
   -- Transitioned accounts must not retain a legacy route around v2 revocation.
   IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
-   UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
+   UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id AND is_active;
   END IF;
   v_id:=public.teacher_v2_issue_employee_id(p_user_id);
   FOR s IN SELECT value FROM jsonb_array_elements(p_assignments) LOOP
@@ -460,7 +488,7 @@ BEGIN
  UPDATE public.teacher_assignments SET status='revoked',revoked_by=auth.uid(),revoked_at=now() WHERE teacher_user_id=p_user_id AND status='active';
  -- Close the legacy path too. This does not grant any new legacy rights.
  IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
-  UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
+  UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id AND is_active;
  END IF;
  INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason) VALUES(auth.uid(),p_user_id,'teacher.suspended',p_reason);
  RETURN true;

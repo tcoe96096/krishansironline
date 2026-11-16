@@ -1,3 +1,5 @@
+> Historical evidence for source `77c6e71`. The later merged Core Beta fails closed for **all** v2 states, including pending/rejected, adds server feature gates, and requires a Super Admin legacy transition before enrollment. The 8,056 checks/87 differences below do not validate those later SQL changes. No revised SQL has run. See the [current Core Beta packet](../teacher-management-v2-minimal-beta-launch-approval.md).
+
 # Teacher Management v2 — preflight security and recovery review
 
 **Decision: HOLD. Do not apply the Preview migration. Production Beta is blocked.**

@@ -41,7 +41,12 @@ export const StaffLearningWorkspace: React.FC = () => {
       try{
         if(teacherBetaEnabled&&!teacherAdvancedEnabled){setReady(true);return;}
         const client=requireSupabase();
-        const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch(()=>null);
+        const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch((cause:unknown)=>{
+          // Legacy-only compatibility is allowed when the v2 RPC is not installed.
+          // A denied/failed v2 lookup must NOT silently re-enable legacy grants.
+          if(cause instanceof Error&&cause.message==='Teacher v2 backend awaits owner-approved activation.')return null;
+          throw cause;
+        });
         if(!mounted)return;
         setV2Profile(profile);
         const roles=await client.from('result_staff_grants')
@@ -51,7 +56,8 @@ export const StaffLearningWorkspace: React.FC = () => {
         const assigned=profile&&usesTeacherV2Assignments(profile) ? (profile.status==='approved'?{user_id:user.id,role:'Teacher',permissions:['materials.read',...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.draft')?['materials.draft.write']:[]),...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.review')?['materials.review.propose']:[])],scope_class:null,is_active:true}:null) : (roles.data||null) as StaffGrant|null;
         if(!assigned||!assigned.is_active){setGrant(null);return;}
         setGrant(assigned);
-        setDraft({...emptyDraft,class_level:assigned.scope_class||'10'});
+        const firstEditable=profile?.status==='approved'?profile.assignments.find(a=>a.status==='active'&&a.work_type==='materials.draft'):null;
+        setDraft({...emptyDraft,class_level:firstEditable?.class_level||assigned.scope_class||'10',subject:firstEditable?.subject||emptyDraft.subject});
         const materialRows=await client.from('study_material_items')
           .select('id,title,description,subject,class_level,kind,resource_url,status,created_by,review_note')
           .order('updated_at',{ascending:false}).limit(150);
@@ -89,7 +95,8 @@ export const StaffLearningWorkspace: React.FC = () => {
     setMessage('');setError('');
   };
   const clearEditor=()=>{
-    setEditing(null);setDraft({...emptyDraft,class_level:grant?.scope_class||'10'});
+    const firstEditable=v2Profile?.status==='approved'?v2Profile.assignments.find(a=>a.status==='active'&&a.work_type==='materials.draft'):null;
+    setEditing(null);setDraft({...emptyDraft,class_level:firstEditable?.class_level||grant?.scope_class||'10',subject:firstEditable?.subject||emptyDraft.subject});
   };
   const saveDraft=async(event:React.FormEvent)=>{
     event.preventDefault();
@@ -150,7 +157,7 @@ export const StaffLearningWorkspace: React.FC = () => {
       <p className="mt-2 text-sm text-sky-100">Your assigned scope and roles decide what can be edited. Students never see drafts.</p>
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
         <span className="rounded-full bg-white/10 px-3 py-1.5">Role: {grant?.role||'Not assigned'}</span>
-        <span className="rounded-full bg-white/10 px-3 py-1.5">Scope: {grant?.scope_class?'Class '+grant.scope_class:'No class restriction in grant'}</span>
+        <span className="rounded-full bg-white/10 px-3 py-1.5">Scope: {v2Profile&&usesTeacherV2Assignments(v2Profile)?'Verified v2 class / subject assignments':grant?.scope_class?'Class '+grant.scope_class:'No class restriction in legacy grant'}</span>
         <a href={import.meta.env.BASE_URL+'study-materials/'} className="rounded-full border border-white/30 px-3 py-1.5 hover:bg-white/10">Open student materials <ExternalLink size={12} className="inline"/></a>
       </div>
     </header>
@@ -170,7 +177,7 @@ export const StaffLearningWorkspace: React.FC = () => {
       <div className="mt-4 rounded-xl border border-sky-200 bg-white p-3 text-xs text-slate-800" aria-label="Teacher employee profile status">
         <h3 className="font-extrabold text-sky-950">Teacher Profile &amp; Employee ID</h3>
         <p className="mt-1">Employee ID: <strong>{v2Profile?.employee_id||'Not issued / not verified'}</strong></p>
-        <p className="mt-1">Assigned class (current verified grant): <strong>{grant?.scope_class?'Class '+grant.scope_class:'No verified class-specific grant'}</strong></p>
+        <p className="mt-1">Assigned class(es): <strong>{v2Profile&&usesTeacherV2Assignments(v2Profile)?[...new Set(v2Profile.assignments.filter(a=>a.status==='active').map(a=>a.class_level))].map(c=>'Class '+c).join(', ')||'No active assignments':grant?.scope_class?'Class '+grant.scope_class:'No verified class-specific grant'}</strong></p>
         <p className="mt-1">Material permissions: <strong>{grant?.is_active?grant.permissions.join(', ')||'None':'None verified'}</strong></p>
         <p className="mt-2 text-slate-600">The new multi-class, multi-subject and Employee ID records will appear here only after approved server-side storage and authorization are activated. This screen does not infer assignments from unsubmitted preview selections.</p>
       </div>
@@ -201,11 +208,11 @@ export const StaffLearningWorkspace: React.FC = () => {
         <h2 className="flex items-center gap-2 font-extrabold text-slate-900"><FileText size={20}/>{editing?'Edit your draft':'Create study material draft'}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-xs font-bold text-slate-700">Class
-            <select value={draft.class_level} disabled={Boolean(grant?.scope_class)} onChange={event=>setDraft({...draft,class_level:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
-            {classes.filter(cl=>withinScope(cl)).map(cl=><option key={cl} value={cl}>{cl}</option>)}</select></label>
+            <select aria-label="Class" value={draft.class_level} disabled={Boolean(grant?.scope_class)} onChange={event=>{const class_level=event.target.value;const subject=subjects.find(sub=>withinScope(class_level,sub))||draft.subject;setDraft({...draft,class_level,subject});}} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
+            {classes.filter(cl=>subjects.some(sub=>withinScope(cl,sub))).map(cl=><option key={cl} value={cl}>{cl}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Subject
-            <select value={draft.subject} onChange={event=>setDraft({...draft,subject:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
-              {subjects.map(subject=><option key={subject} value={subject}>{subject}</option>)}</select></label>
+            <select aria-label="Subject" value={draft.subject} onChange={event=>setDraft({...draft,subject:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
+              {subjects.filter(subject=>withinScope(draft.class_level,subject)).map(subject=><option key={subject} value={subject}>{subject}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Title
             <input required minLength={3} maxLength={200} value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3"/></label>
           <label className="text-xs font-bold text-slate-700">Format

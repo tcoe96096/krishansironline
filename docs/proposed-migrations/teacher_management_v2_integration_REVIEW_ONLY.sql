@@ -1,12 +1,16 @@
 -- REVIEW ONLY. NOT EXECUTED. Requires explicit owner approval and lifecycle bundle.
--- Preserve existing legacy grants until first v2 approval; approved/suspended v2
--- identities must ALWAYS use fresh subject/work assignments.
+-- Preserve legacy grants only for accounts without any v2 profile. As soon as
+-- an identity enters v2 (including pending/rejected), deny legacy fallback.
+-- Approved v2 identities must use active scoped assignments; suspended deny.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.teacher_v2_material_permission(p_class text,p_subject text,p_permission text)
 RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 BEGIN
  IF auth.uid() IS NULL THEN RETURN false; END IF;
- IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid() AND (employee_id IS NOT NULL OR status IN ('approved','suspended'))) THEN
+ IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid()) THEN
+  -- Pending, rejected and suspended profiles fail closed. Legacy grants must
+  -- never bypass a v2 application's current review or suspension status.
+  IF NOT EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid() AND status='approved') THEN RETURN false; END IF;
   IF NOT private.teacher_v2_feature_enabled('material_authoring') THEN RETURN false; END IF;
   RETURN public.teacher_v2_has_active_assignment(p_class,p_subject,CASE p_permission WHEN 'materials.draft.write' THEN 'materials.draft' WHEN 'materials.review.propose' THEN 'materials.review' ELSE NULL END)
    OR (p_permission='materials.read' AND (public.teacher_v2_has_active_assignment(p_class,p_subject,'materials.draft') OR public.teacher_v2_has_active_assignment(p_class,p_subject,'materials.review')));

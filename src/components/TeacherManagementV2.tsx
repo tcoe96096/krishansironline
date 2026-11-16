@@ -2,7 +2,7 @@ import {teacherBetaEnabled,teacherAdvancedEnabled,teacherAnalyticsEnabled} from 
 import React,{useEffect,useState,useRef} from 'react';
 import {formatPrivateResultSummary,type PrivateResultSummary} from '../services/teacherResultPrivacy';
 import {useAuth} from '../context/AuthContext';
-import {teacherCall,saveTeacherApplication,teacherResumeEnabled,uploadTeacherResume,downloadTeacherResume,type TeacherSnapshot} from '../services/teacherManagement';
+import {teacherCall,saveTeacherApplication,teacherResumeEnabled,teacherResultSummaryEnabled,uploadTeacherResume,downloadTeacherResume,type TeacherSnapshot} from '../services/teacherManagement';
 import {TEACHER_CLASSES,TEACHER_SUBJECTS,TEACHER_WORK_TYPES,type TeacherAssignmentInput,type TeacherQualificationInput} from '../lib/teacherManagementValidation';
 
 const field='rounded border border-slate-300 p-2 text-sm w-full';
@@ -37,12 +37,13 @@ export function TeacherManagementV2(){
  {snapshot.decision_reason&&<p>Last review note: {snapshot.decision_reason}</p>}
  {snapshot.qualifications.map((q,i)=><p key={i}>{q.title} · {q.institution} · {q.year}</p>)}
  {snapshot.requested_scopes.map((scope,i)=><p key={`requested-${i}`}>Requested: Class {scope.classLevel} · {scope.subject}</p>)}
- {snapshot.assignments.map(a=><p key={a.id}>Class {a.class_level} · {a.subject}{teacherAdvancedEnabled?' · '+a.work_type:''} · {a.status} {teacherAnalyticsEnabled&&a.status==='active'&&a.work_type==='result.review'&&<button disabled={busy} onClick={()=>{setError('');void teacherCall<typeof summaries>('teacher_v2_result_summary',{p_class:a.class_level,p_subject:a.subject}).then(setSummaries).catch(()=>{setSummaries([]);setError('Scoped result review denied.');});}}>Review result summary</button>}</p>)}
+ {snapshot.assignments.map(a=><p key={a.id}>Class {a.class_level} · {a.subject}{teacherAdvancedEnabled?' · '+a.work_type:''} · {a.status} {teacherAnalyticsEnabled&&a.status==='active'&&a.work_type==='result.review'&&teacherResultSummaryEnabled&&<button disabled={busy} onClick={()=>{setError('');void teacherCall<typeof summaries>('teacher_v2_result_summary',{p_class:a.class_level,p_subject:a.subject}).then(setSummaries).catch(()=>{setSummaries([]);setError('Scoped result review denied.');});}}>Review result summary</button>}</p>)}
  {summaries.map(s=><p key={s.test_id}>Test {s.test_id}: {formatPrivateResultSummary(s)}</p>)}
  {snapshot.resumes.map(d=><p key={d.id}>{d.original_filename} · {d.verification_status} {teacherResumeEnabled&&<button disabled={busy} onClick={()=>void act(()=>downloadTeacherResume(d.id,d.original_filename),'Resume downloaded.',false)}>Download private resume</button>}</p>)}
  {snapshot.submitted_at&&<button disabled={busy} onClick={()=>void act(()=>teacherCall('teacher_v2_withdraw'),'Application withdrawn.')}>Withdraw to edit</button>}</div>}
  {!registrationOpen&&<p role="status">New teacher registration is currently closed. Saved profile details remain read-only.</p>}
  {!locked&&registrationOpen&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,true,snapshot?.revision??null),'Application submitted for independent verification.');}}><fieldset disabled={busy} className="space-y-3">
+ {!snapshot&&<p className="text-xs text-amber-800">Existing staff: have Super Admin verify your assignments and close legacy staff access before entering v2. Applicants cannot change their own permissions.</p>}
  <label className="block">Full name<input className={field} required maxLength={160} value={name} onChange={e=>setName(e.target.value)}/></label>
  <label className="block">Contact email<input className={field} type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <label className="block">Phone<input className={field} maxLength={20} value={phone} onChange={e=>setPhone(e.target.value)}/></label>
