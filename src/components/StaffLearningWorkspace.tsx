@@ -206,10 +206,10 @@ export const StaffLearningWorkspace: React.FC = () => {
         <h2 className="flex items-center gap-2 font-extrabold text-slate-900"><FileText size={20}/>{editing?'Edit your draft':'Create study material draft'}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-xs font-bold text-slate-700">Class
-            <select value={draft.class_level} disabled={Boolean(grant?.scope_class)} onChange={event=>{const class_level=event.target.value;const subject=subjects.find(sub=>withinScope(class_level,sub))||draft.subject;setDraft({...draft,class_level,subject});}} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
+            <select aria-label="Class" value={draft.class_level} disabled={Boolean(grant?.scope_class)} onChange={event=>{const class_level=event.target.value;const subject=subjects.find(sub=>withinScope(class_level,sub))||draft.subject;setDraft({...draft,class_level,subject});}} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
             {classes.filter(cl=>subjects.some(sub=>withinScope(cl,sub))).map(cl=><option key={cl} value={cl}>{cl}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Subject
-            <select value={draft.subject} onChange={event=>setDraft({...draft,subject:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
+            <select aria-label="Subject" value={draft.subject} onChange={event=>setDraft({...draft,subject:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3">
               {subjects.filter(subject=>withinScope(draft.class_level,subject)).map(subject=><option key={subject} value={subject}>{subject}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Title
             <input required minLength={3} maxLength={200} value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})} className="mt-1 block h-11 w-full rounded-xl border border-slate-200 px-3"/></label>
