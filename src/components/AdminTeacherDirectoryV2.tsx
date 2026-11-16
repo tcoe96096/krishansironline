@@ -1,0 +1,29 @@
+import React,{useEffect,useState} from 'react';
+import {useAuth} from '../context/AuthContext';
+import {teacherCall,teacherResumeEnabled,downloadTeacherResume,type TeacherSnapshot} from '../services/teacherManagement';
+import {TeacherScopeEditor} from './TeacherManagementV2';
+import {type TeacherAssignmentInput} from '../lib/teacherManagementValidation';
+
+export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
+ const {user,isAdmin}=useAuth();
+ const [rows,setRows]=useState<TeacherSnapshot[]>([]),[ready,setReady]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[page,setPage]=useState(0),[search,setSearch]=useState(''),[query,setQuery]=useState(''),[reload,setReload]=useState(0);
+ const [selected,setSelected]=useState<string|null>(null),[reason,setReason]=useState(''),[verified,setVerified]=useState(false),[scopes,setScopes]=useState<TeacherAssignmentInput[]>([]),[audit,setAudit]=useState<{id:string;action:string;reason:string;created_at:string}[]>([]);
+ useEffect(()=>{let current=true;setReady(false);setRows([]);setSelected(null);setReason('');setVerified(false);setScopes([]);setAudit([]);setError('');
+ if(!demoMode&&user&&isAdmin)void(async()=>{try{if(await teacherCall<boolean>('is_super_admin')!==true)return;const data=await teacherCall<TeacherSnapshot[]>('teacher_v2_directory',{p_offset:page*25,p_search:query});if(current){setRows(data);setReady(true);}}catch{if(current)setError('Teacher v2 directory awaits approved activation or access was denied.');}})();return()=>{current=false;};},[user?.id,isAdmin,demoMode,page,query,reload]);
+ const act=async(fn:()=>Promise<unknown>)=>{if(busy||reason.trim().length<12||reason.trim().length>1000)return;if(!window.confirm('Apply this audited teacher access decision?'))return;setBusy(true);setError('');try{await fn();setReload(n=>n+1);}catch(e){setError(e instanceof Error?e.message:'Decision failed.');}finally{setBusy(false);}};
+ if(!user||!isAdmin||demoMode)return null;
+ return <section className="my-4 space-y-3 rounded-2xl border bg-white p-5" aria-label="Teacher Directory v2"><h2 className="font-bold">Teacher Directory v2</h2>
+ {!ready?<p>{error||'Checking server authorization…'}</p>:<><form onSubmit={e=>{e.preventDefault();setQuery(search);setPage(0);}}><label>Search name or Employee ID<input maxLength={160} value={search} onChange={e=>setSearch(e.target.value)} className="mx-2 rounded border p-2"/></label><button>Search directory</button></form>
+ {rows.map(p=><article key={p.user_id} className="space-y-2 rounded border p-3"><h3 className="font-bold">{p.display_name} · {p.status}</h3><p>{p.employee_id||'Employee ID not issued'} · {p.contact_email} · {p.phone}</p><p className="break-all text-xs">Account ID: {p.user_id} · Revision {p.revision}</p><p>{p.application_reason}</p>{p.resumes.map(d=><p key={d.id}>{d.original_filename} · {d.verification_status} {teacherResumeEnabled&&<button onClick={()=>void downloadTeacherResume(d.id).catch(()=>setError('Private resume access denied.'))}>Download private resume</button>}</p>)}
+ {p.qualifications.map((q,i)=><p key={i}>{q.title} · {q.institution} · {q.year}</p>)}
+ <button onClick={()=>{setSelected(p.user_id);setReason('');setVerified(false);setScopes([]);setAudit([]);}}>Review profile and access</button>
+ {selected===p.user_id&&<div className="space-y-3"><label className="block">Decision reason<textarea maxLength={1000} className="block w-full rounded border p-2" value={reason} onChange={e=>setReason(e.target.value)}/></label>
+ {p.status==='pending'&&p.submitted_at&&<><label className="block"><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/> Identity independently verified</label><TeacherScopeEditor value={scopes} onChange={setScopes}/>
+ <button disabled={busy||!verified||reason.trim().length<12} onClick={()=>void act(()=>teacherCall('teacher_v2_review',{p_user_id:p.user_id,p_revision:p.revision,p_decision:'approve',p_reason:reason,p_verified:verified,p_assignments:scopes}))}>Approve verified teacher</button>
+ <button disabled={busy||reason.trim().length<12} onClick={()=>void act(()=>teacherCall('teacher_v2_review',{p_user_id:p.user_id,p_revision:p.revision,p_decision:'reject',p_reason:reason,p_verified:false,p_assignments:[]}))}>Reject application</button></>}
+ {p.status==='approved'&&<><TeacherScopeEditor value={scopes} onChange={setScopes}/>{scopes.map((s,i)=><button key={i} disabled={busy||reason.trim().length<12} onClick={()=>void act(()=>teacherCall('teacher_v2_set_assignment',{p_teacher_user_id:p.user_id,p_class_level:s.classLevel,p_subject:s.subject,p_work_type:s.workType,p_action:'grant',p_reason:reason}))}>Grant class {s.classLevel} · {s.subject} · {s.workType}</button>)}<button disabled={busy||reason.trim().length<12} onClick={()=>void act(()=>teacherCall('teacher_v2_suspend',{p_user_id:p.user_id,p_reason:reason}))}>Suspend teacher and revoke access</button></>}
+ {p.assignments.map(a=><p key={a.id}>{a.class_level} · {a.subject} · {a.work_type} · {a.status} {a.status==='active'&&<button disabled={busy||reason.trim().length<12} onClick={()=>void act(()=>teacherCall('teacher_v2_set_assignment',{p_teacher_user_id:p.user_id,p_class_level:a.class_level,p_subject:a.subject,p_work_type:a.work_type,p_action:'revoke',p_reason:reason}))}>Revoke assignment</button>}</p>)}
+ <button onClick={()=>void teacherCall<typeof audit>('teacher_v2_audit',{p_user_id:p.user_id}).then(setAudit).catch(()=>setError('Audit access denied.'))}>Load audit history</button>{audit.map(a=><p key={a.id}>{a.created_at} · {a.action} · {a.reason}</p>)}</div>}</article>)}
+ {!rows.length&&<p>No matching teachers.</p>}<button disabled={page===0} onClick={()=>setPage(page-1)}>Previous page</button><button disabled={rows.length<25} onClick={()=>setPage(page+1)}>Next page</button></>}
+ {ready&&error&&<p role="alert">{error}</p>}</section>;
+}

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { teacherCall, type TeacherSnapshot } from '../services/teacherManagement';
+import { TeacherManagementV2 } from './TeacherManagementV2';
 import { TeacherEnrollmentApplication } from './TeacherEnrollmentApplication';
 
 type StaffGrant = { user_id:string; role:string; permissions:string[]; scope_class:string|null; is_active:boolean };
@@ -16,6 +18,7 @@ const emptyDraft = {title:'',description:'',subject:'History',class_level:'10',k
 export const StaffLearningWorkspace: React.FC = () => {
   const { user, loading:authLoading, signInWithGoogle } = useAuth();
   const googleName = String(user?.user_metadata?.full_name || user?.user_metadata?.name || 'Not provided').trim();
+  const [v2Profile,setV2Profile] = useState<TeacherSnapshot|null>(null);
   const [grant,setGrant] = useState<StaffGrant|null>(null);
   const [ready,setReady] = useState(false);
   const [loading,setLoading] = useState(true);
@@ -31,15 +34,18 @@ export const StaffLearningWorkspace: React.FC = () => {
   useEffect(()=>{
     let mounted=true;
     if(!user){setLoading(false);setGrant(null);setItems([]);setReady(false);return;}
-    setLoading(true);setError('');setMessage('');setReady(false);setItems([]);setGrant(null);
+    setLoading(true);setError('');setMessage('');setReady(false);setItems([]);setGrant(null);setV2Profile(null);
     void (async()=>{
       try{
         const client=requireSupabase();
+        const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch(()=>null);
+        if(!mounted)return;
+        setV2Profile(profile);
         const roles=await client.from('result_staff_grants')
           .select('user_id,role,permissions,scope_class,is_active').eq('user_id',user.id).maybeSingle();
         if(roles.error) throw roles.error;
         if(!mounted)return;
-        const assigned=(roles.data||null) as StaffGrant|null;
+        const assigned=profile ? (profile.status==='approved'?{user_id:user.id,role:'Teacher',permissions:['materials.read',...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.draft')?['materials.draft.write']:[]),...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.review')?['materials.review.propose']:[])],scope_class:null,is_active:true}:null) : (roles.data||null) as StaffGrant|null;
         if(!assigned||!assigned.is_active){setGrant(null);return;}
         setGrant(assigned);
         setDraft({...emptyDraft,class_level:assigned.scope_class||'10'});
@@ -70,10 +76,10 @@ export const StaffLearningWorkspace: React.FC = () => {
 
   const canEdit=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.draft.write'));
   const canReview=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.review.propose'));
-  const withinScope=(classLevel:string)=>!grant?.scope_class||grant.scope_class===classLevel;
+  const withinScope=(classLevel:string,subject:string=draft.subject,work='materials.draft')=>v2Profile ? v2Profile.status==='approved'&&v2Profile.assignments.some(a=>a.status==='active'&&a.class_level===classLevel&&a.subject===subject&&a.work_type===work) : !grant?.scope_class||grant.scope_class===classLevel;
 
   const startEdit=(item:Material)=>{
-    if(!canEdit||!user||item.created_by!==user.id||item.status!=='draft'||!withinScope(item.class_level))return;
+    if(!canEdit||!user||item.created_by!==user.id||item.status!=='draft'||!withinScope(item.class_level,item.subject))return;
     setEditing(item.id);
     setDraft({title:item.title,description:item.description,subject:item.subject,
       class_level:item.class_level,kind:item.kind,resource_url:item.resource_url||''});
@@ -104,7 +110,7 @@ export const StaffLearningWorkspace: React.FC = () => {
     finally{setBusy(false);}
   };
   const submitReview=async(item:Material)=>{
-    if(!canReview||!user||busy||item.status!=='draft'||item.created_by!==user.id||!withinScope(item.class_level))return;
+    if(!canReview||!user||busy||item.status!=='draft'||item.created_by!==user.id||!withinScope(item.class_level,item.subject,'materials.review'))return;
     setBusy(true);setError('');setMessage('');
     try{
       const client=requireSupabase();
@@ -118,7 +124,7 @@ export const StaffLearningWorkspace: React.FC = () => {
     finally{setBusy(false);}
   };
   const removeDraft=async(item:Material)=>{
-    if(!canEdit||!user||busy||item.status!=='draft'||item.created_by!==user.id||!withinScope(item.class_level))return;
+    if(!canEdit||!user||busy||item.status!=='draft'||item.created_by!==user.id||!withinScope(item.class_level,item.subject))return;
     if(!window.confirm('Delete your draft? This action will be audited.'))return;
     setBusy(true);setError('');setMessage('');
     try{
@@ -160,7 +166,7 @@ export const StaffLearningWorkspace: React.FC = () => {
       </div>
       <div className="mt-4 rounded-xl border border-sky-200 bg-white p-3 text-xs text-slate-800" aria-label="Teacher employee profile status">
         <h3 className="font-extrabold text-sky-950">Teacher Profile &amp; Employee ID</h3>
-        <p className="mt-1">Employee ID: <strong>Not issued / not verified</strong></p>
+        <p className="mt-1">Employee ID: <strong>{v2Profile?.employee_id||'Not issued / not verified'}</strong></p>
         <p className="mt-1">Assigned class (current verified grant): <strong>{grant?.scope_class?'Class '+grant.scope_class:'No verified class-specific grant'}</strong></p>
         <p className="mt-1">Material permissions: <strong>{grant?.is_active?grant.permissions.join(', ')||'None':'None verified'}</strong></p>
         <p className="mt-2 text-slate-600">The new multi-class, multi-subject and Employee ID records will appear here only after approved server-side storage and authorization are activated. This screen does not infer assignments from unsubmitted preview selections.</p>
@@ -169,6 +175,7 @@ export const StaffLearningWorkspace: React.FC = () => {
     </section>
     {error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{error}</p>}
     {message&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">{message}</p>}
+    <TeacherManagementV2 key={user.id}/>
     {!grant && <TeacherEnrollmentApplication/>}
     {!grant||!ready?<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6" role="status"><LockKeyhole className="text-amber-900"/><h2 className="mt-2 font-extrabold text-amber-950">{error ? "Staff access could not be verified" : !grant ? "Teacher access awaiting Super Admin approval" : "Study material access is unavailable"}</h2><p className="mt-2 text-sm text-amber-900">{error ? "The staff permission service returned an error or denied access. No editing permission has been granted. Contact Super Admin to verify the preview backend and your account permissions." : !grant ? "Your account does not have an active Teacher grant. Submit or check your Teacher Enrollment request above; Super Admin must verify and approve it before you can edit materials." : "Your staff role exists, but the study material service could not be loaded. Editing remains disabled until access is verified."}</p></div>:<>
       <section className="rounded-2xl border border-slate-200 bg-white p-5">

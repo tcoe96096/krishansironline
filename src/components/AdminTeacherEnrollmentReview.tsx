@@ -1,3 +1,4 @@
+import { AdminTeacherDirectoryV2 } from './AdminTeacherDirectoryV2';
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -87,6 +88,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
   const pending=visible.filter(r=>r.status==='pending');
   const history=visible.filter(r=>r.status!=='pending');
   return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-label="Teacher approval requests">
+    <AdminTeacherDirectoryV2 demoMode={demoMode}/>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="flex items-center gap-2 text-xs font-bold text-teal-800"><ShieldCheck size={15}/> SUPER ADMIN ONLY</p>
