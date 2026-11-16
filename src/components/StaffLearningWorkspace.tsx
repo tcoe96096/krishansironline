@@ -39,7 +39,12 @@ export const StaffLearningWorkspace: React.FC = () => {
     void (async()=>{
       try{
         const client=requireSupabase();
-        const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch(()=>null);
+        const profile=await teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id}).catch((cause:unknown)=>{
+          // Legacy-only compatibility is allowed when the v2 RPC is not installed.
+          // A denied/failed v2 lookup must NOT silently re-enable legacy grants.
+          if(cause instanceof Error&&cause.message==='Teacher v2 backend awaits owner-approved activation.')return null;
+          throw cause;
+        });
         if(!mounted)return;
         setV2Profile(profile);
         const roles=await client.from('result_staff_grants')
