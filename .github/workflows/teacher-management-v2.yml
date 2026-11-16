@@ -35,6 +35,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://teacher-test.supabase.test
           VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_RESUME_ENABLED: 'true'
         run: |
           npm run dev -- --port 4174 --host 127.0.0.1 > /tmp/teacher-vite.log 2>&1 &
           for i in $(seq 1 30); do
@@ -43,3 +44,5 @@ jobs:
           done
           exit 1
       - run: node scripts/teacher-management-smoke.mjs
+        env:
+          TEACHER_TEST_RESUME_ENABLED: 'true'

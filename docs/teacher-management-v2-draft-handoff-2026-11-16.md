@@ -11,9 +11,9 @@ This is a code-complete draft for the implemented paths below, **not an activate
 | --- | --- | --- |
 | Registration | Existing primary class/subject enrollment remains active | Atomic profile + multiple qualifications + requested scopes, revision-checked save/submit/withdraw; reviewed and submitted profiles locked |
 | Employee identity | Legacy enrollment has no v2 Employee ID | Super Admin review checks revision and independent identity verification; approval atomically issues unique ID and explicit assignments |
-| Teacher dashboard | Existing account and material workspace retained | Server profile, verified status, qualifications, Employee ID, assignments and read-only aggregate results |
-| Super Admin | Existing enrollment review retained | Searchable directory, 25 records/page, review, independent verification, assignment grant/revoke, suspension and last 100 audit events |
-| Study Materials | Existing scoped authoring and publication boundary retained | Review-only policy replacement enforces fresh class + subject + work scope for v2 profiles, with legacy fallback only for users without v2 profiles |
+| Teacher dashboard | Existing account and material workspace retained | Server profile, verified status, qualifications, Employee ID, last review note, assignments and read-only aggregate results |
+| Super Admin | Existing enrollment review retained | Searchable directory, 25 records/page, review, independent verification, assignment grant/revoke, suspension/restoration and last 100 audit events |
+| Study Materials | Existing scoped authoring and publication boundary retained | Review-only policy replacement enforces fresh class + subject + work scope for v2 profiles, preserving existing legacy grants during first v2 application, then permanently enforcing v2 assignments after approval |
 | Results | Existing private student Results remain unchanged | Scoped aggregate count/average review; no student identity, answer keys, result editing, delivery or publication grant |
 | Resume | No v2 storage activated | Private upload/download service code, bounded body, filename/type validation, cooldown, scanner receipt, revision-locked attachment; UI flag defaults off |
 | Audits/revocation | Existing legacy audit remains | Default-deny tables; server-only audit writes; assignment revocation and profile suspension; suspension also disables legacy grant |
@@ -28,17 +28,20 @@ No migration was executed, even locally. SQL parser checks do not establish data
 
 ## Validation completed
 
-- `npm test`: **53 passed**, zero failed (legacy unit tests, validation, RPC contract tests and static security checks).
+- `npm test`: **57 passed**, zero failed (legacy unit tests, validation, RPC contract tests and static security checks).
 - `npm run lint`: passed.
 - `npm run build`: passed; existing Vite config/chunk-size warnings remain.
 - `deno test --node-modules-dir=auto --allow-env supabase/functions/teacher-resume/index.test.ts`: **14 passed**, zero failed. Mocked API tests cover origin/auth, missing configuration, oversized body, filename and structural spoofing, absent scanner, malformed/mismatched/malware scanner receipts, verified receipt, authorized download with preserved document extension, denied download, stale finalization and private-object cleanup. No live storage writes.
-- `scripts/teacher-management-smoke.mjs`: passed with synthetic session and intercepted mock APIs. Covers mobile profile/qualifications/scopes, failed save, submission lock, withdrawal, inactive backend, upload gate, ordinary Admin boundary, Super Admin verification/approval, assignment grant/revoke, rejection and suspension.
+- `scripts/teacher-management-smoke.mjs`: passed with synthetic session and intercepted mock APIs. Covers mobile profile/qualifications/scopes, failed save, submission lock, withdrawal, inactive backend, upload gate, ordinary Admin boundary, Super Admin verification/approval, assignment grant/revoke, rejection notes, suspension, restoration without revived grants, and legacy-to-v2 transition. The resume UI flag is enabled only in the isolated mock browser test to prove unsaved edits disable uploads; no storage or service is activated.
 - Existing `scripts/smart-result-smoke.mjs`: passed (14 reported checks).
 - Existing `scripts/visual-studio-smoke.mjs`: passed (14 reported checks).
 - `scripts/parse-teacher-sql.py` with `pglast==8.8`: all **7** review-only SQL files parse, including PL/pgSQL bodies; no database execution.
 - `git diff --check`: passed.
 - `npm audit --omit=dev`: zero known production vulnerabilities. Resume service and frontend both pin Supabase JS 2.119.0.
 - Local document preflight checks PDF header/EOF and bounded DOCX ZIP package structure, expansion declarations, encryption/macros, traversal and overlapping/duplicate entries. It does not decompress/validate document contents and never replaces private malware/content scanning.
+- Reviewed applicants can see the last decision note. Audited restoration preserves Employee ID and leaves assignments revoked and legacy grants disabled; new assignments require explicit Super Admin grants.
+- Profile/directory refresh controls re-read server data. Profile refresh asks before discarding unsaved edits; document downloads preserve edits, uploads require a saved profile, and mutation controls lock while saving.
+- Existing active legacy material grants continue during first v2 registration; approved/suspended v2 identities never fall back to legacy permissions. Rollback-only tests cover this boundary, still unexecuted.
 - Profile draft saves now carry the expected server revision; stale updates are rejected with a refresh instruction. Rollback-only acceptance SQL includes stale save, anonymous/ordinary Admin denial and forbidden material publication/subject tests, still unexecuted.
 - New no-deploy CI workflow repeats unit, build, SQL parse, resume-service and mocked browser checks. Remote CI status is separate from local evidence.
 

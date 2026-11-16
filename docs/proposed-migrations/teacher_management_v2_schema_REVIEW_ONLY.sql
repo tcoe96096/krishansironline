@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS public.teacher_profiles (
   revision integer NOT NULL DEFAULT 1,
   submitted_at timestamptz,
   application_reason text,
+  decision_reason text CHECK (decision_reason IS NULL OR char_length(btrim(decision_reason)) BETWEEN 12 AND 1000),
+  reviewed_at timestamptz,
+  CONSTRAINT teacher_last_review_consistency CHECK ((decision_reason IS NULL)=(reviewed_at IS NULL)),
   requested_scopes jsonb NOT NULL DEFAULT '[]'::jsonb,
   -- Employee identity is retained after suspension; never issue to pending/rejected accounts.
   display_name text NOT NULL CHECK (char_length(trim(display_name)) BETWEEN 2 AND 160),

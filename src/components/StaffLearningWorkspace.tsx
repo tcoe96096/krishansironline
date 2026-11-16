@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FileText, LockKeyhole, RefreshCw, Save, ShieldCheck, UserRound, ExternalLink, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { requireSupabase } from '../lib/supabase';
+import { usesTeacherV2Assignments } from '../lib/teacherManagementValidation';
 import { teacherCall, type TeacherSnapshot } from '../services/teacherManagement';
 import { TeacherManagementV2 } from './TeacherManagementV2';
 import { TeacherEnrollmentApplication } from './TeacherEnrollmentApplication';
@@ -45,7 +46,7 @@ export const StaffLearningWorkspace: React.FC = () => {
           .select('user_id,role,permissions,scope_class,is_active').eq('user_id',user.id).maybeSingle();
         if(roles.error) throw roles.error;
         if(!mounted)return;
-        const assigned=profile ? (profile.status==='approved'?{user_id:user.id,role:'Teacher',permissions:['materials.read',...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.draft')?['materials.draft.write']:[]),...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.review')?['materials.review.propose']:[])],scope_class:null,is_active:true}:null) : (roles.data||null) as StaffGrant|null;
+        const assigned=profile&&usesTeacherV2Assignments(profile) ? (profile.status==='approved'?{user_id:user.id,role:'Teacher',permissions:['materials.read',...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.draft')?['materials.draft.write']:[]),...(profile.assignments.some(a=>a.status==='active'&&a.work_type==='materials.review')?['materials.review.propose']:[])],scope_class:null,is_active:true}:null) : (roles.data||null) as StaffGrant|null;
         if(!assigned||!assigned.is_active){setGrant(null);return;}
         setGrant(assigned);
         setDraft({...emptyDraft,class_level:assigned.scope_class||'10'});
@@ -76,7 +77,7 @@ export const StaffLearningWorkspace: React.FC = () => {
 
   const canEdit=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.draft.write'));
   const canReview=Boolean(ready&&grant?.is_active&&grant.permissions.includes('materials.review.propose'));
-  const withinScope=(classLevel:string,subject:string=draft.subject,work='materials.draft')=>v2Profile ? v2Profile.status==='approved'&&v2Profile.assignments.some(a=>a.status==='active'&&a.class_level===classLevel&&a.subject===subject&&a.work_type===work) : !grant?.scope_class||grant.scope_class===classLevel;
+  const withinScope=(classLevel:string,subject:string=draft.subject,work='materials.draft')=>v2Profile&&usesTeacherV2Assignments(v2Profile) ? v2Profile.status==='approved'&&v2Profile.assignments.some(a=>a.status==='active'&&a.class_level===classLevel&&a.subject===subject&&a.work_type===work) : !grant?.scope_class||grant.scope_class===classLevel;
 
   const startEdit=(item:Material)=>{
     if(!canEdit||!user||item.created_by!==user.id||item.status!=='draft'||!withinScope(item.class_level,item.subject))return;

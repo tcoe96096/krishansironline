@@ -69,7 +69,7 @@ BEGIN
  SELECT * INTO p FROM public.teacher_profiles WHERE user_id=p_user_id FOR UPDATE;
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Application changed; reload before review'; END IF;
  IF p_decision='approve' AND p_verified IS DISTINCT FROM true THEN RAISE EXCEPTION 'Identity verification required'; END IF;
- UPDATE public.teacher_profiles SET status=CASE WHEN p_decision='approve' THEN 'approved' ELSE 'rejected' END,
+ UPDATE public.teacher_profiles SET decision_reason=btrim(p_reason),reviewed_at=now(),status=CASE WHEN p_decision='approve' THEN 'approved' ELSE 'rejected' END,
  approved_by=CASE WHEN p_decision='approve' THEN auth.uid() END,approved_at=CASE WHEN p_decision='approve' THEN now() END,
  submitted_at=NULL,revision=revision+1,updated_at=now() WHERE user_id=p_user_id;
  IF p_decision='approve' THEN
@@ -88,12 +88,26 @@ RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 BEGIN
  IF auth.uid() IS NULL OR NOT coalesce(public.is_super_admin(),false) OR auth.uid()=p_user_id THEN RAISE EXCEPTION 'Independent Super Admin required' USING ERRCODE='42501'; END IF;
  IF p_reason IS NULL OR char_length(btrim(p_reason)) NOT BETWEEN 12 AND 1000 THEN RAISE EXCEPTION 'Reason required'; END IF;
- UPDATE public.teacher_profiles SET status='suspended',revision=revision+1,updated_at=now() WHERE user_id=p_user_id AND status='approved';
+ UPDATE public.teacher_profiles SET status='suspended',decision_reason=btrim(p_reason),reviewed_at=now(),revision=revision+1,updated_at=now() WHERE user_id=p_user_id AND status='approved';
  IF NOT FOUND THEN RAISE EXCEPTION 'Approved teacher required'; END IF;
  UPDATE public.teacher_assignments SET status='revoked',revoked_by=auth.uid(),revoked_at=now() WHERE teacher_user_id=p_user_id AND status='active';
  -- Close the legacy path too. This does not grant any new legacy rights.
  UPDATE public.result_staff_grants SET is_active=false WHERE user_id=p_user_id;
  INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason) VALUES(auth.uid(),p_user_id,'teacher.suspended',p_reason);
+ RETURN true;
+END $$;
+
+-- Restoration preserves identity but never revives revoked assignments or legacy grants.
+CREATE OR REPLACE FUNCTION public.teacher_v2_restore(p_user_id uuid,p_reason text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF auth.uid() IS NULL OR NOT coalesce(public.is_super_admin(),false) OR auth.uid()=p_user_id THEN RAISE EXCEPTION 'Independent Super Admin required' USING ERRCODE='42501'; END IF;
+ IF p_reason IS NULL OR char_length(btrim(p_reason)) NOT BETWEEN 12 AND 1000 THEN RAISE EXCEPTION 'Reason required'; END IF;
+ UPDATE public.teacher_profiles SET status='approved',decision_reason=btrim(p_reason),reviewed_at=now(),revision=revision+1,updated_at=now()
+ WHERE user_id=p_user_id AND status='suspended';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Suspended teacher required'; END IF;
+ INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason)
+ VALUES(auth.uid(),p_user_id,'teacher.restored',p_reason);
  RETURN true;
 END $$;
 
@@ -123,6 +137,6 @@ BEGIN
  RETURN QUERY SELECT * FROM public.teacher_audit_events WHERE teacher_user_id=p_user_id ORDER BY created_at DESC,id LIMIT 100;
 END $$;
 -- Explicit grants form part of the review bundle, NOT an activated capability.
-REVOKE ALL ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid),public.teacher_v2_set_assignment(uuid,text,text,text,text,text) TO authenticated;
+REVOKE ALL ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_restore(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.teacher_v2_save_application(jsonb,jsonb,jsonb,text,boolean,integer),public.teacher_v2_withdraw(),public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb),public.teacher_v2_suspend(uuid,text),public.teacher_v2_restore(uuid,text),public.teacher_v2_snapshot(uuid),public.teacher_v2_directory(integer,text),public.teacher_v2_audit(uuid),public.teacher_v2_set_assignment(uuid,text,text,text,text,text) TO authenticated;
 COMMIT;

@@ -7,6 +7,9 @@ INSERT INTO auth.users(id,email) VALUES
  ('22222222-2222-4222-8222-222222222222','other-v2-acceptance@example.invalid'),
  ('33333333-3333-4333-8333-333333333333','admin-v2-acceptance@example.invalid');
 INSERT INTO public.user_roles(user_id,role) VALUES('33333333-3333-4333-8333-333333333333','super_admin'),('22222222-2222-4222-8222-222222222222','admin');
+SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+INSERT INTO public.result_staff_grants(user_id,role,permissions,scope_class,change_reason)
+VALUES('11111111-1111-4111-8111-111111111111','teacher',ARRAY['materials.read','materials.draft.write'],'10','Existing approved legacy teacher fixture');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
 SELECT public.teacher_v2_save_application(
@@ -40,7 +43,8 @@ DO $$ BEGIN
  BEGIN
   DELETE FROM public.teacher_audit_events;RAISE EXCEPTION 'FAIL: audit tampering';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
- IF public.teacher_v2_has_active_assignment('10','History','materials.draft') THEN RAISE EXCEPTION 'FAIL: pending teacher rights'; END IF;
+ IF public.teacher_v2_has_active_assignment('10','History','materials.draft') THEN RAISE EXCEPTION 'FAIL: pending v2 assignment'; END IF;
+ IF NOT public.teacher_v2_material_permission('10','History','materials.draft.write') THEN RAISE EXCEPTION 'FAIL: existing legacy grant lost during v2 application'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
 DO $$ BEGIN
@@ -69,10 +73,30 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
 SELECT public.teacher_v2_set_assignment('11111111-1111-4111-8111-111111111111','10','History','materials.draft','revoke','Acceptance test immediate assignment revocation');
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+DO $$ BEGIN
+ IF public.teacher_v2_material_permission('10','History','materials.draft.write') THEN RAISE EXCEPTION 'FAIL: revoked v2 assignment fell back to active legacy grant'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
 SELECT public.teacher_v2_suspend('11111111-1111-4111-8111-111111111111','Acceptance test immediate teacher suspension');
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
 DO $$ BEGIN
  IF public.teacher_v2_material_permission('10','History','materials.draft.write') OR public.teacher_v2_has_active_assignment('12','Political Science','result.review') THEN RAISE EXCEPTION 'FAIL: revoked access retained'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+DO $$ BEGIN
+ BEGIN PERFORM public.teacher_v2_restore('11111111-1111-4111-8111-111111111111','Unauthorized ordinary Admin restore');RAISE EXCEPTION 'FAIL: ordinary Admin restoration';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+SELECT public.teacher_v2_restore('11111111-1111-4111-8111-111111111111','Acceptance verified restoration without grants');
+DO $$ DECLARE p jsonb; BEGIN
+ p:=public.teacher_v2_snapshot('11111111-1111-4111-8111-111111111111');
+ IF p->>'status'<>'approved' OR p->>'employee_id' IS NULL OR p->>'decision_reason'<>'Acceptance verified restoration without grants' THEN RAISE EXCEPTION 'FAIL: restoration identity or review note'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+DO $$ BEGIN
+ IF public.teacher_v2_material_permission('10','History','materials.draft.write') OR public.teacher_v2_has_active_assignment('12','Political Science','result.review') THEN RAISE EXCEPTION 'FAIL: restoration revived revoked assignments'; END IF;
 END $$;
 RESET ROLE;
 SET LOCAL ROLE anon;

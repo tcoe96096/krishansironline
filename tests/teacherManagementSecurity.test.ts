@@ -24,3 +24,18 @@ test('resume metadata finalization is service-only; downloads are owner or Super
  const resume=read('resume');assert.ok(resume.includes('TO service_role;'));assert.ok(resume.includes("teacher_user_id=auth.uid() OR public.is_super_admin()"));
  assert.ok(resume.includes('p_revision IS DISTINCT FROM p.revision'));assert.ok(!resume.includes('INSERT INTO storage.buckets'));
 });
+test('restoration preserves employee identity and never reactivates assignments or legacy grants',()=>{
+ const lifecycle=read('lifecycle');const restore=lifecycle.slice(lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_restore'),lifecycle.indexOf('-- Allowlisted nested payload:'));
+ assert.ok(restore.includes('auth.uid()=p_user_id'));
+ assert.ok(restore.includes("WHERE user_id=p_user_id AND status='suspended'"));
+ assert.ok(restore.includes("'teacher.restored'"));
+ assert.ok(!restore.includes('teacher_v2_issue_employee_id'));
+ assert.ok(!restore.includes('UPDATE public.teacher_assignments'));
+ assert.ok(!restore.includes('UPDATE public.result_staff_grants'));
+});
+test('teacher review notes are persisted with their timestamp and are server controlled',()=>{
+ const schema=read('schema'),lifecycle=read('lifecycle');
+ assert.ok(schema.includes('teacher_last_review_consistency'));
+ assert.ok(lifecycle.includes('decision_reason=btrim(p_reason),reviewed_at=now()'));
+ assert.ok(!/GRANT\s+(INSERT|UPDATE)\s+ON\s+public\.teacher_profiles/i.test(lifecycle));
+});
