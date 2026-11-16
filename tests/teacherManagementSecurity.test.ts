@@ -116,3 +116,20 @@ test('minimal beta still revokes historical analytics RPC and never automaticall
  assert.ok(flags.includes("'teacher_v2_result_summary(text,text)'"));
  assert.ok(flags.includes('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC,anon,authenticated,service_role'));
 });
+
+test('private resume bucket provisioner is fail-closed and never opens Storage client access',()=>{
+ const bucket=read('resume_bucket');
+ const resume=read('resume');
+ assert.ok(bucket.startsWith('-- REVIEW ONLY. NOT EXECUTED.'));
+ assert.ok(bucket.includes("to_regprocedure('public.teacher_v2_finalize_resume(uuid,integer,text,text,text,integer,text)')"));
+ assert.ok(bucket.includes("schemaname='storage' AND tablename='objects'"));
+ assert.ok(bucket.includes("ARRAY['anon','authenticated','public']::name[] && roles"));
+ assert.ok(bucket.includes("b.public IS FALSE"));
+ assert.ok(bucket.includes("b.file_size_limit=5242880"));
+ assert.ok(bucket.includes("'application/pdf'"));
+ assert.ok(bucket.includes("'application/vnd.openxmlformats-officedocument.wordprocessingml.document'"));
+ assert.ok(bucket.includes('ON CONFLICT (id) DO NOTHING'));
+ assert.ok(!/CREATE POLICY|GRANT\s+.*storage\.objects/i.test(bucket));
+ assert.ok(!/DELETE\s+FROM\s+storage\.objects|UPDATE\s+storage\.objects/i.test(bucket));
+ assert.ok(!resume.includes('INSERT INTO storage.buckets'));
+});
