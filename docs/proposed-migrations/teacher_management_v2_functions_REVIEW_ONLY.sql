@@ -62,8 +62,14 @@ BEGIN
   END IF;
   IF p_action='grant' AND NOT private.teacher_v2_feature_enabled('registration') THEN
     RAISE EXCEPTION 'Teacher assignment grants disabled' USING ERRCODE='42501'; END IF;
-  IF p_action='grant' AND p_work_type IN ('assessment.draft','result.review') AND NOT private.teacher_v2_feature_enabled('advanced_assignments') THEN
-    RAISE EXCEPTION 'Advanced assignment grants disabled' USING ERRCODE='42501'; END IF;
+  -- Analytics is an independent permission: it must not enable assessment
+  -- editing or general advanced assignments, and cannot be granted while OFF.
+  IF p_action='grant' AND p_work_type='assessment.draft'
+     AND NOT private.teacher_v2_feature_enabled('advanced_assignments') THEN
+    RAISE EXCEPTION 'Assessment authoring grants disabled' USING ERRCODE='42501'; END IF;
+  IF p_action='grant' AND p_work_type='result.review'
+     AND NOT private.teacher_v2_feature_enabled('result_analytics') THEN
+    RAISE EXCEPTION 'Scoped result analytics grants disabled' USING ERRCODE='42501'; END IF;
   SELECT status INTO v_status FROM public.teacher_profiles
     WHERE user_id=p_teacher_user_id FOR UPDATE;
   IF NOT FOUND THEN
