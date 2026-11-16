@@ -7,6 +7,7 @@ RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $
 BEGIN
  IF auth.uid() IS NULL THEN RETURN false; END IF;
  IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid() AND (employee_id IS NOT NULL OR status IN ('approved','suspended'))) THEN
+  IF NOT private.teacher_v2_feature_enabled('material_authoring') THEN RETURN false; END IF;
   RETURN public.teacher_v2_has_active_assignment(p_class,p_subject,CASE p_permission WHEN 'materials.draft.write' THEN 'materials.draft' WHEN 'materials.review.propose' THEN 'materials.review' ELSE NULL END)
    OR (p_permission='materials.read' AND (public.teacher_v2_has_active_assignment(p_class,p_subject,'materials.draft') OR public.teacher_v2_has_active_assignment(p_class,p_subject,'materials.review')));
  END IF;
@@ -34,17 +35,8 @@ CREATE POLICY "V2 delete own draft" ON public.study_material_items FOR DELETE TO
  USING (public.is_super_admin() OR (created_by=auth.uid() AND status='draft' AND public.teacher_v2_material_permission(class_level,subject,'materials.draft.write')));
 -- Existing private audit trigger remains: only Super Admin publishes and links must
 -- match the material's class. No test, result, delivery or website policy is widened.
--- Read-only aggregate review; no student identity, answers, marks writes or delivery.
-CREATE OR REPLACE FUNCTION public.teacher_v2_result_summary(p_class text,p_subject text)
-RETURNS TABLE(test_id text,submitted_count bigint,average_percentage numeric)
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
-BEGIN
- IF auth.uid() IS NULL OR NOT public.teacher_v2_has_active_assignment(p_class,p_subject,'result.review') THEN
-  RAISE EXCEPTION 'Scoped result review required' USING ERRCODE='42501'; END IF;
- RETURN QUERY SELECT t.id,count(a.id),round(avg(a.percentage),2)
- FROM public.tests t LEFT JOIN public.test_attempts a ON a.test_id=t.id AND a.status='submitted'
- WHERE t.class_level=p_class AND t.subject=p_subject GROUP BY t.id ORDER BY t.id LIMIT 100;
-END $$;
-REVOKE ALL ON FUNCTION public.teacher_v2_result_summary(text,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.teacher_v2_result_summary(text,text) TO authenticated;
+-- Privacy change: no live/raw result summary is defined or granted here.
+-- The separately reviewed result_privacy module is REQUIRED for summaries.
+-- Until installed, the frontend fails closed; the old small-cohort RPC must never
+-- be activated from the historical 77c6e71 bundle without that privacy revision.
 COMMIT;
