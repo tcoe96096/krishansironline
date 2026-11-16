@@ -4,7 +4,7 @@ import {validateTeacherResume} from '../../../src/lib/teacherManagementValidatio
 const bucket='teacher-resumes-private';
 const maxBytes=5*1024*1024;
 const json=(status:number,value:unknown,headers:HeadersInit)=>new Response(JSON.stringify(value),{status,headers:{...headers,'Content-Type':'application/json','Cache-Control':'no-store'}});
-Deno.serve(async req=>{
+export async function handleTeacherResume(req:Request):Promise<Response>{
  const origin=Deno.env.get('TEACHER_APP_ORIGIN');
  const headers={'Access-Control-Allow-Origin':origin||'null','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'POST, OPTIONS','Vary':'Origin'};
  if(!origin||req.headers.get('Origin')!==origin)return json(403,{error:'Origin denied'},headers);
@@ -67,4 +67,5 @@ Deno.serve(async req=>{
   if(uploadedPath)await admin.storage.from(bucket).remove([uploadedPath]);
   return json(400,{error:'Resume operation failed; no verified document was attached'},headers);
  }
-});
+}
+if(import.meta.main)Deno.serve(handleTeacherResume);

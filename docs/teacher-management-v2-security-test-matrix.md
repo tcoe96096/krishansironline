@@ -1,3 +1,5 @@
+> Update, 16 November 2026: draft implementation and precise activation/test status are documented in [the v2 handoff](teacher-management-v2-draft-handoff-2026-11-16.md). This earlier design document is historical; no v2 SQL or storage is active.
+
 # Teacher Management v2 — security verification matrix (review only)
 
 This is a **test plan**, not evidence that database tests passed. The proposed SQL has NOT been executed. Run only after the owner separately authorizes a disposable Preview test database.

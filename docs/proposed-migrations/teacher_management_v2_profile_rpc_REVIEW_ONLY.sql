@@ -15,7 +15,9 @@ BEGIN
      OR (p_contact_email IS NOT NULL AND (
           char_length(p_contact_email) > 254 OR
           (p_contact_email <> '' AND p_contact_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$')))
-     OR (p_phone IS NOT NULL AND (char_length(p_phone)>20 OR p_phone ~ '[^0-9+ ()-]'))
+     OR (p_phone IS NOT NULL AND btrim(p_phone)<>'' AND
+          (char_length(p_phone)>20 OR btrim(p_phone) !~ '^[+]?[0-9 ()-]+$'
+           OR char_length(regexp_replace(p_phone,'[^0-9]','','g')) NOT BETWEEN 7 AND 15))
      OR (p_experience_years IS NOT NULL AND p_experience_years NOT BETWEEN 0 AND 70)
   THEN
     RAISE EXCEPTION 'Invalid teacher profile' USING ERRCODE='22023';

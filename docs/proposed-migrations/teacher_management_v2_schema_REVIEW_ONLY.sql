@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_resume_documents (
   original_filename text NOT NULL CHECK (char_length(trim(original_filename)) BETWEEN 5 AND 180),
   content_type text NOT NULL CHECK (content_type IN ('application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document')),
   size_bytes integer NOT NULL CHECK (size_bytes BETWEEN 1 AND 5242880),
-  CONSTRAINT teacher_resume_storage_key_no_traversal CHECK (storage_path !~ '(^/|\\.\\.|//|\\\\)'),
+  CONSTRAINT teacher_resume_storage_key_no_traversal CHECK (left(storage_path,1)<>'/' AND strpos(storage_path,'..')=0 AND strpos(storage_path,'//')=0 AND strpos(storage_path,chr(92))=0),
   verification_status text NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
   uploaded_at timestamptz NOT NULL DEFAULT now()
 );

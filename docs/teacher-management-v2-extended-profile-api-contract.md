@@ -1,3 +1,5 @@
+> Update, 16 November 2026: draft implementation and precise activation/test status are documented in [the v2 handoff](teacher-management-v2-draft-handoff-2026-11-16.md). This earlier design document is historical; no v2 SQL or storage is active.
+
 # Teacher Management v2 — Extended Profile API Contract (REVIEW ONLY)
 
 **Status:** design contract only. No API, storage bucket, migration, or RPC described here is active. This document must not be interpreted as proof of live submission.
