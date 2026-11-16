@@ -97,9 +97,10 @@ export function validateTeacherRequestedWorkTypes(workTypes:readonly string[]):b
     Array.from(workTypes).every(value=>typeof value==='string'&&TEACHER_WORK_TYPES.some(item=>item===value));
 }
 
-/** Display routing only; SQL independently enforces the same transition boundary.
- * Existing approved legacy grants remain authoritative during a first v2 application.
- * Once v2 approves an identity, legacy grants can never bypass v2 revocation. */
+/** Display routing only; SQL independently enforces this fail-closed boundary.
+ * Any v2 profile (including draft, pending, rejected, or suspended) must use v2
+ * authorization. Legacy grants remain eligible only for accounts WITHOUT a v2
+ * profile. Transition old staff with verified assignments before creating one. */
 export function usesTeacherV2Assignments(profile:{status:string;employee_id:string|null}|null):boolean {
-  return profile!==null&&(profile.employee_id!==null||!['pending','rejected'].includes(profile.status));
+  return profile!==null;
 }
