@@ -97,6 +97,34 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.teacher_v2_set_assignment(uuid,text,text,text,text,text)
   FROM PUBLIC, anon, authenticated;
+-- Server-side scoped authorization primitive for future Study Material / Results RPCs.
+-- The caller cannot choose another teacher's user ID. No EXECUTE grant is active.
+-- Never use this boolean alone for a write: the consuming RPC must enforce the
+-- same check inside its own transaction and validate the target resource scope.
+CREATE OR REPLACE FUNCTION public.teacher_v2_has_active_assignment(
+ p_class_level text,p_subject text,p_work_type text
+) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = '' AS $
+DECLARE v_actor uuid;
+BEGIN
+  v_actor := auth.uid();
+  IF v_actor IS NULL THEN RETURN false; END IF;
+  IF p_class_level IS NULL OR p_class_level NOT IN ('6','7','8','9','10','11','12')
+     OR p_subject IS NULL OR p_subject NOT IN ('Political Science','History','Geography','Economics','Other')
+     OR p_work_type IS NULL OR p_work_type NOT IN ('materials.draft','materials.review','assessment.draft','result.review')
+  THEN RETURN false; END IF;
+  RETURN EXISTS (
+    SELECT 1 FROM public.teacher_profiles p
+    JOIN public.teacher_assignments a ON a.teacher_user_id=p.user_id
+    WHERE p.user_id=v_actor AND p.status='approved'
+      AND a.status='active' AND a.revoked_at IS NULL
+      AND a.class_level=p_class_level AND a.subject=p_subject
+      AND a.work_type=p_work_type
+  );
+END;
+$;
+REVOKE ALL ON FUNCTION public.teacher_v2_has_active_assignment(text,text,text)
+  FROM PUBLIC, anon, authenticated;
 COMMIT;
 -- SECURITY GATES BEFORE ANY EXECUTE GRANT:
 -- Verify public.is_super_admin() uses auth.uid() and cannot be spoofed.
