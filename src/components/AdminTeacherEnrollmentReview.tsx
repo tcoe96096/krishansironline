@@ -145,7 +145,8 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
                  <label>Work<select aria-label="Assignment work" value={assignmentWork} onChange={e=>setAssignmentWork(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2">{TEACHER_WORK_TYPES.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
                </div>
                <button type="button" className="mt-2 rounded-lg border border-sky-200 px-3 py-2 font-bold text-sky-900" disabled={assignmentDraft.length>=60} onClick={()=>{try{const next=normalizeTeacherAssignments([...assignmentDraft,{classLevel:assignmentClass,subject:assignmentSubject,workType:assignmentWork}]);if(next.length===assignmentDraft.length){setError('This class, subject and work combination is already in your draft.');return;}setAssignmentDraft(next);setError('');}catch(cause){setError(cause instanceof Error?cause.message:'Could not add assignment.');}}}>Add draft assignment</button>
-               <p className="mt-2 text-xs text-slate-600">{assignmentDraft.length}/60 draft assignments · No permissions are granted by this planner.</p>\n               <div className="mt-2 space-y-1">{assignmentDraft.map((item,index)=><div key={JSON.stringify(item)} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 p-2"><span>Class {item.classLevel} · {item.subject} · {item.workType}</span><button type="button" className="font-bold text-rose-800" aria-label={`Remove assignment ${index+1}`} onClick={()=>setAssignmentDraft(current=>current.filter((_,i)=>i!==index))}>Remove</button></div>)}</div>
+               <p className="mt-2 text-xs text-slate-600">{assignmentDraft.length}/60 draft assignments · No permissions are granted by this planner.</p>
+               <div className="mt-2 space-y-1">{assignmentDraft.map((item,index)=><div key={JSON.stringify(item)} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 p-2"><span>Class {item.classLevel} · {item.subject} · {item.workType}</span><button type="button" className="font-bold text-rose-800" aria-label={`Remove assignment ${index+1}`} onClick={()=>setAssignmentDraft(current=>current.filter((_,i)=>i!==index))}>Remove</button></div>)}</div>
              </div>
              <p className="text-xs font-semibold text-slate-700">Verify account identity outside this form, then enter audit reason.</p>
              <label className="text-xs font-bold text-slate-700">Mandatory Decision Reason
@@ -153,7 +154,7 @@ export const AdminTeacherEnrollmentReview:React.FC<{demoMode?:boolean}> = ({demo
                  onChange={e=>setReason(e.target.value)}
                  className="mt-1 w-full rounded-lg border border-slate-200 p-3 text-sm"/></label>
              <div className="flex flex-wrap gap-2">
-               <button type="button" disabled={busy||reason.trim().length<12}
+               <button type="button" disabled={busy||reason.trim().length<12||reason.trim().length>1000}
                  onClick={()=>void review(req,'approve')}
                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-800 px-4 text-xs font-bold text-white disabled:opacity-40">
                  <CheckCircle2 size={15}/>Approve Teacher
