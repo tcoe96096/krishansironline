@@ -101,3 +101,10 @@ for(const displayName of ['Teacher\nAdmin','Teacher\u200BAdmin','Teacher\u202EAd
   assert.equal(validateTeacherProfile({displayName,contactEmail:'',phone:'',experienceYears:null}),false);
 }
 assert.equal(validateTeacherProfile({displayName:'Dr. Teacher',contactEmail:'',phone:'',experienceYears:null}),true);
+
+// Punctuation must not count toward the minimum phone number length.
+for(const phone of ['-------','(------)','+------','12--34--','1234567890123456']) {
+  assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone,experienceYears:null}),false,
+    `Phone with invalid digit count accepted: ${JSON.stringify(phone)}`);
+}
+assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail:'',phone:'+91 (987) 654-3210',experienceYears:null}),true);
