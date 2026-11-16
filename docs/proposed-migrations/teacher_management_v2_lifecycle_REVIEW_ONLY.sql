@@ -69,6 +69,11 @@ BEGIN
  SELECT * INTO p FROM public.teacher_profiles WHERE user_id=p_user_id FOR UPDATE;
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Application changed; reload before review'; END IF;
  IF p_decision='approve' AND p_verified IS DISTINCT FROM true THEN RAISE EXCEPTION 'Identity verification required'; END IF;
+ -- Never issue an approved employee identity with zero authorized work scopes.
+ -- Legacy class-10 teachers require explicit verified subject mapping before approval.
+ IF p_decision='approve' AND jsonb_array_length(p_assignments)=0 THEN
+  RAISE EXCEPTION 'Approval requires at least one verified class, subject and work assignment' USING ERRCODE='22023';
+ END IF;
  UPDATE public.teacher_profiles SET decision_reason=btrim(p_reason),reviewed_at=now(),status=CASE WHEN p_decision='approve' THEN 'approved' ELSE 'rejected' END,
  approved_by=CASE WHEN p_decision='approve' THEN auth.uid() END,approved_at=CASE WHEN p_decision='approve' THEN now() END,
  submitted_at=NULL,revision=revision+1,updated_at=now() WHERE user_id=p_user_id;
