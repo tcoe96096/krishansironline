@@ -50,3 +50,13 @@ Queried `pg_proc`, `pg_get_functiondef` (only Boolean text-match indicators, not
 - All 18 contain an authentication/authorization-related token (`auth.uid`, `auth.jwt`, `is_admin`, or `is_super_admin`), but token presence does **not** prove effective enforcement; 16/18 have a denial-like text token, while `is_admin` and `is_super_admin` are Boolean helpers. This is a static heuristic only; negative-role runtime tests remain mandatory.
 - `student_purge_settings`, `student_purge_settings_audit`, and `test_answer_keys`: RLS enabled, zero policies; **no SELECT/INSERT/UPDATE/DELETE privileges for authenticated**, and **no SELECT for anon**. This supports intentional private-table design. Do not add broad policies without evidence.
 - This verification does **not** confirm PITR/backup or recovery readiness and does not authorize migrations.
+
+## Targeted function-body review — 2026-11-16 14:46 UTC
+Read-only inspection of actual `pg_get_functiondef` excerpts, not just regular-expression guard detection:
+
+- `review_teacher_enrollment`: checks authenticated actor and `public.is_super_admin()` before selecting/locking request; validates decision/reason, pending status and existing-role conflicts. This is a **static** positive finding, not an account-level test.
+- `send_result_to_student`: checks `public.is_super_admin()`, submitted attempt status and recipient account eligibility before writing delivery notice/audit. This is a **static** positive finding.
+- `admin_schedule_studio_publish`: checks authenticated `public.is_admin()`, publication date bounds and draft existence before scheduling.
+- `admin_cancel_studio_publish`: checks authenticated `public.is_admin()` before cancelling pending schedule.
+
+**Review question before Production:** `is_admin()` is intentionally broader than `is_super_admin()`; verify whether Admin is supposed to schedule/cancel global site publishing under the owner's permission model. Do not silently change this authorization rule. Remaining 14 functions and role-based negative tests are pending.
