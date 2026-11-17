@@ -110,7 +110,7 @@ try{
  assert.deepEqual(writes.at(-1).args.p_assignments,[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
  // Core Beta deliberately excludes the optional material editor.
  await page.goto(base+'/staff-workspace/');
- await page.getByRole('heading',{name:'Basic Teacher Dashboard',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'My Teacher Dashboard',exact:true}).waitFor();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  await page.goto(base+'/admin/');
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
@@ -146,7 +146,7 @@ try{
  await panel.getByText('Last review note: Qualification documents require correction',{exact:true}).waitFor();
  assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),0,'Rejected v2 applicants must not see duplicate enrollment');
  legacyGrant=true;await page.reload();
- await page.getByRole('heading',{name:'Basic Teacher Dashboard',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'My Teacher Dashboard',exact:true}).waitFor();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  assert.equal(await panel.locator('input[type=file]').count(),0);
  assert.equal(await panel.getByRole('button',{name:'Review result summary'}).count(),0);
