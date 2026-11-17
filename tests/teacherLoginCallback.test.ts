@@ -31,3 +31,12 @@ test('OAuth callback rejects encoded and double-encoded path ambiguity',()=>{
    assert.throws(()=>teacherLoginCallback('https://example.org',base),/Invalid teacher login base path\./,`Encoded base accepted: ${base}`);
  }
 });
+
+test('OAuth callback rejects origins normalized silently by URL parser',()=>{
+ for(const origin of ['https://example.org\n','https://example.org\t','https://example.org\\evil','HTTPS://example.org','https://example.org:443','https://example.org//']) {
+   assert.throws(()=>teacherLoginCallback(origin,'/teacher-beta/'),/Invalid teacher login origin\./,`Noncanonical origin accepted: ${JSON.stringify(origin)}`);
+ }
+});
+test('OAuth callback accepts canonical origin with trailing slash',()=>{
+ assert.equal(teacherLoginCallback('https://example.org/','/teacher-beta/'),'https://example.org/teacher-beta/staff-workspace/');
+});
