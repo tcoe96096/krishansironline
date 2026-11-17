@@ -42,3 +42,10 @@ Before release: test recovery, review all proposed SQL/grants, run real Preview 
 - Sixth policy `Published material is readable` (SELECT, roles `anon,authenticated`, condition `status='published'`) is intentionally not dropped by the proposal.
 - Existing staff permissions reference `result_staff_grants` with `is_active`, permission array and scalar class scope. The proposed replacement uses `teacher_v2_material_permission` and introduces subject-aware v2 assignments, so regression tests must cover legacy teacher scope, super admin, draft-to-review transition, published anonymous reads, suspended v2 denial and cross-subject denial.
 - This is schema/policy inventory evidence, NOT proof that a migration or RLS behavior tests succeeded. No SQL writes, policy changes, deployments or feature activations occurred.
+
+## Preview Super Admin authorization dependency — 2026-11-17 (read-only)
+- Verified `public.is_super_admin()` exists as a STABLE SQL `SECURITY DEFINER` function with `search_path=public` in Preview `zgpkmfqioqvincmgyfpi`.
+- Definition checks `auth.uid() IS NOT NULL` and existence of `public.user_roles` row with matching `user_id=auth.uid()` and `lower(role)='super_admin'`; the caller does not supply a user ID or role argument.
+- `has_function_privilege`: `anon` EXECUTE=false, `authenticated` EXECUTE=true, `public` EXECUTE=false.
+- This verifies function identity and grants only, not RLS/role-table mutation security or real-account acceptance. Before any activation, separately inspect `public.user_roles` INSERT/UPDATE/DELETE privileges, RLS and role-management RPCs to exclude self-escalation.
+- No database writes, migration, deployment, or feature activation occurred.
