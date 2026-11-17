@@ -6,6 +6,7 @@ import {AdminTeacherDirectoryV2} from '../src/components/AdminTeacherDirectoryV2
 import {teacherBetaEnabled} from '../src/lib/teacherBetaFlags';
 import {requireSupabase} from '../src/lib/supabase';
 import {teacherCall} from '../src/services/teacherManagement';
+import {teacherLoginCallback} from '../src/lib/teacherLoginCallback';
 import '../src/index.css';
 function TeacherBetaPortal(){
  const {user,loading,configured,signOut}=useAuth();
@@ -13,7 +14,7 @@ function TeacherBetaPortal(){
  const [superAdminAccount,setSuperAdminAccount]=useState<string|null>(null);
  const canReview=!!user&&superAdminAccount===user.id;
  useEffect(()=>{let active=true;setSuperAdminAccount(null);setDirectory(false);if(user&&teacherBetaEnabled)void teacherCall<boolean>('is_super_admin').then(ok=>{if(active&&ok===true)setSuperAdminAccount(user.id);}).catch(()=>{});return()=>{active=false;};},[user?.id]);
- const signInTeacher=async()=>{const basePath=(import.meta.env.BASE_URL||'/').replace(/\/?$/,'/');const redirectTo=new URL(basePath+'staff-workspace/',window.location.origin).toString();const {error}=await requireSupabase().auth.signInWithOAuth({provider:'google',options:{redirectTo}});if(error)throw error;};
+ const signInTeacher=async()=>{const redirectTo=teacherLoginCallback(window.location.origin,import.meta.env.BASE_URL||'/');const {error}=await requireSupabase().auth.signInWithOAuth({provider:'google',options:{redirectTo}});if(error)throw error;};
  if(loading)return <main className="mx-auto max-w-4xl p-6">Checking your teacher account…</main>;
  return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-8">
  <header className="rounded-3xl bg-gradient-to-r from-slate-950 via-sky-950 to-teal-800 p-6 text-white shadow-lg"><p className="text-xs font-semibold uppercase tracking-widest text-teal-200">Krishan Sir Online Learning</p><h1 className="mt-2 text-3xl font-bold">Teacher Management</h1><p className="mt-2 text-sm text-sky-100">One place to apply, manage your teaching profile, and track approval.</p><div className="mt-5 grid gap-2 sm:grid-cols-3">{["1. Google sign-in","2. Profile & qualifications","3. Admin verification"].map(step=><div key={step} className="rounded-xl border border-white/20 bg-white/10 p-3 text-sm">{step}</div>)}</div></header>
