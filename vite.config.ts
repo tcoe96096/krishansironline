@@ -15,6 +15,7 @@ const seoPages = [
   { slug: 'about', title: 'About Krishan Sir | Teacher Profile', description: 'Learn about Krishan Kumar, TGT Social Science, and the Krishan Sir Online Learning Portal.' },
   { slug: 'contact', title: 'Contact & Student Doubt Desk | Krishan Sir', description: 'Contact Krishan Sir and send an academic doubt or learning support request.' },
   { slug: 'admin', title: 'Admin Control Center | Krishan Sir', description: 'Restricted administration portal for authorized website administrators.' },
+  { slug: 'staff-workspace', title: 'Teacher Login & Enrollment | Krishan Sir', description: 'Teacher sign-in and approval-based class-scoped learning workspace.' },
 ];
 
 const generateSeoPages = () => ({

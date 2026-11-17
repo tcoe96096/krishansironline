@@ -1,0 +1,34 @@
+{
+  "project_id": "zgpkmfqioqvincmgyfpi",
+  "expected_project_name": "krishan-sir-lms-preview",
+  "source_commit": "77c6e717c1eddba57e7eef931e0257ff2f74b061",
+  "activation_status": "BLOCKED_NOT_APPLIED",
+  "blocker": "Managed Preview backup and restore readiness unverified; owner has withheld execution pending preflight.",
+  "remote_execution_allowed": false,
+  "files": [
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_schema_REVIEW_ONLY.sql",
+      "sha256": "8c14ceadc1e63928f144b7b8cd1e2adadba0613ee8b1101672698b01ebf2c6eb"
+    },
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_profile_rpc_REVIEW_ONLY.sql",
+      "sha256": "71084cbd96d650e1a67a93cf5db0f86919f00cdef8ae11e2f32b5abfe1a681a6"
+    },
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_functions_REVIEW_ONLY.sql",
+      "sha256": "7bb3b202acd0a9e7dcebdd31d9e93ee83511533fbde0888d3d33e5824e2a35f2"
+    },
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql",
+      "sha256": "479a1865823f721b2e42eedc98e208bf730b1951684bb1f03cd18cb03a5d71b6"
+    },
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_integration_REVIEW_ONLY.sql",
+      "sha256": "a4843f3e5d6ca5e6d773abd375a25343351dcfa562432e904b4b6e2aeae4b7a2"
+    },
+    {
+      "file": "docs/proposed-migrations/teacher_management_v2_resume_REVIEW_ONLY.sql",
+      "sha256": "8f865b0ad936deac6d43d0d1b8920a443017ab09fce5d78c618d3418e1a8b229"
+    }
+  ]
+}

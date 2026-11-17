@@ -1,0 +1,174 @@
+{
+  "policies": [
+    {
+      "cmd": "DELETE",
+      "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Owner may delete only own drafts",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.read'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Owner or super admin reads review drafts",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(status = 'published'::text)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Published material is readable",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Scoped editors create drafts",
+      "schemaname": "public",
+      "with_check": "(( SELECT is_super_admin() AS is_super_admin) OR ((created_by = ( SELECT auth.uid() AS uid)) AND (status = 'draft'::text) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))"
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Scoped editors update only own drafts",
+      "schemaname": "public",
+      "with_check": "(( SELECT is_super_admin() AS is_super_admin) OR ((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.draft.write'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level)))))))"
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((status = 'draft'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.review.propose'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "study_material_items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Scoped staff submit own drafts for review",
+      "schemaname": "public",
+      "with_check": "((status = 'pending_review'::text) AND (created_by = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM result_staff_grants g\n  WHERE ((g.user_id = ( SELECT auth.uid() AS uid)) AND g.is_active AND ('materials.review.propose'::text = ANY (g.permissions)) AND ((g.scope_class IS NULL) OR (g.scope_class = study_material_items.class_level))))))"
+    }
+  ],
+  "triggers": [
+    "CREATE TRIGGER audit_study_material_change BEFORE INSERT OR DELETE OR UPDATE ON public.study_material_items FOR EACH ROW EXECUTE FUNCTION private.audit_study_material_change()"
+  ],
+  "functions": [
+    {
+      "name": "audit_study_material_change",
+      "schema": "private",
+      "definition": "CREATE OR REPLACE FUNCTION private.audit_study_material_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_actor uuid := auth.uid();\n  v_id uuid;\nbegin\n  if v_actor is null then raise exception 'Authentication required' using errcode='42501'; end if;\n  if tg_op='DELETE' then\n    v_id:=old.id;\n    insert into public.study_material_change_audit(item_id,actor_id,operation,old_state)\n      values(v_id,v_actor,'DELETE',to_jsonb(old));\n    return old;\n  end if;\n\n  if tg_op='INSERT' then\n    new.created_by:=v_actor;\n    new.created_at:=now();\n  else\n    if new.id is distinct from old.id or new.created_by is distinct from old.created_by then\n      raise exception 'Material ownership cannot change' using errcode='42501';\n    end if;\n  end if;\n\n  if tg_op='UPDATE' then\n    -- A delegated reviewer may only propose the state transition, not mutate content\n    -- at the same time or elevate directly to a published state.\n    if old.status='draft' and new.status='pending_review'\n      and not public.is_super_admin()\n      and (old.class_level,old.subject,old.title,old.description,old.kind,old.resource_url,old.linked_test_id)\n        is distinct from\n          (new.class_level,new.subject,new.title,new.description,new.kind,new.resource_url,new.linked_test_id)\n    then raise exception 'Submit for review without editing other fields' using errcode='42501';\n    end if;\n    if new.status in ('published','archived') and new.status is distinct from old.status then\n      if not public.is_super_admin() then raise exception 'Only Super Admin publishes or archives' using errcode='42501'; end if;\n      if length(btrim(new.review_note)) < 12 then\n        raise exception 'A review reason of at least 12 characters is required' using errcode='22023';\n      end if;\n    end if;\n  end if;\n\n  if new.linked_test_id is not null and not exists (\n    select 1 from public.tests t\n    where t.id=new.linked_test_id and t.class_level=new.class_level\n  ) then\n    raise exception 'Linked test must match material class' using errcode='23514';\n  end if;\n\n  new.updated_by:=v_actor;\n  new.updated_at:=now();\n  v_id:=new.id;\n  insert into public.study_material_change_audit(item_id,actor_id,operation,old_state,new_state)\n    values(v_id,v_actor,tg_op,case when tg_op='UPDATE' then to_jsonb(old) else null end,to_jsonb(new));\n  return new;\nend;\n$function$\n"
+    },
+    {
+      "name": "is_super_admin",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_super_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select auth.uid() is not null and exists (\n    select 1 from public.user_roles\n    where user_id = auth.uid() and lower(role) = 'super_admin'\n  );\n$function$\n"
+    }
+  ],
+  "constraints": [
+    "CHECK ((class_level = ANY (ARRAY['6'::text, '7'::text, '8'::text, '9'::text, '10'::text, '11'::text, '12'::text])))",
+    "FOREIGN KEY (created_by) REFERENCES auth.users(id)",
+    "CHECK ((kind = ANY (ARRAY['notes'::text, 'pdf'::text, 'video'::text, 'presentation'::text, 'link'::text])))",
+    "FOREIGN KEY (linked_test_id) REFERENCES tests(id) ON DELETE SET NULL",
+    "PRIMARY KEY (id)",
+    "CHECK (((resource_url IS NULL) OR ((resource_url ~~ 'https://%'::text) AND (length(resource_url) <= 2000))))",
+    "CHECK ((length(review_note) <= 1000))",
+    "CHECK ((status = ANY (ARRAY['draft'::text, 'pending_review'::text, 'published'::text, 'archived'::text])))",
+    "CHECK (((length(btrim(subject)) >= 2) AND (length(btrim(subject)) <= 120)))",
+    "CHECK (((length(btrim(title)) >= 3) AND (length(btrim(title)) <= 200)))",
+    "FOREIGN KEY (updated_by) REFERENCES auth.users(id)"
+  ],
+  "dependencies": {
+    "is_admin": "CREATE OR REPLACE FUNCTION public.is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select auth.uid() is not null and exists (\n    select 1 from public.user_roles\n    where user_id = auth.uid() and lower(role) in ('admin','super_admin')\n  );\n$function$\n",
+    "role_policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "((user_id = auth.uid()) OR is_admin())",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "user_roles",
+        "permissive": "PERMISSIVE",
+        "policyname": "users read own role",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "grant_policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "((user_id = ( SELECT auth.uid() AS uid)) OR ( SELECT is_super_admin() AS is_super_admin))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "result_staff_grants",
+        "permissive": "PERMISSIVE",
+        "policyname": "Result staff can inspect own grants or super admin lists",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "result_staff_grants",
+        "permissive": "PERMISSIVE",
+        "policyname": "Super admin inserts result staff grants",
+        "schemaname": "public",
+        "with_check": "( SELECT is_super_admin() AS is_super_admin)"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "( SELECT is_super_admin() AS is_super_admin)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "result_staff_grants",
+        "permissive": "PERMISSIVE",
+        "policyname": "Super admin revokes result staff grants",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "( SELECT is_super_admin() AS is_super_admin)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "result_staff_grants",
+        "permissive": "PERMISSIVE",
+        "policyname": "Super admin updates result staff grants",
+        "schemaname": "public",
+        "with_check": "( SELECT is_super_admin() AS is_super_admin)"
+      }
+    ]
+  },
+  "project_ref": "zgpkmfqioqvincmgyfpi",
+  "source_commit": "77c6e717c1eddba57e7eef931e0257ff2f74b061"
+}

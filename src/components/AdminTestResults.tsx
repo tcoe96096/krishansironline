@@ -1,30 +1,258 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, RefreshCw, Search, ClipboardList, Users, Trophy, Clock3, FileDown, Printer } from 'lucide-react';
+import {
+  Activity, ArrowDownToLine, ArrowRight, BarChart3, CalendarClock, CheckCircle2,
+  ChevronLeft, ChevronRight, Clock3, ClipboardList, Download, Eye, FileBarChart2,
+  FileDown, GraduationCap, LockKeyhole, Printer, RefreshCw, Search,
+  ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Copy, Share2, Link2, ImageUp, Save, Send, BookOpen
+} from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import {
+  defaultReportCardTemplate, localReportDraftKey, parseReportCardTemplate, serializeReportCardTemplate
+} from '../services/reportCardTemplate';
 import type { TestAttempt } from '../services/testService';
+import { escapeSpreadsheetCell, percentageLabel } from '../services/resultMetrics';
+import { displayAttemptStatus } from '../services/attemptDisplayStatus';
+import type { DisplayAttemptStatus } from '../services/attemptDisplayStatus';
+import { SmartResultReportCard, openSmartResultPrint } from './SmartResultReportCard';
+import type { ResultReportTheme, ResultReportOptions } from './SmartResultReportCard';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
+type Status = 'all' | DisplayAttemptStatus;
+type Sort = 'latest' | 'highest' | 'lowest';
+const PAGE_SIZE = 15;
 
-export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = false }) => {
+const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
+));
+const knownPct = (value: number | null | undefined): value is number =>
+  value != null && Number.isFinite(value);
+const sortPct = (value: number | null | undefined, missing: number) =>
+  knownPct(value) ? value : missing;
+
+export const AdminTestResults: React.FC<{
+  demoMode?: boolean;
+  onOpenMaterials?: () => void;
+  onOpenStaff?: () => void;
+}> = ({ demoMode = false, onOpenMaterials, onOpenStaff }) => {
+  const { user } = useAuth();
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [tests, setTests] = useState<TestInfo[]>([]);
   const [students, setStudents] = useState<StudentInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState<Status>('all');
   const [testFilter, setTestFilter] = useState('all');
+  const [classFilter, setClassFilter] = useState('all');
+  const [sort, setSort] = useState<Sort>('latest');
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<TestAttempt | null>(null);
+  const [cardTheme, setCardTheme] = useState<ResultReportTheme>(defaultReportCardTemplate.theme);
+  const [cardOptions, setCardOptions] = useState<ResultReportOptions>({...defaultReportCardTemplate.options});
+  const [showCardDesigner, setShowCardDesigner] = useState(false);
+  const [deliveryNotice, setDeliveryNotice] = useState('');
+  const [inAppDeliveryAvailable, setInAppDeliveryAvailable] = useState(false);
+  const [noticeSending, setNoticeSending] = useState(false);
+  const [designNotice, setDesignNotice] = useState('');
+  const [canPublishTemplate, setCanPublishTemplate] = useState(false);
+  const [publishReason, setPublishReason] = useState('');
+  const [publishBusy, setPublishBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setCanPublishTemplate(false);
+    if (demoMode || !user?.id) return;
+    void (async () => {
+      try {
+        const {data,error} = await requireSupabase().rpc('can_publish_result_card_template');
+        if (active) setCanPublishTemplate(!error && data === true);
+      } catch { if (active) setCanPublishTemplate(false); }
+    })();
+    return () => { active = false; };
+  }, [demoMode,user?.id]);
+
+  const publishGlobalCardDesign = async () => {
+    if (!canPublishTemplate || !user || demoMode || publishBusy) return;
+    const reason = publishReason.trim();
+    if (reason.length < 12) {setDesignNotice('Publish reason must contain at least 12 characters.');return;}
+    // Local uploads never go directly into public database. Secure image asset
+    // storage and its permissions are a separately reviewed feature.
+    const {logoImage: _logo, portraitImage: _portrait, ...publishOptions} = cardOptions;
+    let design;
+    try {
+      design = parseReportCardTemplate(serializeReportCardTemplate(cardTheme,publishOptions));
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error?cause.message:'Invalid design settings.');
+      return;
+    }
+    if (!window.confirm('Publish this design for ALL student report cards? Local uploaded logo/photo previews will NOT be published.')) return;
+    setPublishBusy(true);
+    setDesignNotice('');
+    try {
+      const client = requireSupabase();
+      const authority = await client.rpc('can_publish_result_card_template');
+      if (authority.error || authority.data !== true) throw new Error('Super Admin permission was not verified by the server.');
+      const {data,error:publishError} = await client.rpc('publish_result_card_template',{
+        p_theme:design.theme,p_options:design.options,p_reason:reason
+      });
+      if (publishError) throw publishError;
+      setDesignNotice('Global result-card template version '+String(data)+' published with audit. Local uploaded images were excluded.');
+      setPublishReason('');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error?cause.message:'Template publication failed.');
+    } finally {setPublishBusy(false);}
+  };
+
+  useEffect(() => {
+    // Never reuse another administrator's stored design on a shared browser.
+    setCardTheme(defaultReportCardTemplate.theme);
+    setCardOptions({...defaultReportCardTemplate.options});
+    setDesignNotice('');
+    setSelected(null);
+    setShowCardDesigner(false);
+    if (demoMode || !user?.id) return;
+    try {
+      const saved = localStorage.getItem(localReportDraftKey(user.id));
+      if (saved) {
+        const parsed = parseReportCardTemplate(saved);
+        setCardTheme(parsed.theme);
+        setCardOptions(parsed.options);
+      }
+    } catch { /* Missing or legacy drafts are not trusted; defaults are safe. */ }
+  }, [demoMode,user?.id]);
+
+  const saveCardDesign = () => {
+    if (demoMode || !user) { setDesignNotice('Admin sign-in is required.'); return; }
+    try {
+      localStorage.setItem(localReportDraftKey(user.id),serializeReportCardTemplate(cardTheme,cardOptions));
+      setDesignNotice('Design saved for this admin on this browser. NOT published to students.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Local draft unavailable. Try a smaller image.');
+    }
+  };
+
+  const exportCardDesign = () => {
+    if (demoMode || !user) return;
+    try {
+      const json = serializeReportCardTemplate(cardTheme,cardOptions);
+      const url = URL.createObjectURL(new Blob([json],{type:'application/json;charset=utf-8'}));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ksol-report-card-design-v1.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setDesignNotice('Design-only JSON exported. Contains no student scores or personal results.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Cannot export this design.');
+    }
+  };
+
+  const importCardDesign = async (file: File | undefined) => {
+    if (demoMode || !user || !file) return;
+    if (file.size > 6500000) {setDesignNotice('Backup must be smaller than 6.5 MB.');return;}
+    try {
+      const parsed = parseReportCardTemplate(await file.text());
+      setCardTheme(parsed.theme);
+      setCardOptions(parsed.options);
+      setDesignNotice('Design imported for preview only. Press Save Draft to keep it on this device.');
+    } catch (cause) {
+      setDesignNotice(cause instanceof Error ? cause.message : 'Invalid backup. No changes made.');
+    }
+  };
+  const loadImage = (file: File | undefined, field: 'logoImage' | 'portraitImage') => {
+    if (!file) return;
+    if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 2200000) {
+      setDesignNotice('PNG/JPG/WEBP images up to 2.2MB are supported.'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(reader.result)) {
+        setCardOptions(previous => ({...previous, [field]:reader.result as string}));
+        setDesignNotice('Image added to local design preview. Save Design to keep it on this device.');
+      }
+    };
+    reader.onerror = () => setDesignNotice('Image could not be loaded.');
+    reader.readAsDataURL(file);
+  };
+  useEffect(() => {
+    let active = true;
+    if (demoMode || !selected || selected.status !== 'submitted') {
+      setInAppDeliveryAvailable(false); return;
+    }
+    // Do not offer a nonfunctional Send action unless the private backend
+    // exists AND this session is server-verified as Super Admin.
+    void (async () => {
+      try {
+        const client = requireSupabase();
+        const [role, inbox] = await Promise.all([
+          client.rpc('is_super_admin'),
+          client.from('result_delivery_notices').select('id').limit(1)
+        ]);
+        if (active) setInAppDeliveryAvailable(!role.error && role.data === true && !inbox.error);
+      } catch { if (active) setInAppDeliveryAvailable(false); }
+    })();
+    return () => { active = false; };
+  }, [demoMode,selected?.id,selected?.status]);
+
+  const sendInAppResult = async (attempt: TestAttempt) => {
+    if (!inAppDeliveryAvailable || noticeSending || attempt.status !== 'submitted') return;
+    setNoticeSending(true); setDeliveryNotice('');
+    try {
+      const client = requireSupabase();
+      const {error: deliveryError} = await client.rpc('send_result_to_student',{p_attempt_id:attempt.id});
+      if (deliveryError) throw deliveryError;
+      setDeliveryNotice('Result delivered to this student’s private in-app inbox. No marks were sent publicly.');
+    } catch (cause) {
+      setDeliveryNotice(cause instanceof Error ? cause.message : 'Private inbox delivery failed.');
+    } finally { setNoticeSending(false); }
+  };
+  const resultLink = (attempt: TestAttempt) => new URL(
+    import.meta.env.BASE_URL + 'results/?resultId=' + encodeURIComponent(attempt.id), window.location.origin
+  ).toString();
+  const copyStudentLink = async (attempt: TestAttempt) => {
+    const link = resultLink(attempt);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(link);
+      setDeliveryNotice('Secure student login link copied. Share it privately; grades are never included in the link.');
+    } catch {
+      window.prompt('Copy this student login link (recipient must sign in):', link);
+      setDeliveryNotice('Recipient must sign in with the matching student account. No report was sent automatically.');
+    }
+  };
+  const shareStudentLink = async (attempt: TestAttempt) => {
+    const link = resultLink(attempt);
+    if (!navigator.share) { await copyStudentLink(attempt); return; }
+    try {
+      await navigator.share({
+        title: 'Krishan Sir Online — Result available',
+        text: 'Your assessment result is ready. Sign in to your student account to view and download the report.',
+        url: link
+      });
+      setDeliveryNotice('Share sheet opened. Delivery depends on the application and recipient you selected.');
+    } catch (cause) {
+      if (!(cause instanceof Error && cause.name === 'AbortError')) {
+        setDeliveryNotice('Sharing was unavailable. Use Copy secure link instead.');
+      }
+    }
+  };
 
   const load = useCallback(async () => {
     if (demoMode) { setLoading(false); return; }
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       const client = requireSupabase();
       const [attemptResult, testResult, studentResult] = await Promise.all([
-        client.from('test_attempts').select('id,student_id,test_id,attempt_number,status,started_at,expires_at,submitted_at,score,total_marks,percentage,correct_count,attempted_count').order('started_at', { ascending: false }).limit(1000),
+        client.from('test_attempts')
+          .select('id,student_id,test_id,attempt_number,status,started_at,expires_at,submitted_at,score,total_marks,percentage,correct_count,attempted_count')
+          .order('started_at', { ascending: false }).limit(1000),
         client.from('tests').select('id,title,class_level,subject').order('updated_at', { ascending: false }),
-        client.from('student_profiles').select('user_id,student_name,roll_no,class_level,school_name'),
+        client.from('student_profiles').select('user_id,student_name,roll_no,class_level,school_name')
       ]);
       if (attemptResult.error) throw attemptResult.error;
       if (testResult.error) throw testResult.error;
@@ -34,71 +262,472 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
       setStudents((studentResult.data ?? []) as StudentInfo[]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'परिणाम लोड नहीं हो सके।');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [demoMode]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPage(1); }, [query, status, testFilter, classFilter, sort]);
 
-  const testById = useMemo(() => new Map(tests.map(test => [test.id, test])), [tests]);
-  const studentById = useMemo(() => new Map(students.map(student => [student.user_id, student])), [students]);
-  const filtered = useMemo(() => attempts.filter(attempt => {
-    const test = testById.get(attempt.test_id);
-    const student = studentById.get(attempt.student_id);
-    const text = [student?.student_name, student?.roll_no, student?.school_name, test?.subject, test?.class_level, test?.title && typeof test.title === 'object' ? test.title.hi : test?.title, test?.title && typeof test.title === 'object' ? test.title.en : ''].filter(Boolean).join(' ').toLowerCase();
-    return (status === 'all' || attempt.status === status) && (testFilter === 'all' || attempt.test_id === testFilter) && (!query.trim() || text.includes(query.trim().toLowerCase()));
-  }), [attempts, testById, studentById, status, testFilter, query]);
+  const testById = useMemo(() => new Map(tests.map((test) => [test.id, test])), [tests]);
+  const studentById = useMemo(() => new Map(students.map((student) => [student.user_id, student])), [students]);
+  const titleOf = (test?: TestInfo): string => !test ? 'पुराना टेस्ट' :
+    typeof test.title === 'string' ? test.title : (test.title.hi || test.title.en || test.id);
+  const allClasses = useMemo(() => Array.from(new Set(tests.map((t) => t.class_level).concat(students.map((s) => s.class_level)))).filter(Boolean).sort(), [tests, students]);
 
-  const completed = attempts.filter(item => item.status === 'submitted');
-  const average = completed.length ? Math.round(completed.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / completed.length) : 0;
-  const titleOf = (test?: TestInfo) => !test ? 'टेस्ट उपलब्ध नहीं' : typeof test.title === 'string' ? test.title : test.title.hi || test.title.en || test.id;
+  const nowEpochMs = Date.now();
+  const shownStatus = (attempt: TestAttempt) => displayAttemptStatus(attempt, nowEpochMs);
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    const collection = attempts.filter((attempt) => {
+      const test = testById.get(attempt.test_id);
+      const student = studentById.get(attempt.student_id);
+      const searchable = [student?.student_name, student?.roll_no, student?.school_name,
+        student?.class_level, test?.subject, titleOf(test), attempt.attempt_number]
+        .filter((item) => item != null).join(' ').toLocaleLowerCase();
+      return (status === 'all' || displayAttemptStatus(attempt, nowEpochMs) === status) &&
+        (testFilter === 'all' || attempt.test_id === testFilter) &&
+        (classFilter === 'all' || student?.class_level === classFilter || test?.class_level === classFilter) &&
+        (!normalized || searchable.includes(normalized));
+    });
+    if (sort === 'highest') collection.sort((a, b) => (b.status === 'submitted' ? sortPct(b.percentage, -1) : -1) - (a.status === 'submitted' ? sortPct(a.percentage, -1) : -1));
+    if (sort === 'lowest') collection.sort((a, b) => (a.status === 'submitted' ? sortPct(a.percentage, 101) : 101) - (b.status === 'submitted' ? sortPct(b.percentage, 101) : 101));
+    return collection;
+  }, [attempts, testById, studentById, query, status, testFilter, classFilter, sort, nowEpochMs]);
+  const completed = useMemo(() => attempts.filter((a) => a.status === 'submitted'), [attempts]);
+  const completedPercentages = completed.map((attempt) => attempt.percentage).filter(knownPct);
+  const average = completedPercentages.length
+    ? completedPercentages.reduce((sum, value) => sum + value, 0) / completedPercentages.length : null;
+  const best = completedPercentages.length ? Math.max(...completedPercentages) : null;
+  const paginationCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const statusName = (value: DisplayAttemptStatus) => value === 'submitted' ? 'पूर्ण' : value === 'expired' ? 'समय समाप्त' : value === 'overdue' ? 'अवधि पार — रिकॉर्ड लंबित' : 'जारी';
+  const statusBadge = (value: DisplayAttemptStatus) => value === 'submitted'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    : value === 'in_progress' ? 'border-amber-200 bg-amber-50 text-amber-800' : value === 'overdue' ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-slate-200 bg-slate-100 text-slate-600';
+  const pctText = percentageLabel;
+  const dateText = (value: string | null) => value ? new Date(value).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
   const exportCsv = () => {
-    const escape = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
-    const rows = [
+    if (!filtered.length) return;
+    const data = [
       ['Student Name','Roll Number','Class','School','Test','Subject','Attempt','Status','Score','Total Marks','Percentage','Started At','Submitted At'],
-      ...filtered.map(item => {
-        const student = studentById.get(item.student_id);
-        const test = testById.get(item.test_id);
-        return [student?.student_name,student?.roll_no,student?.class_level,student?.school_name,titleOf(test),test?.subject,item.attempt_number,item.status,item.score,item.total_marks,item.percentage,item.started_at,item.submitted_at].map(escape);
+      ...filtered.map((attempt) => {
+        const student = studentById.get(attempt.student_id);
+        const test = testById.get(attempt.test_id);
+        return [student?.student_name, student?.roll_no, student?.class_level, student?.school_name,
+          titleOf(test), test?.subject, attempt.attempt_number, shownStatus(attempt),
+          attempt.status === 'submitted' ? attempt.score : '', attempt.status === 'submitted' ? attempt.total_marks : '',
+          attempt.status === 'submitted' ? attempt.percentage : '', attempt.started_at, attempt.submitted_at];
       })
     ];
-    const csv = '\uFEFF' + rows.map(row => row.map(value => Array.isArray(value) ? value.join(',') : value).join(',')).join('\r\n');
+    const csv = '\uFEFF' + data.map((row) => row.map(escapeSpreadsheetCell).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
-    link.href = url; link.download = 'krishan-sir-test-results.csv'; link.click();
-    URL.revokeObjectURL(url);
+    link.href = url;
+    link.download = 'krishan-sir-results-' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-
-  const printReport = () => {
-    const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char] || char));
-    const body = filtered.map(item => {
-      const student = studentById.get(item.student_id); const test = testById.get(item.test_id);
-      return '<tr><td>'+escapeHtml(student?.student_name)+'</td><td>'+escapeHtml(student?.roll_no)+'</td><td>'+escapeHtml(student?.class_level)+'</td><td>'+escapeHtml(titleOf(test))+'</td><td>'+escapeHtml(item.attempt_number)+'</td><td>'+escapeHtml(item.status)+'</td><td>'+escapeHtml(item.score)+' / '+escapeHtml(item.total_marks)+'</td><td>'+escapeHtml(item.percentage)+'%</td><td>'+escapeHtml(item.started_at ? new Date(item.started_at).toLocaleString('en-IN') : '')+'</td></tr>';
-    }).join('');
-    const popup = window.open('', '_blank', 'width=1100,height=800');
-    if (!popup) { setError('Print window blocked. कृपया browser में pop-ups allow करें।'); return; }
+  const printReport = (rows: TestAttempt[]) => {
+    if (!rows.length) return;
+    const popup = window.open('', '_blank', 'width=1100,height=850');
+    if (!popup) { setError('Print window blocked. कृपया Browser में Pop-ups Allow करें।'); return; }
     popup.opener = null;
-    popup.document.write('<!doctype html><html><head><title>Krishan Sir - Test Results Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{font-size:22px}p{color:#475569;font-size:12px}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#eef2ff}@media print{button{display:none}}</style></head><body><h1>Krishan Sir — Test Results Report</h1><p>Generated: '+escapeHtml(new Date().toLocaleString('en-IN'))+' · Records: '+filtered.length+'</p><table><thead><tr><th>Student</th><th>Roll</th><th>Class</th><th>Test</th><th>Attempt</th><th>Status</th><th>Score</th><th>%</th><th>Started</th></tr></thead><tbody>'+body+'</tbody></table><p>Use the browser print dialog and choose “Save as PDF”.</p><script>window.onload=()=>window.print()<\/script></body></html>');
+    const body = rows.map((item) => {
+      const student = studentById.get(item.student_id);
+      const test = testById.get(item.test_id);
+      const cells = [student?.student_name, student?.roll_no, student?.class_level, titleOf(test),
+        item.attempt_number, statusName(shownStatus(item)), item.status === 'submitted' ? item.score : '—',
+        item.status === 'submitted' ? item.total_marks : '—',
+        item.status === 'submitted' ? pctText(item.percentage) : '—', dateText(item.submitted_at || item.started_at)];
+      return '<tr>' + cells.map((cell) => '<td>' + escapeHtml(cell) + '</td>').join('') + '</tr>';
+    }).join('');
+    const html = [
+      '<!doctype html><html><head><meta charset="utf-8"><title>Krishan Sir - Assessment Report</title>',
+      '<style>body{font:12px system-ui,Arial,sans-serif;padding:28px;color:#0b2545}',
+      'h1{font-size:23px}p{color:#475569}table{width:100%;border-collapse:collapse;font-size:10px;margin-top:20px}',
+      'th,td{padding:8px;border:1px solid #cbd5e1;text-align:left}th{background:#eaf4ff}',
+      '@page{size:landscape;margin:15mm}</style></head><body>',
+      '<h1>Krishan Sir Online — Assessment Results</h1>',
+      '<p>Generated: ', escapeHtml(new Date().toLocaleString('en-IN')), ' · Displayed records: ', rows.length,
+      ' · Admin-only report · Submitted scores are server recorded</p>',
+      '<table><thead><tr>', ['Student','Roll','Class','Test','Attempt','Status','Score','Total','%','Date'].map((label) => '<th>' + label + '</th>').join(''),
+      '</tr></thead><tbody>', body, '</tbody></table>',
+      '<script>window.onload=function(){window.print();};<\/script></body></html>'
+    ].join('');
+    popup.document.write(html);
     popup.document.close();
   };
 
-  if (demoMode) return <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Demo mode में live विद्यार्थी परिणाम नहीं दिखाए जाते।</section>;
+  const testPerformance = useMemo(() => {
+    const groups = new Map<string, { test: string; sum: number; count: number }>();
+    completed.forEach((attempt) => {
+      if (!knownPct(attempt.percentage)) return;
+      const previous = groups.get(attempt.test_id) || { test: titleOf(testById.get(attempt.test_id)), sum: 0, count: 0 };
+      previous.sum += attempt.percentage;
+      previous.count += 1;
+      groups.set(attempt.test_id, previous);
+    });
+    return Array.from(groups.values()).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [completed, testById]);
 
-  return <section className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Results & Reports</h2><p className="mt-1 text-sm text-slate-500">विद्यार्थियों के टेस्ट प्रयास, स्कोर और परिणामों की सुरक्षित रिपोर्ट।</p></div><div className="flex gap-2"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"><RefreshCw className="h-4 w-4"/>{loading ? 'लोड…' : 'Refresh'}</button><button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl bg-[#082d65] px-3 py-2 text-xs font-bold text-white disabled:opacity-40"><Download className="h-4 w-4"/>Export CSV</button><button type="button" onClick={printReport} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"><Printer className="h-4 w-4"/>Print / Save PDF</button></div></div>
-    {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      {[{label:'कुल प्रयास',value:attempts.length,icon:ClipboardList},{label:'पूर्ण परिणाम',value:completed.length,icon:Trophy},{label:'जारी प्रयास',value:attempts.filter(x=>x.status==='in_progress').length,icon:Clock3},{label:'औसत स्कोर',value:average+'%',icon:Users}].map(card=>{const Icon=card.icon;return <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{card.label}</span><Icon className="h-4 w-4 text-sky-800"/></div><p className="mt-3 text-2xl font-extrabold text-slate-900">{loading?'…':card.value}</p></div>;})}
-    </div>
-    <div className="grid gap-3 md:grid-cols-[1fr_190px_220px]">
-      <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="विद्यार्थी, रोल नंबर, स्कूल या टेस्ट खोजें" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-sky-400"/></label>
-      <select value={status} onChange={event=>setStatus(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="all">सभी स्थितियाँ</option><option value="submitted">पूर्ण</option><option value="in_progress">जारी</option><option value="expired">समय समाप्त</option></select>
-      <select value={testFilter} onChange={event=>setTestFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="all">सभी टेस्ट</option>{tests.map(test=><option key={test.id} value={test.id}>{titleOf(test)}</option>)}</select>
-    </div>
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><h3 className="text-sm font-extrabold text-slate-900">Test Attempt Records</h3><p className="text-xs text-slate-500">अधिकतम नवीनतम 1,000 प्रयास</p></div><span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800">{filtered.length} रिकॉर्ड</span></div>
-      {loading ? <p className="p-8 text-center text-sm text-slate-500">परिणाम लोड हो रहे हैं…</p> : filtered.length === 0 ? <div className="p-9 text-center"><ClipboardList className="mx-auto h-8 w-8 text-slate-300"/><p className="mt-3 text-sm font-bold text-slate-700">अभी कोई परिणाम रिकॉर्ड उपलब्ध नहीं है</p><p className="mt-1 text-xs text-slate-500">टेस्ट प्रयास जमा होने के बाद रिपोर्ट यहाँ दिखाई देगी।</p></div> :
-      <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr>{['विद्यार्थी','टेस्ट','प्रयास','स्थिति','स्कोर','तिथि'].map(label=><th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{filtered.map(item=>{const student=studentById.get(item.student_id);const test=testById.get(item.test_id);return <tr key={item.id} className="hover:bg-slate-50/70"><td className="px-4 py-3"><p className="font-bold text-slate-800">{student?.student_name || 'विद्यार्थी विवरण उपलब्ध नहीं'}</p><p className="mt-1 text-[10px] text-slate-500">रोल: {student?.roll_no || '—'} · कक्षा {student?.class_level || '—'}</p></td><td className="px-4 py-3"><p className="font-semibold text-slate-800">{titleOf(test)}</p><p className="mt-1 text-[10px] text-slate-500">{test?.subject || '—'}</p></td><td className="px-4 py-3">{item.attempt_number}</td><td className="px-4 py-3"><span className={'rounded-full px-2.5 py-1 text-[10px] font-bold '+(item.status==='submitted'?'bg-emerald-50 text-emerald-700':item.status==='in_progress'?'bg-amber-50 text-amber-700':'bg-slate-100 text-slate-600')}>{item.status==='submitted'?'पूर्ण':item.status==='in_progress'?'जारी':'समय समाप्त'}</span></td><td className="px-4 py-3 font-extrabold text-slate-800">{item.status==='submitted'?<>{item.score ?? 0}/{item.total_marks ?? 0}<span className="ml-1 text-[10px] font-medium text-slate-500">({item.percentage ?? 0}%)</span></>:'—'}</td><td className="px-4 py-3 text-slate-600">{new Date(item.started_at).toLocaleString('hi-IN',{dateStyle:'medium',timeStyle:'short'})}</td></tr>;})}</tbody></table></div>}
-    </div>
-  </section>;
+  if (demoMode) return (
+    <section className="rounded-3xl border border-sky-200 bg-sky-50 p-7 text-sm text-sky-900">
+      <LockKeyhole size={27}/><h2 className="mt-3 text-xl font-extrabold">Result Management — Protected Preview</h2>
+      <p className="mt-2">Demo mode में वास्तविक विद्यार्थी डेटा नहीं दिखाया जाता। Admin Login के बाद अधिकृत Result Dashboard खुलेगा।</p>
+    </section>
+  );
+
+  return (
+    <section className="space-y-6 pb-12">
+      <div className="overflow-hidden rounded-[26px] bg-gradient-to-br from-[#061f47] via-[#0b3b75] to-[#087b8a] p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-2xl">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-extrabold tracking-wider text-cyan-100"><Sparkles size={14}/> KRISHAN SIR • ADMIN INTELLIGENCE</p>
+            <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">Smart Results & Reports</h2>
+            <p className="mt-2 text-sm leading-6 text-sky-100">सुरक्षित विद्यार्थी परिणाम, परीक्षा-वार विश्लेषण, स्मार्ट फ़िल्टर और Report Export के लिए नया Admin Control Centre।</p>
+          </div>
+          <div className="rounded-2xl border border-white/20 bg-white/10 p-3"><ShieldCheck size={25} aria-label="Admin restricted"/></div>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">SERVER-VERIFIED SCORES</span>
+          <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">ADMIN-ONLY</span>
+          <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">READ-ONLY RECORDS</span>
+        </div>
+      </div>
+
+      <section aria-label="Result administration controls" className="rounded-3xl border border-sky-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-extrabold tracking-wider text-teal-700">ADMIN RESULT CONTROL BOARD</p>
+            <h3 className="mt-1 text-lg font-extrabold text-slate-900">Digital Report Card & Permissions</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-600">सभी प्रमुख Controls यहाँ से खोलें। जिनके लिए Backend Approval बाकी है, उन्हें Active बताकर नहीं दिखाया जाता।</p>
+          </div>
+          <span className="rounded-full bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-900">Draft · Preview</span>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" disabled={!completed.length || loading}
+            onClick={() => {setSelected(completed[0]);setShowCardDesigner(true);setDesignNotice('');}}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-sky-900 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-40">
+            <SlidersHorizontal size={16}/> Open Digital Card Studio
+          </button>
+          {onOpenMaterials && <button type="button" onClick={onOpenMaterials}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">
+            <BookOpen size={16}/> Study Materials
+          </button>}
+          {onOpenStaff && <button type="button" onClick={onOpenStaff}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">
+            <ShieldCheck size={16}/> Staff Permissions
+          </button>}
+        </div>
+        {!loading && !completed.length && <p className="mt-3 text-xs text-amber-800">Card Studio खोलने के लिए पहले कोई Submitted Result होना चाहिए। बिना परिणाम के असली Report Card नहीं बनाया जाएगा।</p>}
+        <div className="mt-4 grid gap-2 text-[11px] font-semibold text-slate-700 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl bg-emerald-50 p-3"><p className="font-extrabold text-emerald-800">Code ready</p><p className="mt-1">Submitted score → Card / A4 Print</p></div>
+          <div className="rounded-xl bg-sky-50 p-3"><p className="font-extrabold text-sky-800">Local Draft</p><p className="mt-1">Theme, Logo, Photo & Footer editor</p></div>
+          <div className="rounded-xl bg-amber-50 p-3"><p className="font-extrabold text-amber-800">Backend-gated</p><p className="mt-1">Student Inbox Delivery / Role Grants</p></div>
+          <div className="rounded-xl bg-slate-100 p-3"><p className="font-extrabold text-slate-700">Not implemented</p><p className="mt-1">Approved Score Correction / Timed Release</p></div>
+        </div>
+        <p className="mt-3 text-[11px] text-slate-500">Local template edits change this browser's Admin preview and print output only. They do not publish a global student report design.</p>
+      </section>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h3 className="text-lg font-extrabold text-slate-900">Assessment Overview</h3><p className="text-xs text-slate-500">आँकड़े लोड हुए अधिकतम 1,000 नवीनतम प्रयासों पर आधारित हैं।</p></div>
+        <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/>{loading ? 'Loading…' : 'Refresh Data'}</button>
+      </div>
+      {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800">{error}</p>}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {[
+          { label: 'कुल प्रयास', value: attempts.length, icon: ClipboardList, accent: 'bg-sky-50 text-sky-800' },
+          { label: 'पूर्ण परिणाम', value: completed.length, icon: CheckCircle2, accent: 'bg-emerald-50 text-emerald-800' },
+          { label: 'औसत स्कोर', value: average === null ? '—' : pctText(average), icon: Activity, accent: 'bg-teal-50 text-teal-800' },
+          { label: 'सर्वश्रेष्ठ स्कोर', value: best === null ? '—' : pctText(best), icon: TrendingUp, accent: 'bg-amber-50 text-amber-800' }
+        ].map(({ label, value, icon: Icon, accent }) =>
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <span className={'flex h-10 w-10 items-center justify-center rounded-xl ' + accent}><Icon size={20}/></span>
+            <p className="mt-4 text-2xl font-extrabold tabular-nums text-slate-900">{loading ? '…' : value}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">{label}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(275px,1fr)]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between"><h3 className="text-base font-extrabold text-slate-900">Test Performance Overview</h3><BarChart3 className="text-sky-800" size={20}/></div>
+          <p className="mt-1 text-xs text-slate-500">सबसे अधिक Attempt हुए 5 Tests का औसत प्रतिशत। यह पूरे प्लेटफॉर्म की Ranking नहीं है।</p>
+          <div className="mt-5 space-y-4">
+            {testPerformance.length ? testPerformance.map((entry) => {
+              const avg = entry.sum / entry.count;
+              return <div key={entry.test}>
+                <div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="truncate font-bold text-slate-700">{entry.test}</span><span className="shrink-0 font-extrabold text-sky-900">{pctText(avg)} · {entry.count} attempts</span></div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div style={{ width: Math.max(0, Math.min(100, avg)) + '%' }} className="h-full rounded-full bg-gradient-to-r from-sky-800 to-teal-400"/></div>
+              </div>;
+            }) : <p className="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">पूर्ण परिणाम उपलब्ध होने पर वास्तविक ग्राफ दिखाई देगा।</p>}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between"><h3 className="text-base font-extrabold text-slate-900">Attempt Lifecycle</h3><CalendarClock size={20} className="text-sky-800"/></div>
+          <p className="mt-1 text-xs text-slate-500">Server records के आधार पर स्थिति। समय सीमा पार हुए अधूरे प्रयास अलग दिखते हैं; Database Records नहीं बदले जाते।</p>
+          <div className="mt-5 space-y-4">
+            {[
+              { label: 'Submitted', count: completed.length, cls: 'bg-emerald-500' },
+              { label: 'In progress', count: attempts.filter((a) => shownStatus(a) === 'in_progress').length, cls: 'bg-amber-400' },
+              { label: 'Overdue (not synced)', count: attempts.filter((a) => shownStatus(a) === 'overdue').length, cls: 'bg-orange-400' },
+              { label: 'Expired', count: attempts.filter((a) => a.status === 'expired').length, cls: 'bg-slate-400' }
+            ].map((item) => <div key={item.label}>
+              <div className="mb-1 flex justify-between text-xs font-semibold text-slate-700"><span>{item.label}</span><span>{item.count}</span></div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={'h-full rounded-full ' + item.cls} style={{width: attempts.length ? (item.count / attempts.length * 100) + '%' : '0%'}}/></div>
+            </div>)}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-[11px] font-bold tracking-wider text-teal-700"><SlidersHorizontal size={14}/> RESULT MANAGEMENT</p>
+            <h3 className="mt-1 text-lg font-extrabold text-slate-900">Student Result Records</h3>
+            <p className="mt-1 text-xs text-slate-500">रोल नंबर, स्कूल, कक्षा, टेस्ट और Score से खोजें। कोई Result अपने आप Modify नहीं होगा।</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!filtered.length} onClick={exportCsv} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-900 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-50"><Download size={16}/> Export CSV</button>
+            <button type="button" disabled={!filtered.length} onClick={() => printReport(filtered)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"><Printer size={16}/> Print / PDF</button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(190px,1fr)_170px_150px_190px_130px]">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400"/>
+            <span className="sr-only">Search results</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="विद्यार्थी, रोल, स्कूल, टेस्ट…" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
+          </label>
+          <label><span className="sr-only">Result status</span><select value={status} onChange={(event) => setStatus(event.target.value as Status)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी स्थितियाँ</option><option value="submitted">पूर्ण</option><option value="in_progress">जारी</option><option value="expired">समय समाप्त</option><option value="overdue">अवधि पार (लंबित)</option></select></label>
+          <label><span className="sr-only">Class filter</span><select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी कक्षाएँ</option>{allClasses.map((c) => <option key={c} value={c}>कक्षा {c}</option>)}</select></label>
+          <label><span className="sr-only">Test filter</span><select value={testFilter} onChange={(event) => setTestFilter(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="all">सभी टेस्ट</option>{tests.map((test) => <option key={test.id} value={test.id}>{titleOf(test)}</option>)}</select></label>
+          <label><span className="sr-only">Sort results</span><select value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"><option value="latest">नवीनतम</option><option value="highest">अधिक अंक</option><option value="lowest">कम अंक</option></select></label>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <span>{filtered.length} matching records · latest 1,000 loaded maximum</span>
+          {(query || status !== 'all' || classFilter !== 'all' || testFilter !== 'all' || sort !== 'latest') &&
+            <button type="button" onClick={() => { setQuery(''); setStatus('all'); setClassFilter('all'); setTestFilter('all'); setSort('latest'); }} className="font-bold text-sky-800 underline hover:text-sky-900">Clear filters</button>}
+        </div>
+
+        <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full min-w-[750px] text-left text-xs">
+            <thead className="bg-slate-50 text-slate-500">
+              <tr>{['विद्यार्थी', 'परीक्षा', 'स्थिति', 'स्कोर', 'दिनांक', 'विवरण'].map((label) => <th key={label} scope="col" className="px-4 py-3 font-extrabold">{label}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {loading ? <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">परिणाम लोड हो रहे हैं…</td></tr>
+              : visible.length === 0 ? <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">कोई परिणाम उपलब्ध नहीं है। दूसरे फ़िल्टर से खोजें।</td></tr>
+              : visible.map((attempt) => {
+                const student = studentById.get(attempt.student_id);
+                const test = testById.get(attempt.test_id);
+                return <tr key={attempt.id} className="transition hover:bg-sky-50/50">
+                  <td className="px-4 py-3"><p className="font-bold text-slate-900">{student?.student_name || 'विद्यार्थी विवरण अनुपलब्ध'}</p><p className="mt-1 text-[11px] text-slate-500">रोल: {student?.roll_no || '—'} · कक्षा {student?.class_level || '—'}</p></td>
+                  <td className="px-4 py-3"><p className="max-w-[240px] truncate font-bold text-slate-800" title={titleOf(test)}>{titleOf(test)}</p><p className="mt-1 text-[11px] text-slate-500">{test?.subject || '—'} · Attempt #{attempt.attempt_number}</p></td>
+                  <td className="px-4 py-3"><span className={'inline-flex rounded-full border px-2 py-1 font-bold ' + statusBadge(shownStatus(attempt))}>{statusName(shownStatus(attempt))}</span></td>
+                  <td className="px-4 py-3 font-extrabold tabular-nums text-slate-900">{attempt.status === 'submitted' ? <>{attempt.score ?? '—'}/{attempt.total_marks ?? '—'}<p className="mt-1 text-[11px] font-semibold text-teal-700">{pctText(attempt.percentage)}</p></> : '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{dateText(attempt.submitted_at || attempt.started_at)}</td>
+                  <td className="px-4 py-3"><button type="button" onClick={() => setSelected(attempt)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-sky-800 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700"><Eye size={14}/> View</button></td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))} className="rounded-lg border border-slate-200 p-2 text-slate-700 disabled:opacity-40"><ChevronLeft size={17}/></button>
+            <span className="font-semibold">Page {page} / {paginationCount}</span>
+            <button type="button" aria-label="Next page" disabled={page >= paginationCount} onClick={() => setPage((n) => Math.min(paginationCount, n + 1))} className="rounded-lg border border-slate-200 p-2 text-slate-700 disabled:opacity-40"><ChevronRight size={17}/></button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+        <div className="flex gap-3"><ShieldCheck size={20} className="shrink-0 text-sky-800"/><div><h4 className="text-sm font-extrabold text-sky-950">Result Data Protection</h4><p className="mt-1 text-xs leading-5 text-sky-900">यह Stage A Dashboard केवल अधिकृत Records पढ़ता है। अंक बदलना, Result Approve/Release करना, Rank बनाना या Student Data Delete करना इसमें उपलब्ध नहीं है। इन कार्यों का अलग सत्यापित Workflow अगले Stage में बनेगा।</p></div></div>
+      </div>
+
+      {selected && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/75 p-3 sm:p-6" onClick={() => setSelected(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Student result details" onClick={(event) => event.stopPropagation()} className="my-auto w-full max-w-2xl space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3 shadow-lg">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                Report Theme
+                <select value={cardTheme} onChange={(event) => setCardTheme(event.target.value as ResultReportTheme)} className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs">
+                  <option value="modern">Modern Digital</option>
+                  <option value="classic">Classic Academic</option>
+                  <option value="minimal">Minimal Pro</option>
+                </select>
+              </label>
+              <div className="flex items-center gap-2">
+                {selected.status === 'submitted' && (
+                  <button type="button" aria-expanded={showCardDesigner} onClick={() => setShowCardDesigner(v => !v)}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-3 text-xs font-bold text-sky-900 hover:bg-sky-100">
+                    <SlidersHorizontal size={16}/> Card Design
+                  </button>
+                )}
+                <button type="button" onClick={() => {setSelected(null);setShowCardDesigner(false);}} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><X size={17}/> Close</button>
+              </div>
+            </div>
+            {selected.status === 'submitted' && showCardDesigner && (
+              <div className="rounded-2xl border border-sky-200 bg-white p-4 shadow-lg">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <h4 className="text-sm font-extrabold text-sky-950">Report Card Design Editor</h4>
+                  <button type="button" onClick={()=>{setCardOptions({showInstitution:true,showMetrics:true,footerNote:'',showLogo:true,showPortrait:true,showSubjectTable:true,watermarkOpacity:8});setDesignNotice('Design reset for this preview.');}}
+                    className="text-xs font-bold text-sky-800 underline">Reset design</button>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Presentation-only Preview: marks, results, student details and server records are locked. Layout edits are not saved to the database.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-slate-700">Institution Heading
+                    <input maxLength={80} value={cardOptions.brandTitle || 'KRISHAN SIR ONLINE LEARNING'}
+                      onChange={e => setCardOptions(v=>({...v,brandTitle:e.target.value}))}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Tagline
+                    <input maxLength={110} value={cardOptions.tagline || 'STUDY • LEARN • PRACTICE • ACHIEVE'}
+                      onChange={e => setCardOptions(v=>({...v,tagline:e.target.value}))}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Upload Logo (Preview)
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>loadImage(e.target.files?.[0],'logoImage')}
+                      className="mt-1 block w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700">Upload Watermark Photo (Preview)
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>loadImage(e.target.files?.[0],'portraitImage')}
+                      className="mt-1 block w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                  </label>
+                  <label className="text-xs font-bold text-slate-700 sm:col-span-2">Watermark Lightness: {cardOptions.watermarkOpacity ?? 8}%
+                    <input type="range" min={0} max={18} value={cardOptions.watermarkOpacity ?? 8}
+                      onChange={e=>setCardOptions(v=>({...v,watermarkOpacity:Number(e.target.value)}))}
+                      className="mt-2 block w-full accent-teal-700"/>
+                  </label>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" checked={cardOptions.showInstitution !== false}
+                      onChange={(e)=>setCardOptions(v=>({...v,showInstitution:e.target.checked}))}
+                      className="h-4 w-4"/> Show Institution
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showLogo !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showLogo:e.target.checked}))}/> Show Logo</label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showPortrait !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showPortrait:e.target.checked}))}/> Show Photo</label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox"
+                    checked={cardOptions.showSubjectTable !== false}
+                    onChange={e=>setCardOptions(v=>({...v,showSubjectTable:e.target.checked}))}/> Subject Table</label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" checked={cardOptions.showMetrics !== false}
+                      onChange={(e)=>setCardOptions(v=>({...v,showMetrics:e.target.checked}))}
+                      className="h-4 w-4"/> Show Answer Metrics
+                  </label>
+                </div>
+                <label className="mt-4 block text-xs font-bold text-slate-700">
+                  Optional report footer note (max. 180 characters)
+                  <textarea maxLength={180} rows={2} value={cardOptions.footerNote || ''}
+                    onChange={(e)=>setCardOptions(v=>({...v,footerNote:e.target.value}))}
+                    placeholder="Example: Please review questions you answered incorrectly."
+                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"/>
+                </label>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={saveCardDesign}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-900 px-4 text-xs font-bold text-white hover:bg-sky-800"><Save size={15}/> Save Design (Local Draft)</button>
+                  <button type="button" onClick={exportCardDesign}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-200 px-4 text-xs font-bold text-sky-900 hover:bg-sky-50"><Download size={15}/> Export Design JSON</button>
+                  <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-sky-200 px-4 text-xs font-bold text-sky-900 hover:bg-sky-50">
+                    <FileDown size={15}/> Import Design JSON
+                    <input type="file" accept=".json,application/json" className="sr-only"
+                      onChange={event => {void importCardDesign(event.target.files?.[0]);event.target.value='';}}/>
+                  </label>
+                </div>
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h5 className="text-sm font-extrabold text-amber-950">Global Result Card Publishing</h5>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-amber-900">
+                      {canPublishTemplate?'Super Admin backend verified':'Backend approval pending'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-amber-900">
+                    {canPublishTemplate
+                      ? 'Only Super Admin can publish to all students. This action is audited and does not edit exam scores.'
+                      : 'Student-wide design publishing remains disabled until the separately approved Preview database migration and permissions are verified.'}
+                    {' '}Uploaded local logo/portrait files are excluded until a secure image hosting workflow is approved.
+                  </p>
+                  {canPublishTemplate && <label className="mt-3 block text-xs font-bold text-amber-950">
+                    Mandatory Publish Reason
+                    <textarea rows={2} minLength={12} maxLength={1000} value={publishReason}
+                      onChange={event=>setPublishReason(event.target.value)}
+                      placeholder="Explain why this design is being published to all students."
+                      className="mt-2 w-full rounded-xl border border-amber-200 bg-white p-3 text-sm"/>
+                  </label>}
+                  <button type="button" disabled={!canPublishTemplate || publishBusy || publishReason.trim().length < 12}
+                    onClick={()=>void publishGlobalCardDesign()}
+                    className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-amber-950 px-4 text-xs font-bold text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-40">
+                    <ShieldCheck size={15}/>{publishBusy?'Publishing…':'Publish Approved Design to Students'}
+                  </button>
+                </div>
+                {designNotice && <p role="status" className="mt-2 text-xs text-teal-800">{designNotice}</p>}
+              </div>
+            )}
+            {selected.status === 'submitted' && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <button type="button" onClick={()=>void copyStudentLink(selected)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-sky-800 hover:bg-sky-50"><Copy size={15}/> Copy Secure Student Link</button>
+                <button type="button" onClick={()=>void shareStudentLink(selected)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-teal-700 px-3 text-xs font-bold text-white hover:bg-teal-800"><Share2 size={15}/> Share Digitally</button>
+                {inAppDeliveryAvailable && (
+                  <button type="button" disabled={noticeSending} onClick={()=>void sendInAppResult(selected)}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-sky-900 px-3 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-50">
+                    <Send size={15}/>{noticeSending?'Sending…':'Send to Student Inbox'}
+                  </button>
+                )}
+                <span className="text-[11px] text-slate-500">{inAppDeliveryAvailable?'Secure student inbox active':'Secure link sharing active · Personalized inbox requires backend activation'}</span>
+                {deliveryNotice && <p role="status" className="w-full text-xs text-teal-800">{deliveryNotice}</p>}
+              </div>
+            )}
+            {selected.status === 'submitted' ? (
+              <SmartResultReportCard
+                data={{
+                  attempt: selected,
+                  title: titleOf(testById.get(selected.test_id)),
+                  subject: testById.get(selected.test_id)?.subject,
+                  student: {
+                    name: studentById.get(selected.student_id)?.student_name || 'विद्यार्थी',
+                    rollNo: studentById.get(selected.student_id)?.roll_no,
+                    classLevel: studentById.get(selected.student_id)?.class_level,
+                    school: studentById.get(selected.student_id)?.school_name
+                  },
+                  theme: cardTheme,
+                  options: cardOptions
+                }}
+                onPrint={() => {
+                  const student = studentById.get(selected.student_id);
+                  if (!openSmartResultPrint({
+                    attempt: selected, title: titleOf(testById.get(selected.test_id)),
+                    subject: testById.get(selected.test_id)?.subject,
+                    student: {
+                      name: student?.student_name || 'विद्यार्थी', rollNo: student?.roll_no,
+                      classLevel: student?.class_level, school: student?.school_name
+                    }, theme: cardTheme, options: cardOptions
+                  })) setError('Print window blocked. कृपया Pop-ups Allow करें।');
+                }}
+              />
+            ) : (
+              <div className="rounded-2xl bg-white p-6 shadow-lg">
+                <h3 className="text-lg font-extrabold text-slate-900">{titleOf(testById.get(selected.test_id))}</h3>
+                <p className="mt-3 text-sm text-slate-600">Result status: <strong>{statusName(shownStatus(selected))}</strong></p>
+                <p className="mt-2 text-xs text-slate-500">इस प्रयास का पूरा परिणाम अभी नहीं है। बिना Submit के कोई अंक या Result Card तैयार नहीं किया जाएगा।</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 };

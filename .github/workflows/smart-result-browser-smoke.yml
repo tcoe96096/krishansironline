@@ -1,0 +1,58 @@
+name: Smart Result Hub browser smoke (no deployment)
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "src/components/ResultsPortal.tsx"
+      - "src/components/AdminStaffPermissions.tsx"
+      - "src/components/AdminStudyMaterialControl.tsx"
+      - "src/components/StudyMaterialsView.tsx"
+      - "src/components/StaffRoleMatrix.tsx"
+      - "src/components/StaffLearningWorkspace.tsx"
+      - "src/components/PublishedMaterialLibrary.tsx"
+      - "src/components/AdminMaterialReview.tsx"
+      - "src/App.tsx"
+      - "src/components/AdminTestResults.tsx"
+      - "src/components/SmartResultReportCard.tsx"
+      - "scripts/smart-result-smoke.mjs"
+      - ".github/workflows/smart-result-browser-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  result-browser-smoke:
+    name: Verify result routes, privacy and mobile UX in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install site dependencies
+        run: npm install --legacy-peer-deps
+      - name: Install isolated browser test dependency
+        run: npm install --no-save --legacy-peer-deps playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify TypeScript
+        run: npm run lint
+      - name: Build preview artifact without publishing
+        run: npm run build
+      - name: Start local test website
+        run: |
+          npm run dev -- --port 4173 --host 127.0.0.1 > /tmp/smart-result-vite.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:4173/results/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/smart-result-vite.log
+          exit 1
+      - name: Test result routes in browser
+        run: node scripts/smart-result-smoke.mjs
+      - name: Print server errors if browser tests fail
+        if: failure()
+        run: cat /tmp/smart-result-vite.log || true

@@ -5,6 +5,8 @@ import { StudyVideoPlayer } from './StudyVideoPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { studyFiltersFromSearch } from '../services/learningLinks';
+import { PublishedMaterialLibrary } from './PublishedMaterialLibrary';
 import { getMyLearningProgressForMaterial, saveMyLearningProgress } from '../services/learningProgressService';
 import { FileText, Download, Printer, BookOpen, CheckCircle, Clock, Search, ExternalLink, Sparkles } from 'lucide-react';
 
@@ -20,8 +22,8 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
   const openChapterRequest = useRef(0);
   const progressLoadReady = useRef(true);
   const [restoreScrollTop, setRestoreScrollTop] = useState<number | null>(null);
-  const [selectedClass, setSelectedClass] = useState<ClassLevel>(initialClass);
-  const [selectedSubject, setSelectedSubject] = useState<string>('all');
+  const [selectedClass, setSelectedClass] = useState<ClassLevel>(() => (studyFiltersFromSearch(window.location.search).classLevel as ClassLevel | undefined) || initialClass);
+  const [selectedSubject, setSelectedSubject] = useState<string>(() => studyFiltersFromSearch(window.location.search).subject || 'all');
   const [activeChapter, setActiveChapter] = useState<StudyChapter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -141,6 +143,8 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             />
           </div>
         </div>
+
+        <PublishedMaterialLibrary classLevel={selectedClass} subject={selectedSubject} english={language==='en'}/>
 
         {/* Class Level Selector Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-slate-200 mb-6 scrollbar-none">

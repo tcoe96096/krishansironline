@@ -46,6 +46,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li><button onClick={() => onNavigate('materials')} className="hover:text-amber-300 transition-colors">{en ? 'Chapter-Wise Study Notes' : 'अध्यायवार अध्ययन सामग्री'}</button></li>
               <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">{en ? 'Current Affairs' : 'करेंट अफेयर्स'}</button></li>
               <li><button onClick={() => onNavigate('polity')} className="hover:text-amber-300 transition-colors">{en ? 'Indian Constitution' : 'भारतीय संविधान'}</button></li>
+              <li><button onClick={() => onNavigate('staffWorkspace')} className="font-semibold text-cyan-200 hover:text-white">{en ? 'Teacher Login / Enrollment' : 'शिक्षक लॉगिन / पंजीकरण'}</button></li>
+              <li><button onClick={() => onNavigate('admin')} className="font-semibold text-cyan-200 hover:text-white">{en ? 'Admin Login' : 'एडमिन लॉगिन'}</button></li>
               <li><button onClick={() => onNavigate('about')} className="hover:text-amber-300 transition-colors">{en ? 'About Krishan Sir' : 'कृष्ण सर के बारे में'}</button></li>
             </ul>
           </div>
