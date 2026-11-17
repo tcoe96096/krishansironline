@@ -78,11 +78,11 @@ test('SECURITY DEFINER snapshots explicitly allowlist profile and assignment fie
 
 test('Server-side beta flags default closed and cannot be toggled by clients',()=>{
   const sql=read('beta_flags');
-  assert.match(sql,/enabled boolean NOT NULL DEFAULT false/i);
-  assert.doesNotMatch(sql,/UPDATE\\s+private\\.teacher_beta_features\\s+SET\\s+enabled\\s*=\\s*true/i);
-  assert.match(sql,/REVOKE ALL ON private\\.teacher_beta_features FROM PUBLIC,anon,authenticated,service_role/i);
-  assert.match(sql,/REVOKE ALL ON FUNCTION private\\.teacher_v2_feature_enabled\\(text\\) FROM PUBLIC,anon,authenticated,service_role/i);
-  assert.match(sql,/IF auth\\.uid\\(\\) IS NULL THEN RAISE EXCEPTION 'Authentication required'/i);
+  assert.ok(sql.includes('enabled boolean NOT NULL DEFAULT false'));
+  assert.ok(!sql.includes('UPDATE private.teacher_beta_features SET enabled=true'));
+  assert.ok(sql.includes('REVOKE ALL ON private.teacher_beta_features FROM PUBLIC,anon,authenticated,service_role'));
+  assert.ok(sql.includes('REVOKE ALL ON FUNCTION private.teacher_v2_feature_enabled(text) FROM PUBLIC,anon,authenticated,service_role'));
+  assert.ok(sql.includes("IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required'"));
   for(const feature of ['registration','material_authoring','result_analytics','resume_uploads','advanced_assignments']){
     assert.ok(sql.includes("'"+feature+"'"),'missing server-side feature '+feature);
   }
