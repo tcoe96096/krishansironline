@@ -152,3 +152,13 @@ test('Review-only profile RPC rejects email backslashes, controls and bidi spoof
   assert.ok(sql.includes('pg_catalog.strpos(p_contact_email,pg_catalog.chr(92)) > 0'));
   assert.ok(sql.includes("p_contact_email ~ U&'[\\00AD\\061C\\200B-\\200F\\202A-\\202E\\2060-\\206F\\FEFF]'"));
 });
+
+
+test('Advanced teacher grants require an independent server feature flag',()=>{
+  const sql=read('functions');
+  assert.ok(sql.includes("p_action='grant' AND p_work_type IN ('materials.review','assessment.draft')"));
+  assert.ok(sql.includes("NOT private.teacher_v2_feature_enabled('advanced_assignments')"));
+  assert.ok(sql.includes("p_action='grant' AND p_work_type='result.review'"));
+  assert.ok(sql.includes("NOT private.teacher_v2_feature_enabled('result_analytics')"));
+  assert.ok(sql.includes("p_action='grant' AND NOT private.teacher_v2_feature_enabled('registration')"));
+});
