@@ -39,7 +39,7 @@ export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>vo
  {snapshot.qualifications.map((q,i)=><p key={i}>{q.title} · {q.institution} · {q.year}</p>)}
  {snapshot.requested_scopes.map((scope,i)=><p key={`requested-${i}`}>Requested: Class {scope.classLevel} · {scope.subject}</p>)}
  {snapshot.assignments.map(a=><p key={a.id}>Class {a.class_level} · {a.subject}{teacherAdvancedEnabled?' · '+a.work_type:''} · {a.status}</p>)}
- {snapshot.submitted_at&&<button disabled={busy} onClick={()=>void act(()=>teacherCall('teacher_v2_withdraw'),'Application withdrawn.')}>Withdraw to edit</button>}</div>}
+ {snapshot.status==='pending'&&snapshot.submitted_at&&registrationOpen&&<button disabled={busy} onClick={()=>void act(()=>teacherCall('teacher_v2_withdraw'),'Application withdrawn.')}>Withdraw to edit</button>}</div>}
  {!registrationOpen&&<p role="status">New teacher registration is currently closed. Saved profile details remain read-only.</p>}
  {!locked&&registrationOpen&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,true,snapshot?.revision??null),'Application submitted for independent verification.');}}><fieldset disabled={busy} className="space-y-5">
  {!snapshot&&<p className="text-xs text-amber-800">Existing staff: have Super Admin verify your assignments and close legacy staff access before entering v2. Applicants cannot change their own permissions.</p>}
