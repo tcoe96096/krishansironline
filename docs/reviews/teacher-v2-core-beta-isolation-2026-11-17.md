@@ -20,3 +20,10 @@ Before release: test recovery, review all proposed SQL/grants, run real Preview 
 - Existing `review_teacher_enrollment` approves a single requested class into `result_staff_grants.scope_class`. This cannot by itself implement multi-class/multi-subject assignment.
 - Keep legacy enrollment and grants unchanged. Introduce separately reviewed teacher v2 profile and normalized assignment records with ownership/admin RLS, server-side checks, and an explicit mapping plan; do not widen existing permissions by interpreting a scalar as a list.
 - No SQL executed for writes, no schema changes, and no activation. Release remains blocked on backup/restore proof and authenticated role tests.
+
+## Proposed v2 schema/function compatibility review — 2026-11-17
+- Reviewed `teacher_management_v2_schema_REVIEW_ONLY.sql` and `teacher_management_v2_functions_REVIEW_ONLY.sql` against the live read-only Preview column inventory.
+- Proposed `teacher_profiles` stores approval state and unique `KSOL-T-` employee ID; `teacher_qualifications` supports multiple qualifications; `teacher_assignments` uses separate rows keyed by teacher/class/subject/work type and a partial unique active-scope index. This is the correct additive shape for multiple classes/subjects without changing legacy scalar `requested_class` or `scope_class`.
+- Proposed `teacher_v2_set_assignment` requires verified Super Admin, approved teacher status for grants, a reason and feature gates; it supports revocation even after suspension. Proposed functions revoke PUBLIC/anon/authenticated EXECUTE pending a separately reviewed grant plan.
+- Proposed schema also defines `teacher_resume_documents`, but resume upload, private storage and AI remain out of scope for Core Beta; no activation or grants permitted.
+- Outstanding: compare integration/lifecycle/profile RPCs, review `private.teacher_v2_feature_enabled`, verify `is_super_admin`, test SQL on a recoverable isolated environment, and document legacy teacher mapping before any rollout.
