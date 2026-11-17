@@ -144,3 +144,11 @@ test('Role grants hardening remains review-only and does not grant role mutation
   assert.doesNotMatch(sql,/^\s*(?:DELETE|UPDATE|INSERT|TRUNCATE|DROP)\s+(?:FROM\s+|TABLE\s+)?public\.user_roles\b/im);
   assert.ok(sql.includes('has_table_privilege'));
 });
+
+
+test('Review-only profile RPC rejects email backslashes, controls and bidi spoofing',()=>{
+  const sql=read('profile_rpc');
+  assert.ok(sql.includes("p_contact_email ~ '[[:cntrl:]]'"));
+  assert.ok(sql.includes('pg_catalog.strpos(p_contact_email,pg_catalog.chr(92)) > 0'));
+  assert.ok(sql.includes("p_contact_email ~ U&'[\\00AD\\061C\\200B-\\200F\\202A-\\202E\\2060-\\206F\\FEFF]'"));
+});
