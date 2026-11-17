@@ -45,3 +45,15 @@ GitHub Website Build, Preview Build and isolated Teacher Core Beta synthetic bro
 - A read-only `pg_catalog.aclexplode` query on **Preview only** confirms the `public.user_roles` `TRUNCATE`, `TRIGGER`, and `REFERENCES` grants are **direct grants** to each of `anon` and `authenticated` (not inherited from `PUBLIC` in this table ACL). `postgres` and `service_role` also carry those privileges.
 - The separate draft `REVOKE TRUNCATE, TRIGGER, REFERENCES ... FROM anon, authenticated` is therefore directed at the observed grant sources. Its built-in post-REVOKE `has_table_privilege` checks remain mandatory to detect other effective inherited privileges. **No SQL was executed to modify privileges.**
 - Supplied a simplified single-file Windows `.cmd` local test kit (`KSOL-Recovery-OneFile.zip`) with no separate PowerShell script. It restores the authentic archived `auth.uid()` into a new standalone local test database before the limited application-schema restore. This still cannot verify all Supabase-managed services and is not authorization to run a Preview migration.
+
+
+## New local recovery result — \`ksol_verify_19054_2168_30697\` (2026-11-17)
+
+User-provided \`restore-log.txt\` shows progress after fixing the PowerShell/CMD launcher problems:
+
+1. Archive TOC readable; original backed-up \`auth.uid()\` was restored successfully as a real function.
+2. \`public\` and \`private\` application tables were created, table data processing ran, then many sequences, primary keys, indexes and triggers were created. This is **partial application-level recovery evidence only**; do not infer row counts or full consistency.
+3. \`pg_restore --exit-on-error\` stopped at the **first** cross-schema FK: \`public.admin_content_items.created_by REFERENCES auth.users(id) ON DELETE SET NULL\`; PostgreSQL reported **\`relation "auth.users" does not exist\`**.
+4. Root cause: the scoped local restore selected only \`public/private\`, while this FK requires Supabase-managed \`auth.users\`. This is a **restore scope/environment mismatch**, not proof of archive corruption and not a reason to create a fake auth.users stub.
+
+Next action: avoid repeated bespoke standalone PostgreSQL restore fixes. Plan an isolated Supabase-compatible recovery environment that provides actual \`auth\`, \`storage\`, roles and extensions, then verify restored user and student records, RLS, FK references and application RPC behavior. Keep any existing local test DB for evidence and avoid exporting its private data in logs. The single-file kit outcome was \`STAGE=RESTORE_LIMITED_APP_SCHEMAS\`, \`RESULT=FAIL\`. No Preview SQL writes or Production operations occurred.
