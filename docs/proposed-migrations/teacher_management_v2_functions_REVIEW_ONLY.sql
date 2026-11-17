@@ -64,9 +64,11 @@ BEGIN
     RAISE EXCEPTION 'Teacher assignment grants disabled' USING ERRCODE='42501'; END IF;
   -- Analytics is an independent permission: it must not enable assessment
   -- editing or general advanced assignments, and cannot be granted while OFF.
-  IF p_action='grant' AND p_work_type='assessment.draft'
+  -- Basic Beta may grant materials.draft only. Material review and assessment
+  -- authoring both require the separately approved advanced-assignments flag.
+  IF p_action='grant' AND p_work_type IN ('materials.review','assessment.draft')
      AND NOT private.teacher_v2_feature_enabled('advanced_assignments') THEN
-    RAISE EXCEPTION 'Assessment authoring grants disabled' USING ERRCODE='42501'; END IF;
+    RAISE EXCEPTION 'Advanced teacher assignment grants disabled' USING ERRCODE='42501'; END IF;
   IF p_action='grant' AND p_work_type='result.review'
      AND NOT private.teacher_v2_feature_enabled('result_analytics') THEN
     RAISE EXCEPTION 'Scoped result analytics grants disabled' USING ERRCODE='42501'; END IF;
