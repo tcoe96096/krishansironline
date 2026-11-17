@@ -25,3 +25,9 @@ test('OAuth callback preserves a safe nested preview path',()=>{
  assert.equal(teacherLoginCallback('https://example.org','/preview/v2/teacher-beta/'),
    'https://example.org/preview/v2/teacher-beta/staff-workspace/');
 });
+
+test('OAuth callback rejects encoded and double-encoded path ambiguity',()=>{
+ for(const base of ['/teacher-beta/%252e%252e/admin/','/teacher-beta/%255cadmin/','/teacher-beta/%41dmin/','/teacher-beta/%20/','/teacher-beta/%25/']) {
+   assert.throws(()=>teacherLoginCallback('https://example.org',base),/Invalid teacher login base path\./,`Encoded base accepted: ${base}`);
+ }
+});
