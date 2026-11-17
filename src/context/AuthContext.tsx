@@ -52,7 +52,7 @@ type AuthContextValue = {
   configured: boolean;
   isAdmin: boolean;
   adminLoading: boolean;
-  signInWithGoogle: (destination?: 'admin' | 'staff-workspace') => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   signInWithMobile: (identifier: string, password: string) => Promise<void>;
   registerStudent: (details: StudentRegistration) => Promise<void>;
@@ -214,14 +214,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .in('role', ['admin', 'super_admin'])
-          .limit(1);
+          .eq('role', 'admin')
+          .maybeSingle();
         if (!active) return;
         if (error) {
           console.error('Unable to verify admin role:', error.message);
           setIsAdmin(false);
         } else {
-          setIsAdmin(Array.isArray(data) && data.some((item) => item.role === 'admin' || item.role === 'super_admin'));
+          setIsAdmin(Boolean(data));
         }
       } finally {
         if (active) setAdminLoading(false);
@@ -230,15 +230,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { active = false; };
   }, [session?.user?.id]);
 
-  const signInWithGoogle = useCallback(async (destination: 'admin' | 'staff-workspace' = 'admin') => {
-    // OAuth returns to the requesting role's own workspace. Use the Vite
-    // deployment base path so GitHub Pages subdirectory hosting is preserved.
-    // The exact callback URLs must also be allowlisted in Supabase Auth.
-    const base = import.meta.env.BASE_URL || '/';
-    const redirectTo = new URL(base + destination + '/', window.location.origin).toString();
+  const signInWithGoogle = useCallback(async () => {
     const { error } = await requireSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: {
+        // Always return to the Admin route after Google OAuth. Preserve a hosting
+        // subpath (for example GitHub Pages) while avoiding an accidental homepage return.
+        redirectTo: (() => {
+          const pathSegments = window.location.pathname.split('/').filter(Boolean);
+          if (pathSegments[pathSegments.length - 1] === 'admin') pathSegments.pop();
+          const adminPath = `/${pathSegments.concat('admin').join('/')}/`;
+          return new URL(adminPath, window.location.origin).toString();
+        })(),
+      },
     });
     if (error) throw error;
   }, []);
