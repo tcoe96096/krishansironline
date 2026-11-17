@@ -1,3 +1,4 @@
+import type {ResumeSuggestions} from '../lib/teacherResumeAnalysis';
 import {teacherBetaEnabled,teacherAdvancedEnabled,teacherAnalyticsEnabled} from '../lib/teacherBetaFlags';
 import React,{useEffect,useState,useRef} from 'react';
 import {formatPrivateResultSummary,type PrivateResultSummary} from '../services/teacherResultPrivacy';
@@ -27,6 +28,7 @@ export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>vo
  const [resumeUploadOpen,setResumeUploadOpen]=useState(false);
  const [resultAnalyticsOpen,setResultAnalyticsOpen]=useState(false);
  const [summaries,setSummaries]=useState<PrivateResultSummary[]>([]);
+ const [resumeSuggestions,setResumeSuggestions]=useState<ResumeSuggestions|null>(null);
  const [name,setName]=useState(''),[email,setEmail]=useState(''),[phone,setPhone]=useState(''),[years,setYears]=useState(''),[reason,setReason]=useState('');
  const [qualifications,setQualifications]=useState<TeacherQualificationInput[]>([]),[scopes,setScopes]=useState<TeacherAssignmentInput[]>([]);
  useEffect(()=>{let current=true;setSnapshot(null);setRegistrationOpen(false);setResumeUploadOpen(false);setResultAnalyticsOpen(false);setSummaries([]);setReady(false);setError('');setName('');setEmail('');setPhone('');setYears('');setReason('');setQualifications([]);setScopes([]);
@@ -58,7 +60,15 @@ export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>vo
  <button type="button" onClick={()=>setQualifications(qualifications.filter((_,n)=>n!==i))}>Remove qualification</button></div>)}<button type="button" disabled={qualifications.length>=20} onClick={()=>setQualifications([...qualifications,{title:'',institution:'',year:new Date().getFullYear()}])}>Add qualification</button></fieldset>
  <TeacherScopeEditor value={scopes} onChange={setScopes} allowAnalytics={resultAnalyticsOpen}/>
  <label className="block">Application reason<textarea className={field} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
- {resumeUploadOpen&&snapshot&&!locked&&<label className="block">Upload private PDF/DOCX resume (5 MiB maximum)<input disabled={busy||dirty} type="file" accept=".pdf,.docx" onChange={e=>{const file=e.target.files?.[0];if(file)void act(()=>uploadTeacherResume(file,snapshot.revision),'Verified resume attached.');e.target.value='';}}/></label>}
+ {resumeUploadOpen&&snapshot&&!locked&&<label className="block">Upload private PDF/DOCX resume (5 MiB maximum)<input disabled={busy||dirty} type="file" accept=".pdf,.docx" onChange={e=>{const file=e.target.files?.[0];if(file)void act(async()=>{const result=await uploadTeacherResume(file,snapshot.revision);setResumeSuggestions(result.suggestions?.requiresReview===true?result.suggestions:null);setSnapshot(current=>current?{...current,revision:current.revision+1}:current);},'Verified resume attached. Review extracted suggestions before saving.',false);e.target.value='';}}/></label>}
+ {resumeSuggestions&&<section aria-label="Resume analysis suggestions" className="rounded border p-3 space-y-2">
+ <h3 className="font-semibold">Resume analysis — unverified suggestions</h3>
+ <p>Review and edit these details. Extraction is not proof of qualification or experience. Super Admin verifies the final application.</p>
+ {resumeSuggestions.experienceYears!==null&&<button type="button" onClick={()=>setYears(String(resumeSuggestions.experienceYears))}>Use suggested experience: {resumeSuggestions.experienceYears} years</button>}
+ {resumeSuggestions.qualifications.map((q,i)=><p key={i}>Possible qualification: {q.title} <button type="button" onClick={()=>setQualifications(items=>items.length>=20?items:[...items,{...q}])}>Add for editing</button></p>)}
+ {resumeSuggestions.skills.length>0&&<p>Detected skills (review only): {resumeSuggestions.skills.join(', ')}</p>}
+ <button type="button" onClick={()=>setResumeSuggestions(null)}>Dismiss suggestions</button>
+ </section>}
  {dirty&&<p className="text-xs text-amber-800">Save your profile edits before uploading a resume.</p>}
  <p className="text-xs text-amber-800">Private PDF/DOCX resume upload requires separately approved storage and server verification. {resumeUploadOpen?'Uploads must pass private server-side verification before attachment.':'Upload remains closed until the private server, scanner and authorization are enabled.'}</p>
  <div className="flex gap-4"><button type="button" disabled={busy} onClick={()=>void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,reason,false,snapshot?.revision??null),'Profile draft saved.')}>Save profile draft</button><button disabled={busy} type="submit">Submit v2 application</button></div></fieldset></form>}
