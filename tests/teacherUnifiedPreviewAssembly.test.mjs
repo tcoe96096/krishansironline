@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,readFileSync,symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -42,5 +42,22 @@ test('rejects wrong Pages base path',()=>{
   const r=run(f.site,f.beta);assert.notEqual(r.status,0);
   assert.match(r.stderr,/isolated GitHub Pages base path/);
   assert.ok(!existsSync(join(f.site,'teacher-beta')));
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+test('rejects symlinks inside the isolated portal artifact',()=>{
+ const f=fixture();
+ try{
+  symlinkSync(join(f.site,'index.html'),join(f.beta,'linked-page.html'));
+  const r=run(f.site,f.beta);assert.notEqual(r.status,0);
+  assert.match(r.stderr,/Symlink forbidden/);
+  assert.ok(!existsSync(join(f.site,'teacher-beta')));
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+test('refuses to combine overlapping source and destination directories',()=>{
+ const f=fixture();
+ try{
+  const r=run(f.site,f.site);assert.notEqual(r.status,0);
+  assert.match(r.stderr,/Build directories must be independent/);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });
