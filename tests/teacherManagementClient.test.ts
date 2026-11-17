@@ -43,7 +43,7 @@ test('draft and submission reasons reject oversized or invisible-control input w
  let calls=0;
  const client=createTeacherClient(async()=>{calls++;return {data:1,error:null};});
  await assert.rejects(client.save(profile,[],[],'x'.repeat(1001),false),/Invalid application reason/);
- await assert.rejects(client.save(profile,[],[],'hello\\u0000world',false),/Invalid application reason/);
- await assert.rejects(client.save(profile,qualifications,scopes,'Please\\u202E approve',true),/Invalid application reason/);
+ await assert.rejects(client.save(profile,[],[],'hello'+String.fromCharCode(0)+'world',false),/Invalid application reason/);
+ await assert.rejects(client.save(profile,qualifications,scopes,'Please'+String.fromCharCode(0x202e)+' approve',true),/Invalid application reason/);
  assert.equal(calls,0);
 });
