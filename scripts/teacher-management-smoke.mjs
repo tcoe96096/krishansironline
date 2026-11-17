@@ -101,6 +101,8 @@ try{
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
  await directory.getByLabel('Identity independently verified').check();
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'A requested scope is prefilled but still requires explicit approval');
+ await directory.getByRole('button',{name:'Remove scope 1',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Verification alone must not approve an empty-scope teacher');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false);
