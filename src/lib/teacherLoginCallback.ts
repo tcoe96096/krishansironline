@@ -8,11 +8,11 @@ export function teacherLoginCallback(origin:string,baseUrl:string):string {
     site.pathname!=='/'||site.search||site.hash)throw new Error('Invalid teacher login origin.');
   const raw=baseUrl||'/';
   if(!raw.startsWith('/')||raw.startsWith('//')||raw.includes('\\')||
-    /[?#\x00-\x1f\x7f]/.test(raw)||/%(?:2f|5c|2e|00)/i.test(raw)||
+    /[?#%\x00-\x1f\x7f]/.test(raw)||
     raw.split('/').some(segment=>segment==='.'||segment==='..')) {
     throw new Error('Invalid teacher login base path.');
   }
-  const basePath=raw.endsWith('/')?raw:raw+'/';
+  // Reject all percent escapes, including double-encoded separators and dot segments.\n  // The callback is generated from a deployment path, not arbitrary URL input.\n  const basePath=raw.endsWith('/')?raw:raw+'/';
   const callback=new URL(basePath+'staff-workspace/',site);
   if(callback.origin!==site.origin)throw new Error('Invalid teacher login callback.');
   return callback.toString();
