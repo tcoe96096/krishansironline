@@ -52,6 +52,9 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
     { id: 'about', label: language === 'en' ? 'About' : 'परिचय', icon: Info },
     { id: 'contact', label: language === 'en' ? 'Contact' : 'संपर्क', icon: Phone },
   ];
+  // Preview-only entry points: links do not activate registration or grant roles.
+  const teacherPreviewUrl = import.meta.env.BASE_URL.includes('krishansironline-preview-unified')
+    ? `${import.meta.env.BASE_URL}teacher-beta/` : null;
   const handleNavClick = (id: string) => { onNavigate(id); setMobileMenuOpen(false); };
   return (
     <header className={`sticky top-0 z-40 bg-white/95 shadow-[0_8px_30px_rgba(10,35,75,.12)] backdrop-blur-xl transition-transform duration-300 ${headerHiddenOnScroll ? "-translate-y-full" : "translate-y-0"}`}>
@@ -122,10 +125,12 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
             </div>
             <button type="button" onClick={() => onOpenAuth()} aria-label={user ? "Open student dashboard" : "Student Login"} title={user ? studentDisplayName : "Student Login"} className="h-10 min-w-10 max-w-[150px] shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#17477e]/20 bg-[#123c70] px-2 text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4 shrink-0" /><span className="max-w-[92px] truncate text-[11px] font-bold">{user ? studentDisplayName : (language === "en" ? "Login" : "लॉगिन")}</span></button>
           </div>
+          {teacherPreviewUrl && <div className="hidden lg:flex items-center gap-1" aria-label="Teacher Beta preview links"><a href={teacherPreviewUrl} className="rounded-lg bg-teal-800 px-2 py-1 text-xs font-bold text-white hover:bg-teal-700">Teacher Registration</a><a href={teacherPreviewUrl} className="rounded-lg border border-teal-700 px-2 py-1 text-xs font-bold text-teal-900 hover:bg-teal-50">Teacher Login</a></div>}
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1">
             {navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs sm:text-sm font-extrabold transition-all ${activeSection === id ? 'bg-[#d4e5f3] text-[#092c60] shadow-sm ring-1 ring-[#b7cde1]' : 'text-[#24466f] hover:bg-[#dce8f3] hover:text-[#092c60]'}`}><Icon className="w-4 h-4" />{label}</button>)}
           </div>
         </div>
+        {mobileMenuOpen && teacherPreviewUrl && <div className="lg:hidden flex gap-2 px-3 pt-3 bg-[#edf3f9]"><a href={teacherPreviewUrl} className="rounded-lg bg-teal-800 p-2 text-xs font-bold text-white">Teacher Registration</a><a href={teacherPreviewUrl} className="rounded-lg border border-teal-700 p-2 text-xs font-bold text-teal-900">Teacher Login</a></div>}
         {mobileMenuOpen && <div className="lg:hidden grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#edf3f9] border-t border-[#c8d9e9]">{navLinks.map(({id,label,icon:Icon}) => <button key={id} onClick={() => handleNavClick(id)} aria-current={activeSection === id ? 'page' : undefined} className={`flex items-center gap-2 rounded-xl p-3 text-left text-xs sm:text-sm font-extrabold transition ${activeSection === id ? 'bg-[#d4e5f3] text-[#092c60]' : 'bg-white text-[#24466f] hover:bg-[#dce8f3]'}`}><Icon className="w-4 h-4 shrink-0" />{label}</button>)}</div>}
       </nav>
     </header>
