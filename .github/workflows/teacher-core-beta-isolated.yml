@@ -36,6 +36,31 @@ jobs:
           VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
           VITE_TEACHER_RESUME_ENABLED: 'false'
         run: npx vite build --config vite.teacher-beta.config.ts
+      - name: Assemble isolated Unified Preview artifact (no deploy)
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: |
+          npx vite build --config vite.teacher-beta.config.ts --base=/krishansironline-preview-unified/teacher-beta/
+          node scripts/assemble-teacher-unified-preview.mjs dist teacher-beta-dist
+          test -s dist/teacher-beta/index.html
+          test -s dist/teacher-beta/admin/index.html
+          test -s dist/teacher-beta/staff-workspace/index.html
+          test -s dist/index.html
+          test -s dist/admin/index.html
+      - name: Rebuild mock portal for browser contract tests
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts
       - name: Ensure routes exist and optional resume is absent
         run: |
           test -f teacher-beta-dist/index.html
