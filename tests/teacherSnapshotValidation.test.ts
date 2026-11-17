@@ -5,7 +5,7 @@ import {isTeacherSnapshot} from '../src/lib/teacherSnapshotValidation';
 const valid={
   user_id:'teacher-id',employee_id:null,display_name:'Teacher One',contact_email:null,
   phone:null,experience_years:4,status:'pending',revision:1,submitted_at:null,
-  application_reason:null,decision_reason:null,
+  application_reason:null,decision_reason:null,reviewed_at:null,
   requested_scopes:[{classLevel:'10',subject:'History',workType:'materials.draft'}],
   qualifications:[{title:'B.Ed.',institution:'University',year:2024}],
   assignments:[{id:'assignment-id',class_level:'10',subject:'History',work_type:'materials.draft',status:'active'}],
@@ -18,7 +18,9 @@ test('teacher snapshot validates nested server response shapes',()=>{
     {...valid,requested_scopes:[null]}, {...valid,requested_scopes:[{classLevel:'10'}]},
     {...valid,qualifications:[null]}, {...valid,qualifications:[{title:'Degree',institution:'University'}]},
     {...valid,assignments:[null]}, {...valid,assignments:[{id:'id'}]},
-    {...valid,resumes:[null]}, {...valid,display_name:null}
+    {...valid,resumes:[null]}, {...valid,display_name:null},
+    {...valid,reviewed_at:42}, {...valid,reviewed_at:undefined},
+    {...valid,resumes:undefined}, {...valid,resumes:null}
   ];
   for(const item of malformed)assert.equal(isTeacherSnapshot(item),false,'Malformed RPC JSON passed validation: '+JSON.stringify(item));
 });
