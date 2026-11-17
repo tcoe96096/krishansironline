@@ -1,6 +1,7 @@
 // DRAFT ONLY. No deployment or storage activation is authorized.
 import {createClient,type SupabaseClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {hasSafeResumeStructure} from '../../../src/lib/teacherResumeStructure.ts';
+import {analyzeVerifiedResumeText} from '../../../src/lib/teacherResumeAnalysis.ts';
 import {validateTeacherResume} from '../../../src/lib/teacherManagementValidation.ts';
 const bucket='teacher-resumes-private';
 const maxBytes=5*1024*1024;
@@ -73,7 +74,10 @@ export async function handleTeacherResume(req:Request):Promise<Response>{
   const finalized=await admin.rpc('teacher_v2_finalize_resume',{p_user_id:user.id,p_revision:revision,p_path:path,p_filename:file.name,p_content_type:file.type,p_size:file.size,p_sha256:digest});
   if(finalized.error||typeof finalized.data!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(finalized.data))throw new Error('Attachment not confirmed');
   uploadedPath=null;
-  return json(200,{documentId:finalized.data},headers);
+  // The scanner may supply bounded extracted plain text only after digest-bound verification.
+  // Return suggestions to this teacher for review; never store raw text or grant roles.
+  const suggestions=analyzeVerifiedResumeText(verification.extractedText);
+  return json(200,{documentId:finalized.data,suggestions},headers);
  }catch{
   if(uploadedPath&&admin){try{await admin.storage.from(bucket).remove([uploadedPath]);}catch{/* Private orphan cleanup must be retried by the approved retention worker. */}}
   return json(400,{error:'Resume operation failed; no verified document was attached'},headers);
