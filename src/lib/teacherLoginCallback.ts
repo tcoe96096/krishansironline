@@ -12,7 +12,9 @@ export function teacherLoginCallback(origin:string,baseUrl:string):string {
     raw.split('/').some(segment=>segment==='.'||segment==='..')) {
     throw new Error('Invalid teacher login base path.');
   }
-  // Reject all percent escapes, including double-encoded separators and dot segments.\n  // The callback is generated from a deployment path, not arbitrary URL input.\n  const basePath=raw.endsWith('/')?raw:raw+'/';
+  // Reject all percent escapes, including double-encoded separators and dot segments.
+  // The callback is generated from a deployment path, not arbitrary URL input.
+  const basePath=raw.endsWith('/')?raw:raw+'/';
   const callback=new URL(basePath+'staff-workspace/',site);
   if(callback.origin!==site.origin)throw new Error('Invalid teacher login callback.');
   return callback.toString();
