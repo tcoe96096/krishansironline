@@ -36,14 +36,14 @@ Deno.test('verified scanner receipt uploads privately and attaches through servi
  const normal=globalThis.fetch;
  globalThis.fetch=async(input,init)=>{
   const url=String(input instanceof Request?input.url:input);
-  if(url.startsWith('https://scanner.'))return new Response(JSON.stringify({clean:true,validDocument:true,sha256:new Headers(init?.headers).get('X-Content-SHA256'),contentType:'application/pdf'}),{headers:{'Content-Type':'application/json'}});
+  if(url.startsWith('https://scanner.'))return new Response(JSON.stringify({clean:true,validDocument:true,sha256:new Headers(init?.headers).get('X-Content-SHA256'),contentType:'application/pdf',extractedText:'M.A. History, 7 years teaching experience, Research'}),{headers:{'Content-Type':'application/json'}});
   if(url.includes('/storage/')){calls.push(url);return new Response(JSON.stringify({Key:'private-object'}),{headers:{'Content-Type':'application/json'}});}
   if(url.includes('finalize_resume')){calls.push(url);return new Response(JSON.stringify('44444444-4444-4444-8444-444444444444'),{headers:{'Content-Type':'application/json'}});}
   return normal(input,init);
  };
  const form=new FormData();form.append('revision','1');form.append('file',new File(['%PDF-1.7\nTest resume\n%%EOF'],'resume.pdf',{type:'application/pdf'}));
  const result=await handleTeacherResume(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer test'},body:form}));
- assert(result.status===200,'verified file attached');assert(calls.some(x=>x.includes('/storage/v1/object/teacher-resumes-private/'+id+'/')),'random private user prefix');
+ assert(result.status===200,'verified file attached');const payload=await result.json();assert(payload.suggestions?.requiresReview===true,'analysis is unverified');assert(payload.suggestions?.experienceYears===7,'experience suggestion extracted');assert(payload.suggestions?.skills.includes('Research'),'skills extracted');assert(calls.some(x=>x.includes('/storage/v1/object/teacher-resumes-private/'+id+'/')),'random private user prefix');
  assert(calls.some(x=>x.includes('finalize_resume')),'server metadata attachment');
 }));
 Deno.test('download RPC denial never returns private bytes',()=>setup(async calls=>{
