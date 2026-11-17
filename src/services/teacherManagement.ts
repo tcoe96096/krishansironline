@@ -1,3 +1,4 @@
+import type {ResumeSuggestions} from '../lib/teacherResumeAnalysis';
 import {teacherAnalyticsEnabled,teacherResumeUiEnabled} from '../lib/teacherBetaFlags';
 import {createTeacherClient} from './teacherManagementClient';
 import { requireSupabase } from '../lib/supabase';
@@ -22,8 +23,8 @@ export async function uploadTeacherResume(file:File,revision:number){
  if(!teacherResumeEnabled||!validateTeacherResume(file))throw new Error('Private resume upload is unavailable or file is invalid.');
  const body=new FormData();body.append('file',file);body.append('revision',String(revision));
  const {data,error}=await requireSupabase().functions.invoke('teacher-resume',{body});
- if(error||!data?.documentId)throw new Error('Resume verification failed. No attachment confirmed.');
- return data.documentId as string;
+ if(error||typeof data?.documentId!=='string')throw new Error('Resume verification failed. No attachment confirmed.');
+ return {documentId:data.documentId as string,suggestions:data.suggestions as ResumeSuggestions|undefined};
 }
 export async function downloadTeacherResume(documentId:string,originalFilename:string){
  if(!teacherResumeEnabled)throw new Error('Private resume download awaits activation.');
