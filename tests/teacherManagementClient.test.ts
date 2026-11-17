@@ -38,3 +38,12 @@ test('saved profile revision accompanies updates and a conflict requests reload'
  await assert.rejects(conflict.save(profile,[],[],'',false,4),/Refresh before saving/);
  await assert.rejects(client.save(profile,[],[],'',false,-1),/Invalid profile revision/);
 });
+
+test('draft and submission reasons reject oversized or invisible-control input without RPC calls',async()=>{
+ let calls=0;
+ const client=createTeacherClient(async()=>{calls++;return {data:1,error:null};});
+ await assert.rejects(client.save(profile,[],[],'x'.repeat(1001),false),/Invalid application reason/);
+ await assert.rejects(client.save(profile,[],[],'hello\\u0000world',false),/Invalid application reason/);
+ await assert.rejects(client.save(profile,qualifications,scopes,'Please\\u202E approve',true),/Invalid application reason/);
+ assert.equal(calls,0);
+});
