@@ -3,7 +3,11 @@
  * callback into an open redirect if deployment configuration is corrupted.
  */
 export function teacherLoginCallback(origin:string,baseUrl:string):string {
+  // URL() silently strips some control characters and normalizes deceptive origins.
+  // Only accept the canonical origin supplied by window.location.origin.
+  if(typeof origin!=='string'||/[\x00-\x1f\x7f\\]/.test(origin))throw new Error('Invalid teacher login origin.');
   const site=new URL(origin);
+  if(origin!==site.origin&&origin!==site.origin+'/')throw new Error('Invalid teacher login origin.');
   if(!['https:','http:'].includes(site.protocol)||site.username||site.password||
     site.pathname!=='/'||site.search||site.hash)throw new Error('Invalid teacher login origin.');
   const raw=baseUrl||'/';
