@@ -39,3 +39,9 @@
 GitHub Website Build, Preview Build and isolated Teacher Core Beta synthetic browser tests pass on code at `a51590532bbd7bde2e616a9f37a6bcf558b806d8`. These validate compiled code, static SQL and mock API behavior; **they do not establish a successful database migration, real Supabase permission acceptance, or disaster recovery**.
 
 **Current action:** preserve the Draft PR and work on code-only readiness, not SQL execution or a claim that activation succeeded.
+
+## Follow-up read-only ACL investigation (2026-11-17)
+
+- A read-only `pg_catalog.aclexplode` query on **Preview only** confirms the `public.user_roles` `TRUNCATE`, `TRIGGER`, and `REFERENCES` grants are **direct grants** to each of `anon` and `authenticated` (not inherited from `PUBLIC` in this table ACL). `postgres` and `service_role` also carry those privileges.
+- The separate draft `REVOKE TRUNCATE, TRIGGER, REFERENCES ... FROM anon, authenticated` is therefore directed at the observed grant sources. Its built-in post-REVOKE `has_table_privilege` checks remain mandatory to detect other effective inherited privileges. **No SQL was executed to modify privileges.**
+- Supplied a simplified single-file Windows `.cmd` local test kit (`KSOL-Recovery-OneFile.zip`) with no separate PowerShell script. It restores the authentic archived `auth.uid()` into a new standalone local test database before the limited application-schema restore. This still cannot verify all Supabase-managed services and is not authorization to run a Preview migration.
