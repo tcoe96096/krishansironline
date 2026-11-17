@@ -3,6 +3,25 @@
 -- Also remove unnecessary TRIGGER and REFERENCES from web-facing roles.
 BEGIN;
 REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLE public.user_roles FROM anon, authenticated;
+-- Fail closed: a direct REVOKE alone cannot neutralize privileges inherited
+-- through PUBLIC or other memberships. Abort the whole transaction if any
+-- web-facing role still has an effective privilege.
+DO $hardening_verify$
+DECLARE
+  v_role text;
+  v_privilege text;
+BEGIN
+  FOREACH v_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    FOREACH v_privilege IN ARRAY ARRAY['TRUNCATE', 'TRIGGER', 'REFERENCES'] LOOP
+      IF has_table_privilege(v_role, 'public.user_roles', v_privilege) THEN
+        RAISE EXCEPTION 'Unsafe effective privilege persists: role %, privilege % on public.user_roles; no changes committed',
+          v_role, v_privilege
+          USING ERRCODE = '42501';
+      END IF;
+    END LOOP;
+  END LOOP;
+END;
+$hardening_verify$;
 COMMIT;
 -- Verification after separately approved execution (read-only):
 -- SELECT has_table_privilege('anon','public.user_roles','TRUNCATE') AS anon_truncate,
