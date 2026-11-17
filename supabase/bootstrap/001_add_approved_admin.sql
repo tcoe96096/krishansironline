@@ -12,7 +12,8 @@ begin
     into matches, target_user_id
   from auth.users
   where lower(email) = lower('tcoe96096@gmail.com')
-    and email_confirmed_at is not null;
+    and email_confirmed_at is not null
+    and raw_app_meta_data ->> 'provider' = 'google';
 
   if matches = 0 then
     raise exception 'No confirmed Supabase Auth user found for the approved admin email. Sign in once with Google OAuth first.';
@@ -30,4 +31,5 @@ select u.email, r.role, r.created_at
 from public.user_roles r
 join auth.users u on u.id = r.user_id
 where lower(u.email) = lower('tcoe96096@gmail.com')
+  and u.raw_app_meta_data ->> 'provider' = 'google'
   and r.role = 'admin';
