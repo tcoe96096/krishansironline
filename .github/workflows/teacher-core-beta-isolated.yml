@@ -36,6 +36,8 @@ jobs:
           VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
           VITE_TEACHER_RESUME_ENABLED: 'false'
         run: npx vite build --config vite.teacher-beta.config.ts
+      - name: Verify preview assembly safety contracts
+        run: node --test tests/teacherUnifiedPreviewAssembly.test.mjs
       - name: Assemble isolated Unified Preview artifact (no deploy)
         env:
           VITE_SUPABASE_URL: https://teacher-test.supabase.test
