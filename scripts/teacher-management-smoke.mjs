@@ -91,9 +91,10 @@ try{
  assert.equal(await page.getByRole('button',{name:/publish|edit marks/i}).count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
  // Ordinary Admin must not receive the v2 directory. Super Admin reviews explicitly.
- await page.setViewportSize({width:1440,height:1000});admin=true;await page.goto(base+'/admin/');await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});admin=true;await page.goto(base+'/admin/');
+ assert.equal(await page.getByRole('button',{name:adminNavLabel,exact:true}).count(),0,'Ordinary Admin must not see Super Admin directory navigation');
  const directory=page.getByRole('region',{name:'Teacher Directory v2',exact:true});
- assert.equal(await directory.getByRole('button',{name:'Review profile and access',exact:true}).count(),0);
+ assert.equal(await directory.count(),0);
  superAdmin=true;active=true;profile.submitted_at='2026-11-16T10:00:00Z';await page.reload();
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
