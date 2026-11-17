@@ -18,6 +18,13 @@ jobs:
         run: npm run lint
       - name: Teacher Core Beta unit tests
         run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse Core Beta SQL proposals without executing them
+        run: |
+          python -m pip install pglast==8.8
+          python scripts/parse-teacher-core-sql.py
       - name: Main website build, no deployment
         run: npm run build
       - name: Build isolated core portal for MOCK browser tests only
