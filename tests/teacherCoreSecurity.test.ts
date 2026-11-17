@@ -135,3 +135,12 @@ test('V2 policy replacement preserves public published reads and limits draft wr
   assert.ok(sql.includes("created_by=auth.uid() AND status='draft' AND public.teacher_v2_material_permission(class_level,subject,'materials.draft.write')"));
   assert.ok(sql.includes("status='pending_review' AND public.teacher_v2_material_permission(class_level,subject,'materials.review.propose')"));
 });
+
+test('Role grants hardening remains review-only and does not grant role mutation',()=>{
+  const sql=readFileSync('docs/proposed-migrations/teacher_management_v2_role_grants_hardening_REVIEW_ONLY.sql','utf8');
+  assert.match(sql,/REVIEW ONLY.*NOT EXECUTED/i);
+  assert.ok(sql.includes('REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLE public.user_roles FROM anon, authenticated'));
+  assert.doesNotMatch(sql,/^\s*GRANT\s+(?:ALL|INSERT|UPDATE|DELETE|TRUNCATE|TRIGGER|REFERENCES)\b/im);
+  assert.doesNotMatch(sql,/^\s*(?:DELETE|UPDATE|INSERT|TRUNCATE|DROP)\s+(?:FROM\s+|TABLE\s+)?public\.user_roles\b/im);
+  assert.ok(sql.includes('has_table_privilege'));
+});
