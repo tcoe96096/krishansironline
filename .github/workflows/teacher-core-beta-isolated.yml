@@ -17,7 +17,7 @@ jobs:
       - name: TypeScript validation
         run: npm run lint
       - name: Teacher Core Beta unit tests
-        run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts tests/teacherCoreSecurity.test.ts
+        run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts tests/teacherCoreSecurity.test.ts tests/teacherLoginCallback.test.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
