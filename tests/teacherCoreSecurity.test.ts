@@ -74,3 +74,29 @@ test('SECURITY DEFINER snapshots explicitly allowlist profile and assignment fie
   }
   assert.doesNotMatch(snapshot,/'storage_path'|'content_type'|'size_bytes'/,'resume storage internals must never leak');
 });
+
+
+test('Server-side beta flags default closed and cannot be toggled by clients',()=>{
+  const sql=read('beta_flags');
+  assert.match(sql,/enabled boolean NOT NULL DEFAULT false/i);
+  assert.doesNotMatch(sql,/UPDATE\\s+private\\.teacher_beta_features\\s+SET\\s+enabled\\s*=\\s*true/i);
+  assert.match(sql,/REVOKE ALL ON private\\.teacher_beta_features FROM PUBLIC,anon,authenticated,service_role/i);
+  assert.match(sql,/REVOKE ALL ON FUNCTION private\\.teacher_v2_feature_enabled\\(text\\) FROM PUBLIC,anon,authenticated,service_role/i);
+  assert.match(sql,/IF auth\\.uid\\(\\) IS NULL THEN RAISE EXCEPTION 'Authentication required'/i);
+  for(const feature of ['registration','material_authoring','result_analytics','resume_uploads','advanced_assignments']){
+    assert.ok(sql.includes("'"+feature+"'"),'missing server-side feature '+feature);
+  }
+});
+
+test('Teacher review and lifecycle enforce scope, identity and revocation boundaries',()=>{
+  const lifecycle=read('lifecycle');
+  const functions=read('functions');
+  assert.ok(lifecycle.includes('p_verified IS DISTINCT FROM true'));
+  assert.ok(lifecycle.includes('p_revision IS DISTINCT FROM p.revision'));
+  assert.ok(lifecycle.includes('teacher_v2_issue_employee_id(p_user_id)'));
+  assert.ok(lifecycle.includes('teacher_v2_set_assignment(p_user_id'));
+  assert.ok(lifecycle.includes("status='revoked',revoked_by=auth.uid(),revoked_at=now()"));
+  assert.ok(lifecycle.includes('teacher_v2_guard_legacy_grant'));
+  assert.ok(functions.includes("v_status<>'approved'"));
+  assert.ok(functions.includes('private.teacher_v2_feature_enabled'));
+});
