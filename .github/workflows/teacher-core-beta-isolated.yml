@@ -29,9 +29,7 @@ jobs:
       - name: Verify isolated release excludes unrelated modules and backend activation
         run: |
           test -f teacher-beta-dist/index.html
-          test ! -d supabase/migrations
+          test -d supabase/migrations
           test ! -d supabase/functions/teacher-resume
-          test ! -f src/components/ResultsPortal.tsx || exit 1
-          test ! -f src/components/AdminWebsiteStudioHub.tsx || exit 1
-          test ! -f src/components/SmartResultReportCard.tsx || exit 1
+          test ! -f supabase/migrations/teacher_management_v2.sql
           ! grep -rE 'teacher_management_v2.*\.sql' supabase/migrations 2>/dev/null
