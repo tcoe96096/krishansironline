@@ -130,3 +130,23 @@ for(const contactEmail of ['te'+String.fromCharCode(0x202e)+'acher@example.org',
   assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail,phone:'',experienceYears:null}),false,
     `Invisible or control character accepted in teacher email: ${JSON.stringify(contactEmail)}`);
 }
+
+
+// Multi-scope regression: valid cartesian combinations, stable deduplication and fail-closed limits.
+const allAssignments = Array.from({length:60}, (_, i) => ({
+  classLevel: ['6','7','8','9','10','11','12'][Math.floor(i/20)],
+  subject: ['History','Geography','Political Science','Economics','Other'][Math.floor(i/4)%5],
+  workType: ['materials.draft','materials.review','assessment.draft','result.review'][i%4]
+}));
+assert.equal(normalizeTeacherAssignments(allAssignments).length,60);
+assert.throws(()=>normalizeTeacherAssignments([...allAssignments, allAssignments[0]]),
+  'Oversized payload must fail even if duplicates would later be removed');
+assert.deepEqual(normalizeTeacherAssignments([
+  {classLevel:' 10 ',subject:' History ',workType:' materials.draft '},
+  {classLevel:'10',subject:'History',workType:'materials.draft'}
+]),[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
+assert.throws(()=>normalizeTeacherAssignments([,] as any),
+  'Sparse assignment arrays must not bypass entry validation');
+assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','assessment.draft','materials.review','result.review']),true);
+assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','assessment.draft','materials.review','result.review','materials.draft']),false);
+assert.equal(validateTeacherRequestedScopes('6','Other',['6','7','8','9','10','11','12'],['Political Science','History','Geography','Economics','Other']),true);
