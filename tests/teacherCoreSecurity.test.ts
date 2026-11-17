@@ -100,3 +100,38 @@ test('Teacher review and lifecycle enforce scope, identity and revocation bounda
   assert.ok(functions.includes("v_status<>'approved'"));
   assert.ok(functions.includes('private.teacher_v2_feature_enabled'));
 });
+
+test('V2 material permissions deny suspended profiles and cross-subject grants',()=>{
+  const sql=read('integration');
+  const assignment=read('functions');
+  const start=sql.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_material_permission');
+  const end=sql.indexOf('REVOKE ALL ON FUNCTION public.teacher_v2_material_permission',start);
+  assert.ok(start>=0&&end>start);
+  const body=sql.slice(start,end);
+  assert.ok(body.includes('IF EXISTS(SELECT 1 FROM public.teacher_profiles WHERE user_id=auth.uid()) THEN'));
+  assert.ok(body.includes("status='approved'"));
+  assert.ok(body.includes('THEN RETURN false; END IF;'));
+  assert.ok(body.includes('teacher_v2_has_active_assignment(p_class,p_subject'));
+  assert.ok(body.includes('private.teacher_v2_feature_enabled(\'material_authoring\')'));
+  assert.ok(body.includes('result_staff_grants g'));
+  const check=assignment.split('CREATE OR REPLACE FUNCTION public.teacher_v2_has_active_assignment')[1];
+  assert.ok(check);
+  for(const condition of ["p.user_id=v_actor","p.status='approved'","a.status='active'","a.class_level=p_class_level","a.subject=p_subject","a.work_type=p_work_type"]){
+    assert.ok(check.includes(condition),'missing scoped assignment check '+condition);
+  }
+});
+
+test('V2 policy replacement preserves public published reads and limits draft writes',()=>{
+  const sql=read('integration');
+  const dropped=[...sql.matchAll(/DROP POLICY IF EXISTS "([^"]+)" ON public\.study_material_items/g)].map(m=>m[1]);
+  assert.deepEqual(dropped,[
+    'Owner may delete only own drafts',
+    'Owner or super admin reads review drafts',
+    'Scoped editors create drafts',
+    'Scoped editors update only own drafts',
+    'Scoped staff submit own drafts for review'
+  ]);
+  assert.ok(!dropped.includes('Published material is readable'));
+  assert.ok(sql.includes("created_by=auth.uid() AND status='draft' AND public.teacher_v2_material_permission(class_level,subject,'materials.draft.write')"));
+  assert.ok(sql.includes("status='pending_review' AND public.teacher_v2_material_permission(class_level,subject,'materials.review.propose')"));
+});
