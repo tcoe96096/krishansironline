@@ -124,3 +124,9 @@ for(const institution of ['University\nAdmin','University\u200D','University\u20
   assert.equal(validateTeacherQualifications([{title:'M.A.',institution,year:2020}]),false);
 }
 assert.equal(validateTeacherQualifications([{title:'M.A. History',institution:'State University',year:2020}]),true);
+
+// Contacts must not include hidden direction changes or control characters.
+for(const contactEmail of ['te'+String.fromCharCode(0x202e)+'acher@example.org','teacher@exam'+String.fromCharCode(0x200b)+'ple.org','teacher'+String.fromCharCode(0)+'@example.org']) {
+  assert.equal(validateTeacherProfile({displayName:'A Teacher',contactEmail,phone:'',experienceYears:null}),false,
+    `Invisible or control character accepted in teacher email: ${JSON.stringify(contactEmail)}`);
+}
