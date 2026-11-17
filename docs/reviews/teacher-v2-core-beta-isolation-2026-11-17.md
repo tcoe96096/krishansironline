@@ -49,3 +49,10 @@ Before release: test recovery, review all proposed SQL/grants, run real Preview 
 - `has_function_privilege`: `anon` EXECUTE=false, `authenticated` EXECUTE=true, `public` EXECUTE=false.
 - This verifies function identity and grants only, not RLS/role-table mutation security or real-account acceptance. Before any activation, separately inspect `public.user_roles` INSERT/UPDATE/DELETE privileges, RLS and role-management RPCs to exclude self-escalation.
 - No database writes, migration, deployment, or feature activation occurred.
+
+## HIGH PRIORITY — Preview user_roles TRUNCATE privilege exposure (read-only finding, 2026-11-17)
+- `public.user_roles`: RLS enabled, owner `postgres`, FORCE RLS disabled. Only SELECT policy `users read own role` for authenticated (`user_id=auth.uid() OR is_admin()`).
+- `has_table_privilege` for `authenticated` shows INSERT=false, UPDATE=false, DELETE=false, **TRUNCATE=true**; for `anon`, **TRUNCATE=true**. Information schema role grants also lists TRUNCATE for both roles.
+- PostgreSQL TRUNCATE is not governed by row-level security. This is a high-priority destructive privilege exposure; do not attempt to exploit or test via TRUNCATE.
+- **Proposed mitigation, NOT EXECUTED:** after independently confirming project identity and approved change/recovery plan, authorized database owner should revoke TRUNCATE from `anon`, `authenticated`, and review other non-owner role grants and inherited grants. Example review-only SQL: `REVOKE TRUNCATE ON TABLE public.user_roles FROM anon, authenticated;` Then verify effective privileges read-only and review dependent role-management functions.
+- Existing INSERT/UPDATE/DELETE denials alone do not establish complete role-table security. No live database mutation was made in this investigation.
