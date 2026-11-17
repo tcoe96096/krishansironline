@@ -1,6 +1,6 @@
 # KSOL Teacher Management v2 — Core Beta deployment plan (REVIEW ONLY)
 
-Status: planning artifact, **not an authorization or deployment record**. PR #109 remains Draft. Production changes require a distinct, explicit owner approval after review of this plan.
+Status: planning artifact, **not an authorization or deployment record**. The active isolated Teacher Core Beta implementation is PR #111 (Draft); PR #109 is a separate earlier workstream. Production changes require a distinct, explicit owner approval after review of this plan.
 
 ## Scope of the first public beta
 
@@ -53,7 +53,7 @@ Before asking for approval, provide:
 - Evidence for GitHub checks, Preview live DB acceptance, OAuth, security and browser UAT.
 - Explicit list of excluded features and known limitations.
 
-**Stop for owner approval here.** Do not merge PR #109, run Production SQL, enable storage/services, change live feature flags or publish without it.
+**Stop for owner approval here.** Do not merge PR #111 or PR #109, run Production SQL, enable storage/services, change live feature flags or publish without it.
 
 ## Gate E — If and only if approved
 
@@ -72,4 +72,4 @@ Before asking for approval, provide:
 
 ## Current evidence and unknowns
 
-As of 2026-11-16, PR #109 is Draft and six associated GitHub checks passed at SHA `bfec8cd0c9cdf89e9bd23a1822ef1d05636bd3c0`. Static and mocked tests are **not** real database acceptance. Preview migration and Production deployment are not verified as executed. Managed backup/PITR or tested logical restore evidence is missing. This document does not claim those gates passed.
+As of 2026-11-17, isolated PR #111 is Draft. All three PR #111 GitHub checks passed at SHA `08b7fa0510658b782c29a9221a6d6bc19ffe7e82` (website validation, preview build without deployment, and isolated Teacher Core Beta checks). Earlier PR #109 is a separate draft and its historical check results do not establish PR #111 release readiness. Static and mocked tests are **not** real database acceptance. Preview migration and Production deployment are not verified as executed. Managed backup/PITR or tested logical restore evidence is missing. This document does not claim those gates passed.
