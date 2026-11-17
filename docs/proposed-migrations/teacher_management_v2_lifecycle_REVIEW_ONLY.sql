@@ -163,8 +163,8 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 DECLARE v jsonb;
 BEGIN
  IF auth.uid() IS NULL OR (auth.uid()<>p_user_id AND NOT coalesce(public.is_super_admin(),false)) THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
- SELECT to_jsonb(p)||jsonb_build_object('qualifications',coalesce((SELECT jsonb_agg(jsonb_build_object('title',q.title,'institution',q.institution,'year',q.passing_year)) FROM public.teacher_qualifications q WHERE q.teacher_user_id=p.user_id),'[]'::jsonb),
- 'assignments',coalesce((SELECT jsonb_agg(to_jsonb(a)) FROM public.teacher_assignments a WHERE a.teacher_user_id=p.user_id),'[]'::jsonb),
+ SELECT jsonb_build_object('user_id',p.user_id,'employee_id',p.employee_id,'revision',p.revision,'submitted_at',p.submitted_at,'application_reason',p.application_reason,'decision_reason',p.decision_reason,'reviewed_at',p.reviewed_at,'requested_scopes',p.requested_scopes,'display_name',p.display_name,'contact_email',p.contact_email,'phone',p.phone,'experience_years',p.experience_years,'status',p.status,'approved_by',p.approved_by,'approved_at',p.approved_at,'created_at',p.created_at,'updated_at',p.updated_at)||jsonb_build_object('qualifications',coalesce((SELECT jsonb_agg(jsonb_build_object('title',q.title,'institution',q.institution,'year',q.passing_year)) FROM public.teacher_qualifications q WHERE q.teacher_user_id=p.user_id),'[]'::jsonb),
+ 'assignments',coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'teacher_user_id',a.teacher_user_id,'class_level',a.class_level,'subject',a.subject,'work_type',a.work_type,'status',a.status,'assigned_by',a.assigned_by,'assigned_at',a.assigned_at,'revoked_by',a.revoked_by,'revoked_at',a.revoked_at)) FROM public.teacher_assignments a WHERE a.teacher_user_id=p.user_id),'[]'::jsonb),
  'resumes',coalesce((SELECT jsonb_agg(jsonb_build_object('id',d.id,'original_filename',d.original_filename,'verification_status',d.verification_status)) FROM public.teacher_resume_documents d WHERE d.teacher_user_id=p.user_id),'[]'::jsonb)) INTO v FROM public.teacher_profiles p WHERE p.user_id=p_user_id;
  RETURN v;
 END $$;
