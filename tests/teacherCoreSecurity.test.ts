@@ -63,3 +63,14 @@ test('Teacher Directory navigation follows the exact verified account',()=>{
   assert.ok(portal.includes('{directory&&canReview?<AdminTeacherDirectoryV2'));
   assert.ok(!portal.includes("signInWithGoogle('staff-workspace')"));
 });
+
+test('SECURITY DEFINER snapshots explicitly allowlist profile and assignment fields',()=>{
+  const sql=read('lifecycle');
+  const snapshot=sql.split('CREATE OR REPLACE FUNCTION public.teacher_v2_snapshot')[1]?.split('CREATE OR REPLACE FUNCTION public.teacher_v2_directory')[0];
+  assert.ok(snapshot,'snapshot RPC missing');
+  assert.doesNotMatch(snapshot,/to_jsonb\s*\(\s*[pa]\s*\)/i,'raw table-to-JSON exposes future private columns');
+  for(const field of ['user_id','display_name','status','revision','requested_scopes','qualifications','assignments']){
+    assert.ok(snapshot.includes("'"+field+"'"),'missing snapshot contract field '+field);
+  }
+  assert.doesNotMatch(snapshot,/'storage_path'|'content_type'|'size_bytes'/,'resume storage internals must never leak');
+});
