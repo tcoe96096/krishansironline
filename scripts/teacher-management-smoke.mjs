@@ -80,13 +80,13 @@ try{
   assert.equal(await upload.isDisabled(),false);
  }
 
- await panel.getByRole('button',{name:'Submit v2 application',exact:true}).click();await panel.getByRole('button',{name:'Withdraw to edit'}).waitFor();
- assert.equal(await panel.getByRole('button',{name:'Submit v2 application',exact:true}).count(),0);
+ await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).click();await panel.getByRole('button',{name:'Withdraw to edit'}).waitFor();
+ assert.equal(await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).count(),0);
  assert.equal(writes.at(-1).args.p_expected_revision,2);assert.equal(writes.at(-1).args.p_submit,true);assert.equal(writes.at(-1).args.p_qualifications[0].title,'MA History');
  assert.equal(writes.at(-1).args.p_scopes[0].workType,'materials.draft');
- await panel.getByRole('button',{name:'Withdraw to edit'}).click();await panel.getByRole('button',{name:'Submit v2 application',exact:true}).waitFor();
+ await panel.getByRole('button',{name:'Withdraw to edit'}).click();await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).waitFor();
  active=false;await page.reload();await panel.getByText(/awaiting owner-approved backend activation/).waitFor();
- assert.equal(await panel.getByRole('button',{name:'Submit v2 application',exact:true}).count(),0);
+ assert.equal(await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).count(),0);
  assert.equal(await panel.locator('input[type=file]').count(),0);
  assert.equal(await page.getByRole('button',{name:/publish|edit marks/i}).count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
@@ -157,7 +157,7 @@ try{
   for(const forbidden of ['result_staff_grants','study_material_items','test_attempts','teacher_v2_result_summary','teacher-resume'])assert.equal(requestPaths.some(path=>path.includes(forbidden)),false,forbidden);
   const loggedOut=await browser.newContext();const anonymousPage=await loggedOut.newPage();
   await anonymousPage.goto(base+'/');await anonymousPage.getByRole('heading',{name:'Teacher Google Login',exact:true}).waitFor();
-  assert.equal(await anonymousPage.getByRole('button',{name:'Submit v2 application',exact:true}).count(),0);
+  assert.equal(await anonymousPage.getByRole('button',{name:'Submit for Admin Review',exact:true}).count(),0);
   await loggedOut.close();
  }
  assert.deepEqual(errors,[]);
