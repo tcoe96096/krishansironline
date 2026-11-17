@@ -13,11 +13,20 @@ BEGIN
  RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION private.teacher_v2_guard_legacy_grant() FROM PUBLIC,anon,authenticated,service_role;
-DO $$ BEGIN
- IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
+-- Idempotent for repeated review-bundle application; never drop/replace an
+-- existing trigger silently. A same-name trigger with different semantics must
+-- be caught by the separate migration-diff/security acceptance gate.
+DO $ BEGIN
+ IF to_regclass('public.result_staff_grants') IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_trigger t
+      WHERE t.tgrelid = 'public.result_staff_grants'::pg_catalog.regclass
+        AND t.tgname = 'teacher_v2_no_legacy_grant'
+        AND NOT t.tgisinternal
+    ) THEN
   EXECUTE 'CREATE TRIGGER teacher_v2_no_legacy_grant BEFORE INSERT OR UPDATE ON public.result_staff_grants FOR EACH ROW EXECUTE FUNCTION private.teacher_v2_guard_legacy_grant()';
  END IF;
-END $$;
+END $;
 
 CREATE OR REPLACE FUNCTION public.teacher_v2_save_application(p_profile jsonb,p_qualifications jsonb,p_scopes jsonb,p_reason text,p_submit boolean DEFAULT false,p_expected_revision integer DEFAULT NULL)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
