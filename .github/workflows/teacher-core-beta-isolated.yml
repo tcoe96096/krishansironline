@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci --legacy-peer-deps
+      - run: npm install --legacy-peer-deps
       - name: TypeScript validation
         run: npm run lint
       - name: Teacher Core Beta unit tests
