@@ -25,7 +25,7 @@ test('do not allow arbitrary external URL destinations for preview navigation',(
   assert.throws(()=>teacherPagePath('login',untrusted),/Invalid teacher preview base/);
  }
 });
-test('registration, login and dashboard are independent JSX screens and photo stays in dashboard',()=>{
+test('registration takes photo, dashboard displays selected photo after navigation',()=>{
  const main=readFileSync('teacher-beta/main.tsx','utf8');
  const registration=readFileSync('teacher-beta/TeacherRegistrationDesignPreview.tsx','utf8');
  const dashboard=readFileSync('teacher-beta/TeacherDashboardOverview.tsx','utf8');
@@ -34,14 +34,16 @@ test('registration, login and dashboard are independent JSX screens and photo st
  assert.match(main,/page==='login'/);
  assert.match(main,/page==='dashboard'/);
  assert.match(main,/page==='admin'/);
- assert.match(main,/<TeacherRegistrationDesignPreview\/>/);
+ assert.match(main,/<TeacherRegistrationDesignPreview photoUrl=/);
  assert.match(main,/<TeacherDashboardOverview/);
  assert.match(main,/Login required for Teacher Dashboard/);
  assert.match(main,/const demo=!teacherBetaEnabled/);
  assert.match(main,/Teacher Google Login/);
  assert.match(registration,/Resume \/ बायोडाटा/);
  assert.doesNotMatch(registration,/Application reason|Reason for applying|Application Tracking|Super Admin Verification/);
+ assert.match(registration,/<TeacherPhotoPicker/);
  assert.match(dashboard,/<TeacherProfilePhoto/);
+ assert.doesNotMatch(dashboard,/<TeacherPhotoPicker/);
  assert.match(dashboard,/No saved applications/);
  assert.match(config,/'registration','login','dashboard'/);
  assert.doesNotMatch(dashboard,/teacher_v2_save_application|\.rpc\(|signInWithOAuth/);
