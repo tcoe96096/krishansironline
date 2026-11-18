@@ -673,7 +673,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       return;
     }
     const element = iframe.current?.contentDocument?.querySelector(item.selector);
-    if (!(element instanceof HTMLElement)) return;
+    if (!element) return;
     element.scrollIntoView({ block: 'center', behavior: 'smooth' });
     // Use the editor's existing, guarded selection handler: never execute page actions.
     element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -754,15 +754,51 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
             <span className="max-w-[200px] truncate text-[10px] font-semibold text-sky-800" title={status}>{status}</span>
           </div>
         <div data-visual-editor-ui="toolbar" className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg bg-transparent p-1">
-          <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); setThemesOpen(false); setSmartToolsOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-3 py-2.5 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
-          <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); setThemesOpen(false); setSmartToolsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
+          <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); setThemesOpen(false); setSmartToolsOpen(false); setExplorerOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-3 py-2.5 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
+          <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); setThemesOpen(false); setSmartToolsOpen(false); setExplorerOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
           <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} aria-pressed={inspectorOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>{inspectorOpen ? 'Hide Properties' : 'Show Properties'}</button>
-          <button type="button" onClick={() => { setThemesOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); setSmartToolsOpen(false); }} aria-expanded={themesOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (themesOpen ? 'bg-orange-100 text-orange-900' : 'bg-slate-100 text-slate-700')}><Palette className="h-3.5 w-3.5"/>Themes</button>
-          <button type="button" onClick={() => { setSmartToolsOpen(v => !v); setThemesOpen(false); setMediaOpen(false); setComponentsOpen(false); setInspectorOpen(true); }} aria-expanded={smartToolsOpen} className={'rounded-lg px-3 py-2.5 text-xs font-bold ' + (smartToolsOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}>✨ Smart Tools</button>
+          <button type="button" aria-expanded={explorerOpen} onClick={() => { setExplorerOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); setThemesOpen(false); setSmartToolsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (explorerOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><ListTree className="h-3.5 w-3.5"/>Element Explorer</button>
+          <button type="button" onClick={() => { setThemesOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); setSmartToolsOpen(false); setExplorerOpen(false); }} aria-expanded={themesOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (themesOpen ? 'bg-orange-100 text-orange-900' : 'bg-slate-100 text-slate-700')}><Palette className="h-3.5 w-3.5"/>Themes</button>
+          <button type="button" onClick={() => { setSmartToolsOpen(v => !v); setThemesOpen(false); setMediaOpen(false); setComponentsOpen(false); setExplorerOpen(false); setInspectorOpen(true); }} aria-expanded={smartToolsOpen} className={'rounded-lg px-3 py-2.5 text-xs font-bold ' + (smartToolsOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}>✨ Smart Tools</button>
           <button type="button" aria-label="Undo added component" title="Undo added component" disabled={!(componentUndo[pageId] || []).length} onClick={undoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↶</button>
           <button type="button" aria-label="Redo added component" title="Redo added component" disabled={!(componentRedo[pageId] || []).length} onClick={redoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↷</button>
         </div>
-        {(componentsOpen || mediaOpen || themesOpen || smartToolsOpen) && <div data-testid="studio-tool-panels" className="grid min-w-0 max-h-[min(55vh,480px)] gap-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+        {(componentsOpen || mediaOpen || themesOpen || smartToolsOpen || explorerOpen) && <div data-testid="studio-tool-panels" className="grid min-w-0 max-h-[min(55vh,480px)] gap-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+        {explorerOpen && <section data-visual-editor-ui="explorer-panel" data-testid="studio-element-explorer" className="min-w-0 rounded-xl border border-sky-200 bg-white p-3 shadow-sm sm:col-span-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <strong className="flex items-center gap-2 text-xs text-slate-900"><ListTree className="h-4 w-4"/>Element Explorer · {pageLabel}</strong>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={refreshElementExplorer} className="rounded-lg border border-slate-200 px-2 py-1 text-[11px]">Refresh</button>
+              <button type="button" aria-label="Close Element Explorer" onClick={() => setExplorerOpen(false)} className="rounded-lg border border-slate-200 px-2 py-1 text-[11px]">×</button>
+            </div>
+          </div>
+          <p className="mb-2 text-[11px] text-slate-500">Select visible design elements. Protected login, assessment and admin controls appear read-only. Only editor-owned components can be reordered.</p>
+          <input aria-label="Search page elements" value={explorerSearch} onChange={event => setExplorerSearch(event.target.value)} placeholder="Search tag, id or class…" className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"/>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <h4 className="mb-2 text-xs font-extrabold text-slate-800">Page Elements ({explorerItems.length})</h4>
+              <div data-testid="studio-explorer-elements" className="max-h-[250px] space-y-1 overflow-y-auto rounded-lg border border-slate-100 p-1">
+                {explorerItems.filter(item => item.label.toLowerCase().includes(explorerSearch.trim().toLowerCase())).slice(0, 80).map((item, index) =>
+                  <button key={item.selector + '-' + index} type="button" onClick={() => selectExplorerElement(item)} disabled={item.readOnly} aria-label={'Select ' + item.label} className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-[11px] hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60">
+                    <span className="truncate font-mono text-slate-700">{item.label}</span><span className="shrink-0 text-[10px] text-slate-400">{item.readOnly ? 'Protected' : 'Select'}</span>
+                  </button>)}
+                {explorerItems.length === 0 && <p className="p-3 text-xs text-slate-500">No page elements loaded.</p>}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h4 className="mb-2 text-xs font-extrabold text-slate-800">Studio Components ({pageComponents.length})</h4>
+              <div data-testid="studio-explorer-owned" className="max-h-[250px] space-y-1 overflow-y-auto rounded-lg border border-slate-100 p-1">
+                {pageComponents.map(item =>
+                  <div key={item.id} data-testid="studio-explorer-owned-row" draggable onDragStart={event => { event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; }} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={event => { event.preventDefault(); reorderOwnedComponents(event.dataTransfer.getData('text/plain'), item.id); }} className="flex min-w-0 cursor-grab items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
+                    <GripVertical className="h-4 w-4 shrink-0 text-slate-400"/>
+                    <button type="button" aria-label={'Edit studio component ' + item.kind} onClick={() => selectOwnedComponent(item.id)} className="min-w-0 flex-1 truncate text-left text-[11px] font-bold text-slate-700">{item.kind} · {item.text.slice(0, 36)}</button>
+                  </div>)}
+                {pageComponents.length === 0 && <p className="p-3 text-xs text-slate-500">Add a Component to enable Drag & Drop ordering.</p>}
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 text-[10px] text-slate-500">Drag studio-owned rows to reorder within the same section. Preview changes remain Draft-only.</p>
+        </section>}
         {smartToolsOpen && <section data-visual-editor-ui="smart-tools-panel" 
           className="min-w-0 rounded-xl border border-violet-200 bg-white p-3 shadow-sm">
           <div  className="mb-3 flex  items-center justify-between border-b pb-2">
@@ -877,6 +913,11 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
           </div>}
           {selected ? <div className="space-y-2">
             <p className="rounded-lg bg-sky-50 p-2 text-[10px] font-bold text-sky-900">{selected.tag.toUpperCase()} · {Math.round(selected.width)} × {Math.round(selected.height)} px</p>
+            <div data-testid="studio-source-inspector" className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <p className="text-[10px] font-bold text-slate-700">Source selector · read-only</p>
+              <code className="mt-1 block break-all text-[10px] text-slate-500">{selected.selector}</code>
+              <button type="button" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(selected.selector).then(() => setNotice('Selector copied to clipboard.')).catch(() => setNotice('Clipboard access unavailable.')); }} className="mt-2 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-sky-800">Copy Selector</button>
+            </div>
             {selected.textEditable && <label className="block text-[10px] font-semibold text-slate-600">Text / Content<textarea rows={3} value={selected.text} onChange={event => setSelected(current => current ? { ...current, text: event.target.value } : current)} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>}
             <label className="block text-[10px] font-semibold text-slate-600">Text Colour<input type="color" value={style.color} onChange={event => setStyle(current => ({ ...current, color: event.target.value }))} className="mt-1 h-8 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Background · {style.backgroundColor === 'original' ? 'Original (unchanged)' : 'Custom colour'}<input aria-label="Background colour" type="color" value={style.backgroundColor === 'original' ? backgroundSwatch : style.backgroundColor} onChange={event => setStyle(current => ({ ...current, backgroundColor: event.target.value }))} className="mt-1 h-8 w-full"/></label>
