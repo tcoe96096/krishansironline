@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video, Move, MoveDiagonal2 } from 'lucide-react';
+import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video, Move, MoveDiagonal2, ListTree, GripVertical } from 'lucide-react';
 import { STUDIO_THEMES, safeStudioMediaUrl, studioYouTubeEmbed, type StudioDraftPage, type StudioTheme } from '../visual-editor/studioBuilder';
 import { STUDIO_ANIMATIONS, STUDIO_FILTERS, STUDIO_HOVERS, STUDIO_DESIGN_PRESETS, DEFAULT_STUDIO_EFFECT, applyStudioEffects, ensureStudioEffectsStyles, contrastTextForHex, safeStudioEffect, type StudioEffect, type StudioDesignPreset } from '../visual-editor/effects';
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,7 @@ type StyleDraft = { color: string; backgroundColor: string; fontSize: number; fo
 type Override = { selector: string; text: string; textEditable: boolean; style: StyleDraft };
 type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]>; themes?: Record<string, StudioTheme>; customPages?: StudioDraftPage[] };
 type Selected = { tag: string; text: string; selector: string; width: number; height: number; textEditable: boolean };
+type ExplorerItem = { selector: string; tag: string; label: string; readOnly: boolean };
 
 const defaults: StyleDraft = { color: '#18263b', backgroundColor: 'original', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0, effects: DEFAULT_STUDIO_EFFECT };
 const palette: { kind: Kind; label: string; hint: string; icon: React.ElementType }[] = [
@@ -97,6 +98,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [componentQuery, setComponentQuery] = useState('');
   const [copiedStyle, setCopiedStyle] = useState<StyleDraft | null>(null);
   const [smartToolsOpen, setSmartToolsOpen] = useState(false);
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const [explorerSearch, setExplorerSearch] = useState('');
+  const [explorerItems, setExplorerItems] = useState<ExplorerItem[]>([]);
   const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
   const [componentUndo, setComponentUndo] = useState<Record<string, Added[][]>>({});
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
@@ -519,6 +523,32 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     setManagedComponentId(null);
     setNotice('Redo applied to added components.');
   };
+  const reorderOwnedComponents = (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
+    const sourceIndex = pageComponents.findIndex(item => item.id === sourceId);
+    const targetIndex = pageComponents.findIndex(item => item.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    if (pageComponents[sourceIndex].parentSelector !== pageComponents[targetIndex].parentSelector) {
+      setNotice('Drag & Drop ordering works within the same website section. Use the page editor to choose another section.');
+      return;
+    }
+    const next = [...pageComponents];
+    const [moving] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moving);
+    replaceComponents(next, 'Studio components reordered with Drag & Drop');
+  };
+  const selectOwnedComponent = (id: string) => {
+    const doc = iframe.current?.contentDocument;
+    const element = Array.from(doc?.querySelectorAll<HTMLElement>('[data-builder-component-id]') || [])
+      .find(node => node.dataset.builderComponentId === id);
+    element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
+    targetRef.current = null;
+    setSelected(null);
+    setManagedComponentId(id);
+    setInspectorOpen(true);
+    setNotice('Studio-owned component selected in Explorer. Drag rows to reorder within one section.');
+  };
   const updateComponent = (id: string, patch: Partial<Pick<Added, 'text' | 'subtitle' | 'url' | 'effects'>>) => {
     replaceComponents(pageComponents.map(item => item.id === id ? { ...item, ...patch } : item), 'Component updated');
   };
@@ -614,6 +644,39 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       setMediaAlt(''); await loadMedia();
     } catch (error) { setMediaError(error instanceof Error ? error.message : 'Upload विफल रहा।'); }
     finally { setMediaBusy(false); }
+  };
+
+  const refreshElementExplorer = () => {
+    const doc = iframe.current?.contentDocument;
+    if (!doc) { setExplorerItems([]); return; }
+    const nodes = Array.from(doc.querySelectorAll<HTMLElement>(
+      'main,header,footer,nav,aside,section,article,figure,form,label,div,h1,h2,h3,h4,h5,h6,p,button,a,img,input,select,textarea'
+    ));
+    const elements = nodes.filter(node => node !== doc.body && node.id !== 'root' &&
+      !node.closest('[data-visual-editor-ui]') && !node.hasAttribute('data-builder-component-id')).slice(0, 240);
+    setExplorerItems(elements.map(node => {
+      const name = node.tagName.toLowerCase();
+      const id = node.id ? '#' + node.id.slice(0, 40) : '';
+      const classes = typeof node.className === 'string'
+        ? node.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(value => '.' + value.slice(0, 25)).join('')
+        : '';
+      return { selector: selectorFor(node), tag: name, label: (name + id + classes).slice(0, 95), readOnly: !selectable(node) };
+    }));
+  };
+  useEffect(() => {
+    if (ready && explorerOpen) refreshElementExplorer();
+  }, [ready, explorerOpen, pageId, draft.addedComponents]);
+
+  const selectExplorerElement = (item: ExplorerItem) => {
+    if (item.readOnly || !safeSelector(item.selector)) {
+      setNotice('Protected page control: visible in Explorer, but credentials and functional actions are not editable.');
+      return;
+    }
+    const element = iframe.current?.contentDocument?.querySelector(item.selector);
+    if (!(element instanceof HTMLElement)) return;
+    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Use the editor's existing, guarded selection handler: never execute page actions.
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   };
 
   const saveCloudDraft = async () => {
