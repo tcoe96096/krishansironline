@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
 import { STUDIO_THEMES, safeStudioMediaUrl, studioYouTubeEmbed, type StudioDraftPage, type StudioTheme } from '../visual-editor/studioBuilder';
 import { STUDIO_ANIMATIONS, STUDIO_FILTERS, STUDIO_HOVERS, STUDIO_DESIGN_PRESETS, DEFAULT_STUDIO_EFFECT, applyStudioEffects, ensureStudioEffectsStyles, contrastTextForHex, safeStudioEffect, type StudioEffect, type StudioDesignPreset } from '../visual-editor/effects';
@@ -97,31 +96,16 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [componentQuery, setComponentQuery] = useState('');
   const [copiedStyle, setCopiedStyle] = useState<StyleDraft | null>(null);
   const [smartToolsOpen, setSmartToolsOpen] = useState(false);
-  const [smartPos, setSmartPos] = useState({ x: 100, y: 160 });
   const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
   const [componentUndo, setComponentUndo] = useState<Record<string, Added[][]>>({});
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
-  const [toolbarPos, setToolbarPos] = useState({ x: Math.max(12, Math.round((window.innerWidth - 360) / 2)), y: Math.max(12, window.innerHeight - 90) });
-  const [componentsPos, setComponentsPos] = useState({ x: 16, y: 100 });
-  const [mediaPos, setMediaPos] = useState({ x: 16, y: 100 });
-  const [themesPos, setThemesPos] = useState({ x: 36, y: 145 });
+  const [inspectorPlacement, setInspectorPlacement] = useState<'side' | 'below'>('side');
   const themeName: StudioTheme = draft.themes?.[pageId] && STUDIO_THEMES[draft.themes[pageId]]
     ? draft.themes[pageId] : 'original';
   const chooseTheme = (next: StudioTheme) => {
     if (user && isAdmin && !cloudReady) { setNotice('Load Cloud Draft before changing themes.'); return; }
     setDraft(current => ({ ...current, themes: { ...(current.themes || {}), [pageId]: next } }));
     setNotice('Theme changed in Preview. Save Cloud Draft to keep the selected theme.');
-  };
-  const [inspectorPos, setInspectorPos] = useState({ x: Math.max(12, window.innerWidth - 360), y: 100 });
-  const dragPanel = (event: React.PointerEvent<HTMLElement>, setter: React.Dispatch<React.SetStateAction<{x:number;y:number}>>) => {
-    if ((event.target as HTMLElement).closest('button,input,select,textarea,label')) return;
-    event.preventDefault();
-    const startX = event.clientX, startY = event.clientY;
-    const dragTarget = event.currentTarget.dataset.visualEditorUi === 'toolbar' ? event.currentTarget : event.currentTarget.parentElement as HTMLElement;
-    const origin = dragTarget.getBoundingClientRect();
-    const move = (e: PointerEvent) => setter({ x: Math.max(0, Math.min(window.innerWidth - 80, origin.left + e.clientX - startX)), y: Math.max(0, Math.min(window.innerHeight - 48, origin.top + e.clientY - startY)) });
-    const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); };
-    window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop, { once: true });
   };
 
 
@@ -637,27 +621,25 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   useEffect(() => { if (mediaOpen) void loadMedia(); }, [mediaOpen, user?.id, isAdmin]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] leading-5 text-sky-950">
+    <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-950">
         <span><strong>Interactive Live Page Preview:</strong> {pageLabel}. Text, Button, Image, Card, Section और Components का डिज़ाइन बदलें। {designOnly ? 'Protected page: केवल डिज़ाइन; login/test/results actions सुरक्षित हैं।' : 'नीले corner handle से size बदलें।'} सभी edits Draft-only हैं।</span>
         <span className="font-semibold text-sky-800">{status}</span>
       </div>
-      <div className="mx-auto overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 560, maxWidth: mobile ? '390px' : '100%' }}>
-        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} srcDoc={srcDoc} onLoad={() => setReady(true)} className="h-full w-full border-0" />
-      </div>
-      {createPortal(<>
-        <div data-visual-editor-ui="toolbar" style={{ left: toolbarPos.x, top: toolbarPos.y }} onPointerDown={event => dragPanel(event, setToolbarPos)} className="fixed z-[99990] flex items-center gap-1 rounded-xl cursor-move touch-none border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.22)] backdrop-blur">
-          <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-2.5 py-2 text-[10px] font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
-          <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
-          <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>Inspector</button>
-          <button type="button" onClick={() => { setThemesOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); }} aria-expanded={themesOpen} className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (themesOpen ? 'bg-orange-100 text-orange-900' : 'bg-slate-100 text-slate-700')}><Palette className="h-3.5 w-3.5"/>Themes</button>
-          <button type="button" onClick={() => { setSmartToolsOpen(v => !v); setThemesOpen(false); setMediaOpen(false); setComponentsOpen(false); setInspectorOpen(true); }} aria-expanded={smartToolsOpen} className={'rounded-lg px-2.5 py-2 text-[10px] font-bold ' + (smartToolsOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}>✨ Smart Tools</button>
+      <div data-testid="studio-editor-controls" className="min-w-0 space-y-3">
+        <p className="text-xs font-semibold text-slate-600">Editor tools · select a control to open its settings without covering the website preview.</p>
+        <div data-visual-editor-ui="toolbar" className="flex w-full min-w-0 flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+          <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-3 py-2.5 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
+          <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
+          <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} aria-pressed={inspectorOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>Inspector</button>
+          <button type="button" onClick={() => { setThemesOpen(value => !value); setComponentsOpen(false); setMediaOpen(false); }} aria-expanded={themesOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (themesOpen ? 'bg-orange-100 text-orange-900' : 'bg-slate-100 text-slate-700')}><Palette className="h-3.5 w-3.5"/>Themes</button>
+          <button type="button" onClick={() => { setSmartToolsOpen(v => !v); setThemesOpen(false); setMediaOpen(false); setComponentsOpen(false); setInspectorOpen(true); }} aria-expanded={smartToolsOpen} className={'rounded-lg px-3 py-2.5 text-xs font-bold ' + (smartToolsOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}>✨ Smart Tools</button>
           <button type="button" aria-label="Undo added component" title="Undo added component" disabled={!(componentUndo[pageId] || []).length} onClick={undoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↶</button>
           <button type="button" aria-label="Redo added component" title="Redo added component" disabled={!(componentRedo[pageId] || []).length} onClick={redoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↷</button>
-        </div>
-        {smartToolsOpen && <section data-visual-editor-ui="smart-tools-panel" style={{ left: smartPos.x, top: smartPos.y }}
-          className="fixed z-[99995] w-[min(310px,calc(100vw-24px))] rounded-xl border border-violet-200 bg-white p-3 shadow-2xl">
-          <div onPointerDown={event => dragPanel(event, setSmartPos)} className="mb-3 flex cursor-move items-center justify-between border-b pb-2">
+        </div>        {(componentsOpen || mediaOpen || themesOpen || smartToolsOpen) && <div data-testid="studio-tool-panels" className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:grid-cols-2 xl:grid-cols-3">
+        {smartToolsOpen && <section data-visual-editor-ui="smart-tools-panel" 
+          className="min-w-0 rounded-xl border border-violet-200 bg-white p-3 shadow-sm">
+          <div  className="mb-3 flex  items-center justify-between border-b pb-2">
             <strong className="text-xs text-slate-900">✨ Smart Design Tools</strong>
             <button type="button" onClick={() => setSmartToolsOpen(false)} className="rounded border px-2 py-1 text-xs">×</button>
           </div>
@@ -679,9 +661,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
               className="rounded-lg border border-violet-200 bg-violet-50 p-2 text-[10px] font-bold disabled:opacity-50">Auto Contrast</button>
           </div>
         </section>}
-        {themesOpen && <section data-visual-editor-ui="themes-panel" style={{ left: themesPos.x, top: themesPos.y }}
-          className="fixed z-[99996] w-[min(300px,calc(100vw-24px))] rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
-          <div onPointerDown={event => dragPanel(event, setThemesPos)} className="mb-3 flex cursor-move items-center justify-between border-b pb-2">
+        {themesOpen && <section data-visual-editor-ui="themes-panel" 
+          className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div  className="mb-3 flex  items-center justify-between border-b pb-2">
             <strong className="text-xs text-slate-900">Theme Presets</strong>
             <button type="button" onClick={() => setThemesOpen(false)} className="rounded border px-2 py-1 text-xs">×</button>
           </div>
@@ -699,21 +681,26 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
           </div>
           <p className="mt-2 text-[10px] text-slate-500">Palette changes Preview only, until Cloud Draft is saved.</p>
         </section>}
-        {componentsOpen && <div data-visual-editor-ui="components-menu" style={{ left: componentsPos.x, top: componentsPos.y }} className="fixed z-[99999] max-h-[min(65vh,520px)] w-[min(280px,calc(100vw-24px))] overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,.26)]">
-          <div onPointerDown={event => dragPanel(event, setComponentsPos)} className="mb-1 flex items-center justify-between border-b border-slate-100 px-1 pb-2 cursor-move touch-none"><span className="text-[11px] font-extrabold text-slate-800">Add Component to Page</span><button onClick={() => setComponentsOpen(false)} className="rounded px-2 py-1 text-xs text-slate-500">×</button></div>
+        {componentsOpen && <div data-visual-editor-ui="components-menu"  className="min-w-0 max-h-[min(55vh,500px)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div  className="mb-1 flex items-center justify-between border-b border-slate-100 px-1 pb-2 "><span className="text-[11px] font-extrabold text-slate-800">Add Component to Page</span><button onClick={() => setComponentsOpen(false)} className="rounded px-2 py-1 text-xs text-slate-500">×</button></div>
           <label className="mb-2 flex items-center gap-2 rounded-lg border border-slate-200 px-2"><Search className="h-3.5 w-3.5 text-slate-500"/><input aria-label="Search components" value={componentQuery} onChange={event => setComponentQuery(event.target.value)} placeholder="Search components…" className="w-full bg-transparent p-2 text-xs outline-none"/></label>
           {palette.filter(item => (item.label + ' ' + item.hint).toLowerCase().includes(componentQuery.trim().toLowerCase())).map(item => { const Icon = item.icon; return <button key={item.kind} onClick={() => insertComponent(item.kind)} className="flex w-full items-center gap-2 rounded-lg p-2 text-left hover:bg-sky-50"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-800"><Icon className="h-4 w-4"/></span><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-800">{item.label}</span><span className="block text-[10px] text-slate-500">{item.hint}</span></span><Plus className="h-3.5 w-3.5 text-slate-400"/></button>; })}
         </div>}
-        {mediaOpen && <section data-visual-editor-ui="media-panel" style={{ left: mediaPos.x, top: mediaPos.y }} className="fixed z-[99998] max-h-[min(70vh,620px)] w-[min(360px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
-          <div onPointerDown={event => dragPanel(event, setMediaPos)} className="mb-3 flex items-center justify-between cursor-move touch-none"><div><h3 className="text-sm font-extrabold text-slate-900">Media Library</h3><p className="text-[10px] text-slate-500">Admin-only · Supabase Storage · Max 50 MB</p></div><button onClick={() => setMediaOpen(false)} className="rounded-lg border px-2 py-1 text-xs">Close ×</button></div>
+        {mediaOpen && <section data-visual-editor-ui="media-panel"  className="min-w-0 max-h-[min(55vh,500px)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div  className="mb-3 flex items-center justify-between "><div><h3 className="text-sm font-extrabold text-slate-900">Media Library</h3><p className="text-[10px] text-slate-500">Admin-only · Supabase Storage · Max 50 MB</p></div><button onClick={() => setMediaOpen(false)} className="rounded-lg border px-2 py-1 text-xs">Close ×</button></div>
           <input value={mediaAlt} onChange={event => setMediaAlt(event.target.value)} placeholder="Alt text / accessible description" className="mb-2 w-full rounded-lg border p-2 text-[11px]"/>
           <label className="block cursor-pointer rounded-lg border border-dashed border-violet-300 bg-violet-50 p-3 text-center text-[11px] font-bold text-violet-900">{mediaBusy ? 'Uploading…' : 'Upload Image / Video'}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm" disabled={mediaBusy || !isAdmin} className="hidden" onChange={event => { const file = event.target.files?.[0]; if (file) void uploadMedia(file); event.currentTarget.value = ''; }}/></label>
           {mediaError && <p role="alert" className="mt-2 rounded-lg bg-rose-50 p-2 text-[10px] text-rose-700">{mediaError}</p>}
           {mediaLoading ? <p className="py-4 text-center text-xs text-slate-500">Loading media…</p> : media.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No media uploaded yet.</p> : <div className="mt-3 grid grid-cols-2 gap-2">{media.map(asset => <div key={asset.path} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="grid h-20 place-items-center bg-slate-100">{asset.type === 'image' ? <img src={asset.url} alt={asset.name} className="h-full w-full object-cover"/> : <Video className="h-7 w-7 text-slate-500"/>}</div><p className="truncate px-2 pt-1 text-[9px] text-slate-600">{asset.name}</p><button onClick={() => insertComponent(asset.type === 'video' ? 'video' : 'image', asset)} className="m-1 w-[calc(100%-8px)] rounded-md bg-sky-900 p-1.5 text-[10px] font-bold text-white">Insert into page</button></div>)}</div>}
           <button onClick={() => void loadMedia()} disabled={mediaLoading} className="mt-3 w-full rounded-lg border p-2 text-[10px] font-bold text-slate-600">Refresh Library</button>
-        </section>}
-        {inspectorOpen && <aside data-visual-editor-ui="inspector-panel" style={{ left: inspectorPos.x, top: inspectorPos.y }} className="fixed z-[99997] max-h-[min(75vh,700px)] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_48px_rgba(15,23,42,.24)]">
-          <div onPointerDown={event => dragPanel(event, setInspectorPos)} className="mb-3 flex items-center justify-between cursor-move touch-none"><div><h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Settings2 className="h-4 w-4"/>Live Inspector</h3><p className="text-[10px] text-slate-500">Click an element in the website preview</p></div><button onClick={() => setInspectorOpen(false)} className="rounded-lg border px-2 py-1 text-xs">×</button></div>
+        </section>}        </div>}
+      </div>
+      <div data-testid="studio-editor-workspace" className={inspectorOpen && inspectorPlacement === 'side' ? 'grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]' : 'grid min-w-0 grid-cols-1 items-start gap-4'}>
+      <div className="mx-auto min-w-0 w-full overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 480, maxWidth: mobile ? '390px' : '100%' }}>
+        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} srcDoc={srcDoc} onLoad={() => setReady(true)} className="h-full w-full border-0" />
+      </div>
+        {inspectorOpen && <aside data-visual-editor-ui="inspector-panel" className="min-w-0 max-h-[min(76vh,820px)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4 xl:self-start">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3"><div><h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Settings2 className="h-4 w-4"/>Live Inspector</h3><p className="text-xs text-slate-500">Select a page element to edit its properties</p></div><div className="flex items-center gap-1"><button type="button" onClick={() => setInspectorPlacement(value => value === 'side' ? 'below' : 'side')} aria-label={inspectorPlacement === 'side' ? 'Move Inspector Below Preview' : 'Dock Inspector Right'} className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-[11px] font-bold text-sky-900">{inspectorPlacement === 'side' ? 'Below' : 'Dock right'}</button><button type="button" aria-label="Close Inspector" onClick={() => setInspectorOpen(false)} className="rounded-lg border px-2.5 py-1.5 text-xs">×</button></div></div>
           {managedComponent && <div data-testid="managed-component-editor" className="mb-3 space-y-2 rounded-xl border border-violet-200 bg-violet-50/40 p-3">
             <p className="text-xs font-bold text-violet-900">Edit Added Component · {managedComponent.kind}</p>
             <label className="block text-[10px] font-semibold text-slate-600">Title / Text<textarea aria-label="Component title" rows={2} maxLength={2000} value={managedComponent.text} onChange={event => updateComponent(managedComponent.id, { text: event.target.value })} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>
@@ -793,10 +780,10 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
               <span className="text-[10px] text-slate-500">Effects respect reduced-motion preferences. Preview first, then Save Cloud Draft.</span>
             </div>
             <div className="flex gap-2 pt-1"><button onClick={resetSelected} className="flex-1 rounded-lg border p-2 text-[10px] font-bold">Reset</button><button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="flex-1 rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Cloud Draft'}</button></div>
-          </div> : !managedComponent && <div className="space-y-3"><p className="rounded-lg bg-slate-50 p-3 text-[10px] leading-5 text-slate-600">वेबसाइट के किसी भी text, button, card, section या image पर click करें। फिर properties बदलें। Components जोड़कर उन्हें edit, duplicate, delete या reorder कर सकते हैं।</p>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="w-full rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white">{saving ? 'Saving…' : 'Save Added Components to Cloud Draft'}</button>}</div>}
+          </div> : !managedComponent && <div className="space-y-3"><div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4"><p className="text-sm font-bold text-slate-800">कोई Element चयनित नहीं है</p><p className="mt-2 text-xs leading-5 text-slate-600">Preview में किसी Text, Button, Card, Image या Section पर क्लिक करें। चुने हुए Element की Properties यहाँ दिखाई देंगी।</p><p className="mt-2 text-[11px] text-slate-500">नया Component जोड़ने के लिए ऊपर Components खोलें।</p></div>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"><p className="mb-2 text-xs text-emerald-900">इस पेज पर {draft.addedComponents?.[pageId]?.length || 0} Added Component मौजूद हैं।</p><button type="button" onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="w-full rounded-lg bg-emerald-700 p-2.5 text-xs font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Current Draft'}</button><p className="mt-2 text-[11px] text-emerald-900">केवल Draft सेव होगा; Live वेबसाइट publish नहीं होगी।</p></div>}</div>}
           <p className="mt-2 text-[9px] leading-4 text-slate-500">{notice || 'Changes appear immediately in this Preview. Cloud Draft save never publishes the Live website.'}</p>
         </aside>}
-      </>, document.body)}
+      </div>
     </div>
   );
 };
