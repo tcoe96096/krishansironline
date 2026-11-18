@@ -25,7 +25,7 @@ type ModuleId =
 
 const modules: { id: ModuleId; label: string; labelHi: string; group: string; icon: React.ElementType; description: string }[] = [
   { id: 'overview', label: 'Dashboard Overview', labelHi: 'डैशबोर्ड सारांश', group: 'MAIN', icon: LayoutDashboard, description: 'Platform overview, key indicators and quick actions.' },
-  { id: 'website', label: 'Website Publishing & History', labelHi: 'वेबसाइट प्रकाशन एवं इतिहास', group: 'CONTENT & ACADEMICS', icon: History, description: 'View website draft and published versions. All editing and publishing actions are handled in the single Visual Website Studio.' }
+  { id: 'website', label: 'Website Publishing & History', labelHi: 'वेबसाइट प्रकाशन एवं इतिहास', group: 'CONTENT & ACADEMICS', icon: History, description: 'View website draft and published versions. All editing and publishing actions are handled in the single Visual Website Studio.' },
   { id: 'visualStudio', label: 'Main Visual Website Editor', labelHi: 'मुख्य विजुअल वेबसाइट एडिटर', group: 'CONTENT & ACADEMICS', icon: Monitor, description: 'The one interactive website editor with floating components, media library, inspector and safe cloud drafts.' },
   { id: 'academic', label: 'Academic Management', labelHi: 'शैक्षणिक प्रबंधन', group: 'CONTENT & ACADEMICS', icon: GraduationCap, description: 'Manage classes, courses, subjects and chapters.' },
   { id: 'materials', label: 'Study Materials', labelHi: 'अध्ययन सामग्री', group: 'CONTENT & ACADEMICS', icon: BookOpen, description: 'Manage PPT, PDF, video and notes with separate access, publish, view and download permissions.' },
