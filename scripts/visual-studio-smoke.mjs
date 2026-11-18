@@ -276,7 +276,7 @@ try {
   await effects.getByRole('combobox', { name: 'Entrance Animation' }).selectOption('fade');
   await effects.getByRole('combobox', { name: 'Visual Filter' }).selectOption('grayscale');
   await effects.getByRole('combobox', { name: 'Hover Animation' }).selectOption('lift');
-  const title = draftFrame.getByRole('heading', { name: 'Class 10 Sample Lesson' });
+  const title = draftFrame.locator('h1').filter({ hasText: 'Class 10 Sample Lesson' }).first();
   assert.equal(await title.getAttribute('data-studio-animation'), 'fade');
   assert.equal(await title.getAttribute('data-studio-hover'), 'lift');
   assert.match(await title.evaluate(element => element.style.filter), /grayscale/);
