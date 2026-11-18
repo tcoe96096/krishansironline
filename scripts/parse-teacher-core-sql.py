@@ -16,3 +16,22 @@ for name in CORE:
     except Exception as error:
         raise SystemExit(f"FAIL: {path.name}: {error}") from error
     print(f"PASS: parse-only (no DB calls): {path.name}")
+
+# Additional Teacher v2 security proposals and read-only preflight are parsed
+# as syntax only. Never establish a database connection or execute statements.
+ADDITIONAL = (
+    "teacher_v2_independent_verification_REVIEW_ONLY.sql",
+    "teacher_v2_verification_writer_REVIEW_ONLY.sql",
+    "teacher_v2_review_independent_evidence_OVERRIDE_REVIEW_ONLY.sql",
+    "teacher_v2_rpc_effective_privileges_PREFLIGHT_READ_ONLY.sql",
+)
+for name in ADDITIONAL:
+    path = root / "docs" / "proposed-migrations" / name
+    source = path.read_text(encoding="utf-8")
+    if "REVIEW ONLY" not in source.upper() or not any(marker in source.upper() for marker in ("DO NOT", "NOT EXECUTED", "NEVER EXECUTE")):
+        raise SystemExit(f"FAIL: {name} missing review-only warning")
+    try:
+        parse_sql(source)
+    except Exception as error:
+        raise SystemExit(f"FAIL: {name}: {error}") from error
+    print(f"PASS: parse-only (no DB calls): {name}")
