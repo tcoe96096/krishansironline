@@ -6,7 +6,7 @@ import {AdminTeacherDirectoryV2} from '../src/components/AdminTeacherDirectoryV2
 import {teacherBetaEnabled} from '../src/lib/teacherBetaFlags';
 import {requireSupabase} from '../src/lib/supabase';
 import {teacherCall} from '../src/services/teacherManagement';
-import {teacherLoginCallback} from '../src/lib/teacherLoginCallback';
+import {teacherDashboardLoginCallback, teacherLoginCallback} from '../src/lib/teacherLoginCallback';
 import {TeacherRegistrationDesignPreview} from './TeacherRegistrationDesignPreview';
 import {TeacherDashboardOverview} from './TeacherDashboardOverview';
 import {teacherPageFromPath, teacherPagePath, type TeacherPage} from './teacherRoutes';
@@ -41,10 +41,11 @@ function TeacherBetaPortal(){
     setPage(next);setError('');
     window.scrollTo({top:0,behavior:'instant'});
   }
-  async function signInTeacher(){
-    // The same-origin callback is the authenticated registration workspace.
+  async function signInTeacher(target:'registration'|'dashboard'='dashboard'){
+    // An applicant returns to registration; existing accounts return to Dashboard.
     // Google OAuth creates a login identity, never an approved Teacher role.
-    const redirectTo=teacherLoginCallback(window.location.origin,import.meta.env.BASE_URL||'/');
+    const origin=window.location.origin,base=import.meta.env.BASE_URL||'/';
+    const redirectTo=target==='registration'?teacherLoginCallback(origin,base):teacherDashboardLoginCallback(origin,base);
     const {error:oauthError}=await requireSupabase().auth.signInWithOAuth({provider:'google',options:{redirectTo}});
     if(oauthError)throw oauthError;
   }
@@ -121,7 +122,7 @@ function TeacherBetaPortal(){
             <p className="mt-1 text-sm text-slate-600">Separate from Login and Dashboard. New applications require a signed-in identity and independent Admin approval.</p>
           </div>
           {user&&!demo?<TeacherManagementV2 key={user.id}/>:<TeacherRegistrationDesignPreview/>}
-          {(!user&&!demo)&&<button disabled={!configured} onClick={()=>void signInTeacher().catch(()=>setError('Google login unavailable. Please try again.'))} className={actionClass+' disabled:opacity-50'}>Sign in to Apply</button>}
+          {(!user&&!demo)&&<button disabled={!configured} onClick={()=>void signInTeacher('registration').catch(()=>setError('Google login unavailable. Please try again.'))} className={actionClass+' disabled:opacity-50'}>Sign in to Apply</button>}
           <button type="button" onClick={()=>go('login')} className={secondaryClass}>Go to Login Page</button>
         </section>}
 
