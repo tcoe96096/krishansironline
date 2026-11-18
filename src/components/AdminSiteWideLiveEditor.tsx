@@ -63,6 +63,11 @@ const textLeaf = (element: Element) =>
   element.children.length === 0 && Boolean(element.textContent?.trim()) &&
   !element.closest('form,[data-visual-editor-protected]') && !protectedElement(element);
 const selectable = (element: Element) => !['HTML','BODY','SCRIPT','STYLE','INPUT','TEXTAREA','SELECT','OPTION','SVG'].includes(element.tagName) && !protectedElement(element);
+// Design previews may style a protected form control's appearance without reading values,
+// changing attributes, submitting forms or mutating the production app's behavior.
+const protectedDesignTarget = (element: Element) =>
+  ['FORM','LABEL','INPUT','TEXTAREA','SELECT','BUTTON'].includes(element.tagName) &&
+  !element.closest('[data-visual-editor-protected],[data-visual-editor-ui]');
 const hex = (value: string, fallback: string) => {
   if (/^#[0-9a-f]{6}$/i.test(value)) return value;
   if (value.trim().toLowerCase() === 'transparent') return fallback;
@@ -332,7 +337,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     Object.values(draft.pages[pageId] || {}).forEach(item => {
       if (!safeSelector(item.selector)) return;
       const element = doc.querySelector(item.selector) as HTMLElement | null;
-      if (!element || protectedElement(element)) return;
+      if (!element || (protectedElement(element) && !(designOnly && protectedDesignTarget(element)))) return;
       if (item.textEditable && textLeaf(element)) element.textContent = (item.text || '').slice(0, 2000);
       const s = item.style;
       element.style.color = s.color;
@@ -358,7 +363,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       } else addDomNode(doc, item);
     });
     return () => { current = false; };
-  }, [ready, draft, pageId, user?.id]);
+  }, [ready, draft, pageId, user?.id, designOnly]);
 
   useEffect(() => {
     if (!ready) return;
@@ -396,8 +401,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
         event.stopPropagation();
         event.stopImmediatePropagation();
       }
-      const candidate = clicked.closest<HTMLElement>('h1,h2,h3,h4,h5,h6,p,li,span,strong,em,button,a,img,section,article,header,footer,main,aside,nav,figure,div');
-      if (!candidate || !selectable(candidate) || candidate === doc.body || candidate.id === 'root') return;
+      const candidate = clicked.closest<HTMLElement>('h1,h2,h3,h4,h5,h6,p,li,span,strong,em,button,a,img,input,select,textarea,label,form,section,article,header,footer,main,aside,nav,figure,div');
+      if (!candidate || !(selectable(candidate) || (designOnly && protectedDesignTarget(candidate))) || candidate === doc.body || candidate.id === 'root') return;
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
       if (targetRef.current) targetRef.current.style.outline = originalOutlineRef.current;
       active = candidate; targetRef.current = candidate;
@@ -458,7 +463,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   useEffect(() => {
     if (!ready || !selected) return;
     const element = targetRef.current;
-    if (!element || protectedElement(element)) return;
+    if (!element || (protectedElement(element) && !(designOnly && protectedDesignTarget(element)))) return;
     if (selected.textEditable) element.textContent = selected.text.slice(0, 2000);
     element.style.color = style.color;
     // Selection must never paint a transparent or gradient frame black (or any other colour).
@@ -482,7 +487,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       if (!current || (Math.abs(current.width - rect.width) < 0.5 && Math.abs(current.height - rect.height) < 0.5)) return current;
       return { ...current, width: rect.width, height: rect.height };
     });
-  }, [ready, selected?.text, style]);
+  }, [ready, selected?.text, style, designOnly]);
 
   const applySmartPreset = (preset: StudioDesignPreset) => {
     if (!selected) { setNotice('First select any text, card, button or section.'); return; }
@@ -572,6 +577,62 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     replaceComponents(next, 'Component reordered');
   };
 
+  // Direct canvas reordering is restricted to Studio-owned nodes in the SAME parent.
+  // Never mutate, drag, extract or rewrite native login/test/admin application markup.
+  useEffect(() => {
+    if (!ready) return;
+    const doc = iframe.current?.contentDocument;
+    if (!doc) return;
+    const nodes = Array.from(doc.querySelectorAll<HTMLElement>('[data-builder-component-id]'));
+    nodes.forEach(node => { node.draggable = true; node.title = 'Drag to move this Studio Component within its section'; });
+    let movingId: string | null = null;
+    const dragStart = (event: DragEvent) => {
+      const target = event.target;
+      const owned = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
+      if (!owned?.dataset.builderComponentId) return;
+      movingId = owned.dataset.builderComponentId;
+      event.dataTransfer?.setData('text/plain', movingId);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    };
+    const dragOver = (event: DragEvent) => {
+      if (!movingId) return;
+      const target = event.target;
+      const dest = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
+      if (!dest || dest.dataset.builderComponentId === movingId) return;
+      const from = pageComponents.find(item => item.id === movingId);
+      const to = pageComponents.find(item => item.id === dest.dataset.builderComponentId);
+      if (!from || !to || from.parentSelector !== to.parentSelector) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    };
+    const drop = (event: DragEvent) => {
+      if (!movingId) return;
+      const target = event.target;
+      const dest = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
+      const source = movingId;
+      movingId = null;
+      if (!dest?.dataset.builderComponentId || source === dest.dataset.builderComponentId) return;
+      const from = pageComponents.find(item => item.id === source);
+      const to = pageComponents.find(item => item.id === dest.dataset.builderComponentId);
+      if (!from || !to || from.parentSelector !== to.parentSelector) return;
+      event.preventDefault();
+      event.stopPropagation();
+      reorderOwnedComponents(source, dest.dataset.builderComponentId);
+    };
+    const dragEnd = () => { movingId = null; };
+    doc.addEventListener('dragstart', dragStart, true);
+    doc.addEventListener('dragover', dragOver, true);
+    doc.addEventListener('drop', drop, true);
+    doc.addEventListener('dragend', dragEnd, true);
+    return () => {
+      doc.removeEventListener('dragstart', dragStart, true);
+      doc.removeEventListener('dragover', dragOver, true);
+      doc.removeEventListener('drop', drop, true);
+      doc.removeEventListener('dragend', dragEnd, true);
+      nodes.forEach(node => { node.removeAttribute('draggable'); node.removeAttribute('title'); });
+    };
+  }, [ready, pageId, pageComponents]);
+
   const insertComponent = (kind: Kind, asset?: Media) => {
     const doc = iframe.current?.contentDocument;
     if (!doc) return;
@@ -660,12 +721,12 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       const classes = typeof node.className === 'string'
         ? node.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(value => '.' + value.slice(0, 25)).join('')
         : '';
-      return { selector: selectorFor(node), tag: name, label: (name + id + classes).slice(0, 95), readOnly: !selectable(node) };
+      return { selector: selectorFor(node), tag: name, label: (name + id + classes).slice(0, 95), readOnly: !(selectable(node) || (designOnly && protectedDesignTarget(node))) };
     }));
   };
   useEffect(() => {
     if (ready && explorerOpen) refreshElementExplorer();
-  }, [ready, explorerOpen, pageId, draft.addedComponents]);
+  }, [ready, explorerOpen, pageId, draft.addedComponents, designOnly]);
 
   const selectExplorerElement = (item: ExplorerItem) => {
     if (item.readOnly || !safeSelector(item.selector)) {
@@ -918,6 +979,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
               <code className="mt-1 block break-all text-[10px] text-slate-500">{selected.selector}</code>
               <button type="button" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(selected.selector).then(() => setNotice('Selector copied to clipboard.')).catch(() => setNotice('Clipboard access unavailable.')); }} className="mt-2 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-sky-800">Copy Selector</button>
             </div>
+            {designOnly && ['form','label','input','textarea','select'].includes(selected.tag) && <p data-testid="protected-design-note" className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] font-semibold text-amber-900">Visual-only design: form data, answers, credentials and actions cannot be edited. Changes on protected routes are not published to functional app pages.</p>}
             {selected.textEditable && <label className="block text-[10px] font-semibold text-slate-600">Text / Content<textarea rows={3} value={selected.text} onChange={event => setSelected(current => current ? { ...current, text: event.target.value } : current)} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>}
             <label className="block text-[10px] font-semibold text-slate-600">Text Colour<input type="color" value={style.color} onChange={event => setStyle(current => ({ ...current, color: event.target.value }))} className="mt-1 h-8 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Background · {style.backgroundColor === 'original' ? 'Original (unchanged)' : 'Custom colour'}<input aria-label="Background colour" type="color" value={style.backgroundColor === 'original' ? backgroundSwatch : style.backgroundColor} onChange={event => setStyle(current => ({ ...current, backgroundColor: event.target.value }))} className="mt-1 h-8 w-full"/></label>

@@ -173,6 +173,13 @@ try {
   }, beforeOrder[1], { timeout: 10000 });
   await page.getByTestId('studio-element-explorer').getByRole('button', { name: 'Close Element Explorer' }).click();
   console.log('PASS: Drag & Drop reorder of editor-owned components in the same section');
+  const beforeCanvas = await frame.locator('[data-builder-component-id]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-builder-component-id')));
+  assert.equal(await frame.locator('[data-builder-component-id]').first().getAttribute('draggable'), 'true');
+  await frame.locator('[data-builder-component-id]').first().dragTo(frame.locator('[data-builder-component-id]').nth(1));
+  await page.waitForFunction(expected => document.querySelector('iframe[title^="Interactive website editor"]')?.contentDocument
+    ?.querySelector('[data-builder-component-id]')?.getAttribute('data-builder-component-id') === expected,
+    beforeCanvas[1], { timeout: 10000 });
+  console.log('PASS: Direct Canvas Drag & Drop reorders owned components without moving native page controls');
   await managed.getByRole('button', { name: 'Delete component' }).click();
   assert.equal(await frame.locator('[data-builder-component-id]').count(), 1);
   await toolbar.getByRole('button', { name: 'Undo added component' }).click();
@@ -204,6 +211,29 @@ try {
   const testsSrc = await page.locator('iframe[title^="Interactive website editor"]').getAttribute('src');
   assert.match(testsSrc || '', /online-tests/);
   console.log('PASS: Page switching, responsive controls, and protected routes in design-only mode');
+  await frame.locator('main').first().waitFor({ timeout: 15000 });
+  await frame.locator('main').first().evaluate(main => {
+    const form = document.createElement('form');
+    form.dataset.studioTestForm = 'visual-only';
+    const label = document.createElement('label');
+    label.textContent = 'Protected test field';
+    const input = document.createElement('input');
+    input.dataset.studioTestControl = 'field';
+    input.type = 'text';
+    input.value = 'keep-original-value';
+    label.appendChild(input);
+    form.appendChild(label);
+    main.prepend(form);
+  });
+  const protectedField = frame.locator('[data-studio-test-control="field"]');
+  await protectedField.click();
+  await page.getByTestId('protected-design-note').waitFor({ timeout: 10000 });
+  assert.equal(await protectedField.inputValue(), 'keep-original-value', 'Selecting a protected input must not modify its value.');
+  assert.equal(await inspector.getByRole('textbox', { name: 'Text / Content' }).count(), 0, 'Protected form controls must not permit text/value editing.');
+  await inspector.locator('input[aria-label="Background colour"]').fill('#345678');
+  assert.equal(await protectedField.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(52, 86, 120)');
+  assert.equal(await protectedField.inputValue(), 'keep-original-value');
+  console.log('PASS: Protected Test Page form/input design preview can be styled without editing data or functional actions');
 
   // Draft new page: demo mode never writes to Supabase or publishes a route.
   await page.getByRole('button', { name: 'Add New Page' }).click();
