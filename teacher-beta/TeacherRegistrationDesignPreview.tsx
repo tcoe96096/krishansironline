@@ -1,3 +1,4 @@
+import {TeacherPhotoPicker} from './TeacherProfilePhoto';
 /** A separate, visual-only teacher registration page.
  * No auth, persistence, or privileged operations run in this demo.
  * The actual application form is displayed only to signed-in teachers once
@@ -13,7 +14,7 @@ function DemoField({label,value}:{label:string;value:string}){
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">{value}</div>
   </div>;
 }
-export function TeacherRegistrationDesignPreview(){
+export function TeacherRegistrationDesignPreview({photoUrl,onPhotoSelected,onRemovePhoto}:{photoUrl:string|null;onPhotoSelected:(file:File)=>void;onRemovePhoto:()=>void}){
   return <section className="mx-auto max-w-4xl space-y-5" aria-label="Visual preview of Teacher Registration form">
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
       <div className="mb-6 flex items-center gap-3">
@@ -30,6 +31,7 @@ export function TeacherRegistrationDesignPreview(){
         <DemoField label="Phone" value="Not provided"/>
         <DemoField label="Experience" value="3 years (example)"/>
       </div>
+      <div className="mt-5"><TeacherPhotoPicker teacherName="Example Teacher" photoUrl={photoUrl} onPhotoSelected={onPhotoSelected} onRemove={onRemovePhoto}/></div>
       <section className="mt-5 rounded-2xl border border-slate-200 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-bold text-slate-900">Qualifications</h3>
