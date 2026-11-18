@@ -20,7 +20,7 @@ SELECT signature,expected_caller,
        CASE WHEN function_oid IS NULL THEN NULL
             ELSE p.prosecdef END AS security_definer,
        CASE WHEN function_oid IS NULL THEN NULL
-            ELSE has_function_privilege('PUBLIC',function_oid,'EXECUTE') END AS public_can_execute,
+            ELSE EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee=0 AND a.privilege_type='EXECUTE') END AS public_can_execute,
        CASE WHEN function_oid IS NULL THEN NULL
             ELSE has_function_privilege('anon',function_oid,'EXECUTE') END AS anon_can_execute,
        CASE WHEN function_oid IS NULL THEN NULL
@@ -34,7 +34,7 @@ SELECT n.nspname AS schema_name,p.proname AS function_name,
        p.oid::regprocedure::text AS signature,
        pg_get_userbyid(p.proowner) AS function_owner,
        p.prosecdef AS security_definer,
-       has_function_privilege('PUBLIC',p.oid,'EXECUTE') AS public_can_execute,
+       EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee=0 AND a.privilege_type='EXECUTE') AS public_can_execute,
        has_function_privilege('anon',p.oid,'EXECUTE') AS anon_can_execute,
        has_function_privilege('authenticated',p.oid,'EXECUTE') AS authenticated_can_execute
 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
