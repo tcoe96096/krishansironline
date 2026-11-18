@@ -33,7 +33,6 @@ export function TeacherRegistrationDesignPreview(){
      <h3 className="font-bold text-slate-900">Requested teaching assignments</h3><p className="mt-1 text-xs text-slate-500">One teacher can request multiple classes and subjects. Assignments require Super Admin approval.</p>
      <div className="mt-3 flex flex-wrap gap-2">{exampleScopes.map(s=><span key={s.classLevel+s.subject} className="rounded-full border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900">Class {s.classLevel} · {s.subject}</span>)}</div>
     </div>
-    <DemoField label="Reason for applying" value="I would like to contribute teaching materials (example)."/>
     <div className="flex flex-wrap gap-3"><span className="rounded-xl border border-sky-900 px-4 py-3 text-sm font-bold text-sky-900">Save draft · disabled</span><span className="rounded-xl bg-sky-900 px-4 py-3 text-sm font-bold text-white opacity-65">Submit for Review · disabled</span></div>
    </section>
    <div className="space-y-5">
