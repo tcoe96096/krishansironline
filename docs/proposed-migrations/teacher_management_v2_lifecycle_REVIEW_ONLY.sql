@@ -47,7 +47,8 @@ BEGIN
  IF jsonb_typeof(p_profile) IS DISTINCT FROM 'object' OR jsonb_typeof(p_qualifications) IS DISTINCT FROM 'array'
  OR jsonb_array_length(p_qualifications)>20 OR jsonb_typeof(p_scopes) IS DISTINCT FROM 'array'
  OR jsonb_array_length(p_scopes)>60 OR p_submit IS NULL
- OR (p_submit AND (p_reason IS NULL OR char_length(btrim(p_reason)) NOT BETWEEN 12 AND 1000 OR jsonb_array_length(p_scopes)=0)) THEN
+ OR (p_submit AND jsonb_array_length(p_scopes)=0)
+ OR (p_reason IS NOT NULL AND char_length(btrim(p_reason))>1000) THEN
  RAISE EXCEPTION 'Invalid application' USING ERRCODE='22023'; END IF;
  -- Never let an applicant change a Super Admin-owned legacy grant.
  IF to_regclass('public.result_staff_grants') IS NOT NULL THEN
@@ -73,7 +74,7 @@ BEGIN
  DELETE FROM public.teacher_qualifications WHERE teacher_user_id=v_actor;
  INSERT INTO public.teacher_qualifications(teacher_user_id,title,institution,passing_year)
  SELECT v_actor,btrim(value->>'title'),btrim(value->>'institution'),(value->>'year')::integer FROM jsonb_array_elements(p_qualifications);
- UPDATE public.teacher_profiles SET revision=revision+1,requested_scopes=p_scopes,application_reason=btrim(p_reason),
+ UPDATE public.teacher_profiles SET revision=revision+1,requested_scopes=p_scopes,application_reason=NULLIF(btrim(p_reason),''),
  submitted_at=CASE WHEN p_submit THEN now() ELSE NULL END,updated_at=now() WHERE user_id=v_actor RETURNING revision INTO v_revision;
  INSERT INTO public.teacher_audit_events(actor_user_id,teacher_user_id,action,reason,details)
  VALUES(v_actor,v_actor,CASE WHEN p_submit THEN 'application.submitted' ELSE 'profile.saved' END,'Applicant saved own teacher application',jsonb_build_object('revision',v_revision));
