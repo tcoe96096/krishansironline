@@ -6,7 +6,7 @@ type Draft = {heading:string;session:string;student:string;roll:string;classLeve
 const initial:Draft = {heading:'KRISHAN SIR ONLINE LEARNING',session:'2026–27',student:'Demo Student / उदाहरण विद्यार्थी',roll:'DEMO-001',classLevel:'10',remarks:'Only a sample / केवल उदाहरण',rows:[{id:1,subject:'Political Science',maximum:'100',obtained:'82'}]};
 const sanitize=(v:string,max=120)=>v.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'').slice(0,max);
 export function mockMarksTotal(rows:Row[]){
-  if(!rows.length||rows.some(r=>!/^\d{1,3}(?:\.\d{1,2})?$/.test(r.maximum)||!/^\d{1,3}(?:\.\d{1,2})?$/.test(r.obtained)||Number(r.maximum)<=0||Number(r.maximum)>1000||Number(r.obtained)>Number(r.maximum)))return null;
+  if(!rows.length||rows.length>12||rows.some(r=>!r.subject.trim()||r.subject.trim().length>80||!/^\d{1,3}(?:\.\d{1,2})?$/.test(r.maximum)||!/^\d{1,3}(?:\.\d{1,2})?$/.test(r.obtained)||Number(r.maximum)<=0||Number(r.maximum)>1000||Number(r.obtained)>Number(r.maximum)))return null;
   return rows.reduce((a,r)=>({maximum:a.maximum+Number(r.maximum),obtained:a.obtained+Number(r.obtained)}),{maximum:0,obtained:0});
 }
 export const MockResultCardDesigner:React.FC=()=>{
