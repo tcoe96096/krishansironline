@@ -281,7 +281,7 @@ const MainApp: React.FC = () => {
         onOpenAuth={() => setIsAuthOpen(true)}
       />}
 
-      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} showTeacherPreview={activePage === 'home'} />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">

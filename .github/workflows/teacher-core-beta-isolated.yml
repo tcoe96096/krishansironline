@@ -17,7 +17,7 @@ jobs:
       - name: TypeScript validation
         run: npm run lint
       - name: Teacher Core Beta unit tests
-        run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts tests/teacherCoreSecurity.test.ts tests/teacherLoginCallback.test.ts
+        run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts tests/teacherCoreSecurity.test.ts tests/teacherLoginCallback.test.ts tests/teacherPortalRouteSeparation.test.ts tests/teacherProfilePhoto.test.ts tests/teacherDashboardModel.test.ts
       - name: Teacher v2 migration and independent verification static security tests
         run: node --import tsx --test tests/teacherV2MigrationSafety.test.ts tests/teacherV2IndependentVerification.test.ts tests/teacherV2RpcGrantAudit.test.ts tests/teacherV2ReadOnlyPreflight.test.ts
       - uses: actions/setup-python@v5
@@ -54,6 +54,9 @@ jobs:
           test -s dist/teacher-beta/index.html
           test -s dist/teacher-beta/admin/index.html
           test -s dist/teacher-beta/staff-workspace/index.html
+          test -s dist/teacher-beta/registration/index.html
+          test -s dist/teacher-beta/login/index.html
+          test -s dist/teacher-beta/dashboard/index.html
           test -s dist/index.html
           test -s dist/admin/index.html
       - name: Rebuild mock portal for browser contract tests
@@ -69,6 +72,9 @@ jobs:
         run: |
           test -f teacher-beta-dist/index.html
           test -f teacher-beta-dist/staff-workspace/index.html
+          test -f teacher-beta-dist/registration/index.html
+          test -f teacher-beta-dist/login/index.html
+          test -f teacher-beta-dist/dashboard/index.html
           test -f teacher-beta-dist/admin/index.html
           ! grep -R -l 'teacher-resume' teacher-beta-dist/assets
       - run: npm install --no-save --legacy-peer-deps playwright
@@ -86,3 +92,25 @@ jobs:
           TEACHER_TEST_BASE_URL: http://127.0.0.1:4177/teacher-beta
           TEACHER_TEST_PORTAL: 'true'
         run: node scripts/teacher-management-smoke.mjs
+
+      - name: Build visual-only Registration and Dashboard photo Preview
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts
+      - name: Start local Registration photo preview (mock network only)
+        run: |
+          npx vite preview --config vite.teacher-beta.config.ts --port 4178 --host 127.0.0.1 > /tmp/teacher-photo.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4178/teacher-beta/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Browser Registration photo -> Login -> Dashboard demo, no persistence
+        env:
+          TEACHER_VISUAL_TEST_BASE_URL: http://127.0.0.1:4178/teacher-beta
+        run: node scripts/teacher-registration-photo-preview-smoke.mjs

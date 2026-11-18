@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {teacherLoginCallback} from '../src/lib/teacherLoginCallback';
+import {teacherLoginCallback,teacherDashboardLoginCallback} from '../src/lib/teacherLoginCallback';
 test('default portal redirects to its staff workspace',()=>{
  assert.equal(teacherLoginCallback('https://example.org','/teacher-beta/'),'https://example.org/teacher-beta/staff-workspace/');
 });
@@ -39,4 +39,15 @@ test('OAuth callback rejects origins normalized silently by URL parser',()=>{
 });
 test('OAuth callback accepts canonical origin with trailing slash',()=>{
  assert.equal(teacherLoginCallback('https://example.org/','/teacher-beta/'),'https://example.org/teacher-beta/staff-workspace/');
+});
+
+test('returning teacher Google login targets the same-origin dashboard, not the registration form',()=>{
+  assert.equal(teacherDashboardLoginCallback('https://example.org','/teacher-beta/'),
+    'https://example.org/teacher-beta/dashboard/');
+  assert.equal(teacherDashboardLoginCallback('https://tcoe96096.github.io','/krishansironline-preview-unified/teacher-beta/'),
+    'https://tcoe96096.github.io/krishansironline-preview-unified/teacher-beta/dashboard/');
+});
+test('dashboard callback inherits strict same-origin and traversal protections',()=>{
+  for(const value of ['https://attacker.test/','//attacker.test/','/teacher-beta/../admin/','/teacher-beta/%2e%2e/'])
+    assert.throws(()=>teacherDashboardLoginCallback('https://example.org',value),/Invalid teacher login base path/);
 });

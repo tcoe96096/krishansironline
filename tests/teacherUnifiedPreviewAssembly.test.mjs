@@ -13,9 +13,9 @@ function fixture(base='/krishansironline-preview-unified/teacher-beta/'){
  mkdirSync(join(site,'admin'));
  writeFileSync(join(site,'index.html'),'original site');
  writeFileSync(join(site,'admin','index.html'),'original admin');
- for(const path of ['staff-workspace','admin'])mkdirSync(join(beta,path));
+ for(const path of ['staff-workspace','registration','login','dashboard','admin'])mkdirSync(join(beta,path));
  const html='<html><script src="'+base+'assets/main.js"></script></html>';
- for(const path of ['index.html','staff-workspace/index.html','admin/index.html'])writeFileSync(join(beta,path),html);
+ for(const path of ['index.html','staff-workspace/index.html','registration/index.html','login/index.html','dashboard/index.html','admin/index.html'])writeFileSync(join(beta,path),html);
  return {root,site,beta};
 }
 function run(site,beta){return spawnSync(process.execPath,[script.pathname,site,beta],{encoding:'utf8'});}
@@ -23,7 +23,7 @@ test('assembles teacher portal without modifying existing pages',()=>{
  const f=fixture();
  try{
   const r=run(f.site,f.beta);assert.equal(r.status,0,r.stderr);
-  assert.ok(existsSync(join(f.site,'teacher-beta','admin','index.html')));
+  for (const page of ['registration','login','dashboard','staff-workspace','admin']) assert.ok(existsSync(join(f.site,'teacher-beta',page,'index.html')),page);
   assert.equal(readFileSync(join(f.site,'index.html'),'utf8'),'original site');
   assert.equal(readFileSync(join(f.site,'admin','index.html'),'utf8'),'original admin');
  }finally{rmSync(f.root,{recursive:true,force:true});}

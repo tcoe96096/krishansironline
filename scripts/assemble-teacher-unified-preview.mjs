@@ -12,7 +12,7 @@ const site=resolve(siteArg), beta=resolve(betaArg), destination=join(site,'teach
 for (const dir of [site,beta]) if (!existsSync(dir)||!statSync(dir).isDirectory()) throw Error('Missing build directory: '+dir);
 if (site===beta || site.startsWith(beta+sep) || beta.startsWith(site+sep)) throw Error('Build directories must be independent');
 if (existsSync(destination)) throw Error('Refusing to overwrite existing teacher-beta output');
-for (const path of ['index.html','staff-workspace/index.html','admin/index.html']) if (!existsSync(join(beta,path))) throw Error('Missing isolated portal route: '+path);
+for (const path of ['index.html','staff-workspace/index.html','registration/index.html','login/index.html','dashboard/index.html','admin/index.html']) if (!existsSync(join(beta,path))) throw Error('Missing isolated portal route: '+path);
 function checkTree(dir) {
  for(const item of readdirSync(dir)) {
   const p=join(dir,item),st=lstatSync(p);

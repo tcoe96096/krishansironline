@@ -22,7 +22,7 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  else if(op==='teacher_v2_snapshot'){if(denySnapshot){status=403;data={code:'42501'};}else if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
  else if(op==='teacher_v2_save_application'){
   writes.push({op,args});if(denySave){status=403;data={code:'42501'};}else{
-   profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason,decision_reason:null,reviewed_at:null,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
+   profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason||null,decision_reason:null,reviewed_at:null,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
   }
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
@@ -62,7 +62,7 @@ try{
  await panel.getByRole('button',{name:'Add qualification',exact:true}).click();
  await panel.getByLabel('title 1',{exact:true}).fill('MA History');await panel.getByLabel('institution 1',{exact:true}).fill('Test University');
  await panel.getByRole('button',{name:'Add scope',exact:true}).click();
- await panel.getByLabel('Application reason',{exact:true}).fill('Please verify my teaching application');
+ assert.equal(await panel.getByLabel('Application reason',{exact:true}).count(),0,'Applicants should not be asked for a reason');
  denySave=true;await panel.getByRole('button',{name:'Save profile draft',exact:true}).click();await panel.getByRole('alert').waitFor();
  assert.equal(await panel.getByText('Profile draft saved.',{exact:true}).count(),0);
  denySave=false;await panel.getByRole('button',{name:'Save profile draft',exact:true}).click();
@@ -111,7 +111,7 @@ try{
  assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,true);
  assert.deepEqual(writes.at(-1).args.p_assignments,[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
  // Core Beta deliberately excludes the optional material editor.
- await page.goto(base+'/staff-workspace/');
+ await page.goto(base+'/dashboard/');
  await page.getByRole('heading',{name:'My Teacher Dashboard',exact:true}).waitFor();
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  await page.goto(base+'/admin/');
@@ -147,8 +147,9 @@ try{
  await page.goto(base+'/staff-workspace/');
  await panel.getByText('Last review note: Qualification documents require correction',{exact:true}).waitFor();
  assert.equal(await page.getByRole('region',{name:'Teacher enrollment request',exact:true}).count(),0,'Rejected v2 applicants must not see duplicate enrollment');
- legacyGrant=true;await page.reload();
+ legacyGrant=true;await page.goto(base+'/dashboard/');
  await page.getByRole('heading',{name:'My Teacher Dashboard',exact:true}).waitFor();
+ await page.goto(base+'/staff-workspace/');
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  assert.equal(await panel.locator('input[type=file]').count(),0);
  assert.equal(await panel.getByRole('button',{name:'Review result summary'}).count(),0);
@@ -158,7 +159,15 @@ try{
  if(process.env.TEACHER_TEST_PORTAL==='true'){
   for(const forbidden of ['result_staff_grants','study_material_items','test_attempts','teacher_v2_result_summary','teacher-resume'])assert.equal(requestPaths.some(path=>path.includes(forbidden)),false,forbidden);
   const loggedOut=await browser.newContext();const anonymousPage=await loggedOut.newPage();
-  await anonymousPage.goto(base+'/');await anonymousPage.getByRole('heading',{name:'Teacher Google Login',exact:true}).waitFor();
+  await anonymousPage.goto(base+'/');
+  await anonymousPage.getByRole('button',{name:'Open Registration Page',exact:true}).click();
+  await anonymousPage.getByRole('heading',{name:'Teacher Registration Form',exact:true}).waitFor();
+  assert.ok(anonymousPage.url().endsWith('/registration/'));
+  await anonymousPage.getByRole('button',{name:'Go to Login Page',exact:true}).click();
+  await anonymousPage.getByRole('heading',{name:'Teacher Google Login',exact:true}).waitFor();
+  assert.ok(anonymousPage.url().endsWith('/login/'));
+  await anonymousPage.getByRole('button',{name:'Teacher Dashboard',exact:true}).click();
+  await anonymousPage.getByRole('heading',{name:'Login required for Teacher Dashboard',exact:true}).waitFor();
   assert.equal(await anonymousPage.getByRole('button',{name:'Submit for Admin Review',exact:true}).count(),0);
   await loggedOut.close();
  }
