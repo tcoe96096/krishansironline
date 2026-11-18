@@ -673,7 +673,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
 
   const extractSelectedStaticContent = () => {
     const element = targetRef.current;
-    if (!element || !selected || designOnly || !selected.textEditable || !textLeaf(element) || protectedElement(element)) {
+    if (!element || !selected || designOnly || !selected.textEditable || !/^(H[1-6]|P|LI|SPAN|STRONG|EM)$/.test(element.tagName) || !textLeaf(element) || protectedElement(element)) {
       setNotice('Only static public-page text can be extracted. Protected forms, inputs and app behavior are excluded.');
       return;
     }
@@ -1017,7 +1017,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
               <button type="button" onClick={() => { if (navigator.clipboard) void navigator.clipboard.writeText(selected.selector).then(() => setNotice('Selector copied to clipboard.')).catch(() => setNotice('Clipboard access unavailable.')); }} className="mt-2 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-sky-800">Copy Selector</button>
             </div>
             {designOnly && ['form','label','input','textarea','select'].includes(selected.tag) && <p data-testid="protected-design-note" className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] font-semibold text-amber-900">Visual-only design: form data, answers, credentials and actions cannot be edited. Changes on protected routes are not published to functional app pages.</p>}
-            {selected.textEditable && !designOnly && <button type="button" data-testid="studio-extract-static-text" onClick={extractSelectedStaticContent} className="w-full rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-bold text-violet-900">Extract as Editable Component</button>}
+            {selected.textEditable && !designOnly && /^(h[1-6]|p|li|span|strong|em)$/.test(selected.tag) && <button type="button" data-testid="studio-extract-static-text" onClick={extractSelectedStaticContent} className="w-full rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-bold text-violet-900">Extract as Editable Component</button>}
             {selected.textEditable && <label className="block text-[10px] font-semibold text-slate-600">Text / Content<textarea rows={3} value={selected.text} onChange={event => setSelected(current => current ? { ...current, text: event.target.value } : current)} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>}
             <label className="block text-[10px] font-semibold text-slate-600">Text Colour<input type="color" value={style.color} onChange={event => setStyle(current => ({ ...current, color: event.target.value }))} className="mt-1 h-8 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Background · {style.backgroundColor === 'original' ? 'Original (unchanged)' : 'Custom colour'}<input aria-label="Background colour" type="color" value={style.backgroundColor === 'original' ? backgroundSwatch : style.backgroundColor} onChange={event => setStyle(current => ({ ...current, backgroundColor: event.target.value }))} className="mt-1 h-8 w-full"/></label>
