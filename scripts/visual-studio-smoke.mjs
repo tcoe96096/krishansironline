@@ -47,6 +47,41 @@ try {
 
   const frame = page.frameLocator('iframe[title^="Interactive website editor"]');
   await frame.locator('main').first().waitFor({ timeout: 25000 });
+
+  // A real-page frame can inherit transparency or use a gradient. Merely selecting it
+  // must preserve the website's original background, including after inspector updates.
+  await frame.locator('main').first().evaluate(main => {
+    const transparent = document.createElement('section');
+    transparent.dataset.studioBackgroundTest = 'transparent';
+    transparent.textContent = 'Original transparent frame';
+    transparent.style.cssText = 'background-color:transparent;padding:20px;min-height:90px;color:#1f2937;';
+    const gradient = document.createElement('section');
+    gradient.dataset.studioBackgroundTest = 'gradient';
+    gradient.textContent = 'Original gradient frame';
+    gradient.style.cssText = 'background:linear-gradient(90deg,#0b3979,#0d9488);padding:20px;min-height:90px;color:white;';
+    main.prepend(transparent, gradient);
+  });
+  const transparentFrame = frame.locator('[data-studio-background-test="transparent"]');
+  const gradientFrame = frame.locator('[data-studio-background-test="gradient"]');
+  const originalTransparent = await transparentFrame.evaluate(node => getComputedStyle(node).backgroundColor);
+  const originalGradient = await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage);
+  const originalGradientColor = await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor);
+  assert.match(originalTransparent, /^rgba\\(0, 0, 0, 0\\)$/);
+  assert.match(originalGradient, /linear-gradient/);
+  await transparentFrame.click();
+  assert.equal(await transparentFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalTransparent);
+  await gradientFrame.click();
+  assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage), originalGradient);
+  assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalGradientColor);
+  const backgroundInspector = page.locator('[data-visual-editor-ui="inspector-panel"]');
+  await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).waitFor({ timeout: 15000 });
+  assert.equal(await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).isDisabled(), true);
+  await backgroundInspector.getByRole('textbox', { name: 'Background colour' }).fill('#1240b0');
+  assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(18, 64, 176)');
+  await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).click();
+  assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalGradientColor);
+  assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage), originalGradient);
+  console.log('PASS: Transparent and gradient backgrounds stay original on selection, with explicit colour edit/reset');
   await components.getByRole('button', { name: /Heading/ }).click();
   await frame.locator('[data-builder-component-id]').first().waitFor({ timeout: 15000 });
   assert.match(await frame.locator('[data-builder-component-id]').first().innerText(), /New section heading/);
