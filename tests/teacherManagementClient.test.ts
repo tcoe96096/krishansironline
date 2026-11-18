@@ -10,6 +10,12 @@ test('atomic application payload preserves all qualifications and scoped work wi
  assert.equal(await client.save(profile,qualifications,scopes,' Please approve this teacher ',true),4);
  assert.deepEqual(calls,[{name:'teacher_v2_save_application',args:{p_profile:profile,p_qualifications:qualifications,p_scopes:scopes,p_reason:'Please approve this teacher',p_submit:true,p_expected_revision:null}}]);
 });
+test('submitting teaching scopes does not require an applicant reason',async()=>{
+ const calls:{name:string;args:Record<string,unknown>}[]=[];
+ const client=createTeacherClient(async(name,args)=>{calls.push({name,args});return {data:6,error:null};});
+ assert.equal(await client.save(profile,qualifications,scopes,'',true),6);
+ assert.deepEqual(calls,[{name:'teacher_v2_save_application',args:{p_profile:profile,p_qualifications:qualifications,p_scopes:scopes,p_reason:'',p_submit:true,p_expected_revision:null}}]);
+});
 test('invalid data, publication escalation and empty submissions never call the backend',async()=>{
  let calls=0;const client=createTeacherClient(async()=>{calls++;return {data:null,error:null};});
  await assert.rejects(client.save({...profile,experienceYears:-1},qualifications,scopes,'Valid application reason',true));
