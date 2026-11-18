@@ -58,9 +58,9 @@ try {
     await page.mouse.up();
   };
   const oldToolbarBounds = await controls.boundingBox();
-  await dragGrip(page.getByTestId('studio-toolbar-grip'), -45, 18);
+  await dragGrip(page.getByTestId('studio-toolbar-grip'), 45, 18);
   const movedToolbarBounds = await controls.boundingBox();
-  assert.ok(oldToolbarBounds && movedToolbarBounds && movedToolbarBounds.x < oldToolbarBounds.x - 20, 'Toolbar should be draggable.');
+  assert.ok(oldToolbarBounds && movedToolbarBounds && movedToolbarBounds.x > oldToolbarBounds.x + 20, 'Toolbar should be draggable.');
   const oldInspectorBounds = await propertiesPanel.boundingBox();
   await dragGrip(page.getByTestId('studio-inspector-grip'), -85, 35);
   const movedInspectorBounds = await propertiesPanel.boundingBox();
@@ -95,6 +95,19 @@ try {
 
   const frame = page.frameLocator('iframe[title^="Interactive website editor"]');
   await frame.locator('main').first().waitFor({ timeout: 25000 });
+  await toolbar.getByRole('button', { name: 'Element Explorer' }).click();
+  const explorer = page.getByTestId('studio-element-explorer');
+  await explorer.waitFor({ timeout: 12000 });
+  await explorer.getByRole('button', { name: /^Select / }).first().waitFor({ timeout: 12000 });
+  await explorer.getByRole('textbox', { name: 'Search page elements' }).fill('h1');
+  const firstH1 = explorer.getByRole('button', { name: /^Select h1/ }).first();
+  await firstH1.click();
+  const source = page.getByTestId('studio-source-inspector');
+  await source.waitFor({ timeout: 10000 });
+  assert.match(await source.innerText(), /body > /, 'Selected page element should expose its guarded CSS selector.');
+  await explorer.getByRole('button', { name: 'Close Element Explorer' }).click();
+  console.log('PASS: Element Explorer search, guarded element selection and read-only source selector');
+
 
   // A real-page frame can inherit transparency or use a gradient. Merely selecting it
   // must preserve the website's original background, including after inspector updates.
@@ -149,6 +162,17 @@ try {
   assert.match(await frame.locator('[data-builder-component-id]').first().innerText(), /Edited Website Heading/);
   await managed.getByRole('button', { name: 'Duplicate component' }).click();
   assert.equal(await frame.locator('[data-builder-component-id]').count(), 2);
+  const beforeOrder = await frame.locator('[data-builder-component-id]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-builder-component-id')));
+  await toolbar.getByRole('button', { name: 'Element Explorer' }).click();
+  const ownedRows = page.getByTestId('studio-element-explorer').getByTestId('studio-explorer-owned-row');
+  assert.equal(await ownedRows.count(), 2);
+  await ownedRows.nth(1).dragTo(ownedRows.nth(0));
+  await page.waitForFunction(expected => {
+    const frame = document.querySelector('iframe[title^="Interactive website editor"]');
+    return frame?.contentDocument?.querySelector('[data-builder-component-id]')?.getAttribute('data-builder-component-id') === expected;
+  }, beforeOrder[1], { timeout: 10000 });
+  await page.getByTestId('studio-element-explorer').getByRole('button', { name: 'Close Element Explorer' }).click();
+  console.log('PASS: Drag & Drop reorder of editor-owned components in the same section');
   await managed.getByRole('button', { name: 'Delete component' }).click();
   assert.equal(await frame.locator('[data-builder-component-id]').count(), 1);
   await toolbar.getByRole('button', { name: 'Undo added component' }).click();
