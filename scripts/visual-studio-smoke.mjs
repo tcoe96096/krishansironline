@@ -158,7 +158,7 @@ try {
   await mediaPanel.getByRole('button', { name: 'Close ×' }).click();
 
   await frame.locator('h1,h2,h3,p').first().click();
-  await inspector.getByRole('heading', { name: 'Properties Inspector' }).waitFor({ timeout: 15000 });
+  await inspector.getByRole('button', { name: 'Move Properties Inspector' }).waitFor({ timeout: 15000 });
   assert.equal(await inspector.getByRole('button', { name: 'Save Cloud Draft' }).isDisabled(), true);
   console.log('PASS: Element inspector and no unauthorized draft save');
 
