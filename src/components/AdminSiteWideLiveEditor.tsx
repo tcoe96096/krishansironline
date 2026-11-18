@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AlignLeft, BarChart3, BookOpen, ChevronDown, ChevronUp, Columns2, Copy, Download, HelpCircle, Image as ImageIcon, Megaphone, Minus, MousePointerClick, MoveVertical, Palette, Plus, Quote, Search, Settings2, Square, Trash2, Type, Video, Move, MoveDiagonal2 } from 'lucide-react';
 import { STUDIO_THEMES, safeStudioMediaUrl, studioYouTubeEmbed, type StudioDraftPage, type StudioTheme } from '../visual-editor/studioBuilder';
 import { STUDIO_ANIMATIONS, STUDIO_FILTERS, STUDIO_HOVERS, STUDIO_DESIGN_PRESETS, DEFAULT_STUDIO_EFFECT, applyStudioEffects, ensureStudioEffectsStyles, contrastTextForHex, safeStudioEffect, type StudioEffect, type StudioDesignPreset } from '../visual-editor/effects';
 import { supabase } from '../lib/supabase';
@@ -99,7 +100,62 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [managedComponentId, setManagedComponentId] = useState<string | null>(null);
   const [componentUndo, setComponentUndo] = useState<Record<string, Added[][]>>({});
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
-  const [inspectorPlacement, setInspectorPlacement] = useState<'side' | 'below'>('side');
+  const toolbarRootRef = useRef<HTMLDivElement>(null);
+  const inspectorRootRef = useRef<HTMLElement>(null);
+  const [toolbarPos, setToolbarPos] = useState(() => ({ x: Math.max(12, Math.round((window.innerWidth - 650) / 2)), y: 80 }));
+  const [inspectorPos, setInspectorPos] = useState(() => ({ x: Math.max(12, window.innerWidth - 372), y: 180 }));
+  const [inspectorSize, setInspectorSize] = useState(() => ({
+    width: Math.min(340, Math.max(240, window.innerWidth - 24)),
+    height: Math.min(520, Math.max(240, window.innerHeight - 200)),
+  }));
+  const clampToViewport = (position: number, size: number, viewport: number) =>
+    Math.max(8, Math.min(position, Math.max(8, viewport - size - 8)));
+  const startFloatingDrag = (event: React.PointerEvent<HTMLButtonElement>, kind: 'toolbar' | 'inspector') => {
+    if (event.button !== 0) return;
+    const rect = (kind === 'toolbar' ? toolbarRootRef.current : inspectorRootRef.current)?.getBoundingClientRect();
+    if (!rect) return;
+    event.preventDefault();
+    const startX = event.clientX, startY = event.clientY;
+    const onMove = (move: PointerEvent) => {
+      const x = clampToViewport(rect.left + move.clientX - startX, rect.width, window.innerWidth);
+      const y = clampToViewport(rect.top + move.clientY - startY, rect.height, window.innerHeight);
+      if (kind === 'toolbar') setToolbarPos({ x, y });
+      else setInspectorPos({ x, y });
+    };
+    const stop = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', stop, { once: true });
+    window.addEventListener('pointercancel', stop, { once: true });
+  };
+  const startInspectorResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const rect = inspectorRootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.preventDefault();
+    const startX = event.clientX, startY = event.clientY;
+    const onMove = (move: PointerEvent) => {
+      const availableWidth = Math.max(240, window.innerWidth - rect.left - 8);
+      const availableHeight = Math.max(240, window.innerHeight - rect.top - 8);
+      setInspectorSize({
+        width: Math.max(Math.min(280, availableWidth), Math.min(availableWidth, rect.width + move.clientX - startX)),
+        height: Math.max(Math.min(240, availableHeight), Math.min(availableHeight, rect.height + move.clientY - startY)),
+      });
+    };
+    const stop = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', stop, { once: true });
+    window.addEventListener('pointercancel', stop, { once: true });
+  };
+  useEffect(() => {
+    const ensureVisible = () => {
+      const toolbar = toolbarRootRef.current?.getBoundingClientRect();
+      setToolbarPos(current => ({ x: clampToViewport(current.x, toolbar?.width || 600, window.innerWidth), y: clampToViewport(current.y, toolbar?.height || 85, window.innerHeight) }));
+      setInspectorSize(current => ({ width: Math.min(current.width, Math.max(240, window.innerWidth - 24)), height: Math.min(current.height, Math.max(240, window.innerHeight - 24)) }));
+      setInspectorPos(current => ({ x: clampToViewport(current.x, inspectorRootRef.current?.getBoundingClientRect().width || 340, window.innerWidth), y: clampToViewport(current.y, inspectorRootRef.current?.getBoundingClientRect().height || 520, window.innerHeight) }));
+    };
+    window.addEventListener('resize', ensureVisible);
+    return () => window.removeEventListener('resize', ensureVisible);
+  }, []);
   const themeName: StudioTheme = draft.themes?.[pageId] && STUDIO_THEMES[draft.themes[pageId]]
     ? draft.themes[pageId] : 'original';
   const chooseTheme = (next: StudioTheme) => {
@@ -621,14 +677,19 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   useEffect(() => { if (mediaOpen) void loadMedia(); }, [mediaOpen, user?.id, isAdmin]);
 
   return (
-    <div className="min-w-0 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-950">
-        <span><strong>Interactive Live Page Preview:</strong> {pageLabel}. Text, Button, Image, Card, Section और Components का डिज़ाइन बदलें। {designOnly ? 'Protected page: केवल डिज़ाइन; login/test/results actions सुरक्षित हैं।' : 'नीले corner handle से size बदलें।'} सभी edits Draft-only हैं।</span>
-        <span className="font-semibold text-sky-800">{status}</span>
+    <div className="min-w-0 space-y-2">
+      <div data-testid="studio-editor-workspace" className="min-w-0">
+      <div className="mx-auto min-w-0 w-full overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 480, maxWidth: mobile ? '390px' : '100%' }}>
+        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} srcDoc={srcDoc} onLoad={() => setReady(true)} className="h-full w-full border-0" />
       </div>
-      <div data-testid="studio-editor-controls" className="min-w-0 space-y-3">
-        <p className="text-xs font-semibold text-slate-600">Components, Media, Themes और Smart Tools ऊपर उपलब्ध हैं। Properties दाईं ओर देखें या Show/Hide Properties से छिपाएँ।</p>
-        <div data-visual-editor-ui="toolbar" className="flex w-full min-w-0 flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+      </div>
+      {createPortal(<>
+        <div ref={toolbarRootRef} data-testid="studio-editor-controls" style={{ left: toolbarPos.x, top: toolbarPos.y }} className="fixed z-[99990] w-max max-w-[calc(100vw-24px)] max-h-[calc(100vh-24px)] overflow-y-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-[0_18px_48px_rgba(15,23,42,.24)] backdrop-blur">
+          <div className="mb-1 flex items-center justify-between gap-3 border-b border-slate-100 px-1 pb-1">
+            <button data-testid="studio-toolbar-grip" type="button" aria-label="Move toolbar" onPointerDown={event => startFloatingDrag(event, 'toolbar')} className="flex touch-none cursor-move items-center gap-2 rounded-md px-2 py-1 text-[11px] font-extrabold text-slate-800 hover:bg-slate-100"><Move className="h-3.5 w-3.5"/>Editor Tools</button>
+            <span className="max-w-[200px] truncate text-[10px] font-semibold text-sky-800" title={status}>{status}</span>
+          </div>
+        <div data-visual-editor-ui="toolbar" className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg bg-transparent p-1">
           <button type="button" aria-expanded={componentsOpen} onClick={() => { setComponentsOpen(value => !value); setMediaOpen(false); }} className="inline-flex items-center gap-1 rounded-lg bg-sky-900 px-3 py-2.5 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5"/>Components <span className="rounded bg-white/15 px-1">{palette.length}</span></button>
           <button type="button" onClick={() => { setMediaOpen(value => !value); setComponentsOpen(false); }} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (mediaOpen ? 'bg-violet-100 text-violet-900' : 'bg-slate-100 text-slate-700')}><ImageIcon className="h-3.5 w-3.5"/>Media</button>
           <button type="button" onClick={() => { setInspectorOpen(value => !value); setComponentsOpen(false); }} aria-pressed={inspectorOpen} className={'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-xs font-bold ' + (inspectorOpen ? 'bg-sky-100 text-sky-900' : 'bg-slate-100 text-slate-700')}><Settings2 className="h-3.5 w-3.5"/>{inspectorOpen ? 'Hide Properties' : 'Show Properties'}</button>
@@ -637,7 +698,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
           <button type="button" aria-label="Undo added component" title="Undo added component" disabled={!(componentUndo[pageId] || []).length} onClick={undoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↶</button>
           <button type="button" aria-label="Redo added component" title="Redo added component" disabled={!(componentRedo[pageId] || []).length} onClick={redoComponents} className="rounded-lg border px-2 py-2 text-slate-700 disabled:opacity-40">↷</button>
         </div>
-        {(componentsOpen || mediaOpen || themesOpen || smartToolsOpen) && <div data-testid="studio-tool-panels" className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:grid-cols-2 xl:grid-cols-3">
+        {(componentsOpen || mediaOpen || themesOpen || smartToolsOpen) && <div data-testid="studio-tool-panels" className="grid min-w-0 max-h-[min(55vh,480px)] gap-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
         {smartToolsOpen && <section data-visual-editor-ui="smart-tools-panel" 
           className="min-w-0 rounded-xl border border-violet-200 bg-white p-3 shadow-sm">
           <div  className="mb-3 flex  items-center justify-between border-b pb-2">
@@ -695,13 +756,16 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
           {mediaLoading ? <p className="py-4 text-center text-xs text-slate-500">Loading media…</p> : media.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No media uploaded yet.</p> : <div className="mt-3 grid grid-cols-2 gap-2">{media.map(asset => <div key={asset.path} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="grid h-20 place-items-center bg-slate-100">{asset.type === 'image' ? <img src={asset.url} alt={asset.name} className="h-full w-full object-cover"/> : <Video className="h-7 w-7 text-slate-500"/>}</div><p className="truncate px-2 pt-1 text-[9px] text-slate-600">{asset.name}</p><button onClick={() => insertComponent(asset.type === 'video' ? 'video' : 'image', asset)} className="m-1 w-[calc(100%-8px)] rounded-md bg-sky-900 p-1.5 text-[10px] font-bold text-white">Insert into page</button></div>)}</div>}
           <button onClick={() => void loadMedia()} disabled={mediaLoading} className="mt-3 w-full rounded-lg border p-2 text-[10px] font-bold text-slate-600">Refresh Library</button>
         </section>}        </div>}
-      </div>
-      <div data-testid="studio-editor-workspace" className={inspectorOpen && inspectorPlacement === 'side' ? 'grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]' : 'grid min-w-0 grid-cols-1 items-start gap-4'}>
-      <div className="mx-auto min-w-0 w-full overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" style={{ height: 'min(76vh, 860px)', minHeight: 480, maxWidth: mobile ? '390px' : '100%' }}>
-        <iframe ref={iframe} title={'Interactive website editor · ' + pageLabel} src={src} srcDoc={srcDoc} onLoad={() => setReady(true)} className="h-full w-full border-0" />
-      </div>
-        {inspectorOpen && <aside data-visual-editor-ui="inspector-panel" className={'min-w-0 max-h-[min(76vh,820px)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ' + (inspectorPlacement === 'side' ? 'xl:sticky xl:top-4 xl:self-start' : '')}>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3"><div><h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Settings2 className="h-4 w-4"/>Properties Inspector</h3><p className="text-xs text-slate-500">Select a page element to edit its properties</p></div><div className="flex items-center gap-1"><button type="button" onClick={() => setInspectorPlacement(value => value === 'side' ? 'below' : 'side')} aria-label={inspectorPlacement === 'side' ? 'Move Inspector Below Preview' : 'Dock Inspector Right'} className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-[11px] font-bold text-sky-900">{inspectorPlacement === 'side' ? 'Below' : 'Dock right'}</button><button type="button" aria-label="Close Inspector" onClick={() => setInspectorOpen(false)} className="rounded-lg border px-2.5 py-1.5 text-xs">×</button></div></div>
+        </div>
+        {inspectorOpen && <aside ref={inspectorRootRef} data-visual-editor-ui="inspector-panel" data-testid="studio-floating-inspector" style={{ left: inspectorPos.x, top: inspectorPos.y, width: inspectorSize.width, height: inspectorSize.height }} className="fixed z-[99997] flex max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_rgba(15,23,42,.25)]">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
+            <button data-testid="studio-inspector-grip" type="button" aria-label="Move Properties Inspector" onPointerDown={event => startFloatingDrag(event, 'inspector')} className="flex touch-none cursor-move items-center gap-2 rounded-lg px-2 py-1 text-left text-slate-900 hover:bg-slate-100">
+              <Move className="h-4 w-4 text-slate-500"/><span className="text-sm font-extrabold">Properties Inspector</span>
+            </button>
+            <button type="button" aria-label="Close Inspector" onClick={() => setInspectorOpen(false)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs">×</button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3">
+            <p className="mb-3 text-[11px] text-slate-500">Drag the title to move · resize from bottom-right</p>
           {managedComponent && <div data-testid="managed-component-editor" className="mb-3 space-y-2 rounded-xl border border-violet-200 bg-violet-50/40 p-3">
             <p className="text-xs font-bold text-violet-900">Edit Added Component · {managedComponent.kind}</p>
             <label className="block text-[10px] font-semibold text-slate-600">Title / Text<textarea aria-label="Component title" rows={2} maxLength={2000} value={managedComponent.text} onChange={event => updateComponent(managedComponent.id, { text: event.target.value })} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>
@@ -783,8 +847,10 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
             <div className="flex gap-2 pt-1"><button onClick={resetSelected} className="flex-1 rounded-lg border p-2 text-[10px] font-bold">Reset</button><button onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="flex-1 rounded-lg bg-emerald-700 p-2 text-[10px] font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Cloud Draft'}</button></div>
           </div> : !managedComponent && <div className="space-y-3"><div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4"><p className="text-sm font-bold text-slate-800">कोई Element चयनित नहीं है</p><p className="mt-2 text-xs leading-5 text-slate-600">Preview में किसी Text, Button, Card, Image या Section पर क्लिक करें। चुने हुए Element की Properties यहाँ दिखाई देंगी।</p><p className="mt-2 text-[11px] text-slate-500">नया Component जोड़ने के लिए ऊपर Components खोलें।</p></div>{(draft.addedComponents?.[pageId]?.length || 0) > 0 && <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"><p className="mb-2 text-xs text-emerald-900">इस पेज पर {draft.addedComponents?.[pageId]?.length || 0} Added Component मौजूद हैं।</p><button type="button" onClick={() => void saveCloudDraft()} disabled={saving || !cloudReady || !isAdmin} className="w-full rounded-lg bg-emerald-700 p-2.5 text-xs font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Current Draft'}</button><p className="mt-2 text-[11px] text-emerald-900">केवल Draft सेव होगा; Live वेबसाइट publish नहीं होगी।</p></div>}</div>}
           <p className="mt-2 text-[9px] leading-4 text-slate-500">{notice || 'Changes appear immediately in this Preview. Cloud Draft save never publishes the Live website.'}</p>
+          </div>
+          <button type="button" data-testid="studio-inspector-resize" aria-label="Resize Properties Inspector" onPointerDown={startInspectorResize} className="absolute bottom-0 right-0 z-10 grid h-7 w-7 touch-none cursor-nwse-resize place-items-center rounded-tl-lg bg-sky-100 text-sky-800" title="Drag to resize inspector"><MoveDiagonal2 className="h-4 w-4"/></button>
         </aside>}
-      </div>
+      </>, document.body)}
     </div>
   );
 };
