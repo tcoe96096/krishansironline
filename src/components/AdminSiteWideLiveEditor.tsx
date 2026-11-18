@@ -102,7 +102,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
   const toolbarRootRef = useRef<HTMLDivElement>(null);
   const inspectorRootRef = useRef<HTMLElement>(null);
-  const [toolbarPos, setToolbarPos] = useState(() => ({ x: Math.max(12, Math.round((window.innerWidth - 650) / 2)), y: Math.max(12, window.innerHeight - 120) }));
+  const [toolbarPos, setToolbarPos] = useState(() => ({ x: Math.max(12, Math.round((window.innerWidth - 650) / 2)), y: Math.min(260, Math.max(12, window.innerHeight - 140)) }));
   const [inspectorPos, setInspectorPos] = useState(() => ({ x: Math.max(12, window.innerWidth - 372), y: 180 }));
   const [inspectorSize, setInspectorSize] = useState(() => ({
     width: Math.min(340, Math.max(240, window.innerWidth - 24)),
