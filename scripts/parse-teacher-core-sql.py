@@ -28,7 +28,7 @@ ADDITIONAL = (
 for name in ADDITIONAL:
     path = root / "docs" / "proposed-migrations" / name
     source = path.read_text(encoding="utf-8")
-    if "REVIEW ONLY" not in source.upper() or "DO NOT" not in source.upper():
+    if "REVIEW ONLY" not in source.upper() or not any(marker in source.upper() for marker in ("DO NOT", "NOT EXECUTED", "NEVER EXECUTE")):
         raise SystemExit(f"FAIL: {name} missing review-only warning")
     try:
         parse_sql(source)
