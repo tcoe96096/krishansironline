@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="KSOL Teacher Management v2 का केवल डिज़ाइन डेमो। कोई लॉगिन, पंजीकरण या डेटा संग्रह सक्रिय नहीं है।">
+  <title>Teacher Management v2 — Design Demo | Krishan Sir Online Learning</title>
+  <style>
+    :root{color-scheme:light;--navy:#102b53;--blue:#173e73;--teal:#0b777c;--ink:#152a43;--muted:#5c6e81;--line:#d9e5ee;--bg:#eff5f9;--white:#fff}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.5}
+    a{color:inherit}a:focus-visible{outline:3px solid #eeb74c;outline-offset:3px} .wrap{width:min(1150px,calc(100% - 32px));margin:auto}
+    .top{background:var(--navy);color:white;padding:13px 0;border-bottom:3px solid #23a6ad}
+    .top .wrap{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .brand{font-size:14px;letter-spacing:.06em;font-weight:800}.brand small{display:block;font-size:11px;letter-spacing:.12em;color:#a9e9eb;margin-top:2px}
+    .back{font-size:13px;font-weight:700;text-decoration:none;border:1px solid #86accc;border-radius:12px;padding:8px 14px}
+    .hero{background:linear-gradient(120deg,#0e2b54,#174b82 55%,#087a7b);color:white;padding:38px 0 34px;overflow:hidden}
+    .eyebrow{text-transform:uppercase;font-weight:800;letter-spacing:.13em;font-size:11px;color:#baf1ed}
+    h1{font-size:clamp(28px,4vw,43px);line-height:1.1;margin:10px 0}h2{font-size:23px;margin:0 0 6px}h3{font-size:16px;margin:0 0 5px}
+    .hero p{max-width:660px;color:#e1effb;margin:0 0 19px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px}.tag{padding:6px 12px;border:1px solid #a9d8df77;border-radius:999px;font-size:12px;font-weight:700;background:#ffffff17}
+    .notice{margin-top:-20px;position:relative;background:#fff8e9;border:1px solid #e8cb88;border-left:5px solid #c98a26;border-radius:16px;padding:17px 20px;box-shadow:0 8px 24px #152a4320;color:#5a3b13}
+    .notice strong{display:block;font-size:15px}.notice p{margin:4px 0 0;font-size:13px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap;padding:22px 0}.nav a{background:white;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:750;color:var(--blue)}
+    .grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(270px,1fr);gap:18px}.stack{display:grid;gap:18px}
+    .card{background:white;border:1px solid var(--line);border-radius:19px;padding:23px;box-shadow:0 4px 16px #233f5710;min-width:0}
+    .section-name{font-size:11px;color:var(--teal);font-weight:850;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+    .desc{font-size:13px;color:var(--muted);margin:0 0 17px}
+    .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .field label{display:block;font-size:12px;font-weight:750;color:#38556a;margin:0 0 5px}
+    .value{border:1px solid #d7e3eb;background:#f5f8fb;border-radius:11px;min-height:43px;padding:12px;font-size:13px;color:#516879}
+    .panel{border:1px solid var(--line);border-radius:14px;padding:17px;margin-top:16px}
+    .chip{display:inline-block;border:1px solid #a0d6d3;background:#e8f7f5;color:#09676a;padding:6px 10px;font-weight:750;font-size:12px;border-radius:999px;margin:5px 5px 0 0}
+    .pill{font-size:11px;display:inline-block;border-radius:999px;background:#edf2f7;padding:5px 9px;font-weight:700;color:#506278}
+    .line{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eaf0f4;font-size:13px}
+    .line:last-child{border-bottom:0}.disabled{display:inline-block;border:0;border-radius:11px;background:#214d81;color:#fff;opacity:.62;font-size:13px;font-weight:800;padding:12px 15px;cursor:not-allowed}
+    .outline{background:#e6ecf2;color:#496172}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+    .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+    .metric{border:1px solid var(--line);border-radius:13px;background:#f8fbfd;padding:14px}
+    .metric b{display:block;color:var(--navy);font-size:18px}.metric span{font-size:12px;color:var(--muted)}
+    .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:13px}
+    .step{background:#eaf3fa;border:1px solid #c9dce9;color:#204974;padding:9px 13px;border-radius:10px;font-size:12px;font-weight:800}
+    .arrow{color:#78909f}.foot{padding:30px 0 42px;font-size:12px;color:#5c7081;text-align:center}
+    .lower{margin-top:18px}.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .feature{border:1px solid var(--line);border-radius:15px;padding:17px;background:white}
+    .feature p{font-size:12px;color:var(--muted);margin:6px 0 0}
+    @media(max-width:780px){.grid{grid-template-columns:1fr}.features{grid-template-columns:1fr 1fr}.card{padding:18px}}
+    @media(max-width:520px){.fields,.metric-grid,.features{grid-template-columns:1fr}.line{align-items:flex-start;gap:8px}.top .wrap{gap:10px}.hero{padding-top:28px}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="wrap">
+    <div class="brand">KRISHAN SIR <small>ONLINE LEARNING · KSOL</small></div>
+    <a class="back" href="/" aria-label="मुख्य वेबसाइट पर वापस जाएँ">← मुख्य वेबसाइट</a>
+  </div></header>
+  <section class="hero"><div class="wrap">
+    <div class="eyebrow">Teacher Workspace · Version 2</div>
+    <h1>शिक्षक प्रबंधन प्रणाली</h1>
+    <p>पंजीकरण, योग्यता, कक्षा-विषय आवंटन, शिक्षक डैशबोर्ड और Super Admin अनुमोदन का प्रस्तावित Interface।</p>
+    <div class="tags"><span class="tag">Registration</span><span class="tag">Teacher Dashboard</span><span class="tag">Multiple Classes &amp; Subjects</span><span class="tag">Admin Approval</span></div>
+  </div></section>
+  <main class="wrap">
+    <section class="notice" role="status" aria-label="डेमो की स्थिति">
+      <strong>केवल UI Design Demo — वास्तविक सेवा अभी सक्रिय नहीं है</strong>
+      <p>यहाँ सभी विवरण काल्पनिक उदाहरण हैं। कोई Login, Registration, Resume Upload, Database Save, Employee ID जारी करना या Admin Approval संभव नहीं है। कृपया व्यक्तिगत जानकारी दर्ज न करें।</p>
+    </section>
+    <nav class="nav" aria-label="डेमो अनुभाग"><a href="#registration">पंजीकरण</a><a href="#dashboard">शिक्षक डैशबोर्ड</a><a href="#admin">Admin Approval</a><a href="#future">आगे की सुविधाएँ</a></nav>
+    <div class="grid">
+      <section class="card" id="registration" aria-labelledby="registration-title">
+        <p class="section-name">01 / Teacher Registration</p><h2 id="registration-title">शिक्षक पंजीकरण</h2>
+        <p class="desc">सिर्फ़ उदाहरण — ये Input Fields नहीं हैं, कोई डेटा लिया या भेजा नहीं जाता।</p>
+        <div class="fields">
+          <div class="field"><label>पूरा नाम / Full Name</label><div class="value">Example Teacher (Demo)</div></div>
+          <div class="field"><label>ईमेल / Email</label><div class="value">example@school.test</div></div>
+          <div class="field"><label>मोबाइल नंबर</label><div class="value">— डेमो —</div></div>
+          <div class="field"><label>अनुभव</label><div class="value">3 वर्ष (उदाहरण)</div></div>
+          <div class="field"><label>शैक्षणिक योग्यता</label><div class="value">B.Ed. (उदाहरण)</div></div>
+          <div class="field"><label>संस्थान</label><div class="value">Example College</div></div>
+        </div>
+        <div class="panel"><h3>एक से अधिक कक्षा और विषय</h3><p class="desc">अनुमोदन के बाद अलग-अलग शिक्षण कार्य निर्धारित हो सकेंगे।</p>
+          <span class="chip">Class 6 · English</span><span class="chip">Class 7 · Hindi</span><span class="chip">Class 8 · Social Science</span>
+        </div>
+        <div class="panel"><h3>अतिरिक्त जानकारी</h3><div class="fields">
+          <div class="field"><label>बायोडाटा / Resume</label><div class="value">Upload — अभी उपलब्ध नहीं</div></div>
+          <div class="field"><label>Employee ID</label><div class="value">Approval के बाद जारी होगा</div></div>
+        </div></div>
+        <div class="actions"><button class="disabled outline" disabled type="button">Draft Save — बंद</button><button class="disabled" disabled type="button">Submit Application — बंद</button></div>
+      </section>
+      <div class="stack">
+        <section class="card" aria-labelledby="tracking-title"><p class="section-name">02 / Application Tracking</p><h2 id="tracking-title">आवेदन की स्थिति</h2>
+          <div class="line"><span>शिक्षक प्रोफ़ाइल</span><span class="pill">Not saved</span></div>
+          <div class="line"><span>दस्तावेज़ जाँच</span><span class="pill">Not submitted</span></div>
+          <div class="line"><span>Admin Approval</span><span class="pill">Pending activation</span></div>
+          <div class="line"><span>Employee ID</span><span class="pill">Not issued</span></div>
+        </section>
+        <section class="card" id="admin" aria-labelledby="admin-title"><p class="section-name">03 / Super Admin Review</p><h2 id="admin-title">Admin Approval</h2>
+          <p class="desc">वास्तविक सिस्टम में Super Admin ही शिक्षक का सत्यापन और कक्षा-विषय अनुमति देगा। यहाँ कोई अधिकार प्रदान नहीं होता।</p>
+          <div class="flow"><span class="step">Application</span><span class="arrow">→</span><span class="step">Verification</span><span class="arrow">→</span><span class="step">Approval</span><span class="arrow">→</span><span class="step">Employee ID</span></div>
+          <div class="actions"><button class="disabled" disabled type="button">Approve — बंद</button><button class="disabled outline" disabled type="button">Reject — बंद</button></div>
+        </section>
+      </div>
+    </div>
+    <section class="card lower" id="dashboard" aria-labelledby="dashboard-title"><p class="section-name">04 / Teacher Dashboard</p><h2 id="dashboard-title">मेरा Teacher Dashboard</h2>
+      <p class="desc">एक शिक्षक को कई कक्षाओं, विषयों और कार्यों में अनुमति देने की प्रस्तावित व्यवस्था। नीचे सभी आँकड़े काल्पनिक हैं।</p>
+      <div class="metric-grid"><div class="metric"><b>3</b><span>Sample Classes</span></div><div class="metric"><b>3</b><span>Sample Subjects</span></div><div class="metric"><b>0</b><span>Actual approved assignments</span></div></div>
+      <div class="actions"><button class="disabled" disabled type="button">Study Material — बंद</button><button class="disabled outline" disabled type="button">Result Review — बंद</button><button class="disabled outline" disabled type="button">My Profile — बंद</button></div>
+    </section>
+    <section class="lower" id="future" aria-labelledby="future-title"><p class="section-name">Backend से बाद में जोड़ना है</p><h2 id="future-title">अगले चरण की सुविधाएँ</h2>
+      <div class="features">
+        <div class="feature"><h3>Teacher Login</h3><p>Supabase Auth और वास्तविक Teacher Identity से जोड़ना।</p></div>
+        <div class="feature"><h3>Admin Permissions</h3><p>सुरक्षित Role-Based Approval और RLS परीक्षण के बाद।</p></div>
+        <div class="feature"><h3>Digital Results</h3><p>शिक्षक की स्वीकृत भूमिका के आधार पर Result एवं Study Material Integration।</p></div>
+      </div>
+    </section>
+  </main>
+  <footer class="foot"><div class="wrap">© Krishan Sir Online Learning · Design Demo only · Hosted with the main website on GitHub Pages</div></footer>
+</body>
+</html>
