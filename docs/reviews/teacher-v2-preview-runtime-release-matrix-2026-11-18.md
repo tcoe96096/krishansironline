@@ -15,6 +15,10 @@
 
 Do **not** include `teacher_management_v2_integration_REVIEW_ONLY.sql` in the registration-only release: it alters Study Materials permissions.
 
+## Additional read-only SECURITY DEFINER preflight
+
+Before any privileged RPC grant proposal is approved, inspect `docs/proposed-migrations/teacher_v2_rpc_owner_search_path_PREFLIGHT_READ_ONLY.sql` on Preview (read-only only). It reports exact signatures, function owner, `SECURITY DEFINER`, configured `search_path`, effective `anon`/`authenticated` EXECUTE and overload counts. Treat a configured `search_path` as a review input, not proof of safety; inspect its exact value and unqualified function references. The companion static contract is `tests/teacherV2RpcOwnerSearchPathPreflight.test.ts`. **Neither a static pass nor a catalog read proves authorization at runtime.**
+
 ## Mandatory stop/go evidence before any Preview mutation
 - Identify Preview project `zgpkmfqioqvincmgyfpi` and verify a recoverable backup plus a successful disposable restore, with owner-visible evidence. A local RLS rollback is not backup evidence.
 - Inspect every script for idempotence, owner privileges, schema/function dependencies, table grants, security-definer authorization, overloaded signatures and expected data changes. Never assume SQL file labels are executable approvals.
