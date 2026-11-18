@@ -58,9 +58,9 @@ try {
     await page.mouse.up();
   };
   const oldToolbarBounds = await controls.boundingBox();
-  await dragGrip(page.getByTestId('studio-toolbar-grip'), -45, 18);
+  await dragGrip(page.getByTestId('studio-toolbar-grip'), 45, 18);
   const movedToolbarBounds = await controls.boundingBox();
-  assert.ok(oldToolbarBounds && movedToolbarBounds && movedToolbarBounds.x < oldToolbarBounds.x - 20, 'Toolbar should be draggable.');
+  assert.ok(oldToolbarBounds && movedToolbarBounds && movedToolbarBounds.x > oldToolbarBounds.x + 20, 'Toolbar should be draggable.');
   const oldInspectorBounds = await propertiesPanel.boundingBox();
   await dragGrip(page.getByTestId('studio-inspector-grip'), -85, 35);
   const movedInspectorBounds = await propertiesPanel.boundingBox();
