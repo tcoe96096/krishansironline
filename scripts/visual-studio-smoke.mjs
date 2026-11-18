@@ -70,6 +70,13 @@ try {
   const resizedInspectorBounds = await propertiesPanel.boundingBox();
   assert.ok(resizedInspectorBounds && resizedInspectorBounds.width >= movedInspectorBounds.width + 30, 'Inspector width should be resizable.');
   assert.ok(resizedInspectorBounds.height >= movedInspectorBounds.height + 30, 'Inspector height should be resizable.');
+  // Independent floating panels can overlap after a user drags/resizes them.
+  // Move the toolbar to a clear position before continuing to interact with both.
+  await dragGrip(page.getByTestId('studio-toolbar-grip'), -320, 0);
+  const separatedToolbar = await controls.boundingBox();
+  const separatedInspector = await propertiesPanel.boundingBox();
+  assert.ok(separatedToolbar && separatedInspector && separatedToolbar.x + separatedToolbar.width <= separatedInspector.x,
+    'The floating toolbar should be repositionable without overlapping the Inspector.');
   await toolbar.getByRole('button', { name: 'Hide Properties' }).click();
   assert.equal(await propertiesPanel.count(), 0, 'Hide Properties should close the Inspector.');
   await toolbar.getByRole('button', { name: 'Show Properties' }).click();
