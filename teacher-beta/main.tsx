@@ -9,6 +9,7 @@ import {teacherCall} from '../src/services/teacherManagement';
 import {teacherDashboardLoginCallback, teacherLoginCallback} from '../src/lib/teacherLoginCallback';
 import {TeacherRegistrationDesignPreview} from './TeacherRegistrationDesignPreview';
 import {TeacherDashboardOverview} from './TeacherDashboardOverview';
+import {TeacherDashboardData} from './TeacherDashboardData';
 import {TeacherPhotoPicker} from './TeacherProfilePhoto';
 import {teacherPageFromPath, teacherPagePath, type TeacherPage} from './teacherRoutes';
 import {BookOpen, ClipboardCheck, GraduationCap, LayoutDashboard, LogIn, LogOut, ShieldCheck, UserRound} from 'lucide-react';
@@ -160,7 +161,8 @@ function TeacherBetaPortal(){
           {(!user&&!demo)?<section role="status" className="rounded-2xl border border-amber-200 bg-white p-7 text-center">
             <h2 className="text-xl font-bold">Login required for Teacher Dashboard</h2>
             <button onClick={()=>go('login')} className={'mt-4 '+actionClass}>Go to Login</button>
-          </section>:<TeacherDashboardOverview preview={demo} teacherName={demo?'Example Teacher':teacherName} photoUrl={demo?registrationPhotoUrl:null} onRegistration={()=>go('register')} onLogin={()=>go('login')}/>}
+          </section>:<><TeacherDashboardOverview preview={demo} teacherName={demo?'Example Teacher':teacherName} photoUrl={demo?registrationPhotoUrl:null} onRegistration={()=>go('register')} onLogin={()=>go('login')}/>
+          {!demo&&user&&<TeacherDashboardData key={user.id} userId={user.id}/>}</>}
         </div>}
 
         {page==='admin'&&<div className="space-y-4">
