@@ -106,11 +106,11 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [componentRedo, setComponentRedo] = useState<Record<string, Added[][]>>({});
   const toolbarRootRef = useRef<HTMLDivElement>(null);
   const inspectorRootRef = useRef<HTMLElement>(null);
-  const [toolbarPos, setToolbarPos] = useState(() => ({ x: Math.max(12, Math.round((window.innerWidth - 650) / 2)), y: Math.min(260, Math.max(12, window.innerHeight - 140)) }));
-  const [inspectorPos, setInspectorPos] = useState(() => ({ x: Math.max(12, window.innerWidth - 372), y: 180 }));
+  const [toolbarPos, setToolbarPos] = useState(() => ({ x: 12, y: Math.min(260, Math.max(12, window.innerHeight - 140)) }));
+  const [inspectorPos, setInspectorPos] = useState(() => ({ x: Math.max(12, window.innerWidth - 372), y: window.innerWidth < 1200 ? Math.max(300, Math.round(window.innerHeight * 0.5)) : 180 }));
   const [inspectorSize, setInspectorSize] = useState(() => ({
     width: Math.min(340, Math.max(240, window.innerWidth - 24)),
-    height: Math.min(520, Math.max(240, window.innerHeight - 200)),
+    height: window.innerWidth < 1200 ? Math.min(430, Math.max(240, window.innerHeight - Math.max(300, Math.round(window.innerHeight * 0.5)) - 12)) : Math.min(520, Math.max(240, window.innerHeight - 200)),
   }));
   const clampToViewport = (position: number, size: number, viewport: number) =>
     Math.max(8, Math.min(position, Math.max(8, viewport - size - 8)));
