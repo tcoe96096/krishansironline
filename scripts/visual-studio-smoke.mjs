@@ -82,6 +82,8 @@ try {
   await components.getByRole('textbox', { name: 'Search components' }).fill('FAQ');
   assert.equal(await components.getByRole('button', { name: /FAQ/ }).count(), 1);
   await components.getByRole('textbox', { name: 'Search components' }).fill('');
+  await components.getByRole('button', { name: '×' }).click();
+  assert.equal(await components.count(), 0, 'Closing the floating palette should restore page interaction.');
   console.log('PASS: Floating commands, 16-component palette, and search');
 
   const frame = page.frameLocator('iframe[title^="Interactive website editor"]');
@@ -121,6 +123,7 @@ try {
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalGradientColor);
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage), originalGradient);
   console.log('PASS: Transparent and gradient backgrounds stay original on selection, with explicit colour edit/reset');
+  await toolbar.getByRole('button', { name: /Components/ }).click();
   await components.getByRole('button', { name: /Heading/ }).click();
   await frame.locator('[data-builder-component-id]').first().waitFor({ timeout: 15000 });
   assert.match(await frame.locator('[data-builder-component-id]').first().innerText(), /New section heading/);
@@ -152,6 +155,7 @@ try {
   await mediaPanel.waitFor({ timeout: 15000 });
   assert.equal(await mediaPanel.locator('input[type="file"]').isDisabled(), true);
   console.log('PASS: Floating media panel and upload guard in unauthenticated demo');
+  await mediaPanel.getByRole('button', { name: 'Close ×' }).click();
 
   await frame.locator('h1,h2,h3,p').first().click();
   await inspector.getByRole('heading', { name: 'Properties Inspector' }).waitFor({ timeout: 15000 });
