@@ -71,6 +71,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.teacher_v2_review(uuid,integer,text,text,boolean,jsonb)
  FROM PUBLIC,anon,authenticated;
 COMMIT;
--- RELEASE BLOCKERS: no audited verification-writer RPC exists yet; no
--- authenticated execution grant; no runtime tests; no recoverable restore.
+-- RELEASE BLOCKERS: verification-writer SQL is proposed separately but not deployed;
+-- no approved authenticated EXECUTE grants; no real role/runtime tests;
+-- no demonstrated recoverable Preview backup/restore.
 -- p_verified remains in the signature but is intentionally ignored.
