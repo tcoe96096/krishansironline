@@ -6,7 +6,7 @@ const sql = readFileSync('docs/proposed-migrations/teacher_v2_photo_storage_PREF
 
 test('teacher photo storage inventory is SELECT-only', () => {
   const statements = sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(Boolean);
-  assert.equal(statements.length, 4);
+  assert.equal(statements.length, 6);
   for (const statement of statements) {
     assert.match(statement, /^SELECT\b/i);
     const withoutStrings = statement.replace(/'(?:''|[^'])*'/g, "''");
@@ -17,7 +17,7 @@ test('teacher photo storage inventory is SELECT-only', () => {
 test('teacher photo audit checks private bucket, RLS, grants and metadata', () => {
   for (const fragment of ['storage.buckets','b.public','file_size_limit','allowed_mime_types',
     'pg_policies','permissive','with_check','role_table_grants','information_schema.columns',
-    'teacher_profiles','teacher_enrollment_requests',"'anon'","'authenticated'"]) {
+    'teacher_profiles','teacher_enrollment_requests',"'anon'","'authenticated'",'pg_catalog.pg_class','pg_catalog.pg_namespace','relrowsecurity','relforcerowsecurity',"table_name='buckets'"]) {
     assert.ok(sql.includes(fragment),fragment);
   }
 });
