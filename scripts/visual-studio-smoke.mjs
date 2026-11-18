@@ -66,7 +66,7 @@ try {
   const originalTransparent = await transparentFrame.evaluate(node => getComputedStyle(node).backgroundColor);
   const originalGradient = await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage);
   const originalGradientColor = await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor);
-  assert.match(originalTransparent, /^rgba\\(0, 0, 0, 0\\)$/);
+  assert.equal(originalTransparent, 'rgba(0, 0, 0, 0)');
   assert.match(originalGradient, /linear-gradient/);
   await transparentFrame.click();
   assert.equal(await transparentFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalTransparent);
