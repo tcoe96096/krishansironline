@@ -36,6 +36,28 @@ try {
   console.log('PASS: Single advanced editor exposes all routes with protected design-only labels');
 
   const toolbar = page.locator('[data-visual-editor-ui="toolbar"]');
+  const controls = page.getByTestId('studio-editor-controls');
+  const workspace = page.getByTestId('studio-editor-workspace');
+  const propertiesPanel = page.locator('[data-visual-editor-ui="inspector-panel"]');
+  await controls.waitFor({ timeout: 15000 });
+  assert.equal(await propertiesPanel.count(), 1, 'The editor should only render one Properties Inspector.');
+  assert.equal(await propertiesPanel.getByRole('heading', { name: 'Properties Inspector' }).count(), 1);
+  assert.equal(await toolbar.getByRole('button', { name: 'Hide Properties' }).count(), 1);
+  // The component palette is above the website preview, and the Inspector is beside it on desktop.
+  const toolBounds = await controls.boundingBox();
+  const previewBounds = await page.locator('iframe[title^="Interactive website editor"]').boundingBox();
+  const inspectorBounds = await propertiesPanel.boundingBox();
+  assert.ok(toolBounds && previewBounds && inspectorBounds, 'Editor, page preview and Inspector should be rendered.');
+  assert.ok(toolBounds.y + toolBounds.height <= previewBounds.y + 2, 'The toolbar must remain above page preview.');
+  assert.ok(inspectorBounds.x >= previewBounds.x + previewBounds.width - 3, 'Inspector should not overlap page preview on desktop.');
+  await toolbar.getByRole('button', { name: 'Hide Properties' }).click();
+  assert.equal(await propertiesPanel.count(), 0, 'Hide Properties should close the single Inspector.');
+  await toolbar.getByRole('button', { name: 'Show Properties' }).click();
+  await propertiesPanel.waitFor({ timeout: 15000 });
+  await propertiesPanel.getByRole('button', { name: 'Move Inspector Below Preview' }).click();
+  assert.ok(!(await workspace.getAttribute('class')).includes('xl:grid-cols-['), 'Below placement must use a single column.');
+  await propertiesPanel.getByRole('button', { name: 'Dock Inspector Right' }).click();
+  console.log('PASS: Top toolbar, one dockable Properties Inspector, and Show/Hide toggle');
   await toolbar.getByRole('button', { name: /Components/ }).click();
   const components = page.locator('[data-visual-editor-ui="components-menu"]');
   await components.waitFor({ timeout: 15000 });
