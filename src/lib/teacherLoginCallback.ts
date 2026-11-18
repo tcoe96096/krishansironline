@@ -23,3 +23,13 @@ export function teacherLoginCallback(origin:string,baseUrl:string):string {
   if(callback.origin!==site.origin)throw new Error('Invalid teacher login callback.');
   return callback.toString();
 }
+
+/** Login flow returns to the dedicated Teacher Dashboard. This does not
+ * bypass any authentication or Super Admin authorization checks.
+ * Owner-approved OAuth allowed redirect URLs must include this path before activation.
+ */
+export function teacherDashboardLoginCallback(origin:string,baseUrl:string):string {
+  const registration=teacherLoginCallback(origin,baseUrl);
+  if(!registration.endsWith('/staff-workspace/'))throw new Error('Invalid teacher dashboard callback.');
+  return registration.slice(0,-'staff-workspace/'.length)+'dashboard/';
+}
