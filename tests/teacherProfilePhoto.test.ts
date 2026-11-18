@@ -18,7 +18,9 @@ test('teacher dashboard photo accepts camera/gallery safe image types up to 3 MB
 test('photograph appears only in Teacher Workspace and remains a local non-uploaded preview',()=>{
  const portal=readFileSync('teacher-beta/main.tsx','utf8');
  const picker=readFileSync('teacher-beta/TeacherProfilePhoto.tsx','utf8');
- assert.match(portal,/<TeacherProfilePhoto/);
+ const dashboard=readFileSync('teacher-beta/TeacherDashboardOverview.tsx','utf8');
+ assert.match(portal,/<TeacherDashboardOverview/);
+ assert.match(dashboard,/<TeacherProfilePhoto/);
  assert.match(picker,/capture="user"/);
  assert.match(picker,/URL\.createObjectURL/);
  assert.match(picker,/URL\.revokeObjectURL/);
