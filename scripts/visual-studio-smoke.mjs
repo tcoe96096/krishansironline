@@ -40,24 +40,48 @@ try {
   const workspace = page.getByTestId('studio-editor-workspace');
   const propertiesPanel = page.locator('[data-visual-editor-ui="inspector-panel"]');
   await controls.waitFor({ timeout: 15000 });
-  assert.equal(await propertiesPanel.count(), 1, 'The editor should only render one Properties Inspector.');
-  assert.equal(await propertiesPanel.getByRole('heading', { name: 'Properties Inspector' }).count(), 1);
+  assert.equal(await propertiesPanel.count(), 1, 'The editor should render exactly one Properties Inspector.');
+  assert.equal(await propertiesPanel.evaluate(element => getComputedStyle(element).position), 'fixed');
+  assert.equal(await controls.evaluate(element => getComputedStyle(element).position), 'fixed');
+  assert.equal(await propertiesPanel.getByText('Properties Inspector').count(), 1);
   assert.equal(await toolbar.getByRole('button', { name: 'Hide Properties' }).count(), 1);
-  // The component palette is above the website preview, and the Inspector is beside it on desktop.
-  const toolBounds = await controls.boundingBox();
-  const previewBounds = await page.locator('iframe[title^="Interactive website editor"]').boundingBox();
-  const inspectorBounds = await propertiesPanel.boundingBox();
-  assert.ok(toolBounds && previewBounds && inspectorBounds, 'Editor, page preview and Inspector should be rendered.');
-  assert.ok(toolBounds.y + toolBounds.height <= previewBounds.y + 2, 'The toolbar must remain above page preview.');
-  assert.ok(inspectorBounds.x >= previewBounds.x + previewBounds.width - 3, 'Inspector should not overlap page preview on desktop.');
+  assert.ok(await workspace.locator('iframe[title^="Interactive website editor"]').count() === 1);
+  assert.equal(await page.getByText('Interactive Live Page Preview:').count(), 0, 'The redundant preview information frame should be removed.');
+  // Drag the toolbar and Inspector independently.
+  const dragGrip = async (grip, dx, dy) => {
+    const bounds = await grip.boundingBox();
+    assert.ok(bounds);
+    const x = bounds.x + bounds.width / 2, y = bounds.y + bounds.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, y + dy, { steps: 6 });
+    await page.mouse.up();
+  };
+  const oldToolbarBounds = await controls.boundingBox();
+  await dragGrip(page.getByTestId('studio-toolbar-grip'), -45, 18);
+  const movedToolbarBounds = await controls.boundingBox();
+  assert.ok(oldToolbarBounds && movedToolbarBounds && movedToolbarBounds.x < oldToolbarBounds.x - 20, 'Toolbar should be draggable.');
+  const oldInspectorBounds = await propertiesPanel.boundingBox();
+  await dragGrip(page.getByTestId('studio-inspector-grip'), -85, 35);
+  const movedInspectorBounds = await propertiesPanel.boundingBox();
+  assert.ok(oldInspectorBounds && movedInspectorBounds && movedInspectorBounds.x < oldInspectorBounds.x - 50, 'Inspector should be draggable.');
+  // Resize the Properties Inspector from the bottom-right handle.
+  await dragGrip(page.getByTestId('studio-inspector-resize'), 55, 55);
+  const resizedInspectorBounds = await propertiesPanel.boundingBox();
+  assert.ok(resizedInspectorBounds && resizedInspectorBounds.width >= movedInspectorBounds.width + 30, 'Inspector width should be resizable.');
+  assert.ok(resizedInspectorBounds.height >= movedInspectorBounds.height + 30, 'Inspector height should be resizable.');
+  // Independent floating panels can overlap after a user drags/resizes them.
+  // Move the toolbar to a clear position before continuing to interact with both.
+  await dragGrip(page.getByTestId('studio-toolbar-grip'), -320, 0);
+  const separatedToolbar = await controls.boundingBox();
+  const separatedInspector = await propertiesPanel.boundingBox();
+  assert.ok(separatedToolbar && separatedInspector && separatedToolbar.x + separatedToolbar.width <= separatedInspector.x,
+    'The floating toolbar should be repositionable without overlapping the Inspector.');
   await toolbar.getByRole('button', { name: 'Hide Properties' }).click();
-  assert.equal(await propertiesPanel.count(), 0, 'Hide Properties should close the single Inspector.');
+  assert.equal(await propertiesPanel.count(), 0, 'Hide Properties should close the Inspector.');
   await toolbar.getByRole('button', { name: 'Show Properties' }).click();
   await propertiesPanel.waitFor({ timeout: 15000 });
-  await propertiesPanel.getByRole('button', { name: 'Move Inspector Below Preview' }).click();
-  assert.ok(!(await workspace.getAttribute('class')).includes('xl:grid-cols-['), 'Below placement must use a single column.');
-  await propertiesPanel.getByRole('button', { name: 'Dock Inspector Right' }).click();
-  console.log('PASS: Top toolbar, one dockable Properties Inspector, and Show/Hide toggle');
+  console.log('PASS: Floating draggable Toolbar and Inspector, Inspector resize, compact editor and Show/Hide');
   await toolbar.getByRole('button', { name: /Components/ }).click();
   const components = page.locator('[data-visual-editor-ui="components-menu"]');
   await components.waitFor({ timeout: 15000 });
@@ -65,6 +89,8 @@ try {
   await components.getByRole('textbox', { name: 'Search components' }).fill('FAQ');
   assert.equal(await components.getByRole('button', { name: /FAQ/ }).count(), 1);
   await components.getByRole('textbox', { name: 'Search components' }).fill('');
+  await components.getByRole('button', { name: '×' }).click();
+  assert.equal(await components.count(), 0, 'Closing the floating palette should restore page interaction.');
   console.log('PASS: Floating commands, 16-component palette, and search');
 
   const frame = page.frameLocator('iframe[title^="Interactive website editor"]');
@@ -104,6 +130,7 @@ try {
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalGradientColor);
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundImage), originalGradient);
   console.log('PASS: Transparent and gradient backgrounds stay original on selection, with explicit colour edit/reset');
+  await toolbar.getByRole('button', { name: /Components/ }).click();
   await components.getByRole('button', { name: /Heading/ }).click();
   await frame.locator('[data-builder-component-id]').first().waitFor({ timeout: 15000 });
   assert.match(await frame.locator('[data-builder-component-id]').first().innerText(), /New section heading/);
@@ -135,9 +162,10 @@ try {
   await mediaPanel.waitFor({ timeout: 15000 });
   assert.equal(await mediaPanel.locator('input[type="file"]').isDisabled(), true);
   console.log('PASS: Floating media panel and upload guard in unauthenticated demo');
+  await mediaPanel.getByRole('button', { name: 'Close ×' }).click();
 
   await frame.locator('h1,h2,h3,p').first().click();
-  await inspector.getByRole('heading', { name: 'Properties Inspector' }).waitFor({ timeout: 15000 });
+  await inspector.getByRole('button', { name: 'Move Properties Inspector' }).waitFor({ timeout: 15000 });
   assert.equal(await inspector.getByRole('button', { name: 'Save Cloud Draft' }).isDisabled(), true);
   console.log('PASS: Element inspector and no unauthorized draft save');
 

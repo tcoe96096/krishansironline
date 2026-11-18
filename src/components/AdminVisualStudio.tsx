@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarClock, FilePlus2, Layers3, Monitor, MousePointerClick, Image as ImageIcon, Send, ShieldCheck, Smartphone } from 'lucide-react';
+import { CalendarClock, FilePlus2, Monitor, Send, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AdminSiteWideLiveEditor } from './AdminSiteWideLiveEditor';
 import { getVisualDesignPreviewPages } from '../visual-editor/registry';
@@ -171,23 +171,10 @@ export const AdminVisualStudio: React.FC = () => {
   };
 
   return <section data-testid="visual-studio-main" className="min-h-[80vh] space-y-4">
-    <header className="rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
-      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-sky-800">
-        Krishan Sir · Advanced Visual Website Builder
-      </p>
-      <h2 className="mt-1 text-xl font-extrabold text-slate-900 sm:text-2xl">Advanced Real Page Editor</h2>
-      <p className="mt-2 text-xs leading-5 text-slate-700">
-        Existing pages और नए Draft Pages को Design करें। Floating Components, Inspector,
-        Themes, Video Player और PDF Reader Tools उपलब्ध हैं।
-        Draft Save कभी भी Live Publish नहीं करता।
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-sky-900">
-        <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-1"><MousePointerClick className="h-3.5 w-3.5"/> Click to Edit</span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-1"><Layers3 className="h-3.5 w-3.5"/> Components</span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-1"><ImageIcon className="h-3.5 w-3.5"/> Media Tools</span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-1"><ShieldCheck className="h-3.5 w-3.5"/> Draft Only</span>
-      </div>
-    </header>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-base font-extrabold text-slate-900 sm:text-lg">Advanced Real Page Editor</h2>
+      <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold text-sky-900">Draft-only editing</span>
+    </div>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
       <label className="text-xs font-bold text-slate-700">
         Website page
