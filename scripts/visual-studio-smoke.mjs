@@ -98,7 +98,7 @@ try {
   await toolbar.getByRole('button', { name: 'Element Explorer' }).click();
   const explorer = page.getByTestId('studio-element-explorer');
   await explorer.waitFor({ timeout: 12000 });
-  assert.ok(await explorer.getByRole('button', { name: /^Select / }).count() > 0, 'Page Explorer should list selectable elements.');
+  await explorer.getByRole('button', { name: /^Select / }).first().waitFor({ timeout: 12000 });
   await explorer.getByRole('textbox', { name: 'Search page elements' }).fill('h1');
   const firstH1 = explorer.getByRole('button', { name: /^Select h1/ }).first();
   await firstH1.click();
