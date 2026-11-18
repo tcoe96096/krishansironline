@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, RefreshCw, Search, ClipboardList, Users, Trophy, Clock3, FileDown, Printer } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
+import { escapeResultsCsvCell } from '../lib/resultsCsvSafety';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
@@ -53,16 +54,15 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
   const titleOf = (test?: TestInfo) => !test ? 'टेस्ट उपलब्ध नहीं' : typeof test.title === 'string' ? test.title : test.title.hi || test.title.en || test.id;
 
   const exportCsv = () => {
-    const escape = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
     const rows = [
       ['Student Name','Roll Number','Class','School','Test','Subject','Attempt','Status','Score','Total Marks','Percentage','Started At','Submitted At'],
       ...filtered.map(item => {
         const student = studentById.get(item.student_id);
         const test = testById.get(item.test_id);
-        return [student?.student_name,student?.roll_no,student?.class_level,student?.school_name,titleOf(test),test?.subject,item.attempt_number,item.status,item.score,item.total_marks,item.percentage,item.started_at,item.submitted_at].map(escape);
+        return [student?.student_name,student?.roll_no,student?.class_level,student?.school_name,titleOf(test),test?.subject,item.attempt_number,item.status,item.score,item.total_marks,item.percentage,item.started_at,item.submitted_at].map(escapeResultsCsvCell);
       })
     ];
-    const csv = '\uFEFF' + rows.map(row => row.map(value => Array.isArray(value) ? value.join(',') : value).join(',')).join('\r\n');
+    const csv = '\uFEFF' + rows.map((row, index) => (index === 0 ? row.map(escapeResultsCsvCell) : row).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.href = url; link.download = 'krishan-sir-test-results.csv'; link.click();
