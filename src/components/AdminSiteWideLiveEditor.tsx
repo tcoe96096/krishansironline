@@ -15,7 +15,7 @@ type Override = { selector: string; text: string; textEditable: boolean; style: 
 type Draft = { version: 1; pages: Record<string, Record<string, Override>>; addedComponents?: Record<string, Added[]>; themes?: Record<string, StudioTheme>; customPages?: StudioDraftPage[] };
 type Selected = { tag: string; text: string; selector: string; width: number; height: number; textEditable: boolean };
 
-const defaults: StyleDraft = { color: '#18263b', backgroundColor: '#ffffff', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0, effects: DEFAULT_STUDIO_EFFECT };
+const defaults: StyleDraft = { color: '#18263b', backgroundColor: 'original', fontSize: 16, fontWeight: '400', textAlign: 'left', marginTop: 0, marginBottom: 0, padding: 0, borderRadius: 0, width: 0, minHeight: 0, effects: DEFAULT_STUDIO_EFFECT };
 const palette: { kind: Kind; label: string; hint: string; icon: React.ElementType }[] = [
   { kind: 'heading', label: 'Heading', hint: 'Section title or headline', icon: Type },
   { kind: 'text', label: 'Text', hint: 'Paragraph or description', icon: AlignLeft },
@@ -64,8 +64,10 @@ const textLeaf = (element: Element) =>
 const selectable = (element: Element) => !['HTML','BODY','SCRIPT','STYLE','INPUT','TEXTAREA','SELECT','OPTION','SVG'].includes(element.tagName) && !protectedElement(element);
 const hex = (value: string, fallback: string) => {
   if (/^#[0-9a-f]{6}$/i.test(value)) return value;
-  const match = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  return match ? '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('') : fallback;
+  if (value.trim().toLowerCase() === 'transparent') return fallback;
+  const match = value.match(/^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\s*\)$/i);
+  if (!match || (match[4] !== undefined && Number(match[4]) < 1)) return fallback;
+  return '#' + match.slice(1, 4).map(part => Number(part).toString(16).padStart(2, '0')).join('');
 };
 
 export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; pageId: string; pageLabel: string; mobile?: boolean; designOnly?: boolean; onDraftSaved?: (draftId: string) => void }> = ({ src, srcDoc, pageId, pageLabel, mobile = false, designOnly = false, onDraftSaved }) => {
@@ -77,6 +79,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
   const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState<Selected | null>(null);
   const [style, setStyle] = useState<StyleDraft>(defaults);
+  const [backgroundSwatch, setBackgroundSwatch] = useState('#ffffff');
   const [draft, setDraft] = useState<Draft>({ version: 1, pages: {}, addedComponents: {} });
   const [status, setStatus] = useState('Cloud Draft loading…');
   const [cloudReady, setCloudReady] = useState(false);
@@ -287,7 +290,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       if (!element || protectedElement(element)) return;
       if (item.textEditable && textLeaf(element)) element.textContent = (item.text || '').slice(0, 2000);
       const s = item.style;
-      element.style.color = s.color; element.style.backgroundColor = s.backgroundColor;
+      element.style.color = s.color;
+      // `original` means no background override: retain gradients, transparency and inherited design.
+      if (/^#[0-9a-f]{6}$/i.test(s.backgroundColor)) element.style.backgroundColor = s.backgroundColor;
       element.style.fontSize = Math.min(72, Math.max(8, s.fontSize)) + 'px';
       element.style.fontWeight = s.fontWeight; element.style.textAlign = s.textAlign;
       element.style.marginTop = s.marginTop + 'px'; element.style.marginBottom = s.marginBottom + 'px';
@@ -358,8 +363,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
       const rect = candidate.getBoundingClientRect();
       const editable = !designOnly && textLeaf(candidate);
       setSelected({ tag: candidate.tagName.toLowerCase(), text: editable ? candidate.textContent || '' : '', selector: selectorFor(candidate), width: rect.width, height: rect.height, textEditable: editable });
+      setBackgroundSwatch(hex(computed.backgroundColor, '#ffffff'));
       setStyle({
-        color: hex(computed.color, '#18263b'), backgroundColor: hex(computed.backgroundColor, '#ffffff'),
+        color: hex(computed.color, '#18263b'), backgroundColor: 'original',
         fontSize: Number.parseFloat(computed.fontSize) || 16, fontWeight: computed.fontWeight,
         textAlign: (['left','center','right','justify'].includes(computed.textAlign) ? computed.textAlign : 'left') as StyleDraft['textAlign'],
         marginTop: Number.parseFloat(computed.marginTop) || 0, marginBottom: Number.parseFloat(computed.marginBottom) || 0,
@@ -409,7 +415,9 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     const element = targetRef.current;
     if (!element || protectedElement(element)) return;
     if (selected.textEditable) element.textContent = selected.text.slice(0, 2000);
-    element.style.color = style.color; element.style.backgroundColor = style.backgroundColor;
+    element.style.color = style.color;
+    // Selection must never paint a transparent or gradient frame black (or any other colour).
+    if (/^#[0-9a-f]{6}$/i.test(style.backgroundColor)) element.style.backgroundColor = style.backgroundColor;
     element.style.fontSize = style.fontSize + 'px'; element.style.fontWeight = style.fontWeight;
     element.style.textAlign = style.textAlign; element.style.marginTop = style.marginTop + 'px';
     element.style.marginBottom = style.marginBottom + 'px'; element.style.padding = style.padding + 'px';
@@ -604,6 +612,18 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     finally { setSaving(false); }
   };
 
+  const restoreOriginalBackground = () => {
+    const element = targetRef.current;
+    if (!element) return;
+    const original = element.ownerDocument.createElement('div');
+    if (originalStyleRef.current) original.setAttribute('style', originalStyleRef.current);
+    const background = original.style.getPropertyValue('background-color');
+    if (background) element.style.setProperty('background-color', background, original.style.getPropertyPriority('background-color'));
+    else element.style.removeProperty('background-color');
+    setStyle(current => ({ ...current, backgroundColor: 'original' }));
+    setNotice('Original background restored in Preview. Save Cloud Draft to keep it.');
+  };
+
   const resetSelected = () => {
     const element = targetRef.current;
     if (!element) return;
@@ -743,7 +763,8 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
             <p className="rounded-lg bg-sky-50 p-2 text-[10px] font-bold text-sky-900">{selected.tag.toUpperCase()} · {Math.round(selected.width)} × {Math.round(selected.height)} px</p>
             {selected.textEditable && <label className="block text-[10px] font-semibold text-slate-600">Text / Content<textarea rows={3} value={selected.text} onChange={event => setSelected(current => current ? { ...current, text: event.target.value } : current)} className="mt-1 w-full rounded-lg border p-2 text-xs"/></label>}
             <label className="block text-[10px] font-semibold text-slate-600">Text Colour<input type="color" value={style.color} onChange={event => setStyle(current => ({ ...current, color: event.target.value }))} className="mt-1 h-8 w-full"/></label>
-            <label className="block text-[10px] font-semibold text-slate-600">Background<input type="color" value={style.backgroundColor} onChange={event => setStyle(current => ({ ...current, backgroundColor: event.target.value }))} className="mt-1 h-8 w-full"/></label>
+            <label className="block text-[10px] font-semibold text-slate-600">Background · {style.backgroundColor === 'original' ? 'Original (unchanged)' : 'Custom colour'}<input aria-label="Background colour" type="color" value={style.backgroundColor === 'original' ? backgroundSwatch : style.backgroundColor} onChange={event => setStyle(current => ({ ...current, backgroundColor: event.target.value }))} className="mt-1 h-8 w-full"/></label>
+            <button type="button" disabled={style.backgroundColor === 'original'} onClick={restoreOriginalBackground} className="w-full rounded-lg border border-sky-200 bg-sky-50 p-2 text-[10px] font-bold text-sky-900 disabled:opacity-50">Keep Original Background</button>
             <label className="block text-[10px] font-semibold text-slate-600">Font Size · {style.fontSize}px<input type="range" min="8" max="72" value={style.fontSize} onChange={event => setStyle(current => ({ ...current, fontSize: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Width · {style.width ? style.width + 'px' : 'Auto'}<input type="range" min="0" max="1400" step="10" value={style.width} onChange={event => setStyle(current => ({ ...current, width: Number(event.target.value) }))} className="mt-1 w-full"/></label>
             <label className="block text-[10px] font-semibold text-slate-600">Min Height · {style.minHeight}px<input type="range" min="0" max="700" step="5" value={style.minHeight} onChange={event => setStyle(current => ({ ...current, minHeight: Number(event.target.value) }))} className="mt-1 w-full"/></label>
