@@ -30,6 +30,25 @@ WHERE table_schema='public'
        OR column_name ILIKE '%image%' OR column_name ILIKE '%storage%')
 ORDER BY table_name,column_name;
 
+
+-- Confirm RLS enforcement on both bucket metadata and object rows.
+-- Policies alone are insufficient if RLS is disabled on the underlying table.
+SELECT n.nspname AS schema_name, c.relname AS table_name,
+       c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS force_rls
+FROM pg_catalog.pg_class AS c
+JOIN pg_catalog.pg_namespace AS n ON n.oid=c.relnamespace
+WHERE n.nspname='storage' AND c.relname IN ('objects','buckets')
+  AND c.relkind IN ('r','p')
+ORDER BY c.relname;
+
+-- Audit bucket metadata grants separately; public metadata may disclose
+-- bucket names even when object access is private.
+SELECT grantee, privilege_type, is_grantable
+FROM information_schema.role_table_grants
+WHERE table_schema='storage' AND table_name='buckets'
+  AND grantee IN ('anon','authenticated','PUBLIC')
+ORDER BY grantee, privilege_type;
+
 -- Acceptance (not established by catalog reads):
 -- 1. Private bucket with strict image MIME, size and magic-byte verification.
 -- 2. No public URL or unrestricted signed URL; no browser service-role secret.
