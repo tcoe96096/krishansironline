@@ -10,9 +10,16 @@ page.on('pageerror', error => errors.push(error.message));
 try {
   await page.goto(base + '/admin-preview/', { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-  // The admin demo route exercises the actual editor without authentication or writes.
-  await page.getByRole('button', { name: 'Website Settings & Publishing', exact: true }).click();
-  await page.getByRole('button', { name: 'Open Main Visual Editor' }).click();
+  // The admin demo route verifies one editing surface and a read-only publishing/history panel.
+  const adminNav = page.locator('aside nav');
+  assert.equal(await adminNav.getByRole('button', { name: 'Main Visual Website Editor', exact: true }).count(), 1);
+  assert.equal(await adminNav.getByRole('button', { name: 'Website Settings & Publishing', exact: true }).count(), 0);
+  await adminNav.getByRole('button', { name: 'Website Publishing & History', exact: true }).click();
+  const historyPanel = page.getByTestId('website-publishing-history');
+  await historyPanel.waitFor({ timeout: 15000 });
+  assert.equal(await historyPanel.getByRole('textbox').count(), 0);
+  assert.equal(await historyPanel.getByRole('button', { name: /Save Draft|Publish Live|Publish Saved Draft/ }).count(), 0);
+  await historyPanel.getByRole('button', { name: 'Open Visual Studio' }).click();
   await page.getByTestId('visual-studio-main').waitFor({ timeout: 20000 });
 
   assert.equal(await page.getByRole('heading', { name: 'Advanced Real Page Editor' }).count(), 1);
