@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const read=(name:string)=>readFileSync('docs/proposed-migrations/'+name,'utf8');
+const readSource=(path:string)=>readFileSync(path,'utf8');
 
 test('v2 registration uses server-owned RPC rather than legacy enrollment INSERT',()=>{
- const ui=read('src/components/TeacherManagementV2.tsx');
- const service=read('src/services/teacherManagement.ts');
+ const ui=readSource('src/components/TeacherManagementV2.tsx');
+ const service=readSource('src/services/teacherManagement.ts');
  assert.match(ui,/saveTeacherApplication\(/);
  assert.match(service,/requireSupabase\(\)\.rpc\(name,args\)/);
 });
