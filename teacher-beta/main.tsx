@@ -8,6 +8,7 @@ import {requireSupabase} from '../src/lib/supabase';
 import {teacherCall} from '../src/services/teacherManagement';
 import {teacherLoginCallback} from '../src/lib/teacherLoginCallback';
 import {TeacherRegistrationDesignPreview} from './TeacherRegistrationDesignPreview';
+import {TeacherProfilePhoto} from './TeacherProfilePhoto';
 import {ClipboardCheck,GraduationCap,LayoutDashboard,LogOut,ShieldCheck,UserRound} from 'lucide-react';
 import '../src/index.css';
 function TeacherBetaPortal(){
@@ -31,7 +32,8 @@ function TeacherBetaPortal(){
    </header>
    <div className="mt-6 grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
     <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-4 shadow-sm" aria-label="Teacher workspace sidebar">
-     <div className="mb-4 flex items-center gap-3 rounded-2xl bg-sky-50 p-3"><div className="rounded-xl bg-sky-900 p-2 text-white"><UserRound className="h-5 w-5"/></div><div className="min-w-0"><p className="text-xs font-semibold text-slate-500">Teacher account</p><p className="truncate text-sm font-bold">{user?.email||'Guest preview'}</p></div></div>
+     <TeacherProfilePhoto key={user?.id||"guest"} teacherName={String(user?.user_metadata?.full_name||user?.email||"Teacher")} />
+     <div className="mb-4 mt-3 flex items-center gap-3 rounded-2xl bg-sky-50 p-3"><div className="rounded-xl bg-sky-900 p-2 text-white"><UserRound className="h-5 w-5"/></div><div className="min-w-0"><p className="text-xs font-semibold text-slate-500">Teacher account</p><p className="truncate text-sm font-bold">{user?.email||'Guest preview'}</p></div></div>
      <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Workspace</p>
      {user&&teacherBetaEnabled?menu.map(({label,icon:Icon,active,onClick})=><button key={label} type="button" aria-current={active?'page':undefined} onClick={onClick} className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${active?'bg-sky-900 text-white shadow-sm':'text-slate-700 hover:bg-sky-50'}`}><Icon className="h-4 w-4"/>{label}</button>):<div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">Registration and role-based navigation will open after approved backend activation.</div>}
      {user&&teacherBetaEnabled&&<button type="button" onClick={()=>void signOut().catch(()=>setError('Sign out failed. Please try again.'))} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"><LogOut className="h-4 w-4"/>Sign out</button>}
