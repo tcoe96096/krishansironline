@@ -5,11 +5,12 @@ import {TeacherProfilePhoto} from './TeacherProfilePhoto';
 interface Props {
   preview: boolean;
   teacherName: string;
+  photoUrl: string|null;
   onRegistration: () => void;
   onLogin: () => void;
 }
 
-export function TeacherDashboardOverview({preview,teacherName,onRegistration,onLogin}: Props) {
+export function TeacherDashboardOverview({preview,teacherName,photoUrl,onRegistration,onLogin}: Props) {
   return <section aria-label="Teacher dashboard overview" className="space-y-5">
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <p className="text-xs font-extrabold uppercase tracking-widest text-teal-700">My Workspace</p>
@@ -26,7 +27,7 @@ export function TeacherDashboardOverview({preview,teacherName,onRegistration,onL
       </p>}
     </div>
     <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
-      <TeacherProfilePhoto teacherName={teacherName}/>
+      <TeacherProfilePhoto teacherName={teacherName} photoUrl={photoUrl}/>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[
           {label:'Registration',detail:preview?'Sample form only':'Review your saved application',icon:ClipboardCheck},
