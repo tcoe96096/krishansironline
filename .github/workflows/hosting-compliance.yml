@@ -1,0 +1,36 @@
+name: Hosting compliance - GitHub Pages only
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  github-pages-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce approved hosting architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare is strictly DNS-only; Netlify/Vercel are not hosting providers.
+          for config in wrangler.jsonc wrangler.json wrangler.toml netlify.toml netlify.yml netlify.yaml vercel.json; do
+            if [ -e "$config" ]; then
+              echo "::error::Forbidden alternative-hosting config: $config"
+              exit 1
+            fi
+          done
+          # Main site must continue to deploy only with GitHub Pages.
+          test -s .github/workflows/pages.yml
+          grep -Fq 'actions/deploy-pages@' .github/workflows/pages.yml
+          # Exclude this policy checker so the detection patterns don't match themselves.
+          if grep -RIE 'cloudflare/(wrangler|pages)-action|npx[[:space:]]+wrangler|netlify/(actions|cli)|vercel/(action|cli)' .github/workflows --exclude=hosting-compliance.yml; then
+            echo '::error::Alternative-hosting deployment steps are prohibited.'
+            exit 1
+          fi
+          echo 'Hosting policy OK: GitHub Pages for hosting and previews, Cloudflare DNS-only.'
