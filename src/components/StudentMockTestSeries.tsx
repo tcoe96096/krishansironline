@@ -16,7 +16,7 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableIds.includes(a.test_id)).map(a=>a.test_id));
  const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableIds.includes(a.test_id)).map(a=>a.test_id));
  const activeId=availableIds.find(id=>activeIds.has(id));
- const nextId=availableIds.find(id=>!doneIds.has(id));
+ const nextId=availableIds.find(id=>!doneIds.has(id))||availableIds[0];
  const nextActive=Boolean(activeId);
  const percent=Math.round(doneIds.size/Math.max(1,availableIds.length)*100);
  const nextLabel=(id:string)=>{const test=testById.get(id);return test?.title?.hi||test?.title?.en||'प्रकाशित टेस्ट विवरण उपलब्ध नहीं';};
