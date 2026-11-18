@@ -9,6 +9,7 @@ import {teacherCall} from '../src/services/teacherManagement';
 import {teacherDashboardLoginCallback, teacherLoginCallback} from '../src/lib/teacherLoginCallback';
 import {TeacherRegistrationDesignPreview} from './TeacherRegistrationDesignPreview';
 import {TeacherDashboardOverview} from './TeacherDashboardOverview';
+import {TeacherPhotoPicker} from './TeacherProfilePhoto';
 import {teacherPageFromPath, teacherPagePath, type TeacherPage} from './teacherRoutes';
 import {BookOpen, ClipboardCheck, GraduationCap, LayoutDashboard, LogIn, LogOut, ShieldCheck, UserRound} from 'lucide-react';
 import '../src/index.css';
@@ -20,6 +21,11 @@ function TeacherBetaPortal(){
   const {user, loading, configured, signOut}=useAuth();
   const [page, setPage]=useState<TeacherPage>(()=>teacherPageFromPath(window.location.pathname,import.meta.env.BASE_URL||'/'));
   const [error,setError]=useState('');
+  const [registrationPhotoUrl,setRegistrationPhotoUrl]=useState<string|null>(null);
+  // A locally selected file remains available across SPA pages only.
+  // It is never persisted or sent to Supabase; clear and revoke on replacement/logout.
+  useEffect(()=>()=>{if(registrationPhotoUrl)URL.revokeObjectURL(registrationPhotoUrl);},[registrationPhotoUrl]);
+  useEffect(()=>{setRegistrationPhotoUrl(null);},[user?.id]);
   const [superAdminAccount,setSuperAdminAccount]=useState<string|null>(null);
   const canReview=Boolean(user && superAdminAccount===user.id);
   useEffect(()=>{
@@ -51,6 +57,10 @@ function TeacherBetaPortal(){
   }
   if(loading)return <main className="min-h-screen bg-slate-50 p-8 text-slate-700">Checking teacher session…</main>;
   const demo=!teacherBetaEnabled;
+  function previewRegistrationPhoto(file:File){
+    if(!demo)return; // Live upload requires owner-approved private storage and RLS.
+    setRegistrationPhotoUrl(URL.createObjectURL(file));
+  }
   const teacherName=String(user?.user_metadata?.full_name||user?.email||'Example Teacher');
   const nav:{page:TeacherPage;label:string;icon:typeof GraduationCap}[]=[
     {page:'welcome',label:'Home',icon:GraduationCap},
@@ -121,7 +131,10 @@ function TeacherBetaPortal(){
             <h2 className="mt-1 text-xl font-extrabold">Teacher Registration</h2>
             <p className="mt-1 text-sm text-slate-600">Separate from Login and Dashboard. New applications require a signed-in identity and independent Admin approval.</p>
           </div>
-          {user&&!demo?<TeacherManagementV2 key={user.id}/>:<TeacherRegistrationDesignPreview/>}
+          {user&&!demo?<>
+            <TeacherPhotoPicker teacherName={teacherName} photoUrl={null} onPhotoSelected={()=>{}} onRemove={()=>{}} disabled/>
+            <TeacherManagementV2 key={user.id}/>
+          </>:<TeacherRegistrationDesignPreview photoUrl={registrationPhotoUrl} onPhotoSelected={previewRegistrationPhoto} onRemovePhoto={()=>setRegistrationPhotoUrl(null)}/>}
           {(!user&&!demo)&&<button disabled={!configured} onClick={()=>void signInTeacher('registration').catch(()=>setError('Google login unavailable. Please try again.'))} className={actionClass+' disabled:opacity-50'}>Sign in to Apply</button>}
           <button type="button" onClick={()=>go('login')} className={secondaryClass}>Go to Login Page</button>
         </section>}
@@ -147,7 +160,7 @@ function TeacherBetaPortal(){
           {(!user&&!demo)?<section role="status" className="rounded-2xl border border-amber-200 bg-white p-7 text-center">
             <h2 className="text-xl font-bold">Login required for Teacher Dashboard</h2>
             <button onClick={()=>go('login')} className={'mt-4 '+actionClass}>Go to Login</button>
-          </section>:<TeacherDashboardOverview preview={demo} teacherName={demo?'Example Teacher':teacherName} onRegistration={()=>go('register')} onLogin={()=>go('login')}/>}
+          </section>:<TeacherDashboardOverview preview={demo} teacherName={demo?'Example Teacher':teacherName} photoUrl={demo?registrationPhotoUrl:null} onRegistration={()=>go('register')} onLogin={()=>go('login')}/>}
         </div>}
 
         {page==='admin'&&<div className="space-y-4">
