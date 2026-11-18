@@ -1,12 +1,25 @@
-import React,{useCallback,useEffect,useState} from 'react';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {Layers3,PlayCircle,RefreshCw,ClipboardList} from 'lucide-react';
 import {requireSupabase} from '../lib/supabase';
 import {getMyTestAttempts,getPublishedTests,type TestAttempt,type PublishedTest} from '../services/testService';
 type Series={id:string;title:{hi?:string;en?:string};description:{hi?:string;en?:string};class_level:string;subject:string;test_ids:string[];updated_at:string};
 export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel})=>{
  const [rows,setRows]=useState<Series[]>([]),[attempts,setAttempts]=useState<TestAttempt[]>([]),[tests,setTests]=useState<PublishedTest[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
- const load=useCallback(async()=>{if(!classLevel){setRows([]);setLoading(false);return}setLoading(true);setError('');try{const [seriesResult,history,publishedTests]=await Promise.all([requireSupabase().from('mock_test_series').select('id,title,description,class_level,subject,test_ids,updated_at').eq('class_level',classLevel).eq('is_published',true).order('updated_at',{ascending:false}),getMyTestAttempts(),getPublishedTests(classLevel)]);if(seriesResult.error)throw seriesResult.error;setRows((seriesResult.data??[]) as Series[]);setAttempts(history);setTests(publishedTests)}catch(e){setError(e instanceof Error?e.message:'Mock Test Series लोड नहीं हो सकीं।')}finally{setLoading(false)}},[classLevel]);
- useEffect(()=>{void load()},[load]);
+ // A class switch, refresh or unmount invalidates older asynchronous responses.
+ const requestId=useRef(0);
+ const load=useCallback(async()=>{
+  const current=++requestId.current;
+  if(!classLevel){setRows([]);setAttempts([]);setTests([]);setError('');setLoading(false);return;}
+  setLoading(true);setError('');setRows([]);setAttempts([]);setTests([]);
+  try{
+   const [seriesResult,history,publishedTests]=await Promise.all([requireSupabase().from('mock_test_series').select('id,title,description,class_level,subject,test_ids,updated_at').eq('class_level',classLevel).eq('is_published',true).order('updated_at',{ascending:false}),getMyTestAttempts(),getPublishedTests(classLevel)]);
+   if(current!==requestId.current)return;
+   if(seriesResult.error)throw seriesResult.error;
+   setRows((seriesResult.data??[]) as Series[]);setAttempts(history);setTests(publishedTests);
+  }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError(e instanceof Error?e.message:'Mock Test Series लोड नहीं हो सकीं।');}}
+  finally{if(current===requestId.current)setLoading(false);}
+ },[classLevel]);
+ useEffect(()=>{void load();return()=>{requestId.current++;};},[load]);
  return <section className="space-y-3 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between gap-2"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-100 text-indigo-800"><Layers3 className="h-5 w-5"/></span><div><p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700">PRACTICE PATHWAYS</p><h3 className="text-sm font-extrabold text-slate-900">Mock Test Series</h3><p className="text-[10px] text-slate-500">आपकी कक्षा के लिए चुनी गई अभ्यास श्रृंखलाएँ</p></div></div><button onClick={()=>void load()} disabled={loading} aria-label="Mock Test Series फिर लोड करें" title="Refresh Mock Test Series" className="rounded-lg border border-slate-200 bg-white p-2"><RefreshCw className="h-4 w-4"/></button></div>
  {error&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
  {loading?<p className="py-4 text-xs text-slate-500">Series लोड हो रही हैं…</p>:rows.length===0?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">अभी आपकी कक्षा के लिए कोई Mock Test Series प्रकाशित नहीं हुई है।</p>:<div className="grid gap-3 md:grid-cols-2">{rows.map(s=>{
