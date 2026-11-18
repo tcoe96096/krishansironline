@@ -276,7 +276,7 @@ try {
   await effects.getByRole('combobox', { name: 'Entrance Animation' }).selectOption('fade');
   await effects.getByRole('combobox', { name: 'Visual Filter' }).selectOption('grayscale');
   await effects.getByRole('combobox', { name: 'Hover Animation' }).selectOption('lift');
-  const title = draftFrame.getByRole('heading', { name: 'Class 10 Sample Lesson' });
+  const title = draftFrame.locator('h1').filter({ hasText: 'Class 10 Sample Lesson' }).first();
   assert.equal(await title.getAttribute('data-studio-animation'), 'fade');
   assert.equal(await title.getAttribute('data-studio-hover'), 'lift');
   assert.match(await title.evaluate(element => element.style.filter), /grayscale/);
@@ -289,6 +289,20 @@ try {
   await smart.getByRole('button', { name: 'Copy Style' }).click();
   assert.equal(await smart.getByRole('button', { name: 'Paste Style' }).isEnabled(), true);
   console.log('PASS: Visual animations, filters, hover, preset, auto-contrast and clipboard tools');
+
+  // Extract static public content as an editor-owned component without removing the source.
+  await title.click();
+  const extractButton = customInspector.getByTestId('studio-extract-static-text');
+  await extractButton.waitFor({ timeout: 15000 });
+  const originalTitle = await title.textContent();
+  const countBeforeExtract = await draftFrame.locator('[data-builder-component-id]').count();
+  await extractButton.click();
+  await draftFrame.locator('[data-builder-component-id]').last().waitFor({ timeout: 15000 });
+  assert.equal(await draftFrame.locator('[data-builder-component-id]').count(), countBeforeExtract + 1);
+  assert.equal(await draftFrame.locator('[data-builder-component-id]').last().textContent(), originalTitle);
+  assert.equal(await title.textContent(), originalTitle, 'Source page heading must be preserved during extraction.');
+  await customInspector.getByTestId('managed-component-editor').waitFor({ timeout: 15000 });
+  console.log('PASS: Static text extraction creates an editable Studio Component and preserves original page content');
 
   await page.getByRole('button', { name: 'Publish & Schedule' }).click();
   const publishing = page.getByTestId('studio-publishing-panel');
