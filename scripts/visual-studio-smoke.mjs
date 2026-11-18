@@ -137,7 +137,7 @@ try {
   console.log('PASS: Floating media panel and upload guard in unauthenticated demo');
 
   await frame.locator('h1,h2,h3,p').first().click();
-  await inspector.getByText('Live Inspector').waitFor({ timeout: 15000 });
+  await inspector.getByRole('heading', { name: 'Properties Inspector' }).waitFor({ timeout: 15000 });
   assert.equal(await inspector.getByRole('button', { name: 'Save Cloud Draft' }).isDisabled(), true);
   console.log('PASS: Element inspector and no unauthorized draft save');
 
