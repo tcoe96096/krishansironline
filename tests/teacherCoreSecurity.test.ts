@@ -60,7 +60,9 @@ test('Teacher Directory navigation follows the exact verified account',()=>{
   const portal=readFileSync('teacher-beta/main.tsx','utf8');
   assert.ok(portal.includes('setSuperAdminAccount(user.id)'));
   assert.ok(portal.includes('superAdminAccount===user.id'));
-  assert.match(portal,/directory\s*&&\s*canReview\s*\?\s*<AdminTeacherDirectoryV2/);
+  assert.match(portal,/page==='admin'\s*&&/);
+  assert.match(portal,/canReview\s*&&\s*!demo\s*\?\s*<AdminTeacherDirectoryV2/);
+  assert.match(portal,/teacherCall<boolean>\('is_super_admin'\)/);
   assert.ok(!portal.includes("signInWithGoogle('staff-workspace')"));
 });
 
