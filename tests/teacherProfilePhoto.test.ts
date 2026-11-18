@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validateTeacherPhoto} from '../teacher-beta/TeacherProfilePhoto';
 
-test('teacher dashboard photo accepts camera/gallery safe image types up to 3 MB',()=>{
+test('registration photo accepts camera/gallery safe image types up to 3 MB',()=>{
  assert.equal(validateTeacherPhoto({type:'image/jpeg',size:1024}),null);
  assert.equal(validateTeacherPhoto({type:'image/png',size:3*1024*1024}),null);
  assert.equal(validateTeacherPhoto({type:'image/webp',size:24576}),null);
@@ -15,16 +15,24 @@ test('teacher dashboard photo accepts camera/gallery safe image types up to 3 MB
  }
 });
 
-test('photograph appears only in Teacher Workspace and remains a local non-uploaded preview',()=>{
+test('photo is selected in Registration and displayed in Dashboard without an upload',()=>{
  const portal=readFileSync('teacher-beta/main.tsx','utf8');
  const picker=readFileSync('teacher-beta/TeacherProfilePhoto.tsx','utf8');
+ const registration=readFileSync('teacher-beta/TeacherRegistrationDesignPreview.tsx','utf8');
  const dashboard=readFileSync('teacher-beta/TeacherDashboardOverview.tsx','utf8');
  assert.match(portal,/<TeacherDashboardOverview/);
  assert.match(dashboard,/<TeacherProfilePhoto/);
+ assert.match(registration,/<TeacherPhotoPicker/);
+ assert.match(portal,/photoUrl=\{demo\?registrationPhotoUrl:null\}/);
+ assert.match(portal,/URL\.createObjectURL\(file\)/);
+ assert.match(portal,/URL\.revokeObjectURL\(registrationPhotoUrl\)/);
  assert.match(picker,/capture="user"/);
- assert.match(picker,/URL\.createObjectURL/);
- assert.match(picker,/URL\.revokeObjectURL/);
+ assert.doesNotMatch(picker,/URL\.createObjectURL/);
+ assert.doesNotMatch(picker,/URL\.revokeObjectURL/);
  assert.match(picker,/No database\/storage upload/);
+ assert.match(picker,/disabled=\{disabled\}/);
+ assert.match(picker,/onPhotoSelected\(file\)/);
+ assert.doesNotMatch(dashboard,/<TeacherPhotoPicker/);
  assert.doesNotMatch(picker,/\.storage\.from\(|\.upload\(|localStorage\.setItem|sessionStorage\.setItem|fetch\(/);
  assert.doesNotMatch(readFileSync('src/components/StudentDashboard.tsx','utf8'),/TeacherProfilePhoto/);
 });
