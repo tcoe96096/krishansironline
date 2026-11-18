@@ -76,7 +76,7 @@ try {
   const backgroundInspector = page.locator('[data-visual-editor-ui="inspector-panel"]');
   await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).waitFor({ timeout: 15000 });
   assert.equal(await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).isDisabled(), true);
-  await backgroundInspector.getByRole('textbox', { name: 'Background colour' }).fill('#1240b0');
+  await backgroundInspector.locator('input[aria-label="Background colour"]').fill('#1240b0');
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(18, 64, 176)');
   await backgroundInspector.getByRole('button', { name: 'Keep Original Background' }).click();
   assert.equal(await gradientFrame.evaluate(node => getComputedStyle(node).backgroundColor), originalGradientColor);
