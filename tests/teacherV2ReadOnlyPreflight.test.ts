@@ -11,7 +11,8 @@ test('RPC preflight is explicitly read-only and has no mutation statements',()=>
  assert.equal(statements.length,3,'expected three read-only inspection queries');
  for(const statement of statements){
   assert.match(statement,/^(?:WITH|SELECT)\b/i);
-  assert.doesNotMatch(statement,/\b(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE)\b/i);
+  const withoutStringLiterals=statement.replace(/'(?:''|[^'])*'/g,"''");
+  assert.doesNotMatch(withoutStringLiterals,/\b(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE)\b/i);
  }
 });
 
