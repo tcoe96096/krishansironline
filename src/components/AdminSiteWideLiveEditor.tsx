@@ -588,7 +588,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     let movingId: string | null = null;
     const dragStart = (event: DragEvent) => {
       const target = event.target;
-      const owned = target instanceof Element ? target.closest<HTMLElement>('[data-builder-component-id]') : null;
+      const owned = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
       if (!owned?.dataset.builderComponentId) return;
       movingId = owned.dataset.builderComponentId;
       event.dataTransfer?.setData('text/plain', movingId);
@@ -597,7 +597,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     const dragOver = (event: DragEvent) => {
       if (!movingId) return;
       const target = event.target;
-      const dest = target instanceof Element ? target.closest<HTMLElement>('[data-builder-component-id]') : null;
+      const dest = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
       if (!dest || dest.dataset.builderComponentId === movingId) return;
       const from = pageComponents.find(item => item.id === movingId);
       const to = pageComponents.find(item => item.id === dest.dataset.builderComponentId);
@@ -608,7 +608,7 @@ export const AdminSiteWideLiveEditor: React.FC<{ src: string; srcDoc?: string; p
     const drop = (event: DragEvent) => {
       if (!movingId) return;
       const target = event.target;
-      const dest = target instanceof Element ? target.closest<HTMLElement>('[data-builder-component-id]') : null;
+      const dest = target && 'closest' in target ? (target as HTMLElement).closest<HTMLElement>('[data-builder-component-id]') : null;
       const source = movingId;
       movingId = null;
       if (!dest?.dataset.builderComponentId || source === dest.dataset.builderComponentId) return;
