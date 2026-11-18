@@ -11,14 +11,15 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  {error&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
  {loading?<p className="py-4 text-xs text-slate-500">Series लोड हो रही हैं…</p>:rows.length===0?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">अभी आपकी कक्षा के लिए कोई Mock Test Series प्रकाशित नहीं हुई है।</p>:<div className="grid gap-3 md:grid-cols-2">{rows.map(s=>{
  const testById=new Map(tests.map(test=>[test.id,test]));
- const availableIds=s.test_ids.filter(id=>testById.has(id));
- const unavailableCount=s.test_ids.length-availableIds.length;
- const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableIds.includes(a.test_id)).map(a=>a.test_id));
- const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableIds.includes(a.test_id)).map(a=>a.test_id));
- const activeId=availableIds.find(id=>activeIds.has(id));
+ const availableIds=[...new Set(s.test_ids.filter(id=>testById.has(id)))];
+ const unavailableCount=s.test_ids.filter(id=>!testById.has(id)).length;
+ const availableSet=new Set(availableIds);
+ const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableSet.has(a.test_id)).map(a=>a.test_id));
+ const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableSet.has(a.test_id)).map(a=>a.test_id));
+ const activeId=availableIds.find(id=>activeIds.has(id)&&!doneIds.has(id));
  const nextId=availableIds.find(id=>!doneIds.has(id))||availableIds[0];
  const nextActive=Boolean(activeId);
- const percent=Math.round(doneIds.size/Math.max(1,availableIds.length)*100);
+ const percent=availableIds.length?Math.round(doneIds.size/availableIds.length*100):0;
  const nextLabel=(id:string)=>{const test=testById.get(id);return test?.title?.hi||test?.title?.en||'प्रकाशित टेस्ट विवरण उपलब्ध नहीं';};
  return <article key={s.id} className="rounded-xl border border-indigo-100 bg-white p-3">
  <p className="text-sm font-extrabold text-slate-900">{s.title?.hi||s.title?.en||'Mock Test Series'}</p>
