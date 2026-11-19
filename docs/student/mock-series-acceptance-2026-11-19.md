@@ -21,7 +21,7 @@ Scope: `src/components/StudentMockTestSeries.tsx` on Draft PR #120 only. No stud
 ## Verification gate
 
 1. CI must install dependencies before lint/build or browser checks can be credited.
-2. At head `0e173983daa3db9076433c2eabd8530d1b2b4993`, GitHub Actions reports Hosting compliance **success**; website build, Preview build, and isolated Teacher build **failure**. Previous run identified `@supabase/auth-js@2.119.2` npm E404 during install; confirm current logs before concluding the same root cause for all jobs.
+2. At head `716fd790b45b941c243e0d7861b2a61cd8531549`, GitHub Actions reports **success** for all four completed workflows: Validate website build, Teacher Core Beta isolated checks, Preview build (no production deploy), and Hosting compliance. This supersedes the earlier `0e173983` dependency-install failures for this head only. CI build success does **not** establish browser, mobile, accessibility, or authenticated exam-flow acceptance.
 3. Shared dependency/lockfile repairs belong to a coordinated integration proposal; do not edit shared manifests from this student-only branch.
 4. No merge, deployment, Preview/Production database access or student account changes without separate owner approval and recovery/authenticated safety gates.
 
