@@ -25,8 +25,9 @@ export function isValidMockIssueDate(value:string):boolean {
 export function visibleMockInboxItems(items:readonly MockInboxItem[]):MockInboxItem[] {
   const seen=new Set<string>();
   return items.filter(item=>{
-    if(item.recipient!=='demo-self'||item.status!=='issued'||!Number.isSafeInteger(item.revision)||item.revision<=0||!item.id.trim()||!isValidMockIssueDate(item.issuedAt)||seen.has(item.id))return false;
-    seen.add(item.id);
+    const normalizedId=item.id.trim();
+    if(item.recipient!=='demo-self'||item.status!=='issued'||!Number.isSafeInteger(item.revision)||item.revision<=0||!normalizedId||!isValidMockIssueDate(item.issuedAt)||seen.has(normalizedId))return false;
+    seen.add(normalizedId);
     return true;
   });
 }
