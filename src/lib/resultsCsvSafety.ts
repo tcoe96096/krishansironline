@@ -7,9 +7,9 @@ export function escapeResultsCsvCell(value: unknown): string {
   const raw = String(value ?? '');
   // A tab, CR or LF at the start is itself an injection vector; preserve
   // visible text while neutralizing spreadsheet interpretation.
-  // Include invisible format characters that JavaScript \s does not match.
-  // These can visually hide a formula marker in imported spreadsheet data.
-  const unsafe = /^[\s\u0000-\u001f\u007f-\u009f\u00ad\u180e\u200b-\u200d\u2060]*[=+@-]/u.test(raw)
+  // Include all Unicode format characters (Cf), including bidi marks and
+  // invisible separators that JavaScript \s does not match.
+  const unsafe = /^[\s\p{Cf}\u0000-\u001f\u007f-\u009f\u180e]*[=+@-]/u.test(raw)
     || /^[\t\r\n]/u.test(raw);
   const safe = unsafe ? "'" + raw : raw;
   return '"' + safe.replace(/"/g, '""') + '"';
