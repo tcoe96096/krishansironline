@@ -27,7 +27,6 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  // Treat malformed or legacy series payloads as empty rather than crashing the student dashboard.
  const uniqueSeriesIds=[...new Set((Array.isArray(s.test_ids)?s.test_ids:[]).filter((id):id is string=>typeof id==='string').map(id=>id.trim()).filter(Boolean))];
  const availableIds=uniqueSeriesIds.filter(id=>testById.has(id));
- const unavailableCount=uniqueSeriesIds.filter(id=>!testById.has(id)).length;
  const availableSet=new Set(availableIds);
  const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableSet.has(a.test_id)).map(a=>a.test_id));
  const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableSet.has(a.test_id)).map(a=>a.test_id));
@@ -43,7 +42,6 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  <div className="mt-3 flex items-center justify-between gap-2 text-[10px] font-semibold text-slate-500"><span className="flex items-center gap-2"><ClipboardList className="h-3.5 w-3.5"/>{doneIds.size}/{availableIds.length} उपलब्ध Tests पूर्ण · {s.subject}</span><strong className="text-indigo-700">{percent}%</strong></div>
  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-600 transition-all" role="progressbar" aria-label="Series completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} style={{width:percent+'%'}}/></div>
  <ol className="mt-3 space-y-1">{availableIds.map((id,i)=><li key={id} className="flex items-center justify-between gap-2 text-[10px]"><span className="min-w-0 truncate text-slate-600">{i+1}. {nextLabel(id)}</span><span className={doneIds.has(id)?'font-bold text-emerald-700':activeIds.has(id)?'font-bold text-amber-700':'text-slate-400'}>{doneIds.has(id)?'पूर्ण':activeIds.has(id)?'जारी':'बाकी'}</span></li>)}</ol>
- {unavailableCount>0&&<p role="status" className="mt-2 text-[11px] text-amber-800">{unavailableCount} टेस्ट इस कक्षा की उपलब्ध सूची में शामिल नहीं हैं।</p>}
  {availableIds.length===0?<p className="mt-3 rounded-lg bg-slate-100 px-3 py-2.5 text-center text-xs font-semibold text-slate-600">अभी इस Series में कोई उपलब्ध टेस्ट नहीं है।</p>:<a href={import.meta.env.BASE_URL+'online-tests/?testId='+encodeURIComponent(launchId||'')} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-700 px-3 py-2.5 text-xs font-bold text-white"><PlayCircle className="h-4 w-4"/>{doneIds.size===availableIds.length?'Series दोबारा देखें':nextActive?'जारी टेस्ट खोलें':'अगला टेस्ट चुनें'}{activeId?' · '+nextLabel(activeId):nextId?' · '+nextLabel(nextId):''}</a>}</article>;
 })}</div>}
  <p className="text-[10px] text-slate-400">प्रगति आपके सुरक्षित Test Attempts से निकाली जाती है। सूची में प्रकाशित टेस्ट के वास्तविक शीर्षक दिखते हैं। Series क्रम अभ्यास के लिए है; अभी अगले टेस्ट पर तकनीकी लॉक लागू नहीं है। टेस्ट शुरू करने और attempt limit लागू करने का काम मौजूदा सुरक्षित Test Engine करता है।</p></section>
