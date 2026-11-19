@@ -17,3 +17,11 @@ test('input fixture array remains unchanged after filtering',()=>{
   visibleMockInboxItems(MOCK_INBOX_ITEMS);
   assert.equal(JSON.stringify(MOCK_INBOX_ITEMS),before);
 });
+
+test('duplicate and blank synthetic identifiers fail closed without mutating fixtures',()=>{
+  const base:MockInboxItem={id:'DEMO-ONE',title:'Demo',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-10-01',revision:1};
+  const entries=[base,{...base,title:'Duplicate'},{...base,id:'   '},{...base,id:'DEMO-TWO'}];
+  const before=JSON.stringify(entries);
+  assert.deepEqual(visibleMockInboxItems(entries).map(item=>item.id),['DEMO-ONE','DEMO-TWO']);
+  assert.equal(JSON.stringify(entries),before);
+});
