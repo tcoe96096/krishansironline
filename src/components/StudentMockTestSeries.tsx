@@ -16,7 +16,7 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
    if(current!==requestId.current)return;
    if(seriesResult.error)throw seriesResult.error;
    setRows((seriesResult.data??[]) as Series[]);setAttempts(history);setTests(publishedTests);
-  }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError(e instanceof Error?e.message:'Mock Test Series लोड नहीं हो सकीं।');}}
+  }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
   finally{if(current===requestId.current)setLoading(false);}
  },[classLevel]);
  useEffect(()=>{void load();return()=>{requestId.current++;};},[load]);
