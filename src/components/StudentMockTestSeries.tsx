@@ -29,7 +29,9 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  const availableIds=uniqueSeriesIds.filter(id=>testById.has(id));
  const availableSet=new Set(availableIds);
  const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableSet.has(a.test_id)).map(a=>a.test_id));
- const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableSet.has(a.test_id)).map(a=>a.test_id));
+ // Expired in-progress rows are not resumable; the server remains authoritative on launch.
+ const now=Date.now();
+ const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableSet.has(a.test_id)&&Number.isFinite(Date.parse(a.expires_at))&&Date.parse(a.expires_at)>now).map(a=>a.test_id));
  const activeId=availableIds.find(id=>activeIds.has(id)&&!doneIds.has(id));
  const nextId=availableIds.find(id=>!doneIds.has(id))||availableIds[0];
  const nextActive=Boolean(activeId);
