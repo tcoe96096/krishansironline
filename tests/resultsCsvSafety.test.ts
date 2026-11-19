@@ -42,3 +42,12 @@ test('invisible Unicode format prefixes cannot disguise formula markers', () => 
   }
   assert.equal(escapeResultsCsvCell('हिंदी\u200bपाठ'), '"हिंदी\u200bपाठ"');
 });
+
+
+test('bidi and other Unicode format marks cannot conceal formulas', () => {
+  for (const prefix of ['\u200e', '\u200f', '\u202a', '\u202e', '\u2066', '\u2069', '\u061c', '\u2063']) {
+    assert.ok(escapeResultsCsvCell(prefix + '=1+1').startsWith('"\''), JSON.stringify(prefix));
+    assert.ok(escapeResultsCsvCell(' ' + prefix + '+SUM(1)').startsWith('"\''), JSON.stringify(prefix));
+  }
+  assert.equal(escapeResultsCsvCell('पाठ\u200eसुरक्षित'), '"पाठ\u200eसुरक्षित"');
+});
