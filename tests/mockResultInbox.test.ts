@@ -36,3 +36,12 @@ test('synthetic inbox rejects missing and invalid issue dates, including leap-da
   for(const date of ['2024-02-29','2000-02-29','2026-12-31'])assert.equal(isValidMockIssueDate(date),true,date);
   assert.equal(isValidMockIssueDate('1900-02-29'),false);
 });
+
+
+test('synthetic IDs differing only by surrounding whitespace cannot create duplicate entries',()=>{
+  const base:MockInboxItem={id:'DEMO-ONE',title:'Demo',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-10-01',revision:1};
+  const entries=[base,{...base,id:' DEMO-ONE '},{...base,id:'DEMO-TWO'}];
+  const snapshot=JSON.stringify(entries);
+  assert.deepEqual(visibleMockInboxItems(entries).map(item=>item.id),['DEMO-ONE','DEMO-TWO']);
+  assert.equal(JSON.stringify(entries),snapshot);
+});
