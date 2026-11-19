@@ -15,7 +15,7 @@ export const MOCK_INBOX_ITEMS:readonly MockInboxItem[] = [
 /** Display-only eligibility. The future backend must independently enforce authenticated ownership, issuance and revocation. */
 /** Strictly check synthetic issue dates, including calendar validity. Real dates are server-verified. */
 export function isValidMockIssueDate(value:string):boolean {
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
   const [year,month,day]=value.split('-').map(Number);
   if(year<1||month<1||month>12||day<1)return false;
   const daysInMonth=[31,((year%4===0&&year%100!==0)||year%400===0)?29:28,31,30,31,30,31,31,30,31,30,31];
