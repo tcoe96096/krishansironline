@@ -25,7 +25,7 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  {loading?<p className="py-4 text-xs text-slate-500">Series लोड हो रही हैं…</p>:error?<p className="rounded-xl border border-rose-100 bg-white p-4 text-xs text-slate-600">सूची उपलब्ध नहीं है। ऊपर दिए Refresh बटन से दोबारा प्रयास करें।</p>:!classLevel?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">Mock Test Series देखने के लिए पहले अपनी कक्षा चुनें।</p>:rows.length===0?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">अभी आपकी कक्षा के लिए कोई Mock Test Series प्रकाशित नहीं हुई है।</p>:<div className="grid gap-3 md:grid-cols-2">{rows.map(s=>{
  const testById=new Map(tests.map(test=>[test.id,test]));
  // Treat malformed or legacy series payloads as empty rather than crashing the student dashboard.
- const uniqueSeriesIds=[...new Set((Array.isArray(s.test_ids)?s.test_ids:[]).filter((id):id is string=>typeof id==='string'&&id.length>0))];
+ const uniqueSeriesIds=[...new Set((Array.isArray(s.test_ids)?s.test_ids:[]).filter((id):id is string=>typeof id==='string').map(id=>id.trim()).filter(Boolean))];
  const availableIds=uniqueSeriesIds.filter(id=>testById.has(id));
  const unavailableCount=uniqueSeriesIds.filter(id=>!testById.has(id)).length;
  const availableSet=new Set(availableIds);
