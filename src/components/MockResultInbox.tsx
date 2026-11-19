@@ -14,7 +14,12 @@ export const MOCK_INBOX_ITEMS:readonly MockInboxItem[] = [
 
 /** Display-only eligibility. The future backend must independently enforce authenticated ownership, issuance and revocation. */
 export function visibleMockInboxItems(items:readonly MockInboxItem[]):MockInboxItem[] {
-  return items.filter(item=>item.recipient==='demo-self'&&item.status==='issued'&&Number.isSafeInteger(item.revision)&&item.revision>0);
+  const seen=new Set<string>();
+  return items.filter(item=>{
+    if(item.recipient!=='demo-self'||item.status!=='issued'||!Number.isSafeInteger(item.revision)||item.revision<=0||!item.id.trim()||seen.has(item.id))return false;
+    seen.add(item.id);
+    return true;
+  });
 }
 
 export const MockResultInbox:React.FC=()=>{
@@ -27,6 +32,7 @@ export const MockResultInbox:React.FC=()=>{
       <p className="mt-1 text-sm">DEMO ONLY · NOT ISSUED BY KSOL. Synthetic records; no sign-in, database, real results, download, print, share or delivery.</p>
     </header>
     <div className="space-y-3" aria-label="Synthetic inbox entries">
+      {items.length===0&&<p role="status" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">No sample results available / कोई उदाहरण परिणाम उपलब्ध नहीं है। This preview never queries real student records.</p>}
       {items.map(item=><article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h3 className="font-bold text-slate-900">{item.title}</h3><p className="text-sm text-slate-600">{item.session} · Sample {item.id} · Revision {item.revision}</p></div>
