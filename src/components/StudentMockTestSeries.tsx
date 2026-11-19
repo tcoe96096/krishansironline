@@ -22,7 +22,7 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
     if(seenSeriesIds.has(id))return false;
     seenSeriesIds.add(id);
     return true;
-   }));setAttempts(history);setTests(publishedTests);
+   }));setAttempts(Array.isArray(history)?history:[]);setTests(Array.isArray(publishedTests)?publishedTests:[]);
   }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
   finally{if(current===requestId.current)setLoading(false);}
  },[classLevel]);
@@ -31,15 +31,15 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  {error&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
  {loading?<p role="status" aria-live="polite" className="py-4 text-xs text-slate-500">Series लोड हो रही हैं…</p>:error?<p className="rounded-xl border border-rose-100 bg-white p-4 text-xs text-slate-600">सूची उपलब्ध नहीं है। ऊपर दिए Refresh बटन से दोबारा प्रयास करें।</p>:!classLevel?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">Mock Test Series देखने के लिए पहले अपनी कक्षा चुनें।</p>:rows.length===0?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">अभी आपकी कक्षा के लिए कोई Mock Test Series प्रकाशित नहीं हुई है।</p>:<div className="grid gap-3 md:grid-cols-2">{rows.map(s=>{
  // Fail closed if a malformed catalogue response includes another class or an invalid test ID.
- const testById=new Map(tests.filter(test=>test.class_level===classLevel&&typeof test.id==='string'&&test.id.trim()!=='').map(test=>[test.id,test]));
+ const testById=new Map(tests.filter(test=>test&&test.class_level===classLevel&&typeof test.id==='string'&&test.id.trim()!=='').map(test=>[test.id,test]));
  // Treat malformed or legacy series payloads as empty rather than crashing the student dashboard.
  const uniqueSeriesIds=[...new Set((Array.isArray(s.test_ids)?s.test_ids:[]).filter((id):id is string=>typeof id==='string').map(id=>id.trim()).filter(Boolean))];
  const availableIds=uniqueSeriesIds.filter(id=>testById.has(id));
  const availableSet=new Set(availableIds);
- const doneIds=new Set(attempts.filter(a=>a.status==='submitted'&&availableSet.has(a.test_id)).map(a=>a.test_id));
+ const doneIds=new Set(attempts.filter(a=>a&&a.status==='submitted'&&availableSet.has(a.test_id)).map(a=>a.test_id));
  // Expired in-progress rows are not resumable; the server remains authoritative on launch.
  const now=Date.now();
- const activeIds=new Set(attempts.filter(a=>a.status==='in_progress'&&availableSet.has(a.test_id)&&Number.isFinite(Date.parse(a.expires_at))&&Date.parse(a.expires_at)>now).map(a=>a.test_id));
+ const activeIds=new Set(attempts.filter(a=>a&&a.status==='in_progress'&&availableSet.has(a.test_id)&&Number.isFinite(Date.parse(a.expires_at))&&Date.parse(a.expires_at)>now).map(a=>a.test_id));
  const activeId=availableIds.find(id=>activeIds.has(id)&&!doneIds.has(id));
  const nextId=availableIds.find(id=>!doneIds.has(id))||availableIds[0];
  const nextActive=Boolean(activeId);
