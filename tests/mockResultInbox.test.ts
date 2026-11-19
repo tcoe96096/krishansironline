@@ -45,3 +45,19 @@ test('synthetic IDs differing only by surrounding whitespace cannot create dupli
   assert.deepEqual(visibleMockInboxItems(entries).map(item=>item.id),['DEMO-ONE','DEMO-TWO']);
   assert.equal(JSON.stringify(entries),snapshot);
 });
+
+
+test('synthetic inbox rejects unsafe revision numbers and preserves the supplied fixtures',()=>{
+  const base:MockInboxItem={id:'DEMO-SAFE',title:'Demo',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-19',revision:1};
+  const invalid=[Number.MAX_SAFE_INTEGER+1,Number.NEGATIVE_INFINITY,Number.POSITIVE_INFINITY,Number.NaN,0.5];
+  const items=invalid.map((revision,index)=>({...base,id:`DEMO-INVALID-${index}`,revision}));
+  const snapshot=items.map(item=>({...item}));
+  assert.deepEqual(visibleMockInboxItems(items),[]);
+  assert.deepEqual(items,snapshot);
+  assert.deepEqual(visibleMockInboxItems([{...base,revision:Number.MAX_SAFE_INTEGER}]).map(item=>item.id),['DEMO-SAFE']);
+});
+
+test('synthetic issue dates enforce Gregorian century leap-year rules',()=>{
+  for(const date of ['1600-02-29','2000-02-29','2400-02-29'])assert.equal(isValidMockIssueDate(date),true,date);
+  for(const date of ['1700-02-29','1800-02-29','1900-02-29','2100-02-29'])assert.equal(isValidMockIssueDate(date),false,date);
+});
