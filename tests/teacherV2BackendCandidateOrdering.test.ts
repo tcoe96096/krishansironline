@@ -30,7 +30,7 @@ test('candidate teacher-only backend order is explicit and every proposed file e
  assert.ok(!section.includes('teacher_management_v2_integration_REVIEW_ONLY.sql'),
   'Core Beta must not install study-material integration SQL');
  assert.match(document, /NO-GO for backend activation/i);
- assert.match(document, /separate.*owner.*decision/i);
+ assert.match(document, /owner must explicitly authorize high-impact operations/i);
 });
 
 test('review and verification overrides must precede final RPC grants', () => {
