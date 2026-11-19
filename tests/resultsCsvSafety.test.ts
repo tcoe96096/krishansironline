@@ -33,3 +33,12 @@ test('Hindi text and quoted multiline fields retain their CSV data', () => {
   assert.equal(escapeResultsCsvCell('पहली पंक्ति\nदूसरी पंक्ति'), '"पहली पंक्ति\nदूसरी पंक्ति"');
   assert.equal(escapeResultsCsvCell('  सामान्य पाठ'), '"  सामान्य पाठ"');
 });
+
+
+test('invisible Unicode format prefixes cannot disguise formula markers', () => {
+  for (const prefix of ['\u200b', '\u200c', '\u200d', '\u2060', '\u00ad', '\u180e']) {
+    assert.ok(escapeResultsCsvCell(prefix + '=1+1').startsWith('"\''), JSON.stringify(prefix));
+    assert.ok(escapeResultsCsvCell(' ' + prefix + '@SUM(1)').startsWith('"\''), JSON.stringify(prefix));
+  }
+  assert.equal(escapeResultsCsvCell('हिंदी\u200bपाठ'), '"हिंदी\u200bपाठ"');
+});
