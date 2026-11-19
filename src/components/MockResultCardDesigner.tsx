@@ -24,18 +24,18 @@ export const MockResultCardDesigner:React.FC=()=>{
       {([['heading','Heading / शीर्षक'],['session','Session / सत्र'],['student','Demo student / उदाहरण विद्यार्थी'],['roll','Demo roll / उदाहरण रोल'],['classLevel','Class / कक्षा'],['remarks','Remarks / टिप्पणी']] as const).map(([key,label])=><label key={key} className="text-sm font-semibold">{label}<input className="mt-1 w-full rounded-lg border p-2" value={draft[key]} onChange={e=>edit(key,e.target.value)}/></label>)}
     </div>
     <div className="space-y-2"><h3 className="font-bold">Subject rows / विषय</h3>
-      {draft.rows.map(row=><div key={row.id} className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_auto] gap-2">
-        {(['subject','maximum','obtained'] as const).map(key=><label key={key} className="text-xs">{key}<input aria-label={key+' '+row.id} className="mt-1 w-full rounded border p-2" value={row[key]} onChange={e=>editRow(row.id,key,e.target.value)}/></label>)}
+      {draft.rows.map(row=><div key={row.id} className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+        {(['subject','maximum','obtained'] as const).map(key=><label key={key} className="text-xs">{key}<input aria-label={key+' '+row.id} className="mt-1 min-w-0 w-full rounded border p-2" value={row[key]} onChange={e=>editRow(row.id,key,e.target.value)}/></label>)}
         <button type="button" aria-label={'Remove subject '+row.id} className="self-end rounded border px-3 py-2" onClick={()=>setDraft(old=>({...old,rows:old.rows.filter(r=>r.id!==row.id)}))}>×</button>
       </div>)}
       <button type="button" disabled={draft.rows.length>=12} className="rounded border px-3 py-2 disabled:opacity-40" onClick={()=>{setDraft(old=>({...old,rows:[...old.rows,{id:nextId,subject:'',maximum:'100',obtained:'0'}]}));setNextId(x=>x+1);}}>+ Add subject</button>
     </div>
-    <article className="relative overflow-hidden rounded-2xl border-2 border-sky-900 bg-white p-6 text-slate-900" aria-label="Unissued mock report preview">
+    <article className="relative min-w-0 overflow-hidden rounded-2xl border-2 border-sky-900 bg-white p-3 text-slate-900 sm:p-6" aria-label="Unissued mock report preview">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-4xl font-black text-slate-200 opacity-60 -rotate-12">DRAFT / NOT ISSUED</div>
       <div className="relative">
         <h2 className="text-center text-xl font-black">{draft.heading||'KSOL'}</h2><p className="text-center text-sm">Digital Result Card · DEMO · {draft.session}</p>
         <div className="mt-5 grid grid-cols-2 gap-2 text-sm"><p>Student: {draft.student}</p><p>Roll: {draft.roll}</p><p>Class: {draft.classLevel}</p><p>Status: NOT ISSUED</p></div>
-        <table className="mt-4 w-full border-collapse text-left text-sm"><thead><tr><th className="border p-2">Subject</th><th className="border p-2">Maximum</th><th className="border p-2">Obtained</th></tr></thead><tbody>{draft.rows.map(r=><tr key={r.id}><td className="border p-2">{r.subject}</td><td className="border p-2">{r.maximum}</td><td className="border p-2">{r.obtained}</td></tr>)}</tbody></table>
+        <div className="mt-4 max-w-full overflow-x-auto"><table className="w-full min-w-[360px] border-collapse text-left text-sm"><thead><tr><th className="border p-2">Subject</th><th className="border p-2">Maximum</th><th className="border p-2">Obtained</th></tr></thead><tbody>{draft.rows.map(r=><tr key={r.id}><td className="border p-2">{r.subject}</td><td className="border p-2">{r.maximum}</td><td className="border p-2">{r.obtained}</td></tr>)}</tbody></table></div>
         <p role="status" className="mt-3 font-semibold">{total?`Demo total: ${total.obtained} / ${total.maximum} (${(total.obtained/total.maximum*100).toFixed(1)}%)`:'Enter valid subject marks to calculate demo total.'}</p>
         <p className="mt-4 text-sm">Remarks: {draft.remarks}</p><p className="mt-5 border-t pt-3 text-xs">Signature placeholder · Not an official certificate</p>
       </div>
