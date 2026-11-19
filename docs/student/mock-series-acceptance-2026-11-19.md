@@ -26,3 +26,15 @@ Scope: `src/components/StudentMockTestSeries.tsx` on Draft PR #120 only. No stud
 4. No merge, deployment, Preview/Production database access or student account changes without separate owner approval and recovery/authenticated safety gates.
 
 This matrix documents intended tests; it is **not** evidence that browser tests or authenticated security tests passed.
+
+## Reproducible fixture and security test protocol (draft, not executed)
+
+Use **synthetic users only** and mock `mock_test_series`, `getPublishedTests`, and `getMyTestAttempts` at the component boundary. Record the exact branch SHA, test command, browser version, viewport, fixture name and assertion output before checking any scenario above. Never use Production credentials or actual student identifiers.
+
+1. **Cross-class race:** mount class A, hold its three API responses, switch to class B, resolve B with published test B1, then resolve A. Assert B1 remains visible and no A title, test ID or launch URL appears at any post-switch render.
+2. **Malformed catalogue:** return `null`, non-array objects, duplicate IDs, blank IDs and wrong-class published tests separately. Assert no crash, no wrong-class launch, and progress denominator equals distinct valid published IDs.
+3. **Attempt expiry:** freeze the clock; inject submitted, active future-expiry, expired, missing-expiry and invalid-date attempts. Assert only future-expiry in-progress attempts get a Resume label; verify server-side eligibility independently before release.
+4. **Accessibility/mobile:** run Hindi and English text assertions at 320, 375 and 768 CSS pixels, keyboard-focus Refresh and launch, inspect progressbar accessible value and check horizontal overflow.
+5. **Network failure/retry:** reject each of the three requests independently; assert alert, no stale rows or links, then retry with valid fixture and assert recovery.
+
+**Release blocker:** A successful build does not satisfy these assertions. Authenticated authorization, 30-day recovery and server grading require separate student-owned integration tests and verified recovery evidence; no Preview/Production mutations or deployment are authorized by this document.
