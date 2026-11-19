@@ -27,7 +27,8 @@ test('mock validation never assigns an official grade or publishes a result',()=
 test('boundary cases: twelve rows are permitted and thirteen rejected',()=>{
   const twelve=Array.from({length:12},(_,i)=>({...row('Subject '+i,'100','99.99'),id:i+1}));
   const total=mockMarksTotal(twelve);
-  assert.equal(total?.maximum,1200);\n  assert.ok(total && Math.abs(total.obtained-1199.88)<1e-8);
+  assert.equal(total?.maximum,1200);
+  assert.ok(total && Math.abs(total.obtained-1199.88)<1e-8);
   assert.equal(mockMarksTotal([...twelve,{...row('Extra','100','0'),id:13}]),null);
 });
 test('invalid numeric notation and over-maximum decimal values are rejected',()=>{
