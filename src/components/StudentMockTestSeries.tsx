@@ -15,7 +15,14 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
    const [seriesResult,history,publishedTests]=await Promise.all([requireSupabase().from('mock_test_series').select('id,title,description,class_level,subject,test_ids,updated_at').eq('class_level',classLevel).eq('is_published',true).order('updated_at',{ascending:false}),getMyTestAttempts(),getPublishedTests(classLevel)]);
    if(current!==requestId.current)return;
    if(seriesResult.error)throw seriesResult.error;
-   setRows(((seriesResult.data??[]) as Series[]).filter(series=>series&&series.class_level===classLevel&&typeof series.id==='string'&&series.id.trim()!==''));setAttempts(history);setTests(publishedTests);
+   const seenSeriesIds=new Set<string>();
+   setRows(((seriesResult.data??[]) as Series[]).filter(series=>{
+    if(!series||series.class_level!==classLevel||typeof series.id!=='string'||!series.id.trim())return false;
+    const id=series.id.trim();
+    if(seenSeriesIds.has(id))return false;
+    seenSeriesIds.add(id);
+    return true;
+   }));setAttempts(history);setTests(publishedTests);
   }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
   finally{if(current===requestId.current)setLoading(false);}
  },[classLevel]);
