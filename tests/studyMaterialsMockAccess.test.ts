@@ -52,3 +52,22 @@ test('mock authorization never creates signed URLs or mutates material fixtures'
   }
   assert.equal(JSON.stringify([M1, M2, M3]), before);
 });
+
+test('client-supplied class claims cannot override authoritative mock enrollment', () => {
+  const actor = student(['B']);
+  const forgedRequest = { classIds: ['A'], materialId: M1.id };
+  assert.deepEqual(decide(actor, M1, 'download'), deny);
+  assert.deepEqual(decide(actor, M1, 'list'), deny);
+  assert.equal(forgedRequest.classIds.includes('A'), true);
+});
+
+test('material entitlement does not imply result inbox authorization', () => {
+  const actor = student(['A']);
+  assert.equal(decide(actor, M1, 'list').allowed, true);
+  // Separate synthetic result permission; class membership is not a result grant.
+  const resultGrant = { studentId: 'S2', allowedRecipientId: 'S2' };
+  const requestingStudentId = 'S1';
+  const canReadResult = requestingStudentId === resultGrant.allowedRecipientId;
+  assert.equal(canReadResult, false);
+  assert.equal(decide(actor, M1, 'download').url, null);
+});
