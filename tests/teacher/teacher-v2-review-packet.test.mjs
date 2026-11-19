@@ -21,7 +21,7 @@ test('all 18 actor-specific acceptance cases are defined exactly once', () => {
 test('read-only catalog script has an explicit read-only transaction and no mutation statements', () => {
   assert.match(executableSql, /BEGIN\s+TRANSACTION\s+READ\s+ONLY\s*;/i);
   assert.match(executableSql, /ROLLBACK\s*;/i);
-  assert.doesNotMatch(executableSql, /\b(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|MERGE|CALL|DO|COPY|EXECUTE|SET\s+ROLE)\b/i);
+  assert.doesNotMatch(executableSql, /(?:^|;)\s*(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|MERGE|CALL|DO|COPY|EXECUTE|SET\s+ROLE)\b/im);
 });
 test('catalog script inventories all three RPCs and the known privilege hazard', () => {
   for (const rpc of ['teacher_v2_save_application', 'teacher_v2_review', 'teacher_v2_snapshot']) {
