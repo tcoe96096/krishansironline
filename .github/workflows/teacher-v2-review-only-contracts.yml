@@ -5,12 +5,14 @@ on:
       - 'feature/teacher-v2-role-acceptance-matrix-20261120'
     paths:
       - 'tests/teacher/teacher-v2-*.test.mjs'
+      - 'tests/teacher-v2-private-media*.test.mjs'
       - 'docs/teacher/teacher-v2-*.md'
       - 'docs/teacher/teacher-v2-preview-catalog-readonly.sql'
       - '.github/workflows/teacher-v2-review-only-contracts.yml'
   pull_request:
     paths:
       - 'tests/teacher/teacher-v2-*.test.mjs'
+      - 'tests/teacher-v2-private-media*.test.mjs'
       - 'docs/teacher/teacher-v2-*.md'
       - 'docs/teacher/teacher-v2-preview-catalog-readonly.sql'
       - '.github/workflows/teacher-v2-review-only-contracts.yml'
@@ -30,4 +32,4 @@ jobs:
           node-version: '22'
       - name: Execute review-only teacher contracts
         run: |
-          node --test tests/teacher/teacher-v2-*.test.mjs
+          node --test tests/teacher/teacher-v2-*.test.mjs tests/teacher-v2-private-media*.test.mjs
