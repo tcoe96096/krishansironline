@@ -76,3 +76,12 @@ test('synthetic inbox fails closed on unexpected runtime recipient and status va
   assert.deepEqual(malformed,snapshot);
   assert.deepEqual(visibleMockInboxItems([base,...malformed]).map(item=>item.id),['DEMO-VALID']);
 });
+
+
+test('synthetic inbox ignores malformed runtime records without crashing or leaking valid entries',()=>{
+  const valid:MockInboxItem={id:'SAFE',title:'Demo',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const malformed=[null,undefined,42,'unexpected',{...valid,id:null},{...valid,id:42},{...valid,issuedAt:null},{...valid,issuedAt:20261120}];
+  const payload=[...malformed,valid] as unknown as MockInboxItem[];
+  assert.doesNotThrow(()=>visibleMockInboxItems(payload));
+  assert.deepEqual(visibleMockInboxItems(payload).map(item=>item.id),['SAFE']);
+});
