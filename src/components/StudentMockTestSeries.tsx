@@ -16,7 +16,9 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
    if(current!==requestId.current)return;
    if(seriesResult.error)throw seriesResult.error;
    const seenSeriesIds=new Set<string>();
-   setRows(((seriesResult.data??[]) as Series[]).filter(series=>{
+   // A malformed successful API payload must not crash the dashboard or expose stale class data.
+   const safeSeries=Array.isArray(seriesResult.data)?seriesResult.data:[];
+   setRows((safeSeries as Series[]).filter(series=>{
     if(!series||series.class_level!==classLevel||typeof series.id!=='string'||!series.id.trim())return false;
     const id=series.id.trim();
     if(seenSeriesIds.has(id))return false;
