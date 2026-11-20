@@ -121,3 +121,16 @@ test('synthetic inbox excludes blank labels and control-character display fields
   assert.deepEqual(visibleMockInboxItems([...invalid,valid]).map(item=>item.id),['SAFE-LABEL']);
   assert.equal(JSON.stringify(invalid),snapshot);
 });
+
+
+test('synthetic inbox rejects bidirectional override and isolate controls in display fields',()=>{
+  const valid:MockInboxItem={id:'BIDI-SAFE',title:'परिणाम / Result',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const malformed=[
+    {...valid,id:'BIDI-\u202e-ID'},
+    {...valid,id:'BIDI-TITLE',title:'Result\u202d hidden'},
+    {...valid,id:'BIDI-SESSION',session:'2026\u2066–27\u2069'}
+  ];
+  const before=JSON.stringify(malformed);
+  assert.deepEqual(visibleMockInboxItems([...malformed,valid]).map(item=>item.id),['BIDI-SAFE']);
+  assert.equal(JSON.stringify(malformed),before);
+});
