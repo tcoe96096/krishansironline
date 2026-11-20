@@ -36,3 +36,11 @@ test('audit is evidence collection only, not a substitute for runtime acceptance
   assert.match(source, /READ ONLY/i);
   assert.match(source, /STOP: no authenticated positive\/negative test/i);
 });
+
+test('audit enumerates effective PUBLIC RPC grants and SECURITY DEFINER configuration', () => {
+  for (const name of ['aclexplode', 'acldefault', 'pg_get_userbyid', 'pg_get_function_identity_arguments', 'prosecdef', 'proconfig', 'privilege_type', 'is_grantable']) {
+    assert.ok(executable.includes(name), 'missing RPC privilege audit field: ' + name);
+  }
+  assert.match(source, /NULL proacl still implies PostgreSQL default function EXECUTE for PUBLIC/);
+  assert.match(source, /metadata does not prove caller authorization/);
+});
