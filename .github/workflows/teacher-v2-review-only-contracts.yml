@@ -8,6 +8,7 @@ on:
       - 'tests/teacher-v2-private-media*.test.mjs'
       - 'docs/teacher/teacher-v2-*.md'
       - 'docs/teacher/teacher-v2-preview-catalog-readonly.sql'
+      - 'scripts/teacher/verify-release-evidence.mjs'
       - '.github/workflows/teacher-v2-review-only-contracts.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'tests/teacher-v2-private-media*.test.mjs'
       - 'docs/teacher/teacher-v2-*.md'
       - 'docs/teacher/teacher-v2-preview-catalog-readonly.sql'
+      - 'scripts/teacher/verify-release-evidence.mjs'
       - '.github/workflows/teacher-v2-review-only-contracts.yml'
 permissions:
   contents: read
