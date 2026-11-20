@@ -28,6 +28,29 @@ test('no case in the unexecuted evidence template can be presented as passed', (
   }
 });
 
-test('ledger must not embed common secret-bearing URLs or credentials', () => {
-  assert.doesNotMatch(ledger, /(?:eyJ[A-Za-z0-9_-]{20,}\.eyJ|service_role\s*[:=]\s*\S+|postgres(?:ql)?:\/\/[^\s]+@)/i);
+// Inspect only actual evidence cells, not documentation explaining forbidden secrets.
+const sensitiveEvidence = (value) => [
+  /eyJ[A-Za-z0-9_-]{20,}\\.eyJ[A-Za-z0-9_-]{10,}/i, // JWT
+  /(?:service_role|SUPABASE_SERVICE_ROLE_KEY)\\s*[:=]\\s*['"]?[A-Za-z0-9._-]{16,}/i,
+  /postgres(?:ql)?:\\/\\/[^\\s|]+@/i,
+  /https?:\\/\\/[^\\s|]*\\/storage\\/v1\\/object\\/sign\\/[^\\s|?]+\\?[^\\s|]*token=/i,
+  /(?:access_token|refresh_token)\\s*[:=]\\s*['"]?[A-Za-z0-9._-]{16,}/i,
+].some(pattern => pattern.test(value));
+
+test('evidence rows cannot contain JWTs, DB credentials or private signed-media URLs', () => {
+  for (const row of rows(ledger)) {
+    assert.equal(sensitiveEvidence(row.slice(2).join(' | ')), false, row[0] + ': secret-bearing evidence');
+  }
+});
+
+test('secret detector rejects representative synthetic credential formats', () => {
+  const samples = [
+    'eyJ' + 'a'.repeat(24) + '.eyJ' + 'b'.repeat(24),
+    'SUPABASE_SERVICE_ROLE_KEY=' + 's'.repeat(40),
+    'postgresql://user:password@example.invalid:5432/db',
+    'https://example.invalid/storage/v1/object/sign/teacher/a/photo.jpg?token=' + 't'.repeat(32),
+    'refresh_token=' + 'r'.repeat(40),
+  ];
+  for (const sample of samples) assert.equal(sensitiveEvidence(sample), true);
+  assert.equal(sensitiveEvidence('HTTP 403, owner check denied, no data changed'), false);
 });
