@@ -107,3 +107,17 @@ test('invalid duplicate cannot shadow a later valid synthetic inbox item',()=>{
   assert.deepEqual(visibleMockInboxItems(input).map(item=>item.id),['DEMO-RECOVER']);
   assert.equal(JSON.stringify(input),snapshot);
 });
+
+test('synthetic inbox excludes blank labels and control-character display fields',()=>{
+  const valid:MockInboxItem={id:'SAFE-LABEL',title:'Readable result',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const invalid=[
+    {...valid,id:'BLANK-TITLE',title:'   '},
+    {...valid,id:'BLANK-SESSION',session:'\t'},
+    {...valid,id:'CTRL-TITLE',title:'Demo\u0000title'},
+    {...valid,id:'CTRL-SESSION',session:'2026\u001f27'},
+    {...valid,id:'CTRL-ID\u007f'}
+  ];
+  const snapshot=JSON.stringify(invalid);
+  assert.deepEqual(visibleMockInboxItems([...invalid,valid]).map(item=>item.id),['SAFE-LABEL']);
+  assert.equal(JSON.stringify(invalid),snapshot);
+});
