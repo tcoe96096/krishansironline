@@ -14,6 +14,26 @@ FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
 WHERE n.nspname='public'
   AND p.proname IN ('teacher_v2_save_application','teacher_v2_review','teacher_v2_snapshot')
 ORDER BY p.proname,p.oid::regprocedure::text;
+-- SECURITY DEFINER review: owner, search_path, argument types and PUBLIC EXECUTE grants.
+-- A NULL proacl still implies PostgreSQL default function EXECUTE for PUBLIC.
+-- Inspect the function body separately; metadata does not prove caller authorization.
+SELECT p.oid::regprocedure::text AS rpc_signature,
+       pg_get_userbyid(p.proowner) AS function_owner,
+       l.lanname AS function_language,
+       p.prosecdef AS security_definer,
+       p.proconfig AS function_settings,
+       pg_get_function_identity_arguments(p.oid) AS identity_arguments,
+       acl.grantee::regrole::text AS granted_role,
+       acl.privilege_type,
+       acl.is_grantable
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid=p.pronamespace
+JOIN pg_language l ON l.oid=p.prolang
+CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) AS acl
+WHERE n.nspname='public'
+  AND p.proname IN ('teacher_v2_save_application','teacher_v2_review','teacher_v2_snapshot')
+ORDER BY p.oid::regprocedure::text,acl.grantee,acl.privilege_type;
+-- For grantee 0, regrole displays '-' (PUBLIC); verify no implicit broad EXECUTE.
 -- Zero rows for an expected RPC is a BLOCKER; check against all three names above.
 SELECT required.name AS expected_rpc,
        EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
