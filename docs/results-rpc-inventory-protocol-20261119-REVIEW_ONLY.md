@@ -67,3 +67,46 @@ ORDER BY 1, 2, 3;
 ## Verified repository checkpoint — 2026-11-20
 
 Draft PR #122 head `e87ec828e488a709fab8056105df8562d727be18` had four successful PR-triggered GitHub Actions: Preview build (no production deploy), Teacher Core Beta isolated checks, Hosting compliance, and Validate website build. This verifies repository CI only; **no database catalog connection or browser authorization test was performed**. PR #117 was merged. Recovery and Production Result Card backend remain unverified.
+
+## Effective privilege and forced-RLS checks — SQL TEMPLATES ONLY (2026-11-20)
+
+These queries close gaps in the earlier *metadata-only* examples. They are **NOT EXECUTED**. A separately authorized reviewer must confirm the intended environment before running them independently in Preview and Production, and capture redacted UTC-stamped results. Never attach credentials, application rows, function bodies, policy expressions, tokens, or signed URLs.
+
+```sql
+-- Effective EXECUTE, including implicit PUBLIC privileges (proacl NULL is not a denial).
+-- These are metadata predicates, not function calls.
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       pg_get_function_identity_arguments(p.oid) AS argument_types,
+       p.prosecdef AS security_definer,
+       p.proconfig AS function_settings,
+       has_function_privilege('PUBLIC', p.oid, 'EXECUTE') AS public_execute,
+       CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon')
+            THEN has_function_privilege('anon', p.oid, 'EXECUTE') END AS anon_execute,
+       CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated')
+            THEN has_function_privilege('authenticated', p.oid, 'EXECUTE') END AS authenticated_execute,
+       CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role')
+            THEN has_function_privilege('service_role', p.oid, 'EXECUTE') END AS service_role_execute
+FROM pg_catalog.pg_proc p
+JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND (p.proname ILIKE '%result%' OR p.proname ILIKE '%report%')
+ORDER BY 1, 2, 3;
+
+-- Both RLS enabled and FORCE RLS flags; catalog metadata only.
+SELECT n.nspname AS schema_name, c.relname AS table_name,
+       c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS rls_forced
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+  AND (c.relname ILIKE '%result%' OR c.relname ILIKE '%report%')
+ORDER BY 1, 2;
+
+-- Supabase migration history metadata only; skip if relation absent or access denied.
+-- Avoid claiming migration applied based solely on a repository SQL filename.
+SELECT version, name
+FROM supabase_migrations.schema_migrations
+ORDER BY version;
+```
+
+**Interpretation:** A function with `SECURITY DEFINER` and broad EXECUTE needs separate review of ownership, explicit `search_path`, and internal authorization logic; metadata alone cannot establish safe access. `PUBLIC` EXECUTE can apply even when `proacl` is null. Function-name patterns are incomplete discovery: reviewers must reconcile migration-defined function names and indirect dependencies, including non-public schemas. RLS enabled/forced flags do not establish correct policy behavior. The migration-history table/schema and `name` column may differ by environment; verify its structure first and record UNKNOWN when inaccessible. Storage bucket/policy metadata and negative role tests remain separate gates. No production activation or parity assertion is authorized by these queries.
