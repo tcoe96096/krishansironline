@@ -29,7 +29,7 @@ export function visibleMockInboxItems(items:readonly MockInboxItem[]):MockInboxI
     if(!item||typeof item!=='object'||typeof item.id!=='string'||typeof item.issuedAt!=='string'||typeof item.title!=='string'||typeof item.session!=='string')return false;
     const normalizedId=item.id.trim();
     // Blank labels, control characters and bidirectional overrides can make a synthetic card misleading.
-    if(!item.title.trim()||!item.session.trim()||/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/u.test(item.id+item.title+item.session))return false;
+    if(!item.title.trim()||!item.session.trim()||/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/u.test(item.id+item.title+item.session))return false;
     if(item.recipient!=='demo-self'||item.status!=='issued'||!Number.isSafeInteger(item.revision)||item.revision<=0||!normalizedId||!isValidMockIssueDate(item.issuedAt)||seen.has(normalizedId))return false;
     seen.add(normalizedId);
     return true;
