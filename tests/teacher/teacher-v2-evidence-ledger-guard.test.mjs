@@ -30,11 +30,11 @@ test('no case in the unexecuted evidence template can be presented as passed', (
 
 // Inspect only actual evidence cells, not documentation explaining forbidden secrets.
 const sensitiveEvidence = (value) => [
-  /eyJ[A-Za-z0-9_-]{20,}\\.eyJ[A-Za-z0-9_-]{10,}/i, // JWT
-  /(?:service_role|SUPABASE_SERVICE_ROLE_KEY)\\s*[:=]\\s*['"]?[A-Za-z0-9._-]{16,}/i,
-  /postgres(?:ql)?:\\/\\/[^\\s|]+@/i,
-  /https?:\\/\\/[^\\s|]*\\/storage\\/v1\\/object\\/sign\\/[^\\s|?]+\\?[^\\s|]*token=/i,
-  /(?:access_token|refresh_token)\\s*[:=]\\s*['"]?[A-Za-z0-9._-]{16,}/i,
+  /eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{10,}/i, // JWT
+  /(?:service_role|SUPABASE_SERVICE_ROLE_KEY)\s*[:=]\s*['"]?[A-Za-z0-9._-]{16,}/i,
+  /postgres(?:ql)?:\/\/[^\s|]+@/i,
+  /https?:\/\/[^\s|]*\/storage\/v1\/object\/sign\/[^\s|?]+\?[^\s|]*token=/i,
+  /(?:access_token|refresh_token)\s*[:=]\s*['"]?[A-Za-z0-9._-]{16,}/i,
 ].some(pattern => pattern.test(value));
 
 test('evidence rows cannot contain JWTs, DB credentials or private signed-media URLs', () => {
