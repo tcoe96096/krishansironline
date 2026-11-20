@@ -8,10 +8,12 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
  const [rows,setRows]=useState<Series[]>([]),[attempts,setAttempts]=useState<TestAttempt[]>([]),[tests,setTests]=useState<PublishedTest[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
  // A class switch, refresh or unmount invalidates older asynchronous responses.
  const requestId=useRef(0);
+ // Keep previous-class attempts and catalogue out of render until the new class loads.
+ const [loadedClass,setLoadedClass]=useState<string|undefined>(undefined);
  const load=useCallback(async()=>{
   const current=++requestId.current;
   if(!classLevel){setRows([]);setAttempts([]);setTests([]);setError('');setLoading(false);return;}
-  setLoading(true);setError('');setRows([]);setAttempts([]);setTests([]);
+  setLoading(true);setError('');setLoadedClass(undefined);setRows([]);setAttempts([]);setTests([]);
   try{
    const [seriesResult,history,publishedTests]=await Promise.all([requireSupabase().from('mock_test_series').select('id,title,description,class_level,subject,test_ids,updated_at').eq('class_level',classLevel).eq('is_published',true).order('updated_at',{ascending:false}),getMyTestAttempts(),getPublishedTests(classLevel)]);
    if(current!==requestId.current)return;
@@ -25,13 +27,13 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
     if(seenSeriesIds.has(id))return false;
     seenSeriesIds.add(id);
     return true;
-   }));setAttempts(Array.isArray(history)?history:[]);setTests(Array.isArray(publishedTests)?publishedTests:[]);
+   }));setAttempts(Array.isArray(history)?history:[]);setTests(Array.isArray(publishedTests)?publishedTests:[]);setLoadedClass(classLevel);
   }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
   finally{if(current===requestId.current)setLoading(false);}
  },[classLevel]);
  useEffect(()=>{void load();return()=>{requestId.current++;};},[load]);
  // Hide previous-class rows synchronously during render, before the class-change effect runs.
- const visibleRows=rows.filter(series=>series.class_level===classLevel);
+ const visibleRows=loadedClass===classLevel?rows.filter(series=>series.class_level===classLevel):[];
  return <section aria-busy={loading} className="space-y-3 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between gap-2"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-100 text-indigo-800"><Layers3 className="h-5 w-5"/></span><div><p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700">PRACTICE PATHWAYS</p><h3 className="text-sm font-extrabold text-slate-900">Mock Test Series</h3><p className="text-[10px] text-slate-500">आपकी कक्षा के लिए चुनी गई अभ्यास श्रृंखलाएँ</p></div></div><button type="button" onClick={()=>void load()} disabled={loading} aria-label="Mock Test Series फिर लोड करें" title="Refresh Mock Test Series" className="rounded-lg border border-slate-200 bg-white p-2"><RefreshCw className="h-4 w-4"/></button></div>
  {error&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
  {loading?<p role="status" aria-live="polite" className="py-4 text-xs text-slate-500">Series लोड हो रही हैं…</p>:error?<p className="rounded-xl border border-rose-100 bg-white p-4 text-xs text-slate-600">सूची उपलब्ध नहीं है। ऊपर दिए Refresh बटन से दोबारा प्रयास करें।</p>:!classLevel?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">Mock Test Series देखने के लिए पहले अपनी कक्षा चुनें।</p>:visibleRows.length===0?<p className="rounded-xl border border-dashed border-indigo-200 bg-white p-4 text-xs text-slate-500">अभी आपकी कक्षा के लिए कोई Mock Test Series प्रकाशित नहीं हुई है।</p>:<div className="grid gap-3 md:grid-cols-2">{visibleRows.map(s=>{
