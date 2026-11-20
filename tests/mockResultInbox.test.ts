@@ -85,3 +85,16 @@ test('synthetic inbox ignores malformed runtime records without crashing or leak
   assert.doesNotThrow(()=>visibleMockInboxItems(payload));
   assert.deepEqual(visibleMockInboxItems(payload).map(item=>item.id),['SAFE']);
 });
+
+test('synthetic inbox ignores malformed title and session fields before React rendering',()=>{
+  const valid:MockInboxItem={id:'SAFE-TEXT',title:'Sample',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const malformed=[
+    {...valid,id:'BAD-TITLE-NULL',title:null},
+    {...valid,id:'BAD-TITLE-OBJECT',title:{unsafe:'object'}},
+    {...valid,id:'BAD-SESSION-ARRAY',session:['2026–27']},
+    {...valid,id:'BAD-SESSION-UNDEFINED',session:undefined}
+  ] as unknown as MockInboxItem[];
+  const payload=[...malformed,valid];
+  assert.doesNotThrow(()=>visibleMockInboxItems(payload));
+  assert.deepEqual(visibleMockInboxItems(payload).map(item=>item.id),['SAFE-TEXT']);
+});
