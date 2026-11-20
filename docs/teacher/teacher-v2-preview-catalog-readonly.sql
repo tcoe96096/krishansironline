@@ -55,5 +55,19 @@ FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
 LEFT JOIN pg_policy p ON p.polrelid=c.oid
 WHERE n.nspname='storage' AND c.relname='objects'
 ORDER BY p.polname;
+-- Policy composition: permissive policies OR together; restrictive policies AND together.
+-- Inspect role targets and permissive mode before claiming private-object isolation.
+SELECT p.polname AS policy_name,
+       CASE WHEN p.polpermissive THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END AS policy_mode,
+       p.polcmd AS command,
+       ARRAY(SELECT CASE WHEN role_oid = 0 THEN 'PUBLIC' ELSE role_oid::regrole::text END
+             FROM unnest(p.polroles) AS role_oid) AS policy_roles,
+       pg_get_expr(p.polqual,p.polrelid) AS using_expr,
+       pg_get_expr(p.polwithcheck,p.polrelid) AS check_expr
+FROM pg_policy p
+JOIN pg_class c ON c.oid=p.polrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='storage' AND c.relname='objects'
+ORDER BY p.polname;
 ROLLBACK;
 -- STOP: no authenticated positive/negative test, restore verification or owner approval is implied.
