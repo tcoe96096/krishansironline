@@ -46,3 +46,9 @@ test('incorrect environment, malformed hashes and unreviewed rows block', () => 
   const c = fixture(); c.cases[0].reviewer = '';
   assert.ok(validateEvidence(c).length);
 });
+
+test('future-dated evidence cannot be counted as completed Preview acceptance', () => {
+  const e = fixture();
+  e.cases[0].timestampUtc = '2099-01-01T00:00:00Z';
+  assert.ok(validateEvidence(e).some(x => x.includes('future evidence timestamp')));
+});
