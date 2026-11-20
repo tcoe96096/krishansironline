@@ -69,5 +69,21 @@ JOIN pg_class c ON c.oid=p.polrelid
 JOIN pg_namespace n ON n.oid=c.relnamespace
 WHERE n.nspname='storage' AND c.relname='objects'
 ORDER BY p.polname;
+-- Public teacher policy composition: role targets and PERMISSIVE OR can widen grants.
+-- Inspect every matching policy, not just teacher-named policies.
+SELECT c.relname AS table_name,
+       p.polname AS policy_name,
+       CASE WHEN p.polpermissive THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END AS policy_mode,
+       p.polcmd AS command,
+       ARRAY(SELECT CASE WHEN role_oid = 0 THEN 'PUBLIC' ELSE role_oid::regrole::text END
+             FROM unnest(p.polroles) AS role_oid) AS policy_roles,
+       pg_get_expr(p.polqual,p.polrelid) AS using_expr,
+       pg_get_expr(p.polwithcheck,p.polrelid) AS check_expr
+FROM pg_policy p
+JOIN pg_class c ON c.oid=p.polrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='public'
+  AND (c.relname LIKE 'teacher%' OR c.relname IN ('user_roles','teacher_applications'))
+ORDER BY c.relname,p.polname;
 ROLLBACK;
 -- STOP: no authenticated positive/negative test, restore verification or owner approval is implied.
