@@ -38,5 +38,22 @@ ORDER BY c.relname,p.polname;
 SELECT id,name,public,file_size_limit,allowed_mime_types
 FROM storage.buckets WHERE id LIKE '%teacher%' OR name LIKE '%teacher%'
 ORDER BY id;
+-- Effective privileges can arise from PUBLIC or inherited role memberships, not only direct grants.
+SELECT role_name,
+       has_table_privilege(role_name,'public.user_roles','SELECT') AS can_select_user_roles,
+       has_table_privilege(role_name,'public.user_roles','INSERT') AS can_insert_user_roles,
+       has_table_privilege(role_name,'public.user_roles','UPDATE') AS can_update_user_roles,
+       has_table_privilege(role_name,'public.user_roles','DELETE') AS can_delete_user_roles,
+       has_table_privilege(role_name,'public.user_roles','TRUNCATE') AS can_truncate_user_roles
+FROM (VALUES ('anon'),('authenticated')) AS roles(role_name);
+-- Storage object policy inventory; bucket privacy alone does not protect object rows.
+SELECT c.relname AS table_name,c.relrowsecurity AS rls_enabled,
+       p.polname AS policy_name,p.polcmd AS command,
+       pg_get_expr(p.polqual,p.polrelid) AS using_expr,
+       pg_get_expr(p.polwithcheck,p.polrelid) AS check_expr
+FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+LEFT JOIN pg_policy p ON p.polrelid=c.oid
+WHERE n.nspname='storage' AND c.relname='objects'
+ORDER BY p.polname;
 ROLLBACK;
 -- STOP: no authenticated positive/negative test, restore verification or owner approval is implied.
