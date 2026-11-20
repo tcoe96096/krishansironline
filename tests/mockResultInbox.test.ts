@@ -61,3 +61,18 @@ test('synthetic issue dates enforce Gregorian century leap-year rules',()=>{
   for(const date of ['1600-02-29','2000-02-29','2400-02-29'])assert.equal(isValidMockIssueDate(date),true,date);
   for(const date of ['1700-02-29','1800-02-29','1900-02-29','2100-02-29'])assert.equal(isValidMockIssueDate(date),false,date);
 });
+
+test('synthetic inbox fails closed on unexpected runtime recipient and status values',()=>{
+  const base:MockInboxItem={id:'DEMO-VALID',title:'Sample',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  // API-shaped malformed values must never be treated as display authorization.
+  const malformed:MockInboxItem[]=[
+    {...base,id:'BAD-RECIPIENT',recipient:'demo-self ' as MockInboxItem['recipient']},
+    {...base,id:'BAD-STATUS',status:'ISSUED' as MockInboxItem['status']},
+    {...base,id:'BAD-NULL',recipient:null as unknown as MockInboxItem['recipient']},
+    {...base,id:'BAD-REVISION',revision:Number.MIN_VALUE}
+  ];
+  const snapshot=malformed.map(item=>({...item}));
+  assert.deepEqual(visibleMockInboxItems(malformed),[]);
+  assert.deepEqual(malformed,snapshot);
+  assert.deepEqual(visibleMockInboxItems([base,...malformed]).map(item=>item.id),['DEMO-VALID']);
+});
