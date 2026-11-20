@@ -40,3 +40,19 @@ Status: **unverified inventory, no database access or execution**. Prepared agai
 - Recovery evidence and explicit separate owner approvals.
 
 **Current gate: BLOCKED for backend activation.** This worksheet is safe to review and commit; it authorizes no SQL execution, database mutation, deployment, merge, publication or result delivery. Teacher v2, PR #109, Student/Exam source and standalone ADVANCE Studio remain out of scope.
+
+## Verified repository checkpoint — 2026-11-20 (read-only)
+
+- Draft PR #122 remains open on `fix/results-csv-formula-guard-20261119` targeting `main`; no merge authorized.
+- Commit `5691f1bfc079753424f3733060bfbf2e088a4972`: four PR-triggered GitHub Actions checks completed successfully (hosting compliance, website build, preview build, isolated teacher checks). These are **build checks**, not database/RLS or browser evidence.
+- PR changed-path inventory contains `src/components/MockResultCardDesigner.tsx`, `src/components/MockResultInbox.tsx`, `tests/mockResultInbox.test.ts`, `tests/studyMaterialsMockAccess.test.ts` and review-only documents. No migration file is in this PR changed-path list; this does **not** inventory other branches or either database.
+
+| Evidence needed | Preview | Production | Gate |
+| --- | --- | --- | --- |
+| Applied migration ledger and checksums | NOT INSPECTED | NOT INSPECTED | BLOCKED |
+| Result RPC signatures, grants and owners | NOT INSPECTED | NOT INSPECTED | BLOCKED |
+| Result tables, RLS policies and Storage access | NOT INSPECTED | NOT INSPECTED | BLOCKED |
+| Cross-student and role-revocation server tests | NOT EXECUTED | NOT EXECUTED | BLOCKED |
+| Recovery rehearsal and separate owner approval | NOT VERIFIED | NOT VERIFIED | BLOCKED |
+
+Do not interpret the successful mock/CI checks as Preview database readiness or Production availability. Next bounded task: obtain **redacted read-only** per-environment RPC/RLS and migration evidence from authorized sources, then mark each item PRESENT, MISSING or DIVERGENT with signatures and checksums; do not run SQL or apply migrations.
