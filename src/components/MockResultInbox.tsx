@@ -26,7 +26,7 @@ export function visibleMockInboxItems(items:readonly MockInboxItem[]):MockInboxI
   const seen=new Set<string>();
   return items.filter(item=>{
     // Treat even typed fixtures as untrusted at runtime; malformed API-shaped values must not crash the preview.
-    if(!item||typeof item!=='object'||typeof item.id!=='string'||typeof item.issuedAt!=='string')return false;
+    if(!item||typeof item!=='object'||typeof item.id!=='string'||typeof item.issuedAt!=='string'||typeof item.title!=='string'||typeof item.session!=='string')return false;
     const normalizedId=item.id.trim();
     if(item.recipient!=='demo-self'||item.status!=='issued'||!Number.isSafeInteger(item.revision)||item.revision<=0||!normalizedId||!isValidMockIssueDate(item.issuedAt)||seen.has(normalizedId))return false;
     seen.add(normalizedId);
