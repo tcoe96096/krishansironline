@@ -18,7 +18,8 @@ test('catalog audit is a closed, read-only transaction with SELECT-only body', (
   assert.ok(statements.length >= 7, 'expected full catalog inventory');
   for (const [index, statement] of statements.slice(1, -1).entries()) {
     assert.match(statement, /^SELECT\b/i, 'non-SELECT statement at ' + (index + 2));
-    assert.doesNotMatch(statement, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|GRANT|REVOKE|MERGE|CALL|DO|COPY|EXECUTE|PERFORM|LOCK|INTO|FOR\s+UPDATE|FOR\s+SHARE|pg_sleep|dblink|lo_export|set_config)\b/i);
+    const withoutSqlLiterals = statement.replace(/'(?:''|[^'])*'/g, "''");
+    assert.doesNotMatch(withoutSqlLiterals, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|GRANT|REVOKE|MERGE|CALL|DO|COPY|EXECUTE|PERFORM|LOCK|INTO|FOR\s+UPDATE|FOR\s+SHARE|pg_sleep|dblink|lo_export|set_config)\b/i);
   }
 });
 
