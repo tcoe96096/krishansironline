@@ -18,9 +18,9 @@ const student = (classIds: readonly string[], active = true): Actor => ({ kind: 
 const teacher = (assignments: readonly string[]): Actor => ({ kind: 'teacher', assignments });
 const deny = Object.freeze({ allowed: false, metadata: null, url: null });
 function decide(actor: Actor, material: Material, action: 'list' | 'download' | 'edit' | 'publish') {
-  if (action === 'publish') return actor.kind === 'admin' && actor.mayPublish
+  if (action === 'publish') return material.state === 'draft' && actor.kind === 'admin' && actor.mayPublish
     ? { allowed: true, metadata: null, url: null } : deny;
-  if (action === 'edit') return actor.kind === 'teacher' &&
+  if (action === 'edit') return material.state !== 'archived' && actor.kind === 'teacher' &&
     actor.assignments.includes(material.classId + '/' + material.subject)
     ? { allowed: true, metadata: null, url: null } : deny;
   if (actor.kind !== 'student' || !actor.active || material.state !== 'published' ||
@@ -70,4 +70,13 @@ test('material entitlement does not imply result inbox authorization', () => {
   const canReadResult = requestingStudentId === resultGrant.allowedRecipientId;
   assert.equal(canReadResult, false);
   assert.equal(decide(actor, M1, 'download').url, null);
+});
+
+// These are design-contract checks only; production authorization remains unverified.
+test('archived materials cannot be edited or republished even by delegated actors', () => {
+  const archived = { ...M3, classId: 'A', subject: 'History' };
+  assert.deepEqual(decide(teacher(['A/History']), archived, 'edit'), deny);
+  assert.deepEqual(decide({ kind: 'admin', mayPublish: true }, archived, 'publish'), deny);
+  assert.deepEqual(decide({ kind: 'admin', mayPublish: true }, M1, 'publish'), deny);
+  assert.equal(decide({ kind: 'admin', mayPublish: true }, M2, 'publish').allowed, true);
 });
