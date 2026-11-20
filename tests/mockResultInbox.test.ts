@@ -134,3 +134,18 @@ test('synthetic inbox rejects bidirectional override and isolate controls in dis
   assert.deepEqual(visibleMockInboxItems([...malformed,valid]).map(item=>item.id),['BIDI-SAFE']);
   assert.equal(JSON.stringify(malformed),before);
 });
+
+
+test('synthetic inbox excludes invisible zero-width labels and spoofed identifiers',()=>{
+  const valid:MockInboxItem={id:'VISIBLE',title:'Readable / परिणाम',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const invalid=[
+    {...valid,id:'ZERO-WIDTH-TITLE',title:'\u200b'},
+    {...valid,id:'ZERO-WIDTH-SESSION',session:'\ufeff'},
+    {...valid,id:'VIS\u200bIBLE'},
+    {...valid,id:'WORD-JOINER',title:'Result\u2060hidden'},
+    {...valid,id:'MARKED',session:'2026\u200e–27'}
+  ];
+  const snapshot=JSON.stringify(invalid);
+  assert.deepEqual(visibleMockInboxItems([...invalid,valid]).map(item=>item.id),['VISIBLE']);
+  assert.equal(JSON.stringify(invalid),snapshot);
+});
