@@ -98,3 +98,12 @@ test('synthetic inbox ignores malformed title and session fields before React re
   assert.doesNotThrow(()=>visibleMockInboxItems(payload));
   assert.deepEqual(visibleMockInboxItems(payload).map(item=>item.id),['SAFE-TEXT']);
 });
+
+test('invalid duplicate cannot shadow a later valid synthetic inbox item',()=>{
+  const valid:MockInboxItem={id:'DEMO-RECOVER',title:'Safe',session:'2026–27',status:'issued',recipient:'demo-self',issuedAt:'2026-11-20',revision:1};
+  const invalid={...valid,id:' DEMO-RECOVER ',status:'revoked' as const};
+  const input=[invalid,valid];
+  const snapshot=JSON.stringify(input);
+  assert.deepEqual(visibleMockInboxItems(input).map(item=>item.id),['DEMO-RECOVER']);
+  assert.equal(JSON.stringify(input),snapshot);
+});
