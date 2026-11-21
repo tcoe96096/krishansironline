@@ -36,3 +36,19 @@ test('student-visible progress remains bilingual and accessible', () => {
   assert.match(source, /पूर्ण \/ Completed/);
   assert.match(source, /जारी \/ In progress/);
 });
+
+test('malformed and duplicate series rows are rejected before display', () => {
+  assert.match(source, /Array\.isArray\(seriesResult\.data\)\?seriesResult\.data:\[\]/);
+  assert.match(source, /series\.class_level!==classLevel/);
+  assert.match(source, /seenSeriesIds\.has\(id\)/);
+});
+test('malformed series test IDs cannot inflate progress or create a launch link', () => {
+  assert.match(source, /Array\.isArray\(s\.test_ids\)\?s\.test_ids:\[\]/);
+  assert.match(source, /new Set\(\(Array\.isArray\(s\.test_ids\)/);
+  assert.match(source, /availableIds\.length\?Math\.round\(doneIds\.size\/availableIds\.length\*100\):0/);
+  assert.match(source, /availableIds\.length===0\?<p/);
+});
+test('API errors clear attempts and published tests before showing retry', () => {
+  assert.match(source, /catch\(e\)\{if\(current===requestId\.current\)\{setRows\(\[\]\);setAttempts\(\[\]\);setTests\(\[\]\)/);
+  assert.match(source, /role="alert"/);
+});
