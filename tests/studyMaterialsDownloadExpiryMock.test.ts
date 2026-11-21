@@ -19,7 +19,9 @@ type Decision = { allowed: boolean; objectKey: null; downloadUrl: null };
 const DENY: Decision = { allowed: false, objectKey: null, downloadUrl: null };
 function mockDownloadDecision(f: Fixture): Decision {
   // Fail closed; never return a mock storage key or a bearer URL.
-  const allowed = f.studentId === f.ownerId &&
+  const validId = (id: unknown): id is string => typeof id === 'string' && id.length > 0 && id === id.trim();
+  const allowed = [f.studentId, f.ownerId, f.tokenStudentId, f.materialId, f.tokenMaterialId].every(validId) &&
+    f.studentId === f.ownerId &&
     f.studentId === f.tokenStudentId &&
     f.enrolled && f.published && !f.revoked &&
     f.materialId === f.tokenMaterialId &&
@@ -53,6 +55,16 @@ test('revoked token and cross-material replay fail closed', () => {
     { revoked: true },
     { materialId: 'synthetic-M2' },
     { tokenMaterialId: 'synthetic-M2' },
+  ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
+});
+test('empty and whitespace-only identity or material bindings fail closed', () => {
+  for (const change of [
+    { studentId: '', ownerId: '', tokenStudentId: '' },
+    { studentId: ' ', ownerId: ' ', tokenStudentId: ' ' },
+    { ownerId: '' }, { tokenStudentId: '' },
+    { materialId: '', tokenMaterialId: '' },
+    { materialId: ' ', tokenMaterialId: ' ' },
+    { tokenMaterialId: '' },
   ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
 });
 test('invalid clock values and unsafe integer timestamps fail closed', () => {
