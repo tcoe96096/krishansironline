@@ -43,6 +43,23 @@ test('withdrawal, draft and cross-student token reuse fail closed', () => {
     { nowMs: Number.NaN }, { nowMs: Number.POSITIVE_INFINITY },
   ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
 });
+test('invalid clock values and unsafe integer timestamps fail closed', () => {
+  for (const change of [
+    { nowMs: -1 }, { nowMs: Number.NEGATIVE_INFINITY },
+    { nowMs: Number.MAX_SAFE_INTEGER + 1 },
+    { expiresAtMs: Number.MAX_SAFE_INTEGER + 1 },
+    { expiresAtMs: 0 }, { expiresAtMs: -100 },
+    { nowMs: 2000, expiresAtMs: 2000 },
+    { nowMs: 2001, expiresAtMs: 2000 },
+  ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
+});
+test('eligibility is not a signed download or storage permission', () => {
+  const decision = mockDownloadDecision(base);
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.objectKey, null);
+  assert.equal(decision.downloadUrl, null);
+});
+
 test('no fixture returns object keys or bearer URLs', () => {
   for (const fixture of [base, { ...base, enrolled: false }, { ...base, expiresAtMs: 0 }]) {
     const decision = mockDownloadDecision(fixture);
