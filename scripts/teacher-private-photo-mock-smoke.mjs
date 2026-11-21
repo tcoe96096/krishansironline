@@ -9,7 +9,7 @@ const objectPath=uuid+'/profile.webp';
 const browser=await chromium.launch({headless:true});
 const context=await browser.newContext({viewport:{width:390,height:844}});
 const page=await context.newPage();
-const errors=[],writes=[],unhandled=[];
+const errors=[],writes=[],unhandled=[],storageRequests=[];
 let denyUpload=true,photo=null;
 let profile={
  user_id:uuid,employee_id:null,display_name:'Synthetic Teacher',
@@ -20,6 +20,7 @@ let profile={
 };
 page.on('pageerror',e=>errors.push(e.message));
 page.on('requestfailed',r=>unhandled.push(r.url()));
+page.on('request',r=>{if(new URL(r.url()).pathname.includes('/storage/v1/'))storageRequests.push({method:r.method(),path:new URL(r.url()).pathname});});
 await context.addInitScript(({uuid})=>{
  const user={id:uuid,email:'teacher@example.test',aud:'authenticated',role:'authenticated',
   user_metadata:{name:'Synthetic Teacher'},app_metadata:{provider:'google'}};
@@ -101,7 +102,11 @@ try{
  assert.equal(photo,null,'Denied upload does not persist media');
  denyUpload=false;
  await input.setInputFiles({name:'private-teacher.png',mimeType:'image/png',buffer:png});
- await editor.getByRole('img',{name:'My registered teacher photo'}).waitFor();
+ try{await editor.getByRole('img',{name:'My registered teacher photo'}).waitFor({timeout:12000});}
+ catch(e){
+  const statuses=await editor.locator('[role="status"],[role="alert"]').allTextContents();
+  throw new Error('Photo persisted but UI did not show image: '+JSON.stringify({statuses,storageRequests,photoBytes:photo?.length??0,writes:writes.map(w=>({method:w.method,path:w.path,bytes:w.bytes?.length??0})),errors,unhandled})+'; '+String(e));
+ }
  assert.ok(photo&&photo.toString('ascii',8,12)==='WEBP','Successful storage object is normalized WebP');
  assert.equal(writes.length,2,'A denied attempt followed by a permitted upload');
  assert.ok(writes.every(w=>w.path.endsWith('/'+bucket+'/'+objectPath)));
