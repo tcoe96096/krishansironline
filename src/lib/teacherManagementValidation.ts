@@ -3,7 +3,7 @@
  * Authorization and uniqueness must be enforced by the reviewed server migration.
  */
 export const TEACHER_CLASSES = ['6','7','8','9','10','11','12'] as const;
-export const TEACHER_SUBJECTS = ['Political Science','History','Geography','Economics','Other'] as const;
+export const TEACHER_SUBJECTS = ['Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other'] as const;
 export const TEACHER_WORK_TYPES = ['materials.draft','materials.review','assessment.draft','result.review'] as const;
 export type TeacherClass = typeof TEACHER_CLASSES[number];
 export type TeacherSubject = typeof TEACHER_SUBJECTS[number];
