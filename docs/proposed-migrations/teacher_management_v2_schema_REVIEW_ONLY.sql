@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS public.teacher_resume_documents (
   size_bytes integer NOT NULL CHECK (size_bytes BETWEEN 1 AND 5242880),
   CONSTRAINT teacher_resume_storage_key_no_traversal CHECK (left(storage_path,1)<>'/' AND strpos(storage_path,'..')=0 AND strpos(storage_path,'//')=0 AND strpos(storage_path,chr(92))=0),
   verification_status text NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
+  -- Reserved metadata must NEVER appear as a submitted document until finalization.
+  upload_state text NOT NULL DEFAULT 'reserved' CHECK (upload_state IN ('reserved','uploaded')),
   uploaded_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS public.teacher_assignments (
