@@ -101,9 +101,12 @@ try{
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
  await directory.getByLabel('Identity independently verified').check();
- assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'A requested scope is prefilled but still requires explicit approval');
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Identity verification alone must not approve applicant-requested scopes');
+ assert.equal(await directory.getByRole('button',{name:'Remove scope 1',exact:true}).count(),0,'Admin must start with zero preselected grants');
+ await directory.getByRole('button',{name:'Add scope',exact:true}).click();
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'Explicitly added scope is reviewable');
  await directory.getByRole('button',{name:'Remove scope 1',exact:true}).click();
- assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Verification alone must not approve an empty-scope teacher');
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Removing the only scope blocks approval');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false);
  const reviewedRevision=profile.revision;page.on('dialog',dialog=>dialog.accept());await directory.getByRole('button',{name:'Approve verified teacher'}).click();
