@@ -12,11 +12,11 @@ function mockVideoEmbedDecision(input: unknown): VideoDecision {
   try { url = new URL(input); } catch { return DENY; }
   if (url.protocol !== 'https:' || !approvedHosts.has(url.hostname.toLowerCase()) ||
       url.username || url.password || url.port || url.hash ||
-      /[\\\u0000-\u001f\u007f]/.test(input)) return DENY;
+      /[\u0000-\u001f\u007f]/.test(input)) return DENY;
   if (url.hostname === 'www.youtube-nocookie.com') {
-    if (!/^\\/embed\\/[A-Za-z0-9_-]{11}$/.test(url.pathname) || url.search) return DENY;
+    if (!/^\/embed\/[A-Za-z0-9_-]{11}$/.test(url.pathname) || url.search) return DENY;
   } else {
-    if (!/^\\/video\\/[0-9]+$/.test(url.pathname) || url.search) return DENY;
+    if (!/^\/video\/[0-9]+$/.test(url.pathname) || url.search) return DENY;
   }
   return { allowed: true, normalizedUrl: url.href };
 }
