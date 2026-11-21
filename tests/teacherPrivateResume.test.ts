@@ -6,7 +6,7 @@ import {DOCX_MIME,PDF_MIME,TEACHER_RESUME_MAX_BYTES,TEACHER_RESUME_BUCKET,
 
 const own='11111111-1111-4111-8111-111111111111';
 const other='22222222-2222-4222-8222-222222222222';
-const document='33333333-3333-4333-8333-333333333333';
+const document='a3333333-3333-4333-8333-333333333333';
 const valid={document_id:document,storage_path:own+'/'+document+'.pdf'};
 
 test('only matching PDF/DOCX extensions, MIME and 5 MB input sizes pass',()=>{
