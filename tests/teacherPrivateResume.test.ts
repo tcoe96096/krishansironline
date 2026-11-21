@@ -67,6 +67,7 @@ test('resume database proposal is default-deny, two-phase, server-owned, no clie
  assert.match(sql,/private\.teacher_v2_feature_enabled\('resume_uploads'\)/);
  assert.match(sql,/status='pending' AND p\.submitted_at IS NULL/);
  assert.match(sql,/pg_advisory_xact_lock/);
+ assert.match(sql,/p_filename ~ '\[\[:cntrl:\]\]'/,'server must reject control characters even if client checks are bypassed');
  assert.match(sql,/count\(\*\).*teacher_resume_documents|teacher_resume_documents[\s\S]*?>=5/);
  assert.match(sql,/v_path:=auth\.uid\(\)::text\|\|'\/\'\|\|v_id::text\|\|v_ext/);
  assert.match(sql,/d\.teacher_user_id=auth\.uid\(\)/);
