@@ -55,7 +55,7 @@ BEGIN
     RAISE EXCEPTION 'A decision reason of 12–1000 characters is required';
   END IF;
   IF p_class_level IS NULL OR p_class_level NOT IN ('6','7','8','9','10','11','12')
-    OR p_subject IS NULL OR p_subject NOT IN ('Political Science','History','Geography','Economics','Other')
+    OR p_subject IS NULL OR p_subject NOT IN ('Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other')
     OR p_work_type IS NULL OR p_work_type NOT IN ('materials.draft','materials.review','assessment.draft','result.review')
     OR p_action IS NULL OR p_action NOT IN ('grant','revoke') THEN
     RAISE EXCEPTION 'Invalid assignment scope or action';
@@ -122,7 +122,7 @@ BEGIN
   v_actor := auth.uid();
   IF v_actor IS NULL THEN RETURN false; END IF;
   IF p_class_level IS NULL OR p_class_level NOT IN ('6','7','8','9','10','11','12')
-     OR p_subject IS NULL OR p_subject NOT IN ('Political Science','History','Geography','Economics','Other')
+     OR p_subject IS NULL OR p_subject NOT IN ('Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other')
      OR p_work_type IS NULL OR p_work_type NOT IN ('materials.draft','materials.review','assessment.draft','result.review')
   THEN RETURN false; END IF;
   RETURN EXISTS (

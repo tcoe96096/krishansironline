@@ -67,7 +67,7 @@ BEGIN
  END LOOP;
  FOR s IN SELECT value FROM jsonb_array_elements(p_scopes) LOOP
   IF (s->>'classLevel') IS NULL OR (s->>'classLevel') NOT IN ('6','7','8','9','10','11','12')
-   OR (s->>'subject') IS NULL OR (s->>'subject') NOT IN ('Political Science','History','Geography','Economics','Other')
+   OR (s->>'subject') IS NULL OR (s->>'subject') NOT IN ('Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other')
    OR (s->>'workType') IS NULL OR (s->>'workType') NOT IN ('materials.draft','materials.review','assessment.draft','result.review') THEN
    RAISE EXCEPTION 'Invalid scope' USING ERRCODE='22023'; END IF;
  END LOOP;
