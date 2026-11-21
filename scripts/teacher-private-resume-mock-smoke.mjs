@@ -94,10 +94,12 @@ try{
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
  await editor.getByText('Teacher operation denied or unavailable. Refresh and check your access.').waitFor();
  assert.deepEqual(writes.map(w=>w.op),['reserve'],'Denied reservation must not upload anything');
+ assert.equal(profile.resumes.length,0,'Denied reservation cannot appear in the teacher/Admin submitted-document list');
  deniedReserve=false;
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
  await editor.getByText('Private resume upload was denied. The reservation was not finalized.').waitFor();
  assert.equal(finalizeCount,0,'Storage denial must not finalize document');
+ assert.equal(profile.resumes.length,0,'Reserved but missing Storage objects must not be shown as submitted');
  deniedUpload=false;
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
  // Upload success refreshes the parent form, so the transient status can
