@@ -4,7 +4,10 @@
 -- The browser cannot generate, overwrite, read another user's, or finalize an
 -- arbitrary object. The server issues an opaque per-document UUID and key.
 BEGIN;
-ALTER TABLE public.teacher_resume_documents ADD COLUMN upload_state text
+-- Initial Teacher v2 schema now declares upload_state; preserve compatibility
+-- with a separately-reviewed, older schema during staged upgrades.
+-- Audit the existing column's type/default/check constraint before any install.
+ALTER TABLE public.teacher_resume_documents ADD COLUMN IF NOT EXISTS upload_state text
  NOT NULL DEFAULT 'reserved' CHECK(upload_state IN ('reserved','uploaded'));
 DO $resume_bucket$
 BEGIN
