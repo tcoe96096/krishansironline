@@ -36,7 +36,7 @@ test('backup, runtime JWT/RLS, document scan, policy composition and approval ne
  'target_project_verified','independently_restored_backup','authenticated_rls_matrix',
  'private_media_policy_composition','document_malware_scan','independent_owner_release_approval'
  ];
- for(const gate of mandatory)assert.match(sql,new RegExp("'"+gate+"'\\s*,\\s*'UNVERIFIED'"));
+ for(const gate of mandatory)assert.match(sql,new RegExp("'"+gate+"'(?:\\s*::text\\s+AS\\s+gate)?\\s*,\\s*'UNVERIFIED'"));
  assert.match(sql,/CASE WHEN catalog_ready THEN 'CATALOG_PRESENT_NOT_RUNTIME_VERIFIED'/);
  assert.match(sql,/ELSE 'BLOCKED'/);
  assert.doesNotMatch(sql,/THEN 'GO'|AS (?:release|activation)_go/i);
