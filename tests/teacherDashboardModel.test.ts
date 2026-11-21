@@ -96,7 +96,7 @@ test('admin directory displays only resume metadata after server-side super-admi
 
 test('admin review never preselects applicant-requested permissions',()=>{
  const directory=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
- assert.match(directory,/setScopes\(\[\]\); \/\/ Never pre-authorize applicant-requested scopes/);
+ assert.match(directory,/setScopes\(\[\]\); \/\* Never pre-authorize applicant-requested scopes/);
  assert.doesNotMatch(directory,/setScopes\(p\.status==='pending'\?p\.requested_scopes/);
  assert.match(directory,/No class or subject is approved by default/);
  assert.match(directory,/scopes\.length===0/);
