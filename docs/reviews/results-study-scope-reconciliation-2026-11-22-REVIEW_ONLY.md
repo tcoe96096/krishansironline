@@ -16,3 +16,11 @@ Source: GitHub compare `main...test/study-video-url-mock-20261121` inspected 202
 - Confirm role contracts and Student/Exam ownership before shared-path changes; keep Teacher v2, PR #109 and ADVANCE Studio untouched.
 - Production Result Card remains blocked pending verified recovery, deployed RPC/RLS and private storage evidence, authenticated student/admin QA, and separate explicit owner approval.
 - No SQL execution, database writes/migrations, credential access, publishing, deployment, DNS changes, cross-user sends, or merge permitted by this document.
+
+## CI evidence checkpoint (2026-11-22, read-only)
+
+- The existing failed run [44905926000](https://github.com/tcoe96096/krishansironline/actions/runs/44905926000) has job `136851361284`: checkout succeeded, `Set up Node 22` failed, and both dependency installation and synthetic test steps were skipped. **Zero tests executed in that run.**
+- The updated branch workflow uses `actions/setup-node@v4` without npm caching, then invokes `node --experimental-strip-types --test` on the three mock test files. This is configuration evidence, not execution evidence.
+- Its `push` trigger is limited to branch `test/study-video-url-mock-20261121` **and** changes to the three test paths or the workflow file; docs-only commits on that branch will not start this workflow. `workflow_dispatch` is declared, but execution is not established by the declaration.
+- The available commit-workflow connector only enumerates PR-triggered runs, so an empty response **cannot** establish that no push-triggered run exists. To close this gap, inspect [Actions runs](https://github.com/tcoe96096/krishansironline/actions/workflows/study-materials-synthetic-review.yml) filtered to the source branch, capture run URL, event, head SHA, conclusion, job logs and test counts. Do not report PASS until those logs show actual execution.
+- Keep 320px Chromium mock evidence a separate gate; a green Node test run does not validate mobile rendering, authenticated access, storage authorization, RPC/RLS or Production readiness.
