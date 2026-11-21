@@ -30,8 +30,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
+      # Repository has no root dependency lockfile. These isolated tests use
+      # only built-in node:test/assert and Node 22's native TypeScript stripping.
+      # No npm install, remote package fetch, backend access, or deployment.
       - name: Run isolated synthetic tests
-        run: npx --no-install tsx --test tests/studyMaterialsVideoEmbedMock.test.ts tests/studyMaterialsDownloadExpiryMock.test.ts tests/studyMaterialsMockAccess.test.ts
+        run: node --experimental-strip-types --test tests/studyMaterialsVideoEmbedMock.test.ts tests/studyMaterialsDownloadExpiryMock.test.ts tests/studyMaterialsMockAccess.test.ts
