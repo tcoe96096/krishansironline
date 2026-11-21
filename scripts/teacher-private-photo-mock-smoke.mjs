@@ -50,7 +50,7 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  }
  if(path.includes('/rest/v1/'))return send([]);
  if(path.includes('/storage/v1/object/')){
-  const isGet=path.endsWith('/authenticated/'+bucket+'/'+objectPath);
+  const isGet=path.endsWith('/object/'+bucket+'/'+objectPath); // Authenticated SDK download uses bearer token on this route.
   const isPut=path.endsWith('/object/'+bucket+'/'+objectPath);
   if(isGet&&method==='GET'){
    if(photo)return route.fulfill({status:200,body:photo,contentType:'image/webp',
