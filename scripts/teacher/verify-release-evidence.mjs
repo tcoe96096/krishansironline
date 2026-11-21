@@ -36,8 +36,14 @@ export function validateEvidence(evidence) {
       }
       seen.add(c.id);
       if (c.status !== 'PASS') errors.push(c.id + ': not PASS');
-      if (!UTC.test(c.timestampUtc ?? '') || !Number.isFinite(Date.parse(c.timestampUtc))) errors.push(c.id + ': valid UTC timestamp missing');
-      else if (Date.parse(c.timestampUtc) > Date.now()) errors.push(c.id + ': future evidence timestamp');
+      const timestamp = c.timestampUtc;
+      const parsed = typeof timestamp === 'string' ? Date.parse(timestamp) : NaN;
+      // Date.parse normalizes some impossible calendar dates (e.g. February 31).
+      // Compare the parsed UTC components to the supplied calendar components.
+      const calendarValid = UTC.test(timestamp ?? '') && Number.isFinite(parsed) &&
+        new Date(parsed).toISOString().slice(0, 19) === timestamp.slice(0, 19);
+      if (!calendarValid) errors.push(c.id + ': valid UTC timestamp missing');
+      else if (parsed > Date.now()) errors.push(c.id + ': future evidence timestamp');
       if (typeof c.actorAlias === 'string' && typeof c.reviewer === 'string' &&
           c.actorAlias.trim().toLowerCase() === c.reviewer.trim().toLowerCase()) {
         errors.push(c.id + ': independent reviewer must differ from actor');
