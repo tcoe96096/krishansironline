@@ -20,13 +20,13 @@ export function validateTeacherResume(file:TeacherResumeCandidate):string|null{
    return 'Resume must be between 1 byte and 5 MB.';
  return null;
 }
-export function isOwnResumeReservation(value:unknown,userId:string):value is TeacherResumeReservation{
+export function isOwnResumeReservation(value:unknown,userId:string,expectedMime:string):value is TeacherResumeReservation{
  if(!value||typeof value!=='object'||!uuid.test(userId))return false;
  const r=value as Record<string,unknown>;
  if(typeof r.document_id!=='string'||!uuid.test(r.document_id)||typeof r.storage_path!=='string')return false;
  const key=r.storage_path;
- return key===userId.toLowerCase()+'/'+r.document_id.toLowerCase()+'.pdf'||
-  key===userId.toLowerCase()+'/'+r.document_id.toLowerCase()+'.docx';
+ const extension=expectedMime===PDF_MIME?'.pdf':expectedMime===DOCX_MIME?'.docx':null;
+ return extension!==null&&key===userId.toLowerCase()+'/'+r.document_id.toLowerCase()+extension;
 }
 export function resumeDraftWritable(profile:{user_id:string;status:string;submitted_at:string|null}|null,id:string){
  return !!profile&&profile.user_id===id&&profile.status==='pending'&&profile.submitted_at===null;
