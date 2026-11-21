@@ -19,7 +19,7 @@ jobs:
       - name: Teacher Core Beta unit tests
         run: node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts tests/teacherScopeTransition.test.ts tests/teacherCoreSecurity.test.ts tests/teacherLoginCallback.test.ts tests/teacherPortalRouteSeparation.test.ts tests/teacherProfilePhoto.test.ts tests/teacherDashboardModel.test.ts tests/teacherPrivatePhotoStorage.test.ts tests/teacherPrivateResume.test.ts
       - name: Teacher v2 migration and independent verification static security tests
-        run: node --import tsx --test tests/teacherV2MigrationSafety.test.ts tests/teacherV2IndependentVerification.test.ts tests/teacherV2RpcGrantAudit.test.ts tests/teacherV2ReadOnlyPreflight.test.ts
+        run: node --import tsx --test tests/teacherV2MigrationSafety.test.ts tests/teacherV2IndependentVerification.test.ts tests/teacherV2RpcGrantAudit.test.ts tests/teacherV2ReadOnlyPreflight.test.ts tests/teacherV2ActivationReadiness.test.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
