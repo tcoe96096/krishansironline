@@ -3,11 +3,11 @@
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS private;
 CREATE TABLE private.teacher_beta_features (
- feature text PRIMARY KEY CHECK (feature IN ('registration','material_authoring','result_analytics','resume_uploads','advanced_assignments')),
+ feature text PRIMARY KEY CHECK (feature IN ('registration','material_authoring','result_analytics','resume_uploads','advanced_assignments','profile_photos')),
  enabled boolean NOT NULL DEFAULT false
 );
 INSERT INTO private.teacher_beta_features(feature) VALUES
- ('registration'),('material_authoring'),('result_analytics'),('resume_uploads'),('advanced_assignments');
+ ('registration'),('material_authoring'),('result_analytics'),('resume_uploads'),('advanced_assignments'),('profile_photos');
 ALTER TABLE private.teacher_beta_features ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON private.teacher_beta_features FROM PUBLIC,anon,authenticated,service_role;
 CREATE TABLE private.teacher_beta_feature_audit (
@@ -34,6 +34,7 @@ BEGIN
  'materials',private.teacher_v2_feature_enabled('material_authoring'),
  'analytics',private.teacher_v2_feature_enabled('result_analytics'),
  'resumes',private.teacher_v2_feature_enabled('resume_uploads'),
+ 'photos',private.teacher_v2_feature_enabled('profile_photos'),
  'advanced',private.teacher_v2_feature_enabled('advanced_assignments'));
 END $$;
 REVOKE ALL ON FUNCTION public.teacher_v2_beta_capabilities() FROM PUBLIC,anon,authenticated,service_role;
@@ -56,5 +57,5 @@ BEGIN
  END LOOP;
 END $beta$;
 COMMIT;
--- Proposed minimal launch: registration only, all four advanced features false.
+-- Proposed minimal launch: registration only, all five optional features false (including private photos).
 -- Enabling even registration requires a separately approved, target-specific action.
