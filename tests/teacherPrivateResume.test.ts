@@ -21,16 +21,19 @@ test('only matching PDF/DOCX extensions, MIME and 5 MB input sizes pass',()=>{
 });
 test('reserve response is accepted only for authenticated owner and exact opaque UUID key',()=>{
  assert.equal(TEACHER_RESUME_BUCKET,'teacher-resumes-private');
- assert.equal(isOwnResumeReservation(valid,own),true);
- assert.equal(isOwnResumeReservation({...valid,storage_path:own+'/'+document+'.docx'},own),true);
- assert.equal(isOwnResumeReservation(valid,other),false);
+ assert.equal(isOwnResumeReservation(valid,own,PDF_MIME),true);
+ assert.equal(isOwnResumeReservation({...valid,storage_path:own+'/'+document+'.docx'},own,DOCX_MIME),true);
+ assert.equal(isOwnResumeReservation(valid,other,PDF_MIME),false);
+ assert.equal(isOwnResumeReservation(valid,own,DOCX_MIME),false,'PDF reservation must never match DOCX body');
+ assert.equal(isOwnResumeReservation({...valid,storage_path:own+'/'+document+'.docx'},own,PDF_MIME),false);
+ assert.equal(isOwnResumeReservation(valid,own,'application/octet-stream'),false);
  for(const wrong of [
   {...valid,storage_path:other+'/'+document+'.pdf'},
   {...valid,storage_path:'../'+document+'.pdf'},
   {...valid,storage_path:own+'/files/'+document+'.pdf'},
   {...valid,document_id:'invalid'}, {...valid,storage_path:own+'/'+document+'.exe'},
   {...valid,storage_path:own+'/'+document.toUpperCase()+'.pdf'},null,
- ])assert.equal(isOwnResumeReservation(wrong,own),false);
+ ])assert.equal(isOwnResumeReservation(wrong,own,PDF_MIME),false);
 });
 test('submitted, approved, suspended and unrelated profiles cannot upload',()=>{
  assert.equal(resumeDraftWritable({user_id:own,status:'pending',submitted_at:null},own),true);
@@ -51,7 +54,7 @@ test('service enforces authenticated owner, server capability, file magic, reser
  assert.match(s,/teacher_v2_snapshot/);
  assert.match(s,/resumeDraftWritable\(profile,id\)/);
  assert.match(s,/teacher_v2_resume_reserve/);
- assert.match(s,/isOwnResumeReservation\(reservation,id\)/);
+ assert.match(s,/isOwnResumeReservation\(reservation,id,file\.type\)/);
  assert.match(s,/upsert:false/);
  assert.match(s,/teacher_v2_resume_finalize/);
  assert.match(s,/if\(finalized!==true\)/);
@@ -68,6 +71,7 @@ test('resume database proposal is default-deny, two-phase, server-owned, no clie
  assert.match(sql,/d\.teacher_user_id=auth\.uid\(\)/);
  assert.match(sql,/d\.upload_state='reserved'/);
  assert.match(sql,/d\.upload_state='uploaded'/);
+ assert.match(sql,/ADD COLUMN IF NOT EXISTS upload_state/);
  assert.match(sql,/o\.owner_id=auth\.uid\(\)::text/);
  assert.match(sql,/v_object\.metadata/);
  assert.match(sql,/FOR INSERT TO authenticated/);
@@ -85,4 +89,16 @@ test('registration upload requires both client and server flags plus editable dr
  assert.doesNotMatch(input,/localStorage|sessionStorage|createSignedUrl|getPublicUrl/);
  const flag=readFileSync('src/lib/teacherBetaPolicy.ts','utf8');
  assert.match(flag,/core&&env\.VITE_TEACHER_RESUME_ENABLED==='true'/);
+});
+
+test('unfinished reservations never appear in teacher or admin snapshots',()=>{
+ const schema=readFileSync('docs/proposed-migrations/teacher_management_v2_schema_REVIEW_ONLY.sql','utf8');
+ const lifecycle=readFileSync('docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql','utf8');
+ const directory=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
+ assert.match(schema,/upload_state text NOT NULL DEFAULT 'reserved' CHECK \(upload_state IN \('reserved','uploaded'\)\)/);
+ assert.match(lifecycle,/FROM public\.teacher_resume_documents d WHERE d\.teacher_user_id=p\.user_id AND d\.upload_state='uploaded'/);
+ assert.match(lifecycle,/public\.teacher_v2_directory\(/);
+ assert.match(lifecycle,/public\.teacher_v2_snapshot\(p\.user_id\)/,'Admin must use the same filtered teacher snapshot');
+ assert.match(directory,/Submitted Resume Records/);
+ assert.doesNotMatch(directory,/\.storage\.from\(|\.download\(|createSignedUrl/);
 });
