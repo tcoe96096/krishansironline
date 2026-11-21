@@ -1,6 +1,8 @@
 import React from 'react';
 import {BookOpen, ClipboardCheck, GraduationCap, LayoutDashboard, ShieldCheck} from 'lucide-react';
 import {TeacherProfilePhoto} from './TeacherProfilePhoto';
+import {TeacherPrivatePhotoV2} from '../src/components/TeacherPrivatePhotoV2';
+import {teacherPhotoUiEnabled} from '../src/lib/teacherBetaFlags';
 
 interface Props {
   preview: boolean;
@@ -27,7 +29,7 @@ export function TeacherDashboardOverview({preview,teacherName,photoUrl,onRegistr
       </p>}
     </div>
     <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
-      <TeacherProfilePhoto teacherName={teacherName} photoUrl={photoUrl}/>
+      {!preview&&teacherPhotoUiEnabled?<TeacherPrivatePhotoV2/>:<TeacherProfilePhoto teacherName={teacherName} photoUrl={photoUrl}/>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[
           {label:'Registration',detail:preview?'Sample form only':'Review your saved application',icon:ClipboardCheck},
