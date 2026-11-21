@@ -11,7 +11,7 @@ export type TeacherResumeReservation={document_id:string;storage_path:string};
  * must still examine actual document bytes before trusting a resume. */
 export function validateTeacherResume(file:TeacherResumeCandidate):string|null{
  const name=file.name.trim();
- if(name.length<5||name.length>180||name.includes('/')||name.includes('\\')||name.includes('..'))
+ if(name.length<5||name.length>180||name.includes('/')||name.includes('\\')||name.includes('..')||/[\u0000-\u001f\u007f]/.test(name))
    return 'Choose a named PDF or DOCX document (up to 180 characters).';
  const expected=name.toLowerCase().endsWith('.pdf')?PDF_MIME:
   name.toLowerCase().endsWith('.docx')?DOCX_MIME:null;
