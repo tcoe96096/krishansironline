@@ -8,7 +8,7 @@ const browser=await chromium.launch({headless:true});
 const context=await browser.newContext({viewport:{width:390,height:844}});
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const requestPaths=[];page.on('request',r=>requestPaths.push(new URL(r.url()).pathname));
-let profile=null,active=true,denySave=false,denySnapshot=false,admin=false,superAdmin=false,legacyGrant=false;const writes=[];
+let profile=null,active=true,denySave=false,denySnapshot=false,denyVerification=false,admin=false,superAdmin=false,legacyGrant=false,recordedVerification=null;const writes=[];
 await context.addInitScript(({id})=>{
  const user={id,email:'teacher@example.test',aud:'authenticated',role:'authenticated',user_metadata:{name:'Test Teacher'},app_metadata:{provider:'google'}};
  const token=btoa(JSON.stringify({alg:'HS256',typ:'JWT'}))+'.'+btoa(JSON.stringify({sub:id,exp:Math.floor(Date.now()/1000)+3600}))+'.test';
@@ -22,14 +22,23 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  else if(op==='teacher_v2_snapshot'){if(denySnapshot){status=403;data={code:'42501'};}else if(active)data=profile;else{status=404;data={code:'PGRST202'};}}
  else if(op==='teacher_v2_save_application'){
   writes.push({op,args});if(denySave){status=403;data={code:'42501'};}else{
-   profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason||null,decision_reason:null,reviewed_at:null,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
+   recordedVerification=null;profile={user_id:id,employee_id:null,...{display_name:args.p_profile.displayName,contact_email:args.p_profile.contactEmail,phone:args.p_profile.phone,experience_years:args.p_profile.experienceYears},status:'pending',revision:profile?profile.revision+1:2,submitted_at:args.p_submit?'2026-11-16T10:00:00Z':null,application_reason:args.p_reason||null,decision_reason:null,reviewed_at:null,requested_scopes:args.p_scopes,qualifications:args.p_qualifications,assignments:[],resumes:[]};data=profile.revision;
   }
- }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;data=true;writes.push({op,args});}
+ }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;recordedVerification=null;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
  else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
+ else if(op==='teacher_v2_record_identity_verification'){
+  writes.push({op,args});
+  if(denyVerification||!superAdmin||!profile||profile.status!=='pending'||!profile.submitted_at
+     ||args.p_teacher_user_id!==id||args.p_profile_revision!==profile.revision
+     ||typeof args.p_evidence_reference!=='string'||args.p_evidence_reference.trim().length<12
+     ||typeof args.p_reason!=='string'||args.p_reason.trim().length<12
+     ||recordedVerification!==null){status=403;data={code:'42501'};}
+  else{recordedVerification={teacher:id,revision:profile.revision};data='33333333-3333-4333-8333-333333333333';}
+ }
  else if(op==='teacher_v2_review'){
   writes.push({op,args});
-  if(args.p_decision==='approve'&&(!args.p_verified||!Array.isArray(args.p_assignments)||args.p_assignments.length===0)){
+  if(args.p_decision==='approve'&&(!recordedVerification||recordedVerification.teacher!==id||recordedVerification.revision!==profile.revision||!Array.isArray(args.p_assignments)||args.p_assignments.length===0)){
    status=400;data={code:'22023'};
   }else{
    profile.status=args.p_decision==='approve'?'approved':'rejected';
@@ -100,18 +109,28 @@ try{
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
- await directory.getByLabel('Identity independently verified').check();
- assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Identity verification alone must not approve applicant-requested scopes');
  assert.equal(await directory.getByRole('button',{name:'Remove scope 1',exact:true}).count(),0,'Admin must start with zero preselected grants');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
- assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'Explicitly added scope is reviewable');
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'A class permission alone cannot bypass identity verification');
+ await directory.getByLabel('Opaque verification case reference (no ID numbers)').fill('case-reference-2026-11-21');
+ page.on('dialog',dialog=>dialog.accept());
+ denyVerification=true;
+ await directory.getByRole('button',{name:'Record independent verification'}).click();
+ await directory.getByRole('alert').waitFor();
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'A failed server record cannot enable approval');
+ denyVerification=false;
+ await directory.getByRole('button',{name:'Record independent verification'}).click();
+ await directory.getByText(/Server verification recorded for revision/).waitFor();
+ assert.equal(writes.at(-1).op,'teacher_v2_record_identity_verification');
+ assert.equal(writes.at(-1).args.p_profile_revision,profile.revision);
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'Server-recorded evidence and explicit scopes enable review');
  await directory.getByRole('button',{name:'Remove scope 1',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Removing the only scope blocks approval');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false);
- const reviewedRevision=profile.revision;page.on('dialog',dialog=>dialog.accept());await directory.getByRole('button',{name:'Approve verified teacher'}).click();
+ const reviewedRevision=profile.revision;await directory.getByRole('button',{name:'Approve verified teacher'}).click();
  await directory.getByText(/KSOL-T-123456ABCDEF/).waitFor();
- assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,true);
+ assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,false,'Legacy UI boolean is never identity verification authority');
  assert.deepEqual(writes.at(-1).args.p_assignments,[{classLevel:'10',subject:'History',workType:'materials.draft'}]);
  // Core Beta deliberately excludes the optional material editor.
  await page.goto(base+'/dashboard/');
@@ -175,5 +194,5 @@ try{
   await loggedOut.close();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS: teacher v2 mobile registration, multiple qualifications/scopes, failed save, pending lock, withdrawal, inactive backend, upload gate, Admin denial, approval, assignment grant/revoke, rejection notes, suspension, restoration without revived grants and publication boundary (mock API).');
+ console.log('PASS: teacher v2 mobile registration, multiple qualifications/scopes, failed save, pending lock, withdrawal, inactive backend, upload gate, Admin denial, server-backed revision verification with denial test, explicit scope approval, assignment grant/revoke, rejection, suspension, restoration and publication boundary (mock API).');
 }finally{await browser.close();}
