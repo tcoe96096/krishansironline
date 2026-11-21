@@ -1,6 +1,13 @@
 name: Student Mock Series Source Contracts
 
 on:
+  push:
+    branches:
+      - 'fix/student-mock-series-published-availability-20261119'
+    paths:
+      - 'src/components/StudentMockTestSeries.tsx'
+      - 'tests/student/**'
+      - '.github/workflows/student-mock-series-contracts.yml'
   pull_request:
     paths:
       - 'src/components/StudentMockTestSeries.tsx'
