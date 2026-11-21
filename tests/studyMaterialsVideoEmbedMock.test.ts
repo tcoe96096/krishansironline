@@ -12,7 +12,7 @@ function mockVideoEmbedDecision(input: unknown): VideoDecision {
   try { url = new URL(input); } catch { return DENY; }
   if (url.protocol !== 'https:' || !approvedHosts.has(url.hostname.toLowerCase()) ||
       url.username || url.password || url.port || url.hash ||
-      /[\u0000-\u001f\u007f]/.test(input)) return DENY;
+      /[\u0000-\u001f\u007f]/.test(input) || input !== url.href) return DENY;
   if (url.hostname === 'www.youtube-nocookie.com') {
     if (!/^\/embed\/[A-Za-z0-9_-]{11}$/.test(url.pathname) || url.search) return DENY;
   } else {
@@ -42,6 +42,9 @@ test('mock rejects credentials, ports, fragments, query redirects and invalid pa
     'https://www.youtube-nocookie.com/embed/abcdefghijk?autoplay=1',
     'https://player.vimeo.com/video/not-an-id',
     ' https://player.vimeo.com/video/123',
+    'https://player.vimeo.com/other/../video/123',
+    'https://player.vimeo.com/video/%31%32%33',
+    'https://PLAYER.VIMEO.COM/video/123',
   ]) assert.deepEqual(mockVideoEmbedDecision(input), DENY, input);
 });
 test('denied mock embeds never expose a renderable URL', () => {
