@@ -84,3 +84,12 @@ test('dashboard projects personal details, qualifications and resume metadata on
  assert.match(view,/Resume Records/);
  assert.doesNotMatch(view,/createSignedUrl|download\(|\.upload\(|localStorage/);
 });
+
+test('admin directory displays only resume metadata after server-side super-admin verification',()=>{
+ const directory=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
+ assert.match(directory,/teacherCall<boolean>\('is_super_admin'\)/);
+ assert.match(directory,/Submitted Resume Records/);
+ assert.match(directory,/p\.resumes\.map\(doc=>/);
+ assert.match(directory,/doc\.verification_status/);
+ assert.doesNotMatch(directory,/createSignedUrl|\.download\(|\.upload\(|localStorage/);
+});
