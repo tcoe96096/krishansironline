@@ -1,4 +1,6 @@
 import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';
+import {TEACHER_SUBJECTS} from '../src/lib/teacherManagementValidation';
 import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId,validateTeacherProfile,validateTeacherRequestedScopes,validateTeacherRequestedWorkTypes} from '../src/lib/teacherManagementValidation';
 
 const a=normalizeTeacherAssignments([
@@ -155,7 +157,7 @@ assert.equal(validateTeacherRequestedScopes('6','Other',['6','7','8','9','10','1
 // Teacher subject choices must match the REVIEW_ONLY SQL constraints at every
 // server boundary; client-only options would otherwise be rejected after activation.
 const expectedTeacherSubjects = ["Hindi","English","Sanskrit","Mathematics","Science","Social Science","Physics","Chemistry","Biology","Computer Science","Political Science","History","Geography","Economics","Accountancy","Business Studies","Psychology","Physical Education","Fine Arts","Other"];
-import {TEACHER_SUBJECTS} from '../src/lib/teacherManagementValidation';
+
 assert.deepEqual([...TEACHER_SUBJECTS],expectedTeacherSubjects);
 for(const subject of ['Hindi','English','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Accountancy','Business Studies','Physical Education']){
  assert.equal(normalizeTeacherAssignments([{classLevel:'8',subject,workType:'materials.draft'}]).length,1);
