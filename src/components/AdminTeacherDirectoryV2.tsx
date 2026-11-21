@@ -21,6 +21,12 @@ export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
  {rows.map(p=><article key={p.user_id} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"><h3 className="text-lg font-bold text-slate-900">{p.display_name} <span className="ml-2 inline-block rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase text-sky-900">{p.status}</span></h3><p>{p.employee_id||'Employee ID not issued'} · {p.contact_email} · {p.phone}</p><p className="break-all text-xs">Account ID: {p.user_id} · Revision {p.revision}</p><p>{p.application_reason}</p>{p.decision_reason&&<p>Last review note: {p.decision_reason}</p>}
  {p.requested_scopes.map((scope,i)=><p key={`requested-${i}`}>Requested: Class {scope.classLevel} · {scope.subject}</p>)}
  {p.qualifications.map((q,i)=><p key={i}>{q.title} · {q.institution} · {q.year}</p>)}
+ <section aria-label={`Resume records for ${p.display_name}`} className="rounded-xl border border-slate-200 bg-white p-3">
+  <h4 className="text-sm font-semibold text-slate-800">Submitted Resume Records</h4>
+  {p.resumes.length===0?<p className="mt-1 text-sm text-slate-500">No resume on record.</p>:
+   <ul className="mt-2 space-y-1">{p.resumes.map(doc=><li key={doc.id} className="break-all text-sm text-slate-700">{doc.original_filename} · <span className="text-xs text-slate-500">Verification: {doc.verification_status}</span></li>)}</ul>}
+  <p className="mt-2 text-xs text-slate-500">Metadata only. Private files are not opened or downloaded by the directory.</p>
+ </section>
  <button className="rounded-xl bg-sky-900 px-4 py-2 font-semibold text-white" onClick={()=>{setSelected(p.user_id);selectedRef.current=p.user_id;setReason('');setVerified(false);setScopes(p.status==='pending'?p.requested_scopes.map(scope=>({...scope})):[]);setAudit([]);}}>Review profile and access</button>
  {selected===p.user_id&&<div className="space-y-3"><label className="block">Decision reason (shown to teacher)<textarea maxLength={1000} className="block w-full rounded border p-2" value={reason} onChange={e=>setReason(e.target.value)}/></label>
  {p.status==='pending'&&p.submitted_at&&<><label className="block"><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/> Identity independently verified</label><TeacherScopeEditor value={scopes} onChange={setScopes} allowAnalytics={false}/>
