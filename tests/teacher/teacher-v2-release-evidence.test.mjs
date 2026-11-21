@@ -58,3 +58,10 @@ test('actor cannot independently review their own acceptance evidence', () => {
   e.cases[0].reviewer = ' SYNTHETIC-ACTOR ';
   assert.ok(validateEvidence(e).some(x => x.includes('independent reviewer')));
 });
+
+test('impossible UTC calendar dates cannot pass acceptance evidence', () => {
+  for (const timestamp of ['2026-02-31T06:00:00Z', '2026-11-31T06:00:00Z', '2026-13-01T06:00:00Z']) {
+    const e = fixture(); e.cases[0].timestampUtc = timestamp;
+    assert.ok(validateEvidence(e).some(x => x.includes('valid UTC timestamp missing')), timestamp);
+  }
+});
