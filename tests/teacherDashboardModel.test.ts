@@ -108,6 +108,8 @@ test('admin review never preselects applicant-requested permissions',()=>{
 test('admin verification must be recorded by a revision-bound server RPC, never a checkbox',()=>{
  const directory=readFileSync('src/components/AdminTeacherDirectoryV2.tsx','utf8');
  assert.match(directory,/teacher_v2_record_identity_verification/);
+ assert.match(directory,/teacher_v2_verification_status/);
+ assert.match(directory,/p_teacher_user_id:p.user_id,p_profile_revision:p.revision/);
  assert.match(directory,/p_teacher_user_id:teacherId,p_profile_revision:profileRevision/);
  assert.match(directory,/verifiedRevision!==p\.revision/);
  assert.match(directory,/Server verification recorded for revision/);
