@@ -27,6 +27,13 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;recordedVerification=null;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
  else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
+ else if(op==='teacher_v2_verification_status'){
+  if(!superAdmin){status=403;data={code:'42501'};}
+  else data=!!(recordedVerification&&profile&&profile.status==='pending'&&profile.submitted_at
+    &&recordedVerification.teacher===args.p_teacher_user_id
+    &&recordedVerification.revision===args.p_profile_revision
+    &&profile.revision===args.p_profile_revision);
+ }
  else if(op==='teacher_v2_record_identity_verification'){
   writes.push({op,args});
   if(denyVerification||!superAdmin||!profile||profile.status!=='pending'||!profile.submitted_at
@@ -126,8 +133,17 @@ try{
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false,'Server-recorded evidence and explicit scopes enable review');
  await directory.getByRole('button',{name:'Remove scope 1',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Removing the only scope blocks approval');
+ // Refresh clears the browser-only state; the server read-only status must
+ // restore the same revision's independent verification without creating another.
+ await directory.getByRole('button',{name:'Refresh',exact:true}).click();
+ await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
+ await directory.getByText(/Server verification recorded for revision/).waitFor();
+ assert.equal(await directory.getByRole('button',{name:'Record independent verification'}).isDisabled(),true,'A saved verification can be recovered, not duplicated');
+ await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
+ assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true,'Recovered verification never auto-approves a scope');
  await directory.getByRole('button',{name:'Add scope',exact:true}).click();
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),false);
+ assert.ok(requestPaths.some(path=>path.includes('teacher_v2_verification_status')),'Status must be read from a server RPC');
  const reviewedRevision=profile.revision;await directory.getByRole('button',{name:'Approve verified teacher'}).click();
  await directory.getByText(/KSOL-T-123456ABCDEF/).waitFor();
  assert.equal(writes.at(-1).args.p_revision,reviewedRevision);assert.equal(writes.at(-1).args.p_verified,false,'Legacy UI boolean is never identity verification authority');
