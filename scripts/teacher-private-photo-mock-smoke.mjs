@@ -78,7 +78,7 @@ try{
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64');
  await page.goto(base+'/registration/');
  const registration=page.getByRole('region',{name:'Teacher registration page'});
- await registration.getByRole('heading',{name:'Teacher Registration'}).waitFor();
+ await registration.getByRole('heading',{name:'Teacher Registration',exact:true}).waitFor();
  const editor=page.getByRole('region',{name:'Teacher Management v2'});
  await editor.getByRole('region',{name:'Private teacher profile photo'}).waitFor();
  const input=editor.getByLabel('Upload registered teacher photo',{exact:true});
