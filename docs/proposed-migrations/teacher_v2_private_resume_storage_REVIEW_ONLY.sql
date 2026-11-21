@@ -47,6 +47,7 @@ BEGIN
  IF p_filename IS NULL OR char_length(btrim(p_filename)) NOT BETWEEN 5 AND 180
    OR position('/' in p_filename)>0 OR position(chr(92) in p_filename)>0
    OR position('..' in p_filename)>0
+   OR p_filename ~ '[[:cntrl:]]' -- match client-side NUL/newline/DEL rejection
    OR p_size_bytes NOT BETWEEN 1 AND 5242880 THEN
   RAISE EXCEPTION 'Invalid resume metadata' USING ERRCODE='22023';
  END IF;
