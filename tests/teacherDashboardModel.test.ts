@@ -65,3 +65,22 @@ test('dashboard reads its own authenticated record, and preview cannot call back
  assert.doesNotMatch(view,/\.(?:insert|update|delete|upsert|upload)\(/);
  assert.doesNotMatch(view,/teacher_v2_save_application|teacher_v2_set_assignment|teacher_v2_review/);
 });
+
+test('dashboard projects personal details, qualifications and resume metadata only for its own verified account',()=>{
+ const own={...approvedProfile,qualifications:[{title:'M.A.',institution:'University',year:2020}],
+   resumes:[{id:'r1',original_filename:'Teaching CV.pdf',verification_status:'pending'}]};
+ const summary=teacherDashboardSummary(own,userId);
+ assert.equal(summary.displayName,'Example Teacher');
+ assert.equal(summary.contactEmail,'teacher@example.test');
+ assert.equal(summary.experienceYears,3);
+ assert.deepEqual(summary.qualifications,[{title:'M.A.',institution:'University',year:2020}]);
+ assert.deepEqual(summary.resumeRecords,[{id:'r1',filename:'Teaching CV.pdf',status:'pending'}]);
+ const noRecord=teacherDashboardSummary(null,userId);
+ assert.deepEqual({qualifications:noRecord.qualifications,resumeRecords:noRecord.resumeRecords,contactEmail:noRecord.contactEmail},
+   {qualifications:[],resumeRecords:[],contactEmail:null});
+ assert.throws(()=>teacherDashboardSummary(own,'22222222-2222-4222-8222-222222222222'),/Invalid teacher profile/);
+ const view=readFileSync('teacher-beta/TeacherDashboardData.tsx','utf8');
+ assert.match(view,/My Registration Details/);
+ assert.match(view,/Resume Records/);
+ assert.doesNotMatch(view,/createSignedUrl|download\(|\.upload\(|localStorage/);
+});
