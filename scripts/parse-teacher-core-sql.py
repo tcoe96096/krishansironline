@@ -27,6 +27,7 @@ ADDITIONAL = (
     "teacher_v2_private_resume_storage_REVIEW_ONLY.sql",
     "teacher_v2_review_independent_evidence_OVERRIDE_REVIEW_ONLY.sql",
     "teacher_v2_rpc_effective_privileges_PREFLIGHT_READ_ONLY.sql",
+    "teacher_v2_activation_readiness_PREFLIGHT_READ_ONLY.sql",
 )
 for name in ADDITIONAL:
     path = root / "docs" / "proposed-migrations" / name
