@@ -31,9 +31,15 @@ BEGIN
     OR NOT private.teacher_v2_feature_enabled('registration') THEN
   RAISE EXCEPTION 'Private teacher resumes disabled' USING ERRCODE='42501';
  END IF;
+ -- Serialize concurrent reservations so a teacher cannot bypass the quota.
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(auth.uid()::text,0));
  IF NOT EXISTS(SELECT 1 FROM public.teacher_profiles p
      WHERE p.user_id=auth.uid() AND p.status='pending' AND p.submitted_at IS NULL) THEN
   RAISE EXCEPTION 'An editable teacher registration draft is required' USING ERRCODE='42501';
+ END IF;
+ IF (SELECT count(*) FROM public.teacher_resume_documents
+     WHERE teacher_user_id=auth.uid())>=5 THEN
+  RAISE EXCEPTION 'Maximum five private resume records; request administrator review' USING ERRCODE='22023';
  END IF;
  IF p_filename IS NULL OR char_length(btrim(p_filename)) NOT BETWEEN 5 AND 180
    OR position('/' in p_filename)>0 OR position(chr(92) in p_filename)>0
