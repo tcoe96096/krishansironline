@@ -92,7 +92,7 @@ try{
  assert.equal(writes.length,0,'Bad file signatures cannot reach an RPC or Storage');
  const valid=Buffer.from('%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n');
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
- await editor.getByText('Server denied reservation').waitFor();
+ await editor.getByText('Teacher operation denied or unavailable. Refresh and check your access.').waitFor();
  assert.deepEqual(writes.map(w=>w.op),['reserve'],'Denied reservation must not upload anything');
  deniedReserve=false;
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
