@@ -24,6 +24,7 @@ ADDITIONAL = (
     "teacher_v2_verification_writer_REVIEW_ONLY.sql",
     "teacher_v2_verification_status_REVIEW_ONLY.sql",
     "teacher_v2_private_photo_storage_REVIEW_ONLY.sql",
+    "teacher_v2_private_resume_storage_REVIEW_ONLY.sql",
     "teacher_v2_review_independent_evidence_OVERRIDE_REVIEW_ONLY.sql",
     "teacher_v2_rpc_effective_privileges_PREFLIGHT_READ_ONLY.sql",
 )
