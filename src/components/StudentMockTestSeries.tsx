@@ -28,7 +28,7 @@ export const StudentMockTestSeries:React.FC<{classLevel?:string}> = ({classLevel
     seenSeriesIds.add(id);
     return true;
    }));setAttempts(Array.isArray(history)?history:[]);setTests(Array.isArray(publishedTests)?publishedTests:[]);setLoadedClass(classLevel);
-  }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
+  }catch(e){if(current===requestId.current){setRows([]);setAttempts([]);setTests([]);setLoadedClass(classLevel);setError('Mock Test Series अभी लोड नहीं हो सकीं। कृपया दोबारा प्रयास करें।');}}
   finally{if(current===requestId.current)setLoading(false);}
  },[classLevel]);
  useEffect(()=>{void load();return()=>{requestId.current++;};},[load]);
