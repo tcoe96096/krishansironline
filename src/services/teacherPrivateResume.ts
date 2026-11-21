@@ -32,7 +32,7 @@ export async function uploadOwnTeacherResume(file:File):Promise<void>{
  const reservation=await teacherCall<unknown>('teacher_v2_resume_reserve',{
   p_filename:file.name,p_content_type:file.type,p_size_bytes:file.size
  });
- if(!isOwnResumeReservation(reservation,id))
+ if(!isOwnResumeReservation(reservation,id,file.type))
   throw new Error('Server did not return a valid owner-specific resume reservation.');
  const {error:uploadError}=await supabase.storage.from(TEACHER_RESUME_BUCKET)
   .upload(reservation.storage_path,file,{contentType:file.type,upsert:false,cacheControl:'0'});
