@@ -62,3 +62,20 @@ test('review and verification writer use consistent lock order', () => {
   assert.ok(advisory>=0 && rowLock>advisory);
  }
 });
+
+test('staging lifecycle cannot approve a teacher before independent evidence override is installed', () => {
+ const lifecycle=readFileSync('docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql','utf8');
+ const start=lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_review(');
+ const end=lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.teacher_v2_suspend(',start);
+ assert.ok(start>=0&&end>start,'staging review RPC must be identifiable');
+ const review=lifecycle.slice(start,end);
+ const deny=review.indexOf("IF p_decision='approve' THEN\n   RAISE EXCEPTION 'Independent verification review override required before teacher approval'");
+ const mutation=review.indexOf('UPDATE public.teacher_profiles SET decision_reason=');
+ assert.ok(deny>=0&&mutation>deny,'approve must be rejected before any status/ID/role mutation');
+ assert.match(review,/USING ERRCODE='42501'/);
+ assert.doesNotMatch(review,/p_verified IS DISTINCT FROM true/,'caller-supplied boolean is not evidence');
+ const override=read('teacher_v2_review_independent_evidence_OVERRIDE');
+ assert.match(override,/FROM public\.teacher_identity_verifications v/);
+ assert.match(override,/v\.profile_revision=p\.revision/);
+ assert.match(override,/v\.revoked_at IS NULL/);
+});
