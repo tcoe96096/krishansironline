@@ -3,21 +3,21 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {deriveTeacherBetaFlags} from '../src/lib/teacherBetaPolicy';
 test('teacher Beta and all advanced features default off',()=>{
- assert.deepEqual(deriveTeacherBetaFlags({}),{core:false,advanced:false,analytics:false,resumes:false});
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false});
+ assert.deepEqual(deriveTeacherBetaFlags({}),{core:false,advanced:false,analytics:false,resumes:false,photos:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false,photos:false});
 });
 test('core Beta can opt into resumes and analytics separately without enabling advanced work permissions',()=>{
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:true});
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:true,advanced:false,analytics:false,resumes:true});
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:true,photos:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true'}),{core:true,advanced:false,analytics:false,resumes:true,photos:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:true,advanced:false,analytics:true,resumes:false,photos:false});
 });
 test('advanced flag alone never unlocks private documents or analytics, and core remains master off-switch',()=>{
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_ADVANCED_ENABLED:'true'}),{core:true,advanced:true,analytics:false,resumes:false});
- assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_ADVANCED_ENABLED:'true'}),{core:true,advanced:true,analytics:false,resumes:false,photos:false});
+ assert.deepEqual(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'false',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'}),{core:false,advanced:false,analytics:false,resumes:false,photos:false});
 });
 test('feature flags require explicit exact true; partial or truthy strings never enable them',()=>{
  const enabled=deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_ADVANCED_ENABLED:'true',VITE_TEACHER_RESUME_ENABLED:'true',VITE_TEACHER_RESULT_ANALYTICS_ENABLED:'true'});
- assert.deepEqual(enabled,{core:true,advanced:true,analytics:true,resumes:true});
+ assert.deepEqual(enabled,{core:true,advanced:true,analytics:true,resumes:true,photos:false});
  assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'1'}).core,false);
 });
 test('server-owned feature states default off and client roles have no flag mutation permission',()=>{
@@ -45,4 +45,15 @@ test('core enrollment requires Super Admin legacy transition without weakening t
  assert.ok(sql.includes('Legacy grant cannot bypass a v2 profile'));
  assert.ok(!sql.includes('UPDATE public.result_staff_grants SET is_active=false WHERE user_id=v_actor'));
  assert.ok(sql.includes("p_decision='approve' AND jsonb_array_length(p_assignments)=0"));
+});
+
+test('private photos require both core and their own exact opt-in; server flag remains off by default',()=>{
+ assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_PHOTO_ENABLED:'true'}).photos,false);
+ assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true'}).photos,false);
+ assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_PHOTO_ENABLED:'1'}).photos,false);
+ assert.equal(deriveTeacherBetaFlags({VITE_TEACHER_BETA_ENABLED:'true',VITE_TEACHER_PHOTO_ENABLED:'true'}).photos,true);
+ const sql=readFileSync('docs/proposed-migrations/teacher_management_v2_beta_flags_REVIEW_ONLY.sql','utf8');
+ assert.match(sql,/profile_photos/);
+ assert.match(sql,/'photos',private\.teacher_v2_feature_enabled\('profile_photos'\)/);
+ assert.match(sql,/enabled boolean NOT NULL DEFAULT false/);
 });
