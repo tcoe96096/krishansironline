@@ -11,6 +11,9 @@ type Fixture = {
   nowMs: number;
   expiresAtMs: number;
   tokenStudentId: string;
+  materialId: string;
+  tokenMaterialId: string;
+  revoked: boolean;
 };
 type Decision = { allowed: boolean; objectKey: null; downloadUrl: null };
 const DENY: Decision = { allowed: false, objectKey: null, downloadUrl: null };
@@ -18,7 +21,8 @@ function mockDownloadDecision(f: Fixture): Decision {
   // Fail closed; never return a mock storage key or a bearer URL.
   const allowed = f.studentId === f.ownerId &&
     f.studentId === f.tokenStudentId &&
-    f.enrolled && f.published &&
+    f.enrolled && f.published && !f.revoked &&
+    f.materialId === f.tokenMaterialId &&
     Number.isSafeInteger(f.nowMs) && Number.isSafeInteger(f.expiresAtMs) &&
     f.nowMs >= 0 && f.expiresAtMs > f.nowMs;
   return { allowed, objectKey: null, downloadUrl: null };
@@ -26,6 +30,7 @@ function mockDownloadDecision(f: Fixture): Decision {
 const base: Fixture = {
   studentId: 'synthetic-S1', ownerId: 'synthetic-S1',
   tokenStudentId: 'synthetic-S1', enrolled: true, published: true,
+  materialId: 'synthetic-M1', tokenMaterialId: 'synthetic-M1', revoked: false,
   nowMs: 1000, expiresAtMs: 2000,
 };
 test('synthetic unexpired, enrolled owner passes eligibility only', () => {
@@ -41,6 +46,13 @@ test('withdrawal, draft and cross-student token reuse fail closed', () => {
     { enrolled: false }, { published: false },
     { ownerId: 'synthetic-S2' }, { tokenStudentId: 'synthetic-S2' },
     { nowMs: Number.NaN }, { nowMs: Number.POSITIVE_INFINITY },
+  ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
+});
+test('revoked token and cross-material replay fail closed', () => {
+  for (const change of [
+    { revoked: true },
+    { materialId: 'synthetic-M2' },
+    { tokenMaterialId: 'synthetic-M2' },
   ]) assert.deepEqual(mockDownloadDecision({ ...base, ...change }), DENY);
 });
 test('invalid clock values and unsafe integer timestamps fail closed', () => {
@@ -68,5 +80,5 @@ test('no fixture returns object keys or bearer URLs', () => {
   }
 });
 
-// Real enforcement requires backend authorization, token signature/revocation,
+// Real enforcement requires backend authorization, token signature/revocation and resource binding,
 // server clock, storage policies, and authenticated browser integration tests.
