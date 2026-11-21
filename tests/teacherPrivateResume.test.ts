@@ -16,6 +16,7 @@ test('only matching PDF/DOCX extensions, MIME and 5 MB input sizes pass',()=>{
   {name:'cv.pdf',type:DOCX_MIME,size:100},{name:'cv.docx',type:PDF_MIME,size:100},
   {name:'x.svg',type:'image/svg+xml',size:100},{name:'../cv.pdf',type:PDF_MIME,size:100},
   {name:'a/cv.pdf',type:PDF_MIME,size:100},{name:'a\\cv.pdf',type:PDF_MIME,size:100},
+  {name:'cv\u0000.pdf',type:PDF_MIME,size:100},{name:'cv\n.pdf',type:PDF_MIME,size:100},
   {name:'cv.pdf',type:PDF_MIME,size:0},{name:'cv.pdf',type:PDF_MIME,size:TEACHER_RESUME_MAX_BYTES+1}
  ])assert.notEqual(validateTeacherResume(item),null,JSON.stringify(item));
 });
