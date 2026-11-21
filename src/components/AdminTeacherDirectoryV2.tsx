@@ -44,7 +44,11 @@ export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
    <ul className="mt-2 space-y-1">{p.resumes.map(doc=><li key={doc.id} className="break-all text-sm text-slate-700">{doc.original_filename} · <span className="text-xs text-slate-500">Verification: {doc.verification_status}</span></li>)}</ul>}
   <p className="mt-2 text-xs text-slate-500">Metadata only. Private files are not opened or downloaded by the directory.</p>
  </section>
- <button className="rounded-xl bg-sky-900 px-4 py-2 font-semibold text-white" onClick={()=>{setSelected(p.user_id);selectedRef.current=p.user_id;setReason('');setVerificationRef('');setVerifiedRevision(null);setScopes([]); /* Never pre-authorize applicant-requested scopes; reviewer selects each grant. */setAudit([]);}}>Review profile and access</button>
+ <button className="rounded-xl bg-sky-900 px-4 py-2 font-semibold text-white" onClick={()=>{setSelected(p.user_id);selectedRef.current=p.user_id;setReason('');setVerificationRef('');setVerifiedRevision(null);setScopes([]); /* Never pre-authorize applicant-requested scopes; reviewer selects each grant. */setAudit([]);
+ if(p.status==='pending'&&p.submitted_at)void teacherCall<unknown>('teacher_v2_verification_status',{
+   p_teacher_user_id:p.user_id,p_profile_revision:p.revision
+ }).then(recorded=>{if(selectedRef.current===p.user_id&&recorded===true)setVerifiedRevision(p.revision);})
+ .catch(()=>{if(selectedRef.current===p.user_id)setError('Verification status unavailable. Confirm backend activation before reviewing.');});}}>Review profile and access</button>
  {selected===p.user_id&&<div className="space-y-3"><label className="block">Decision reason (shown to teacher)<textarea maxLength={1000} className="block w-full rounded border p-2" value={reason} onChange={e=>setReason(e.target.value)}/></label>
  {p.status==='pending'&&p.submitted_at&&<>
  <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
