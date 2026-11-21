@@ -1,4 +1,4 @@
--- READ ONLY: Teacher Management v2 activation catalog preflight (2026-11-21).
+-- REVIEW ONLY; NOT EXECUTED; READ ONLY: Teacher Management v2 activation catalog preflight (2026-11-21).
 -- Expected operator-selected target: Preview zgpkmfqioqvincmgyfpi ONLY.
 -- This query DOES NOT CONNECT to a target, write data, change grants, or
 -- attest a backup, an isolated restore, JWT actor tests or owner approval.
