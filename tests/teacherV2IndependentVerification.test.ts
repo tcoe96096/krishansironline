@@ -36,6 +36,23 @@ test('verification writer restricts identity, revision, and audit', () => {
  assert.match(sql,/REVOKE ALL ON FUNCTION public\.teacher_v2_record_identity_verification/);
 });
 
+test('status RPC lets Super Admin resume revision-bound verification without exposing evidence', () => {
+ const sql=read('teacher_v2_verification_status');
+ assert.match(sql,/STABLE SECURITY DEFINER SET search_path=''/);
+ assert.match(sql,/auth\.uid\(\) IS NULL OR NOT coalesce\(public\.is_super_admin\(\),false\)/);
+ assert.match(sql,/auth\.uid\(\)=p_teacher_user_id/);
+ assert.match(sql,/v\.profile_revision=p\.revision/);
+ assert.match(sql,/p\.revision=p_profile_revision/);
+ assert.match(sql,/p\.status='pending' AND p\.submitted_at IS NOT NULL/);
+ assert.match(sql,/v\.revoked_at IS NULL/);
+ assert.match(sql,/v\.verified_by<>p_teacher_user_id/);
+ assert.match(sql,/REVOKE ALL ON FUNCTION public\.teacher_v2_verification_status/);
+ assert.match(sql,/FROM PUBLIC,anon,authenticated;/);
+ assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.teacher_v2_verification_status\(uuid,integer\)/);
+ assert.match(sql,/TO authenticated;/);
+ assert.doesNotMatch(sql,/\b(?:INSERT INTO|UPDATE public|DELETE FROM|TRUNCATE|DROP TABLE)\b/i);
+});
+
 test('review and verification writer use consistent lock order', () => {
  const review=read('teacher_v2_review_independent_evidence_OVERRIDE');
  const writer=read('teacher_v2_verification_writer');
