@@ -38,6 +38,10 @@ export function validateEvidence(evidence) {
       if (c.status !== 'PASS') errors.push(c.id + ': not PASS');
       if (!UTC.test(c.timestampUtc ?? '') || !Number.isFinite(Date.parse(c.timestampUtc))) errors.push(c.id + ': valid UTC timestamp missing');
       else if (Date.parse(c.timestampUtc) > Date.now()) errors.push(c.id + ': future evidence timestamp');
+      if (typeof c.actorAlias === 'string' && typeof c.reviewer === 'string' &&
+          c.actorAlias.trim().toLowerCase() === c.reviewer.trim().toLowerCase()) {
+        errors.push(c.id + ': independent reviewer must differ from actor');
+      }
       for (const field of ['actorAlias', 'operation', 'expected', 'actual', 'auditEvidenceRef', 'reviewer']) {
         if (typeof c[field] !== 'string' || !c[field].trim()) errors.push(c.id + ': missing ' + field);
       }
