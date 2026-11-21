@@ -137,3 +137,26 @@ jobs:
         env:
           TEACHER_PHOTO_MOCK_BASE_URL: http://127.0.0.1:4179/teacher-beta
         run: node scripts/teacher-private-photo-mock-smoke.mjs
+
+      - name: Build gated private resume portal for synthetic browser tests only
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'true'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts
+      - name: Start synthetic private resume portal (no real database)
+        run: |
+          npx vite preview --config vite.teacher-beta.config.ts --port 4180 --host 127.0.0.1 > /tmp/teacher-resume-private-mock.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4180/teacher-beta/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Browser private resume rejection, upload, finalize and reload (synthetic only)
+        env:
+          TEACHER_RESUME_MOCK_BASE_URL: http://127.0.0.1:4180/teacher-beta
+        run: node scripts/teacher-private-resume-mock-smoke.mjs
