@@ -75,7 +75,15 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
  return send({code:'42501',message:'Unexpected endpoint'},403);
 });
 try{
- const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64');
+ // Generate a valid PNG from Chromium rather than relying on a tiny fixture
+ // whose pixel stream may be accepted for display but rejected by createImageBitmap.
+ const pngBase64=await page.evaluate(()=>{
+  const canvas=document.createElement('canvas');
+  canvas.width=8;canvas.height=8;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#0080cc';ctx.fillRect(0,0,8,8);
+  return canvas.toDataURL('image/png').split(',')[1];
+ });
+ const png=Buffer.from(pngBase64,'base64');
  await page.goto(base+'/registration/');
  const registration=page.getByRole('region',{name:'Teacher registration page'});
  await registration.getByRole('heading',{name:'Teacher Registration',exact:true}).waitFor();
@@ -84,7 +92,12 @@ try{
  const input=editor.getByLabel('Upload registered teacher photo',{exact:true});
  assert.equal(await input.isDisabled(),false,'An authenticated teacher with an unsent draft can upload');
  await input.setInputFiles({name:'private-teacher.png',mimeType:'image/png',buffer:png});
- await editor.getByText('Private photo upload was denied or unavailable.').waitFor();
+ try{
+  await editor.getByText('Private photo upload was denied or unavailable.').waitFor({timeout:15000});
+ }catch(e){
+  const statuses=await editor.locator('[role="status"],[role="alert"]').allTextContents();
+  throw new Error('Unexpected mock upload result: '+JSON.stringify(statuses)+'; pageerrors='+JSON.stringify(errors)+'; '+String(e));
+ }
  assert.equal(photo,null,'Denied upload does not persist media');
  denyUpload=false;
  await input.setInputFiles({name:'private-teacher.png',mimeType:'image/png',buffer:png});
