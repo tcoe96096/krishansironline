@@ -68,7 +68,7 @@ jobs:
           VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
           VITE_TEACHER_RESUME_ENABLED: 'false'
         run: npx vite build --config vite.teacher-beta.config.ts
-      - name: Ensure routes exist and optional resume is absent
+      - name: Ensure routes exist and optional resumes remain disabled in mock build
         run: |
           test -f teacher-beta-dist/index.html
           test -f teacher-beta-dist/staff-workspace/index.html
@@ -76,7 +76,7 @@ jobs:
           test -f teacher-beta-dist/login/index.html
           test -f teacher-beta-dist/dashboard/index.html
           test -f teacher-beta-dist/admin/index.html
-          ! grep -R -l 'teacher-resume' teacher-beta-dist/assets
+          node --import tsx --test tests/teacherBetaFlags.test.ts tests/teacherPrivateResume.test.ts
       - run: npm install --no-save --legacy-peer-deps playwright
       - run: npx playwright install --with-deps chromium
       - name: Start local preview (mock API only)
