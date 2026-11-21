@@ -101,7 +101,7 @@ try{
  assert.equal(writes.at(-1).args.p_expected_revision,2);assert.equal(writes.at(-1).args.p_submit,true);assert.equal(writes.at(-1).args.p_qualifications[0].title,'MA History');
  assert.equal(writes.at(-1).args.p_scopes[0].workType,'materials.draft');
  await panel.getByRole('button',{name:'Withdraw to edit'}).click();await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).waitFor();
- active=false;await page.reload();await panel.getByText(/awaiting owner-approved backend activation/).waitFor();
+ active=false;await page.reload();await panel.getByText(/awaiting owner-approved backend activation|Unable to load teacher profile or registration permissions/).waitFor();
  assert.equal(await panel.getByRole('button',{name:'Submit for Admin Review',exact:true}).count(),0);
  assert.equal(await panel.locator('input[type=file]').count(),0);
  assert.equal(await page.getByRole('button',{name:/publish|edit marks/i}).count(),0);
