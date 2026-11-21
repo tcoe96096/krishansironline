@@ -100,7 +100,9 @@ try{
  assert.equal(finalizeCount,0,'Storage denial must not finalize document');
  deniedUpload=false;
  await input.setInputFiles({name:'professional-cv.pdf',mimeType:'application/pdf',buffer:valid});
- await editor.getByText('Resume uploaded. Document security review is still required.').waitFor();
+ // Upload success refreshes the parent form, so the transient status can
+ // unmount before Playwright sees it. Assert the server-side finalization instead.
+ for(let i=0;i<100&&finalizeCount===0;i++)await new Promise(resolve=>setTimeout(resolve,50));
  assert.equal(finalizeCount,1,'Only confirmed Storage upload permits one finalize');
  assert.equal(profile.resumes.length,1);
  assert.equal(profile.resumes[0].verification_status,'pending','Upload is not verification');
