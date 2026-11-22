@@ -1,0 +1,69 @@
+name: KSOL private encrypted Google Drive backup (opt-in, free only)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 2 * * *' # Daily 08:10 IST, default branch ONLY after separately merged
+permissions:
+  contents: read
+concurrency:
+  group: ksol-private-preview-cloud-backup
+  cancel-in-progress: false
+jobs:
+  preview-encrypted-backup:
+    # Opt-in mandatory. Never run on PRs or a private repository with billable minutes.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'tcoe96096/krishansironline' &&
+      github.event.repository.private == false &&
+      vars.KSOL_CLOUD_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KSOL_DB_HOST: ${{ secrets.KSOL_PREVIEW_DB_HOST }}
+      KSOL_DB_PORT: ${{ secrets.KSOL_PREVIEW_DB_PORT }}
+      KSOL_DB_USER: ${{ secrets.KSOL_PREVIEW_DB_USER }}
+      KSOL_DB_NAME: ${{ secrets.KSOL_PREVIEW_DB_NAME }}
+      KSOL_DB_PASSWORD: ${{ secrets.KSOL_PREVIEW_DB_PASSWORD }}
+      RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
+    steps:
+      - name: Retrieve only the reviewed source (no PR-origin code)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node 22 for safe binary stream transport
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install free, public PostgreSQL 18 and rclone tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ca-certificates curl gnupg postgresql-common rclone
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc |
+            sudo gpg --dearmor --yes -o /usr/share/postgresql-common/pgdg/postgres.gpg
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/postgres.gpg] https://apt.postgresql.org/pub/repos/apt \${VERSION_CODENAME}-pgdg main" |
+            sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          /usr/lib/postgresql/18/bin/pg_dump --version
+      - name: Encrypted-stream Preview dump with cloud readback (never saves raw archive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RCLONE_CONFIG_B64"
+          test -n "$KSOL_DB_PASSWORD"
+          test -n "$KSOL_DB_HOST"
+          test -n "$KSOL_DB_USER"
+          test -n "$KSOL_DB_NAME"
+          export PATH="/usr/lib/postgresql/18/bin:$PATH"
+          export RCLONE_CONFIG="$RUNNER_TEMP/ksol-private-rclone.conf"
+          trap 'rm -f "$RCLONE_CONFIG"' EXIT
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
+          unset RCLONE_CONFIG_B64
+          chmod 600 "$RCLONE_CONFIG"
+          node scripts/recovery/cloud-stream-backup.mjs --source preview
+          echo 'Encrypted cloud backup stream and archive readback succeeded; FULL RESTORE STILL NOT VERIFIED.' >> "$GITHUB_STEP_SUMMARY"
