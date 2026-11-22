@@ -25,6 +25,7 @@ jobs:
       KSOL_DB_NAME: ${{ secrets.KSOL_PREVIEW_DB_NAME }}
       KSOL_DB_PASSWORD: ${{ secrets.KSOL_PREVIEW_DB_PASSWORD }}
       RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
+      RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
     steps:
       - name: Retrieve only the reviewed source (no PR-origin code)
         uses: actions/checkout@v4
