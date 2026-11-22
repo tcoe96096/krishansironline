@@ -32,3 +32,15 @@ No migrations under `supabase/migrations/`, no Edge Functions, no UI/shared conf
 ## Release gate
 
 **NO-GO until** source catalog reconciliation + scoped tests + successful current recovery + real authenticated RLS/RPC/Storage tests + final code review + separate owner approval. Paid/blocked portions remain deferred, not silently bypassed.
+
+
+## 2026-11-23 read-only reconciliation and scoped test hardening
+
+- Latest observed main SHA: `9958a2ba52515000ce82bae6cdefbc7a62990067`. This scoped branch is **6 commits ahead / 2 behind** main; rebase/merge is **not authorized**. The branch diff still contains exactly six files: five `docs/results/` files and `tests/resultCardBackendContractReview.test.mjs`. No runtime SQL, Edge Function, shared config or UI files are changed.
+- Existing Results PRs #129 (broad draft backend/UI), #122 and #135 (CSV export formula safety) remain separate. The scoped branch does not duplicate their runtime implementation.
+- Synthetic model hardening: reject missing/malformed idempotency actor UUID, operation, request UUID and SHA-256 payload digest **before** treating a request as new or replayed; preserve actor/action/key scoping and changed-payload conflict denial. Additional stale-session/version cases added. These are model checks only, **not** executable Production RPC fixes.
+- **Newly explicit design gap:** the current comment-only atomic SQL candidate lists `result_release_requests` without a `payload_digest` column, while the contract demands same-key/different-payload rejection. The runnable design must include a canonical payload digest (and stable replay outcome) and define uniqueness/locking before implementation. Never infer that the commented pseudocode enforces this.
+- **Authorization design gap:** current pseudocode checks `public.is_super_admin()`; the intended separately delegated publisher role must be defined against server-owned permissions. Super-admin status alone is not proof of every result's private download permission.
+- **Recovery gap:** local `--no-privileges` restores do not prove SQL grants; Supabase Free tier must not be treated as providing managed/PITR backups. PDF object bytes require separate private Storage recovery proof.
+- CI evidence: GitHub's commit-associated workflow query for the prior scoped branch head returned **no runs**; no green CI can be claimed for this scoped branch. A code-only commit also does not imply a test has executed. Validate with verified free quota and attach exact commit SHA/run IDs.
+- Release remains **NO-GO** until fresh Preview/Production source-specific backup, successful isolated compatible restore, real JWT/RLS/concurrency tests, scoped green CI, security review and separate explicit owner authorization. Incremental spending remains **₹0**.
