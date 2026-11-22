@@ -109,7 +109,7 @@ test('offline recovery rejects answers and cursor outside the current published 
   assert.equal(isSafeExamAnswerDraft({}, {}, 0, 0), false);
   assert.equal(isSafeExamAnswerDraft({}, {}, 0, Number.NaN), false);
   const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
-  assert.match(engine, /isSafeExamAnswerDraft\(saved\.selectedAnswers, saved\.markedForReview, saved\.currentQuestionIndex, selectedTest\.questions\.length\)/);
+  assert.match(engine, /isSafeExamAnswerDraft\(saved\.selectedAnswers, saved\.markedForReview, saved\.currentQuestionIndex, selectedTest\.questions\.length,/);
 });
 
 
