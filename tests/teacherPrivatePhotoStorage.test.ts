@@ -25,7 +25,7 @@ test('only owner with unsent pending draft can replace a private photograph',()=
 test('MIME and bytes constraints exclude SVG, PDF, oversized and empty uploads',()=>{
  for(const type of ['image/jpeg','image/png','image/webp'])assert.equal(validatePrivatePhotoInput({type,size:TEACHER_PHOTO_MAX_BYTES}),true);
  for(const type of ['image/svg+xml','image/gif','application/pdf','text/html',''])assert.equal(validatePrivatePhotoInput({type,size:300}),false);
- for(const size of [0,-1,TEACHER_PHOTO_MAX_BYTES+1,Infinity,NaN])assert.equal(validatePrivatePhotoInput({type:'image/png',size}),false);
+ for(const size of [0,-1,0.5,1.5,TEACHER_PHOTO_MAX_BYTES+0.5,TEACHER_PHOTO_MAX_BYTES+1,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])assert.equal(validatePrivatePhotoInput({type:'image/png',size}),false);
 });
 test('private media service requires fresh auth, server capability and owner verified profile before Storage',()=>{
  const service=readFileSync('src/services/teacherPrivatePhoto.ts','utf8');
