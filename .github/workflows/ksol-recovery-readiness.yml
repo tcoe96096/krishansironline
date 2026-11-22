@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/recovery/**'
       - 'tests/ksolRecoveryInventory.test.mjs'
+      - 'tests/ksolAutomaticBackup.test.mjs'
       - '.github/workflows/ksol-recovery-readiness.yml'
   workflow_dispatch:
   schedule:
@@ -21,7 +22,10 @@ jobs:
         with:
           node-version: '22'
       - name: Synthetic local recovery regression checks
-        run: node --test tests/ksolRecoveryInventory.test.mjs
+        run: |
+          node --check scripts/recovery/create-verified-backup.mjs
+          node --check scripts/recovery/inspect-local-backups.mjs
+          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs
       - name: Advisory status, never authorize a merge
         shell: bash
         run: |
