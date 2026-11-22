@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { canRestoreExamAnswers } from '../utils/examSessionGuard';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
@@ -48,10 +49,8 @@ const EMPTY_TEST: OnlineTest = {
   instructions: { en: [], hi: [] },
 };
 
-interface PersistedTestSession {
-  version: 1;
+type PersistedTestSession = {
   testId: string;
-  student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
   markedForReview: Record<number, boolean>;
   currentQuestionIndex: number;
@@ -59,22 +58,32 @@ interface PersistedTestSession {
   savedAt: number;
   questionLang: 'en' | 'hi';
   viewLayout: 'cbt' | 'all';
-}
+} & (
+  | { version: 1; student: StudentLoginDetails }
+  | { version: 2; userId: string; attemptId: string }
+);
 
 const readPersistedTestSession = (): PersistedTestSession | null => {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(ACTIVE_TEST_SESSION_KEY);
     if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<PersistedTestSession>;
-    const student = value.student as StudentLoginDetails | undefined;
+    const value = JSON.parse(raw) as Partial<PersistedTestSession> & {
+      version?: number; student?: StudentLoginDetails; userId?: string; attemptId?: string;
+    };
+    const student = value.student;
+    const validLegacy = value.version === 1 &&
+      !!student &&
+      typeof student.studentName === 'string' &&
+      typeof student.rollNo === 'string' &&
+      typeof student.studentClass === 'string' &&
+      typeof student.school === 'string';
+    const validBoundSession = value.version === 2 &&
+      typeof value.userId === 'string' && value.userId.length > 0 &&
+      typeof value.attemptId === 'string' && value.attemptId.length > 0;
     if (
-      value.version !== 1 ||
+      (!validLegacy && !validBoundSession) ||
       typeof value.testId !== 'string' ||
-      !student ||
-      typeof student.studentName !== 'string' ||
-      typeof student.rollNo !== 'string' ||
-      typeof student.studentClass !== 'string' ||
       typeof value.timeLeftSeconds !== 'number' ||
       !Number.isFinite(value.timeLeftSeconds) ||
       typeof value.savedAt !== 'number' ||
@@ -173,12 +182,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       ? Math.min(Math.max(0, restoredSession.currentQuestionIndex), Math.max(0, restoredTest.questions.length - 1))
       : 0
   );
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>(
-    () => restoredSession?.selectedAnswers || {}
-  );
-  const [markedForReview, setMarkedForReview] = useState<Record<number, boolean>>(
-    () => restoredSession?.markedForReview || {}
-  );
+  // Never display browser-cached answers before the signed-in server attempt is verified.
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [markedForReview, setMarkedForReview] = useState<Record<number, boolean>>({});
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
@@ -328,7 +334,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // savedAt is refreshed with the countdown so time away can be deducted on resume.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isTestActive || isSubmitted || !studentDetails) {
+    if (!isTestActive || isSubmitted || !studentDetails || !activeAttempt || !user) {
       if (isSubmitted) {
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
         localStorage.removeItem('krishan_sir_active_student');
@@ -337,9 +343,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     const session: PersistedTestSession = {
-      version: 1,
+      version: 2,
       testId: selectedTest.id,
-      student: studentDetails,
+      userId: user.id,
+      attemptId: activeAttempt.id,
       selectedAnswers,
       markedForReview,
       currentQuestionIndex,
@@ -365,6 +372,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     viewLayout,
     isTestActive,
     isSubmitted,
+    activeAttempt?.id,
+    user?.id,
   ]);
 
   // Countdown timer for the selected assessment
@@ -458,16 +467,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setServerResult(null);
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
       const saved = restoredSession;
-      const sameStudent = !!saved &&
-        saved.student.studentName === studentDetails.studentName &&
-        saved.student.rollNo === studentDetails.rollNo &&
-        saved.student.studentClass === studentDetails.studentClass &&
-        saved.student.school === studentDetails.school;
-      const canRestoreAnswers = !!saved &&
-        saved.testId === selectedTest.id &&
-        sameStudent &&
-        attempt.status === 'in_progress' &&
-        remaining > 0;
+      const canRestoreAnswers = canRestoreExamAnswers(
+        saved, selectedTest.id, user.id, studentDetails, attempt, remaining,
+      );
       if (canRestoreAnswers && saved) {
         setSelectedAnswers(saved.selectedAnswers);
         setMarkedForReview(saved.markedForReview);
@@ -478,7 +480,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         setSelectedAnswers({});
         setMarkedForReview({});
         setCurrentQuestionIndex(0);
-        if (saved && !sameStudent) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        if (saved && !canRestoreAnswers) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       }
       const active = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
