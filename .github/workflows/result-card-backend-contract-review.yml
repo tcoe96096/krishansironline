@@ -18,6 +18,9 @@ on:
       - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
       - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
       - 'src/components/ResultsPortal.tsx'
+      - 'src/components/AdminResultCardPanel.tsx'
+      - 'src/components/AdminTestResults.tsx'
+      - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
       - 'supabase/functions/ksol-result-pdf-upload/index.ts'
       - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
@@ -42,6 +45,9 @@ on:
       - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
       - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
       - 'src/components/ResultsPortal.tsx'
+      - 'src/components/AdminResultCardPanel.tsx'
+      - 'src/components/AdminTestResults.tsx'
+      - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
       - 'supabase/functions/ksol-result-pdf-upload/index.ts'
       - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
@@ -104,4 +110,5 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
           psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql
           psql -v ON_ERROR_STOP=1 -f docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-assertions.sql
