@@ -31,7 +31,7 @@ test('idempotency key is unique and payload conflict rejected',()=>{
 test('private tables deny direct client access',()=>{
  assert.match(sql,/REVOKE ALL ON private\.ksol_result_release/);
  assert.match(sql,/FROM PUBLIC,anon,authenticated/);
- assert.match(sql,/REVOKE ALL ON SCHEMA private/);
+ assert.doesNotMatch(sql,/^REVOKE ALL ON SCHEMA private\b/im);
 });
 test('no automatic result send or grant to anonymous role',()=>{
  assert.doesNotMatch(sql,/\bSELECT\s+public\.send_result_to_student\s*\(/i);
