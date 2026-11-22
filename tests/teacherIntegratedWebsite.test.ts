@@ -33,7 +33,7 @@ test('Teacher Site auth and registration remain fail-closed until beta activatio
  assert.match(portal,/teacherBetaEnabled/);
  assert.match(portal,/!active&&<p role="status"/);
  assert.match(portal,/active&&!loading&&user\?<TeacherManagementV2/);
- assert.match(portal,/active&&!loading&&user\?<TeacherDashboardData/);
+ assert.match(portal,/active&&!loading&&user\?<div className="space-y-5"><TeacherDashboardData/);
  assert.match(portal,/signInWithOAuth/);
  assert.match(portal,/teacherCallback\(target\)/);
  assert.doesNotMatch(portal,/service_role|teacher_v2_review\(|localStorage/);
