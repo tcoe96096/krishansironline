@@ -48,6 +48,7 @@ DECLARE
   v_prior private.ksol_result_request%ROWTYPE;
   v_status text;
   v_student uuid;
+  v_attempt_locked uuid;
   v_next text;
 BEGIN
   IF v_actor IS NULL OR NOT public.is_super_admin() THEN
@@ -69,13 +70,17 @@ BEGIN
     END IF;
     RETURN v_prior.outcome;
   END IF;
+  -- Lock attempt first so status/ownership cannot race this transition.
+  SELECT a.id,a.status,a.student_id INTO v_attempt_locked,v_status,v_student
+    FROM public.test_attempts a WHERE a.id=p_attempt_id FOR UPDATE;
+  IF v_attempt_locked IS NULL THEN
+    RAISE EXCEPTION 'Attempt not available' USING ERRCODE='22023';
+  END IF;
   SELECT * INTO v_row FROM private.ksol_result_release
     WHERE attempt_id=p_attempt_id FOR UPDATE;
   IF NOT FOUND OR v_row.result_version<>p_expected_version THEN
     RAISE EXCEPTION 'Result version not available' USING ERRCODE='22023';
   END IF;
-  SELECT a.status,a.student_id INTO v_status,v_student
-    FROM public.test_attempts a WHERE a.id=p_attempt_id;
   IF v_status IS DISTINCT FROM 'submitted' OR v_student IS NULL
     OR NOT public.student_account_is_eligible(v_student) THEN
     RAISE EXCEPTION 'Result not eligible' USING ERRCODE='22023';
