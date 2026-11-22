@@ -6,6 +6,8 @@ on:
       - 'src/services/teacher*.ts'
       - 'src/components/Teacher*.tsx'
       - 'tests/teacher*.test.ts'
+      - 'tests/teacher*.test.mjs'
+      - 'scripts/teacher*'
       - 'docs/proposed-migrations/teacher*.sql'
       - '.github/workflows/teacher-v2-checks.yml'
   workflow_dispatch:
@@ -30,4 +32,4 @@ jobs:
       - name: Build website bundle
         run: npm run build
       - name: Teacher v2 regression tests
-        run: npx tsx --test tests/teacher*.test.ts
+        run: npx tsx --test tests/teacher*.test.ts tests/teacher*.test.mjs
