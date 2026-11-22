@@ -30,6 +30,7 @@ CREATE POLICY teacher_v2_photo_super_admin_review ON storage.objects
  FOR SELECT TO authenticated
  USING (
   bucket_id='teacher-profile-photos-private'
+  AND private.teacher_v2_feature_enabled('profile_photos')
   AND public.is_super_admin()
  );
 COMMIT;
