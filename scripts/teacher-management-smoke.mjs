@@ -125,6 +125,8 @@ try{
  assert.equal(await directory.count(),0);
  superAdmin=true;active=true;profile.submitted_at='2026-11-16T10:00:00Z';await page.reload();
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ assert.equal(await directory.getByLabel('Filter teacher application status').inputValue(),'pending','Pending is the safe default filter');
+ await directory.getByLabel('Filter teacher application status').selectOption('all');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
