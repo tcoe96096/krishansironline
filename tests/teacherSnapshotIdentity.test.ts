@@ -25,3 +25,22 @@ test('nested untrusted snapshot fields fail closed',()=>{
  assert.equal(isOwnTeacherSnapshot({...snapshot,status:'admin'},'teacher-a'),false);
  assert.equal(isOwnTeacherSnapshot({...snapshot,user_id:'teacher-b'},'teacher-a'),false);
 });
+
+test('well-typed but unauthorized scope and status values are rejected',()=>{
+ assert.equal(isOwnTeacherSnapshot({...snapshot,requested_scopes:[{classLevel:'13',subject:'History',workType:'materials.draft'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,requested_scopes:[{classLevel:'10',subject:'History',workType:'publish.production'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,assignments:[{id:'a',class_level:'10',subject:'History',work_type:'materials.draft',status:'admin'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,resumes:[{id:'r',original_filename:'resume.pdf',verification_status:'approved'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,employee_id:'KSOL-T-INVALID!'},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,employee_id:'KSOL-T-ABCDEF123456'},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,qualifications:[{title:'B.Ed',institution:'College',year:2100}]},'teacher-a'),false);
+});
+test('valid scope and assignment metadata can render for the owner',()=>{
+ const assigned={...snapshot,status:'approved',employee_id:'KSOL-T-ABCDEF123456',
+  requested_scopes:[{classLevel:'10',subject:'History',workType:'materials.draft'}],
+  qualifications:[{title:'B.Ed',institution:'College',year:2020}],
+  assignments:[{id:'assignment-a',class_level:'10',subject:'History',work_type:'materials.draft',status:'active'}],
+  resumes:[{id:'resume-a',original_filename:'resume.pdf',verification_status:'pending'}]};
+ assert.equal(isOwnTeacherSnapshot(assigned,'teacher-a'),true);
+ assert.equal(isOwnTeacherSnapshot(assigned,'teacher-b'),false);
+});
