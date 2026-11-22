@@ -41,3 +41,8 @@ test('complete WebP gate rejects truncated trailing RIFF chunks and accepts alig
  const truncated=metadata.slice(0,-1);truncated[4]=23;
  assert.equal(hasConsistentWebpContainer(truncated),false);
 });
+
+test('complete WebP gate rejects an empty primary image payload',()=>{
+ const empty=new Uint8Array([...header(12),0x56,0x50,0x38,0x4c,0,0,0,0]);
+ assert.equal(hasConsistentWebpContainer(empty),false);
+});
