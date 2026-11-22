@@ -7,6 +7,7 @@ import {TeacherScopeEditor} from './TeacherManagementV2';
 import {type TeacherAssignmentInput} from '../lib/teacherManagementValidation';
 import {isTeacherSnapshot} from '../lib/teacherSnapshotValidation';
 import {isTeacherQueueSummary,type TeacherQueueSummary} from '../lib/teacherQueueSummary';
+import {TeacherResumeScanSummary} from './TeacherResumeScanSummary';
 
 export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
  const {user}=useAuth();
@@ -66,6 +67,7 @@ export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
   <h4 className="text-sm font-semibold text-slate-800">Submitted Resume Records</h4>
   {p.resumes.length===0?<p className="mt-1 text-sm text-slate-500">No resume on record.</p>:
    <ul className="mt-2 space-y-1">{p.resumes.map(doc=><li key={doc.id} className="break-all text-sm text-slate-700">{doc.original_filename} · <span className="text-xs text-slate-500">Verification: {doc.verification_status}</span></li>)}</ul>}
+  {p.resumes.length>0&&<TeacherResumeScanSummary teacherUserId={p.user_id}/>}
   <p className="mt-2 text-xs text-slate-500">Metadata only. Private files are not opened or downloaded by the directory.</p>
  </section>
  <button className="rounded-xl bg-sky-900 px-4 py-2 font-semibold text-white" onClick={()=>{setSelected(p.user_id);selectedRef.current=p.user_id;setReason('');setVerificationRef('');setVerifiedRevision(null);setScopes([]); /* Never pre-authorize applicant-requested scopes; reviewer selects each grant. */setAudit([]);
