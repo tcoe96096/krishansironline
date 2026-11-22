@@ -13,7 +13,8 @@ type Actor = { kind: 'student'; id: string; active: boolean }
 type Action = 'inbox' | 'view' | 'download' | 'print';
 const DENY = Object.freeze({ allowed: false, resultId: null, downloadUrl: null, document: null });
 function decide(actor: Actor, result: Result, action: Action, requestedVersion: number) {
-  const permitted = actor.kind === 'student' && actor.active &&
+  const permitted = (['inbox', 'view', 'download', 'print'] as string[]).includes(action) &&
+    actor.kind === 'student' && actor.active &&
     actor.id.length > 0 && actor.id === actor.id.trim() &&
     result.studentId === actor.id && result.id.length > 0 && result.id === result.id.trim() &&
     result.studentId.length > 0 && result.studentId === result.studentId.trim() && result.state === 'released' &&
@@ -57,6 +58,16 @@ test('student cannot override ownership using a forged request parameter', () =>
   const forged = { studentId: 'synthetic-S1', resultId: released.id };
   assert.equal(forged.studentId, released.studentId);
   assert.deepEqual(decide(requester, released, 'download', 2), DENY);
+});
+test('unknown runtime actions fail closed even for an eligible owner', () => {
+  for (const action of ['', 'share', 'send', 'export', 'delete', ' download ', '__proto__'])
+    assert.deepEqual(decide(owner, released, action as Action, 2), DENY);
+});
+test('malformed or blank actor identity fails closed across all actions', () => {
+  for (const id of ['', ' ', ' synthetic-S1', 'synthetic-S1 ', 'synthetic-S1\n']) {
+    for (const action of ['inbox', 'view', 'download', 'print'] as const)
+      assert.deepEqual(decide({ kind: 'student', id, active: true }, released, action, 2), DENY);
+  }
 });
 test('malformed or blank result identity fails closed before any action', () => {
   for (const id of ['', ' ', ' synthetic-R1', 'synthetic-R1 ']) {
