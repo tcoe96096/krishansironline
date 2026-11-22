@@ -13,6 +13,10 @@ on:
   pull_request:
     paths:
       - 'tests/resultCardBackendContractReview.test.mjs'
+      - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
+      - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - '.github/workflows/result-card-backend-contract-review.yml'
 permissions:
   contents: read
