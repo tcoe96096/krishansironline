@@ -12,6 +12,8 @@ on:
       - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'src/services/resultCardBackend.ts'
+      - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
@@ -26,6 +28,8 @@ on:
       - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'src/services/resultCardBackend.ts'
+      - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
@@ -43,4 +47,4 @@ jobs:
       - name: Run synthetic fail-closed contract checks
         run: |
           node --check docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs
-          node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs tests/resultCardPdfDownloadCandidateStaticReview.test.mjs
+          node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs tests/resultCardPdfDownloadCandidateStaticReview.test.mjs tests/resultCardApprovePdfSqlStaticReview.test.mjs
