@@ -127,10 +127,33 @@ Deno.serve(async (req: Request) => {
     },
     body: bytes,
   }).catch(() => null);
-  if (!upload?.ok) {
-    // No overwrite on conflict. An orphaned/duplicate PDF needs manual review.
-    return response(upload?.status === 409 ? 409 : 503,
-      { error: "PDF could not be stored" }, origin);
+  if (upload?.status === 409) {
+    // A previous attempt may have stored the PDF before the approval RPC
+    // failed. On retry, never overwrite: compare ACTUAL existing bytes.
+    const stored = await fetch(
+      `${base}/storage/v1/object/authenticated/${BUCKET}/${encoded}`, {
+        method: "GET", redirect: "error",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+      },
+    ).catch(() => null);
+    if (!stored?.ok) {
+      return response(409, { error: "Existing PDF requires review" }, origin);
+    }
+    const previous = new Uint8Array(await stored.arrayBuffer());
+    if (previous.byteLength !== bytes.byteLength) {
+      return response(409, { error: "Stored PDF mismatch" }, origin);
+    }
+    const priorDigest = new Uint8Array(await crypto.subtle.digest("SHA-256", previous));
+    const priorSha256 = Array.from(priorDigest, b => b.toString(16).padStart(2, "0")).join("");
+    if (priorSha256 !== sha256) {
+      return response(409, { error: "Stored PDF checksum mismatch" }, origin);
+    }
+    // Exact same private object can be reused for the pending DB approval.
+  } else if (!upload?.ok) {
+    return response(503, { error: "PDF could not be stored" }, origin);
   }
 
   // Approval still runs under the caller JWT, after uploading. The DB checks
