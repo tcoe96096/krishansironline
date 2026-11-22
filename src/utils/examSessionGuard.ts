@@ -55,3 +55,21 @@ export function canRestoreExamAnswers(
     saved.student.studentClass === student.studentClass &&
     saved.student.school === student.school;
 }
+
+/** Reject malformed browser drafts before they can enter exam React state. */
+export function isSafeExamAnswerDraft(
+  selectedAnswers: unknown,
+  markedForReview: unknown,
+  questionIndex: unknown,
+): boolean {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype;
+  if (!isRecord(selectedAnswers) || !isRecord(markedForReview) ||
+      !Number.isSafeInteger(questionIndex) || (questionIndex as number) < 0) return false;
+  const validIndex = (key: string) => /^(0|[1-9][0-9]*)$/.test(key) &&
+    Number.isSafeInteger(Number(key));
+  return Object.entries(selectedAnswers).every(([key, answer]) =>
+    validIndex(key) && Number.isSafeInteger(answer) && (answer as number) >= 0 && (answer as number) <= 20) &&
+    Object.entries(markedForReview).every(([key, marked]) => validIndex(key) && typeof marked === 'boolean');
+}
