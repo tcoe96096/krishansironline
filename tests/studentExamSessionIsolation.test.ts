@@ -40,3 +40,13 @@ test('new browser draft saves only opaque account/attempt IDs and never student 
   assert.match(engine, /version: 2,\s*testId: selectedTest.id,\s*userId: user.id,\s*attemptId: activeAttempt.id,/);
   assert.match(engine, /canRestoreExamAnswers\(/);
 });
+
+test('malformed countdown and missing authenticated identity fail closed', () => {
+  for (const remaining of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1]) {
+    assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, remaining), false);
+  }
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', '', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, { ...attempt, id: '' }, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...saved, userId: '' }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...saved, attemptId: '' }, 'test-1', 'student-user-1', student, attempt, 500), false);
+});
