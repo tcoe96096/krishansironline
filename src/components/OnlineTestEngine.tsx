@@ -492,7 +492,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const errorDetails = (() => {
         try { return JSON.stringify(error); } catch { return errorMessage; }
       })();
-      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      const isAttemptLimitReached = /attempt[\s_-]*limit[\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setLoginError(isAttemptLimitReached
         ? (questionLang === 'hi' ? `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।` : `You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.`)
         : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
@@ -678,7 +678,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const errorDetails = (() => {
         try { return JSON.stringify(error); } catch { return errorMessage; }
       })();
-      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      const isAttemptLimitReached = /attempt[\s_-]*limit[\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
         ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn)
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
