@@ -27,9 +27,9 @@ test('v2 recovery requires the same authenticated student, exact test and server
   assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 0), false);
 });
 
-test('legacy v1 draft can resume only its original server attempt window', () => {
+test('legacy v1 drafts never restore without authenticated account and attempt binding', () => {
   const old: SavedExamIdentity = { version: 1, testId: 'test-1', savedAt: saved.savedAt, student };
-  assert.equal(canRestoreExamAnswers(old, 'test-1', 'student-user-1', student, attempt, 500), true);
+  assert.equal(canRestoreExamAnswers(old, 'test-1', 'student-user-1', student, attempt, 500), false);
   assert.equal(canRestoreExamAnswers(old, 'test-1', 'student-user-1', student, { ...attempt, started_at: '2026-11-22T09:10:00Z' }, 500), false);
   assert.equal(canRestoreExamAnswers(old, 'test-1', 'student-user-1', { ...student, rollNo: 'SYN-002' }, attempt, 500), false);
   assert.equal(canRestoreExamAnswers({ ...old, savedAt: Number.NaN }, 'test-1', 'student-user-1', student, attempt, 500), false);
@@ -123,4 +123,15 @@ test('offline recovery refuses an answer index outside the published bilingual o
   assert.equal(isSafeExamAnswerDraft({ 0: 0 }, {}, 0, 2, [3, 2]), true);
   const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
   assert.match(engine, /selectedTest\.questions\.map\(\(question\) => Math\.min\(question\.options\.en\.length, question\.options\.hi\.length\)\)/);
+});
+
+
+test('legacy v1 rejects two distinct accounts sharing the same student details and attempt window', () => {
+  const legacy: SavedExamIdentity = { version: 1, testId: 'test-1', savedAt: saved.savedAt, student };
+  for (const account of ['student-user-1', 'student-user-2']) {
+    assert.equal(canRestoreExamAnswers(legacy, 'test-1', account, student, attempt, 500), false);
+  }
+  // v2 continues to recover for the original owner only.
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-2', student, attempt, 500), false);
 });
