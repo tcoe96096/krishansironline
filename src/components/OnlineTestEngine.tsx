@@ -516,7 +516,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Select question option
   const handleSelectOption = (qIndex: number, optIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setSelectedAnswers((prev) => ({
       ...prev,
       [qIndex]: optIndex,
@@ -525,7 +525,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Toggle mark for review
   const handleToggleReview = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setMarkedForReview((prev) => ({
       ...prev,
       [qIndex]: !prev[qIndex],
@@ -534,7 +534,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Clear answer for current question
   const handleClearAnswer = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setSelectedAnswers((prev) => {
       const next = { ...prev };
       delete next[qIndex];
