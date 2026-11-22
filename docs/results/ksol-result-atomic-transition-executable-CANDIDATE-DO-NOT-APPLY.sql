@@ -83,7 +83,7 @@ BEGIN
     RAISE EXCEPTION 'Result version not available' USING ERRCODE='22023';
   END IF;
   IF v_status IS DISTINCT FROM 'submitted' OR v_student IS NULL
-    OR NOT public.student_account_is_eligible(v_student) THEN
+    OR public.student_account_is_eligible(v_student) IS DISTINCT FROM TRUE THEN
     RAISE EXCEPTION 'Result not eligible' USING ERRCODE='22023';
   END IF;
   IF p_operation='release' AND v_row.state='approved' THEN v_next:='released';
