@@ -29,3 +29,21 @@ Status: **BLOCKED — do not deploy or publish**.
 - [ ] Request separate production release authorization after Preview acceptance and rollback readiness.
 
 No SQL was executed to change Preview or Production as part of this audit. PR #109 remains read-only.
+
+## Independent role acceptance matrix (planning only; no database writes)
+
+Execute **only after** a verified full restore rehearsal, reviewed migrations and a distinct owner approval for Preview. Use independently authenticated sessions; never emulate roles by editing client-side flags or JWT claims. Capture sanitized evidence (request ID, expected/actual status, role, timestamp) without tokens, private file URLs or PII.
+
+| Actor | Positive case | Mandatory denial case |
+| --- | --- | --- |
+| Anonymous | Public site remains readable | Teacher snapshot, registration save, review, resume/photo access and scan summary all denied |
+| Applicant A | Save and retrieve own draft; upload only when independently approved | Read/alter applicant B, assign self an employee ID, approve own application, fetch B media |
+| Approved Teacher A | Own verified profile and authorized class/subject/work scopes | Alter B profile, grant own scopes, review applications, use revoked/suspended permissions |
+| Reviewer/Admin | View only server-authorized review queue; record independent review decision | Escalate to Super Admin, bypass second-party approval, open unscanned resumes |
+| Super Admin | Authorized review and scope assignment, with audit trail | Bypass private-media quarantine or read data outside explicit server policy |
+
+**SQL permission evidence:** Inspect effective grants for `anon`, `authenticated` and inherited roles. Confirm `has_table_privilege(...,'TRUNCATE')=false` for both on `public.user_roles` after separately approved remediation; never issue an actual TRUNCATE. Test RLS cross-user reads and writes with distinct real auth identities, not only unit-test mocks. For SECURITY DEFINER functions verify `auth.uid()` identity, fixed `search_path`, least-privilege EXECUTE grants and audit logging.
+
+**Private media acceptance:** Verify owner-specific object paths, Storage RLS, MIME/header/size validation, denied public listing and signed URL issuance, denial after suspension, and no cross-account reads. Resume bytes remain quarantined until a trusted independent scanner attests a clean hash; browser-side PDF/DOCX preflight is not malware scanning. Keep resume and private-photo feature flags OFF until these checks pass.
+
+**Release boundary:** GitHub Pages CI success proves only code checks, not Supabase acceptance. Teacher-only Vite beta entry points are not proof of deployment to `krishansir.online`. Production migration, flag activation and publication each require their own explicit authorization; no billable services or additional spend are permitted (₹0).
