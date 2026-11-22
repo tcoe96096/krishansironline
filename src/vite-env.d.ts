@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string;
   readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
+  readonly VITE_RESULT_CARD_BACKEND_ENABLED?: string;
 }
 
 interface ImportMeta {
