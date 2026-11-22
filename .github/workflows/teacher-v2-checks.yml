@@ -11,6 +11,10 @@ on:
       - 'scripts/parse-teacher-core-sql.py'
       - 'scripts/assemble-teacher-unified-preview.mjs'
       - 'teacher-beta/**'
+      - 'src/App.tsx'
+      - 'src/components/Header.tsx'
+      - 'src/components/AdminDashboard.tsx'
+      - 'vite.config.ts'
       - 'vite.teacher-beta.config.ts'
       - 'docs/proposed-migrations/teacher*.sql'
       - '.github/workflows/teacher-v2-checks.yml'
@@ -89,6 +93,18 @@ jobs:
           TEACHER_TEST_BASE_URL: http://127.0.0.1:4177/teacher-beta
           TEACHER_TEST_PORTAL: 'true'
         run: node scripts/teacher-management-smoke.mjs
+      - name: Start current KSOL website for integrated Teacher browser test
+        run: |
+          npx vite preview --config vite.config.ts --port 4184 --host 127.0.0.1 > /tmp/ksol-integrated-teacher.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4184/teacher/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Main-site Teacher mobile and registration/login/dashboard smoke
+        env:
+          INTEGRATED_SITE_TEST_BASE_URL: http://127.0.0.1:4184
+        run: node scripts/teacher-integrated-website-smoke.mjs
       - name: Upload review-only Preview artifact (never publish)
         uses: actions/upload-artifact@v4
         with:
