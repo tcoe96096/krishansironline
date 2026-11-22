@@ -25,10 +25,38 @@ test('dashboard shows employee ID and only active server-approved assignments',(
  const summary=teacherDashboardSummary(approvedProfile,userId);
  assert.equal(summary.status,'approved');
  assert.equal(summary.employeeId,'KSOL-T-ABCDEF123456');
- assert.deepEqual(summary.approvedScopes,[{id:'one',label:'Class 10 · History'}]);
+ assert.deepEqual(summary.approvedScopes,[{id:'one',label:'Class 10 · History',workType:'materials.draft',workLabel:'Study Materials · Draft'}]);
  assert.equal(summary.approvedScopes.some(s=>s.label.includes('Political Science')),false,
    'Requested scope does not confer access');
 });
+test('one teacher can hold multiple distinct approved class/subject/work roles',()=>{
+ const multi:TeacherSnapshot={...approvedProfile,
+  assignments:[
+    {id:'a',class_level:'10',subject:'History',work_type:'materials.draft',status:'active'},
+    {id:'b',class_level:'10',subject:'History',work_type:'materials.review',status:'active'},
+    {id:'c',class_level:'11',subject:'Political Science',work_type:'assessment.draft',status:'active'},
+    {id:'d',class_level:'12',subject:'Political Science',work_type:'result.review',status:'active'},
+    {id:'x',class_level:'12',subject:'Hindi',work_type:'result.review',status:'revoked'},
+  ],
+ };
+ const assigned=teacherDashboardSummary(multi,userId).approvedScopes;
+ assert.equal(assigned.length,4);
+ assert.deepEqual(assigned.map(x=>x.workLabel),[
+  'Study Materials · Draft',
+  'Study Materials · Review',
+  'Assessments · Draft',
+  'Results · Review',
+ ]);
+ assert.equal(assigned.some(x=>x.label.includes('Hindi')),false);
+ const suspended=teacherDashboardSummary({...multi,status:'suspended'},userId);
+ assert.deepEqual(suspended.approvedScopes,[],'Suspended teachers must not see authorized scopes');
+ const another=teacherDashboardSummary({...multi,status:'pending',employee_id:null},userId);
+ assert.deepEqual(another.approvedScopes,[],'Self-requested preferences are never approved assignments');
+ const dashboard=readFileSync('teacher-beta/TeacherDashboardData.tsx','utf8');
+ assert.match(dashboard,/aria-label="Approved teacher work assignments"/);
+ assert.match(dashboard,/Approved work: \{scope.workLabel\}/);
+});
+
 test('missing profile and pending drafts cannot pretend to be approved teachers',()=>{
  const missing=teacherDashboardSummary(null,userId);
  assert.deepEqual({status:missing.status,employeeId:missing.employeeId,approvedScopes:missing.approvedScopes},
