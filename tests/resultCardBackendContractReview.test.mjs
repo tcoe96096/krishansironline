@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 const permit = (x) => Boolean(
   x.authenticated && x.active && x.eligible && x.owns &&
   x.released && !x.revoked && !x.withdrawn &&
+  Number.isSafeInteger(x.requestedVersion) && x.requestedVersion > 0 &&
+  Number.isSafeInteger(x.currentVersion) && x.currentVersion > 0 &&
   x.requestedVersion === x.currentVersion && x.objectPrivate &&
   x.sessionValid
 );
@@ -37,7 +39,10 @@ test('revocation overrides previously valid access on every new request', () => 
   assert.equal(permit({...base,revoked:true}),false);
 });
 const transition = ({actorAuthorized, expectedVersion, actualVersion, state, action}) => {
-  if (!actorAuthorized || expectedVersion!==actualVersion) return 'DENY';
+  if (actorAuthorized !== true ||
+      !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0 ||
+      !Number.isSafeInteger(actualVersion) || actualVersion <= 0 ||
+      expectedVersion !== actualVersion) return 'DENY';
   if (action==='release' && state==='approved') return 'released';
   if (action==='revoke' && state==='released') return 'revoked';
   return 'DENY';
@@ -58,4 +63,18 @@ test('same idempotency key and changed payload fail closed', () => {
   const p={actor:'admin1',action:'release',key:'request1',digest:'abc'};
   assert.equal(replay(p,'admin1','release','request1','abc'),'SAME_OUTCOME');
   assert.equal(replay(p,'admin1','release','request1','def'),'DENY_CONFLICT');
+});
+
+test('fail closed on absent, invalid or ambiguous version identifiers', () => {
+  const invalid = [undefined, null, NaN, Infinity, -1, 0, '3', 3.5, {}, []];
+  for (const value of invalid) {
+    assert.equal(permit({...base,requestedVersion:value,currentVersion:value}), false, String(value));
+    assert.equal(transition({actorAuthorized:true,expectedVersion:value,actualVersion:value,state:'approved',action:'release'}),'DENY',String(value));
+  }
+  assert.equal(permit({...base,requestedVersion:undefined,currentVersion:undefined}), false);
+});
+test('fail closed on missing or untrusted publisher authorization', () => {
+  for (const actorAuthorized of [undefined,null,0,1,'true',false]) {
+    assert.equal(transition({actorAuthorized,expectedVersion:3,actualVersion:3,state:'approved',action:'release'}),'DENY');
+  }
 });
