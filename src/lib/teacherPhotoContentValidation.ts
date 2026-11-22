@@ -26,6 +26,8 @@ export function hasConsistentWebpContainer(bytes:Uint8Array):boolean{
   const n=(bytes[offset+4]|bytes[offset+5]<<8|bytes[offset+6]<<16|bytes[offset+7]<<24)>>>0;
   const remaining=bytes.length-offset-8;
   if(n>remaining||n+(n%2)>remaining)return false;
+  // RIFF requires an explicit zero pad byte for odd-sized chunks.
+  if(n%2!==0&&bytes[offset+8+n]!==0)return false;
   offset+=8+n+(n%2);
  }
  return offset===bytes.length;
