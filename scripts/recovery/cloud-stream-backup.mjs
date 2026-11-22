@@ -80,6 +80,20 @@ function collectDiagnostic(stream){
  });
  return ()=>classifyBackupFailure(stderr);
 }
+// pg_restore --list may finish after only the archive header/TOC. Detach its
+// stdin when it closes, but continue draining the full cloud stream for SHA-256.
+// A closed TOC input must never make a successful readback look like a timeout.
+export function drainAfterTocInputCloses(readable,tocInput){
+ let unexpectedInputError=false;
+ const detach=()=>{readable.unpipe(tocInput);readable.resume();};
+ tocInput.once('close',detach);
+ tocInput.on('error',err=>{
+  if(err?.code!=='EPIPE'&&err?.code!=='ERR_STREAM_DESTROYED')
+   unexpectedInputError=true;
+  detach();
+ });
+ return ()=>unexpectedInputError;
+}
 function exited(child){
  return new Promise((resolvePromise,reject)=>{
   child.once('error',reject);
@@ -137,22 +151,39 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  console.log('KSOL_BACKUP_PHASE: READBACK_START');
  // Read BACK the decrypted cloud object only through memory to confirm its
  // integrity and archive TOC. Never cache raw records, data or backup bytes.
- const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:6*60*1000});
- const toc=spawn('pg_restore',['--list','-'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:6*60*1000});
+ const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
+ const toc=spawn('pg_restore',['--list','-'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
  let checkedBytes=0,checkedText='',overflow=false;const checkedHash=createHash('sha256');
  read.stdout.on('data',chunk=>{checkedBytes+=chunk.length;checkedHash.update(chunk)});
+ const tocInputError=drainAfterTocInputCloses(read.stdout,toc.stdin);
  read.stdout.pipe(toc.stdin);
  toc.stdout.on('data',chunk=>{
   if(checkedText.length+chunk.length>32*1024*1024){overflow=true;toc.kill();return}
   checkedText+=chunk.toString('utf8');
  });
- read.stderr.resume();toc.stderr.resume();
- toc.stdin.on('error',()=>{try{read.kill()}catch{}});
- const [readResult,tocResult]=await Promise.all([exited(read),exited(toc)]);
- if(readResult.signal||tocResult.signal)
-  throw new Error('Cloud readback/TOC subprocess timed out or was terminated [READBACK_STOPPED]; no verified backup');
- if(readResult.code!==0||tocResult.code!==0||overflow||checkedBytes!==bytes||checkedHash.digest('hex')!==expectedDigest)
-  throw new Error('Encrypted cloud download/readback verification failed; do not claim backup ready');
+ // Classify errors without printing raw stderr (which may contain private URLs).
+ const readDiagnostic=collectDiagnostic(read.stderr);
+ const tocDiagnostic=collectDiagnostic(toc.stderr);
+ let tocPhase='RUNNING';
+ toc.once('close',(code,signal)=>{tocPhase=signal?'STOPPED':code===0?'OK':'FAILED';});
+ const progress=setInterval(()=>{
+  console.log('KSOL_BACKUP_PHASE: READBACK_PROGRESS bytes='+checkedBytes+' toc='+tocPhase);
+ },30000);
+ let readResult,tocResult;
+ try{
+  [readResult,tocResult]=await Promise.all([exited(read),exited(toc)]);
+ }finally{clearInterval(progress);}
+ if(readResult.signal||tocResult.signal){
+  const phase=readResult.signal?'CLOUD_DOWNLOAD':'ARCHIVE_TOC';
+  throw new Error('Cloud readback/TOC subprocess timed out or was terminated [READBACK_STOPPED:'+phase+']; no verified backup');
+ }
+ if(readResult.code!==0||tocResult.code!==0||overflow||tocInputError()||
+    checkedBytes!==bytes||checkedHash.digest('hex')!==expectedDigest){
+  const phase=readResult.code!==0?'CLOUD_DOWNLOAD:'+readDiagnostic():
+   tocResult.code!==0?'ARCHIVE_TOC:'+tocDiagnostic():
+   overflow?'ARCHIVE_TOC_OVERFLOW':tocInputError()?'ARCHIVE_TOC_PIPE':'CHECKSUM_MISMATCH';
+  throw new Error('Encrypted cloud download/readback verification failed ['+phase+']; do not claim backup ready');
+ }
  console.log('KSOL_BACKUP_PHASE: READBACK_INTEGRITY_OK');
  const coverage=assessDownloadedToc(checkedText);
  return {
