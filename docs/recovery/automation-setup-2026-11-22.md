@@ -129,3 +129,14 @@ The destination must already exist and cannot be the same drive. The script vali
 - **Real full recovery is still unverified:** restore a current real backup into a *fresh Supabase-compatible disposable environment* with correct auth, storage, roles, extensions and RLS. Then reconcile source/restore records and perform authenticated Student Login → Exam → Submit → Server Grade → Result and cross-user negative tests. Do not repeat the failed standalone PostgreSQL \`public/private\`-only attempt or fabricate \`auth.users\`.
 - **Cloud-offsite copy and user-facing push notification** require an explicitly chosen, secure external destination/channel and separate connection approval; neither is silently created or granted access.
 - **No production deployment, DB migration, merge or permission change** is performed by the recovery scripts or GitHub CI.
+
+
+## BitLocker Access denied troubleshooting (Windows)
+If \`Get-BitLockerVolume -MountPoint "D:"\` produces \`Get-CimInstance: Access denied\`, that is an **insufficient permission** result, not proof that the D: drive is decrypted or unsupported. Do not guess or bypass encryption checks.
+
+1. Open **Windows PowerShell as Administrator** as the **same Windows user account** that owns the DPAPI-protected backup secret. A different admin account cannot necessarily decrypt the secret.
+2. Run \`manage-bde -status D:\` and \`Get-Volume -DriveLetter D | Select DriveLetter,FileSystem,DriveType,HealthStatus\`; check the status with no passwords or recovery keys pasted to chat.
+3. If D: has \`Protection Status: Protection On\`, retry setup from this elevated prompt, using the **already checked-out feature branch** in \`D:\KSOL-RECOVERY-CODE\`. Update branch first with \`git pull --ff-only\` from this folder.
+4. If D: is not a supported BitLocker-protected NTFS volume, select an alternate verified encrypted backup volume or arrange secure device encryption through Windows system settings. Do not disable the software's security check or dump sensitive production data to plaintext storage.
+
+Daily export tasks now request \`-RunLevel Highest\` for their same-user interactive account, because the runtime rechecks BitLocker status. Task Scheduler installation may require admin privilege. The owner must still perform first local verification; GitHub CI has no access to the D: drive.
