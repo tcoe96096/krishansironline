@@ -6,6 +6,8 @@ on:
       - 'src/services/teacherManagement.ts'
       - 'src/lib/teacherManagementValidation.ts'
       - 'tests/teacherSnapshotIdentity.test.ts'
+      - 'tests/teacherManagementClient.test.ts'
+      - 'tests/teacherManagementValidation.test.ts'
       - '.github/workflows/teacher-v2-checks.yml'
   workflow_dispatch:
 
@@ -27,4 +29,4 @@ jobs:
       - name: Typecheck
         run: npm run lint
       - name: Teacher identity regression tests
-        run: npx tsx --test tests/teacherSnapshotIdentity.test.ts
+        run: npx tsx --test tests/teacherSnapshotIdentity.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts
