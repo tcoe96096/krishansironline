@@ -70,6 +70,6 @@ export function isSafeExamAnswerDraft(
   const validIndex = (key: string) => /^(0|[1-9][0-9]*)$/.test(key) &&
     Number.isSafeInteger(Number(key));
   return Object.entries(selectedAnswers).every(([key, answer]) =>
-    validIndex(key) && Number.isSafeInteger(answer) && (answer as number) >= 0 && (answer as number) <= 20) &&
+    validIndex(key) && typeof answer === 'number' && Number.isSafeInteger(answer) && answer >= 0 && answer <= 20) &&
     Object.entries(markedForReview).every(([key, marked]) => validIndex(key) && typeof marked === 'boolean');
 }
