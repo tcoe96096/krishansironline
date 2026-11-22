@@ -95,6 +95,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
    throw new Error('Private rclone remote MUST be a configured crypt overlay; upload aborted');
  const name='ksol-'+source+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+process.pid+'.dump';
  const target=remote+':'+source+'/'+name;
+ console.log('KSOL_BACKUP_PHASE: CRYPT_CONFIG_VALIDATED');
  const pgEnv={...env,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20',PGSSLMODE:'require'};
  delete pgEnv.KSOL_DB_PASSWORD;
  // Preflight must finish before opening a cloud object. It never prints credential-bearing stderr.
@@ -104,15 +105,18 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
   env:pgEnv,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
  if(dbCheck.error||dbCheck.status!==0||dbCheck.stdout.trim()!=='1')
   throw new Error('Preview database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
+ console.log('KSOL_BACKUP_PHASE: DATABASE_PREFLIGHT_OK');
  const cloudCheck=spawnSync('rclone',['lsf',remote+':'],{
   env,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
  if(cloudCheck.error||cloudCheck.status!==0)
   throw new Error('Encrypted Drive preflight failed [CLOUD_'+classifyBackupFailure(cloudCheck.stderr)+']; no database export attempted');
+ console.log('KSOL_BACKUP_PHASE: DRIVE_PREFLIGHT_OK');
+ console.log('KSOL_BACKUP_PHASE: EXPORT_UPLOAD_START');
  const args=['--no-password','--format=custom',
   '--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
   '--username',env.KSOL_DB_USER,'--dbname',env.KSOL_DB_NAME];
- const pg=spawn('pg_dump',args,{env:pgEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
- const put=spawn('rclone',['rcat',target],{env,stdio:['pipe','ignore','pipe'],windowsHide:true});
+ const pg=spawn('pg_dump',args,{env:pgEnv,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:18*60*1000});
+ const put=spawn('rclone',['rcat',target],{env,stdio:['pipe','ignore','pipe'],windowsHide:true,timeout:18*60*1000});
  let bytes=0;const digest=createHash('sha256');
  pg.stdout.on('data',chunk=>{bytes+=chunk.length;digest.update(chunk)});
  pg.stdout.pipe(put.stdin);
@@ -121,17 +125,20 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  const uploadDiagnostic=collectDiagnostic(put.stderr);
  put.stdin.on('error',()=>{try{pg.kill()}catch{}});
  const [dumpResult,uploadResult]=await Promise.all([exited(pg),exited(put)]);
+ if(dumpResult.signal||uploadResult.signal)
+  throw new Error('Export/upload subprocess timed out or was terminated [EXPORT_UPLOAD_STOPPED]; no verified backup');
  if(dumpResult.code!==0||uploadResult.code!==0||bytes<=5){
   const phase=dumpResult.code!==0?'PG_DUMP':'RCLONE_UPLOAD';
   const code=dumpResult.code!==0?pgDiagnostic():uploadDiagnostic();
   throw new Error('Database export/upload failed ['+phase+':'+code+']; any incomplete remote object is NOT a recoverable backup');
  }
  const expectedDigest=digest.digest('hex');
-
+ console.log('KSOL_BACKUP_PHASE: EXPORT_UPLOAD_COMPLETE');
+ console.log('KSOL_BACKUP_PHASE: READBACK_START');
  // Read BACK the decrypted cloud object only through memory to confirm its
  // integrity and archive TOC. Never cache raw records, data or backup bytes.
- const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true});
- const toc=spawn('pg_restore',['--list','-'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true});
+ const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:6*60*1000});
+ const toc=spawn('pg_restore',['--list','-'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:6*60*1000});
  let checkedBytes=0,checkedText='',overflow=false;const checkedHash=createHash('sha256');
  read.stdout.on('data',chunk=>{checkedBytes+=chunk.length;checkedHash.update(chunk)});
  read.stdout.pipe(toc.stdin);
@@ -142,8 +149,11 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  read.stderr.resume();toc.stderr.resume();
  toc.stdin.on('error',()=>{try{read.kill()}catch{}});
  const [readResult,tocResult]=await Promise.all([exited(read),exited(toc)]);
+ if(readResult.signal||tocResult.signal)
+  throw new Error('Cloud readback/TOC subprocess timed out or was terminated [READBACK_STOPPED]; no verified backup');
  if(readResult.code!==0||tocResult.code!==0||overflow||checkedBytes!==bytes||checkedHash.digest('hex')!==expectedDigest)
   throw new Error('Encrypted cloud download/readback verification failed; do not claim backup ready');
+ console.log('KSOL_BACKUP_PHASE: READBACK_INTEGRITY_OK');
  const coverage=assessDownloadedToc(checkedText);
  return {
    source,ref:v.ref,encryptedCloudUpload:'READBACK_VERIFIED',
