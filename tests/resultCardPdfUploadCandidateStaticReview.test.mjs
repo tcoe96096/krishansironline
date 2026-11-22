@@ -38,3 +38,12 @@ test('approval RPC follows upload and does not auto-publish',()=>{
  assert.doesNotMatch(source,/\/rpc\/ksol_result_transition/);
  assert.doesNotMatch(source,/send_result_to_student\s*\(/);
 });
+
+test('uncertain upload retries require exact stored PDF bytes and matching SHA-256',()=>{
+ assert.match(source,/upload\?\.status === 409/);
+ assert.match(source,/\/storage\/v1\/object\/authenticated\//);
+ assert.match(source,/previous\.byteLength !== bytes\.byteLength/);
+ assert.match(source,/crypto\.subtle\.digest\("SHA-256", previous\)/);
+ assert.match(source,/priorSha256 !== sha256/);
+ assert.match(source,/Stored PDF checksum mismatch/);
+});
