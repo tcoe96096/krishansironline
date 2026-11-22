@@ -16,7 +16,7 @@ $scriptFile=[System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'Invoke-KSOL-
 $nodeAction=New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -NonInteractive -File "'+$scriptFile+'" -Source '+$Source+' -BackupRoot "'+$root+'"')
 $trigger=New-ScheduledTaskTrigger -Daily -At $stamp
 $identity=[System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$principal=New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
+$principal=New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Highest
 $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 45)
 $taskName="KSOL-Verified-Backup-$Source"
 Register-ScheduledTask -TaskName $taskName -Action $nodeAction -Trigger $trigger -Principal $principal -Settings $settings -Description "Private daily encrypted-volume PostgreSQL dump; never mutates KSOL remote data" -Force | Out-Null
