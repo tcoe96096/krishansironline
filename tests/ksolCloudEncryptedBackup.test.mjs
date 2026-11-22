@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PROJECT_REFS,validateCloudSettings,isCryptRemote,assessDownloadedToc} from '../scripts/recovery/cloud-stream-backup.mjs';
+import {PROJECT_REFS,validateCloudSettings,isCryptRemote,assessDownloadedToc,classifyBackupFailure} from '../scripts/recovery/cloud-stream-backup.mjs';
 
 const base={KSOL_DB_HOST:'db.'+PROJECT_REFS.preview+'.supabase.co',
  KSOL_DB_PORT:'5432',KSOL_DB_USER:'postgres',KSOL_DB_NAME:'postgres',
@@ -62,4 +62,18 @@ test('script never writes local plaintext dump or mistakes archive success for f
  assert.match(content,/fullSupabaseRestore:'NOT_VERIFIED'/);
  assert.match(content,/releaseGate:'NO_GO'/);
  assert.doesNotMatch(content,/writeFileSync|--file|DROP DATABASE|pg_restore.*--clean/);
+});
+
+test('backup failure categories never log credential-bearing stderr',()=>{
+ assert.equal(classifyBackupFailure('psql: password authentication failed for user postgres.x'), 'DATABASE_AUTH');
+ assert.equal(classifyBackupFailure('could not translate host name aws-0.example.com'), 'DNS_HOST');
+ assert.equal(classifyBackupFailure('Failed to refresh token: invalid_grant'), 'GOOGLE_AUTH');
+ assert.equal(classifyBackupFailure('storage quota exceeded'), 'DRIVE_QUOTA');
+ assert.equal(classifyBackupFailure('unclassified secret value 12345'), 'UNCLASSIFIED');
+ const content=readFileSync('scripts/recovery/cloud-stream-backup.mjs','utf8');
+ assert.match(content,/Preview database preflight failed/);
+ assert.match(content,/Encrypted Drive preflight failed/);
+ assert.match(content,/const pgDiagnostic=collectDiagnostic/);
+ assert.match(content,/const uploadDiagnostic=collectDiagnostic/);
+ assert.doesNotMatch(content,/console\.error\([^\n]*\.stderr/);
 });

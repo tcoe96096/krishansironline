@@ -57,6 +57,29 @@ export function assessDownloadedToc(text){
  });
  return {tocCoverage:rows.length===REQUIRED.length,missingTables:REQUIRED.filter(x=>!rows.includes(x))};
 }
+// Diagnostic categories only: never forward stderr, URLs, passwords, tokens or SQL text into CI logs.
+export function classifyBackupFailure(stderr){
+ const msg=String(stderr||'').slice(0,32768).toLowerCase();
+ if(/password authentication failed|invalid password|password failed|no password supplied/.test(msg))return 'DATABASE_AUTH';
+ if(/could not translate host name|name or service not known|no such host|temporary failure in name resolution/.test(msg))return 'DNS_HOST';
+ if(/connection timed out|i\/o timeout|context deadline exceeded|operation timed out/.test(msg))return 'CONNECTION_TIMEOUT';
+ if(/connection refused|server closed the connection|cannot connect/.test(msg))return 'CONNECTION_REFUSED';
+ if(/permission denied|insufficient privilege|must be owner|not permitted/.test(msg))return 'DATABASE_PERMISSIONS';
+ if(/server version mismatch|aborting because of server version mismatch/.test(msg))return 'POSTGRES_VERSION';
+ if(/invalid_grant|invalid_client|unauthorized|token expired|invalid token|failed to refresh token|oauth|access_denied/.test(msg))return 'GOOGLE_AUTH';
+ if(/quota exceeded|storage quota|insufficient storage|not enough storage/.test(msg))return 'DRIVE_QUOTA';
+ if(/403 forbidden|forbidden|insufficient permissions/.test(msg))return 'ACCESS_DENIED';
+ if(/ssl|certificate verify failed/.test(msg))return 'TLS_FAILURE';
+ return 'UNCLASSIFIED';
+}
+function collectDiagnostic(stream){
+ let stderr='';
+ stream.on('data',chunk=>{
+   const remaining=16384-stderr.length;
+   if(remaining>0)stderr+=chunk.toString('utf8').slice(0,remaining);
+ });
+ return ()=>classifyBackupFailure(stderr);
+}
 function exited(child){
  return new Promise((resolvePromise,reject)=>{
   child.once('error',reject);
@@ -74,6 +97,17 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  const target=remote+':'+source+'/'+name;
  const pgEnv={...env,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20',PGSSLMODE:'require'};
  delete pgEnv.KSOL_DB_PASSWORD;
+ // Preflight must finish before opening a cloud object. It never prints credential-bearing stderr.
+ const common=['--no-password','--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
+  '--username',env.KSOL_DB_USER,'--dbname',env.KSOL_DB_NAME];
+ const dbCheck=spawnSync('psql',[...common,'--no-psqlrc','--tuples-only','--no-align','--command','SELECT 1'],{
+  env:pgEnv,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
+ if(dbCheck.error||dbCheck.status!==0||dbCheck.stdout.trim()!=='1')
+  throw new Error('Preview database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
+ const cloudCheck=spawnSync('rclone',['lsf',remote+':'],{
+  env,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
+ if(cloudCheck.error||cloudCheck.status!==0)
+  throw new Error('Encrypted Drive preflight failed [CLOUD_'+classifyBackupFailure(cloudCheck.stderr)+']; no database export attempted');
  const args=['--no-password','--format=custom',
   '--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
   '--username',env.KSOL_DB_USER,'--dbname',env.KSOL_DB_NAME];
@@ -83,11 +117,15 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  pg.stdout.on('data',chunk=>{bytes+=chunk.length;digest.update(chunk)});
  pg.stdout.pipe(put.stdin);
  // Do not dump stderr content into logs; CLI can print connection details.
- pg.stderr.resume();put.stderr.resume();
+ const pgDiagnostic=collectDiagnostic(pg.stderr);
+ const uploadDiagnostic=collectDiagnostic(put.stderr);
  put.stdin.on('error',()=>{try{pg.kill()}catch{}});
  const [dumpResult,uploadResult]=await Promise.all([exited(pg),exited(put)]);
- if(dumpResult.code!==0||uploadResult.code!==0||bytes<=5)
-  throw new Error('Database export/upload failed; any incomplete remote object is NOT a recoverable backup');
+ if(dumpResult.code!==0||uploadResult.code!==0||bytes<=5){
+  const phase=dumpResult.code!==0?'PG_DUMP':'RCLONE_UPLOAD';
+  const code=dumpResult.code!==0?pgDiagnostic():uploadDiagnostic();
+  throw new Error('Database export/upload failed ['+phase+':'+code+']; any incomplete remote object is NOT a recoverable backup');
+ }
  const expectedDigest=digest.digest('hex');
 
  // Read BACK the decrypted cloud object only through memory to confirm its
