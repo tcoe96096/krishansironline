@@ -149,6 +149,25 @@ Deno.serve(async (req) => {
   if (actualSha256 !== parts[2].slice(0, 64)) {
     return respond(503, { error: "Private PDF integrity check failed" }, origin);
   }
+  // Recheck authorization AFTER Storage retrieval and byte hashing. A revoke
+  // committed during the fetch must deny the response. This narrows (but
+  // cannot eliminate) the final check-to-response race; only a DB-coordinated
+  // streaming design could provide stronger linearization guarantees.
+  const finalManifest = await callJson(`${base}/rest/v1/rpc/ksol_result_pdf_manifest`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      p_attempt_id: attemptId,
+      p_expected_version: version,
+    }),
+  }).catch(() => ({ ok: false, data: null }));
+  if (!finalManifest.ok || finalManifest.data !== objectKey) {
+    return respond(404, { error: "Result no longer available" }, origin);
+  }
   const headers = new Headers({
     "Content-Type": "application/pdf",
     "Content-Disposition": `attachment; filename="result-card-${attemptId}-v${version}.pdf"`,
