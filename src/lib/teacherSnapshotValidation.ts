@@ -28,3 +28,9 @@ export function isTeacherSnapshot(value:unknown):value is TeacherSnapshot {
      object(r)&&text(r.id)&&text(r.original_filename)&&text(r.verification_status)))return false;
   return true;
 }
+
+/** Client-side identity guard; database RLS must independently enforce ownership. */
+export function isOwnTeacherSnapshot(value:unknown,authenticatedUserId:string):value is TeacherSnapshot {
+  return typeof authenticatedUserId==='string'&&authenticatedUserId.length>0&&
+    isTeacherSnapshot(value)&&value.user_id===authenticatedUserId;
+}
