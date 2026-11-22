@@ -484,8 +484,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setTimeLeftSeconds(remaining);
       setIsSubmitted(false);
       setIsTestActive(active);
-      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
-      setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
+      setSubmissionStatus({ loading: false, success: active, message: active ? 'आपकी परीक्षा शुरू हो गई है।' : 'इस प्रयास की समय-सीमा समाप्त हो चुकी है। नया प्रयास उपलब्ध है या नहीं, इसकी जाँच करें।' });
+      if (active) setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
       const errorMessage = error instanceof Error ? error.message : String(error ?? '');
@@ -665,9 +665,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setSelectedAnswers({});
       setMarkedForReview({});
       setCurrentQuestionIndex(0);
-      setTimeLeftSeconds(Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000)));
+      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      const canStart = attempt.status === 'in_progress' && remaining > 0;
+      setTimeLeftSeconds(remaining);
+      setAutoSubmitPending(false);
+      setSubmissionStatus({ loading: false, success: canStart, message: canStart ? 'नया प्रयास शुरू हो गया है।' : 'यह प्रयास समाप्त हो चुका है। कृपया उपलब्ध प्रयासों की जाँच करें।' });
       setIsSubmitted(false);
-      setIsTestActive(attempt.status === 'in_progress');
+      setIsTestActive(canStart);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error ?? '');
