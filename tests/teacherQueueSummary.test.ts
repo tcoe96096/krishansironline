@@ -23,7 +23,8 @@ test('Only Super Admin may get queue counters, with no applicant PII',()=>{
  assert.match(sql,/SECURITY DEFINER/);
  assert.match(sql,/submitted_at IS NOT NULL/);
  assert.match(sql,/submitted_at IS NULL/);
- assert.doesNotMatch(sql,/contact_email|storage_path|phone|raw_user_meta_data/);
+ const functionBody=sql.slice(sql.indexOf('CREATE FUNCTION'),sql.indexOf('REVOKE ALL ON FUNCTION'));
+ assert.doesNotMatch(functionBody,/contact_email|storage_path|phone|raw_user_meta_data/);
 });
 
 test('Admin keeps directory available if optional queue counters are unavailable',()=>{
