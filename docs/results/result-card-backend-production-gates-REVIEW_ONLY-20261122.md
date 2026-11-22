@@ -58,3 +58,11 @@ No database query, SQL, cloud database write, merge, deployment, or new backup w
 4. Confirm restore source state against the current source snapshot, record any excluded objects explicitly, and obtain a separate Production-specific recoverability/rollback sign-off before owner activation approval.
 
 A readable archive, schema-only copy, static CI success, or historical backup **must not** be recorded as `RECOVERY VERIFIED`.
+
+
+### Supabase subscription and Storage recovery caveat (read-only verified)
+
+- Connected Supabase organization `zzvopzivnbufgtdpoaqw` currently reports `plan=free`, `tier=tier_free`. Do **not** assume a managed daily backup or PITR exists.
+- Official docs: [Database Backups](https://supabase.com/docs/guides/platform/backups) and [Free-plan backups FAQ](https://supabase.com/kb/faqs/platform/free-plan-backups). Free-tier projects should export their own logical dumps and retain independent offsite copies.
+- Supabase Database backups include Storage **metadata**, not the PDF/object bytes themselves. A Result Card recovery test must separately prove the private PDF objects are recoverable and match their immutable SHA-256 manifest.
+- Since neither a source-specific fresh dump nor a complete isolated restore with object recovery evidence is available, live SQL and merge gates remain **NO-GO**.
