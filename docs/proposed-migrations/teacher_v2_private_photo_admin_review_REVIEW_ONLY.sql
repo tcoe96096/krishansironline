@@ -28,11 +28,11 @@ END $preflight$;
 -- executable by authenticated. Keep that capability reader unexposed; this
 -- narrow SECURITY DEFINER helper checks the trusted Super Admin role too.
 CREATE OR REPLACE FUNCTION private.teacher_v2_superadmin_photo_read_allowed()
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
  SELECT auth.uid() IS NOT NULL
    AND private.teacher_v2_feature_enabled('profile_photos')
    AND public.is_super_admin();
-$;
+$$;
 REVOKE ALL ON FUNCTION private.teacher_v2_superadmin_photo_read_allowed()
  FROM PUBLIC,anon,authenticated,service_role;
 GRANT USAGE ON SCHEMA private TO authenticated;
