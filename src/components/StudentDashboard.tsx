@@ -31,8 +31,13 @@ export const StudentDashboard: React.FC = () => {
   const loadDashboard = async () => {
     setLoading(true); setError('');
     try {
-      const [history, catalogue, saved] = await Promise.all([getMyTestAttempts(), getPublishedTests(), getMyBookmarks()]);
+      const [history, catalogue] = await Promise.all([getMyTestAttempts(), getPublishedTests()]);
       setAttempts(history); setTests(catalogue);
+      // Bookmarks are optional: a missing Pro Learning table must not hide published exams.
+      const saved = await getMyBookmarks().catch((bookmarkError) => {
+        console.warn('Bookmarks are temporarily unavailable:', bookmarkError);
+        return [] as Awaited<ReturnType<typeof getMyBookmarks>>;
+      });
       setSavedTests(saved.filter(item => item.item_type === 'test').map(item => item.item_id));
       // Progress storage may not be deployed in Preview yet; keep tests and dashboard usable.
       const progress = await getMyLearningProgress().catch((progressError) => {
