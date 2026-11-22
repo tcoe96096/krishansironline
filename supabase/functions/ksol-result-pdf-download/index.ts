@@ -1,5 +1,5 @@
 // STAGED ONLY / DO NOT DEPLOY OR ACTIVATE WITHOUT APPROVED RECOVERY.
-// Candidate Supabase Edge Function for KSOL student result PDF links.
+// Candidate Supabase Edge Function for revocation-checked private PDF proxy downloads.
 // Requires: private bucket + release SQL + student gate + manifest RPC,
 // JWT tests, independently proven restore, and owner approval.
 // No third-party imports; credentials remain in server environment only.
@@ -120,28 +120,51 @@ Deno.serve(async (req: Request) => {
     return respond(404, { error: "Result not available" }, origin);
   }
   const encodedPath = parts.map(encodeURIComponent).join("/");
-  // The service key is used ONLY to sign a verified private object path.
-  const signed = await callJson(`${base}/storage/v1/object/sign/${BUCKET}/${encodedPath}`, {
-    method: "POST",
+  // Never issue a reusable signed Storage URL: revocation must be checked
+  // through the caller's JWT on EVERY fresh PDF request.
+  const stored = await fetch(`${base}/storage/v1/object/authenticated/${BUCKET}/${encodedPath}`, {
+    method: "GET",
+    redirect: "error",
     headers: {
       apikey: serviceKey,
       Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ expiresIn: TTL_SECONDS }),
-  }).catch(() => ({ ok: false, data: null }));
-  if (!signed.ok) {
+  }).catch(() => null);
+  if (!stored?.ok) {
     return respond(503, { error: "Download temporarily unavailable" }, origin);
   }
-  const relative = signed.data?.signedURL ?? signed.data?.signedUrl;
-  // A compromised response must not redirect users to an arbitrary host.
-  if (typeof relative !== "string" ||
-      !relative.startsWith(`/object/sign/${BUCKET}/`)) {
-    return respond(503, { error: "Invalid download link" }, origin);
+  const length = Number(stored.headers.get("content-length"));
+  const mime = stored.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if (mime !== "application/pdf" || length > 10485760) {
+    return respond(503, { error: "Invalid private PDF" }, origin);
   }
-  const signedUrl = `${base}/storage/v1${relative}`;
-  return respond(200, { signedUrl, expiresInSeconds: TTL_SECONDS }, origin);
+  // Verify the exact bytes against the immutable, version-bound object digest.
+  const contents = await stored.arrayBuffer().catch(() => null);
+  if (!contents || contents.byteLength < 8 || contents.byteLength > 10485760) {
+    return respond(503, { error: "Invalid private PDF" }, origin);
+  }
+  const bytes = new Uint8Array(contents);
+  if (String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") {
+    return respond(503, { error: "Invalid private PDF" }, origin);
+  }
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", contents));
+  const actualSha256 = Array.from(digest, b => b.toString(16).padStart(2, "0")).join("");
+  if (actualSha256 !== parts[2].slice(0, 64)) {
+    return respond(503, { error: "Private PDF integrity check failed" }, origin);
+  }
+  const headers = new Headers({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="result-card-${attemptId}-v${version}.pdf"`,
+    "Cache-Control": "private, no-store, max-age=0",
+    "Pragma": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "Vary": "Origin",
+  });
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers.set("Access-Control-Allow-Origin", origin);
+  }
+  return new Response(contents, { status: 200, headers });
 });
 // Security gap before deployment: dedicated immutable upload/approval workflow,
-// real JWT and signed-link expiry tests, audit trail and rate limits.
-// A previously issued signed URL cannot be recalled before its TTL expires.
+// real JWT/authorization/integrity tests, audit trail and rate limits.
+// No reusable signed Storage URL is issued; already-downloaded bytes cannot be recalled.
