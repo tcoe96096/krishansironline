@@ -36,8 +36,10 @@ ALTER TABLE private.ksol_result_request ENABLE ROW LEVEL SECURITY;
 ALTER TABLE private.ksol_result_audit ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON private.ksol_result_release,private.ksol_result_request,
   private.ksol_result_audit FROM PUBLIC,anon,authenticated;
-REVOKE ALL ON SCHEMA private FROM PUBLIC,anon,authenticated;
--- Do not grant private schema usage to clients. RPC remains in public.
+-- Do not change schema-wide grants: private may be shared by unrelated modules.
+-- Deployment gate: independently verify private schema USAGE privileges for
+-- anon/authenticated and confirm no existing policy exposes these tables.
+-- Only the three newly named result tables have their direct grants revoked.
 CREATE OR REPLACE FUNCTION public.ksol_result_transition(
   p_attempt_id uuid,p_expected_version integer,p_operation text,p_request_key uuid
 ) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
