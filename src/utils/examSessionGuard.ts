@@ -31,12 +31,12 @@ export function canRestoreExamAnswers(
   attempt: ExamAttemptIdentity,
   remainingSeconds: number,
 ): boolean {
-  if (!saved || saved.testId !== testId || attempt.status !== 'in_progress' || remainingSeconds <= 0) {
+  if (!saved || saved.testId !== testId || attempt.status !== 'in_progress' || !Number.isFinite(remainingSeconds) || remainingSeconds <= 0 || !userId || !attempt.id) {
     return false;
   }
 
   if (saved.version === 2) {
-    return saved.userId === userId && saved.attemptId === attempt.id;
+    return !!saved.userId && !!saved.attemptId && saved.userId === userId && saved.attemptId === attempt.id;
   }
 
   if (saved.version !== 1 || !saved.student) return false;
