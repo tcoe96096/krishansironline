@@ -1,7 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PROJECT_REFS,validateCloudSettings,isCryptRemote,assessDownloadedToc,classifyBackupFailure} from '../scripts/recovery/cloud-stream-backup.mjs';
+import {Readable,Writable} from 'node:stream';
+import {once} from 'node:events';
+import {PROJECT_REFS,validateCloudSettings,isCryptRemote,assessDownloadedToc,classifyBackupFailure,drainAfterTocInputCloses} from '../scripts/recovery/cloud-stream-backup.mjs';
 
 const base={KSOL_DB_HOST:'db.'+PROJECT_REFS.preview+'.supabase.co',
  KSOL_DB_PORT:'5432',KSOL_DB_USER:'postgres',KSOL_DB_NAME:'postgres',
@@ -83,8 +85,29 @@ test('backup exports have phase markers and terminate before workflow timeout',(
  for(const phase of ['DATABASE_PREFLIGHT_OK','DRIVE_PREFLIGHT_OK','EXPORT_UPLOAD_START','EXPORT_UPLOAD_COMPLETE','READBACK_START','READBACK_INTEGRITY_OK'])
   assert.ok(source.includes('KSOL_BACKUP_PHASE: '+phase),'missing safe phase '+phase);
  assert.match(source,/timeout:18\*60\*1000/);
- assert.match(source,/timeout:6\*60\*1000/);
+ assert.match(source,/timeout:8\*60\*1000/);
  assert.match(source,/EXPORT_UPLOAD_STOPPED/);
  assert.match(source,/READBACK_STOPPED/);
  assert.doesNotMatch(source,/console\.log\([^\n]*(password|token|PGPASSWORD)/i);
+});
+
+test('readback keeps draining cloud bytes when pg_restore finishes listing early',async()=>{
+ const payload=['archive-header','archive-data','archive-trailer'];
+ async function* streamChunks(){
+  for(const item of payload){
+   yield Buffer.from(item);
+   await new Promise(resolve=>setImmediate(resolve));
+  }
+ }
+ const source=Readable.from(streamChunks());
+ let checkedBytes=0;
+ source.on('data',chunk=>{checkedBytes+=chunk.length;});
+ const tocInput=new Writable({
+  write(_chunk,_enc,done){done();this.destroy();}
+ });
+ const hadInputError=drainAfterTocInputCloses(source,tocInput);
+ source.pipe(tocInput);
+ await once(source,'end');
+ assert.equal(checkedBytes,payload.join('').length);
+ assert.equal(hadInputError(),false);
 });
