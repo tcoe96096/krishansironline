@@ -480,7 +480,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const canRestoreAnswers = canRestoreExamAnswers(
         saved, selectedTest.id, user.id, studentDetails, attempt, remaining,
       );
-      if (canRestoreAnswers && saved && isSafeExamAnswerDraft(saved.selectedAnswers, saved.markedForReview, saved.currentQuestionIndex, selectedTest.questions.length)) {
+      if (canRestoreAnswers && saved && isSafeExamAnswerDraft(saved.selectedAnswers, saved.markedForReview, saved.currentQuestionIndex, selectedTest.questions.length, selectedTest.questions.map((question) => Math.min(question.options.en.length, question.options.hi.length)))) {
         setSelectedAnswers(saved.selectedAnswers);
         setMarkedForReview(saved.markedForReview);
         setCurrentQuestionIndex(Math.min(Math.max(0, saved.currentQuestionIndex), Math.max(0, selectedTest.questions.length - 1)));
