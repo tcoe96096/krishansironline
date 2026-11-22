@@ -46,14 +46,11 @@ export function canRestoreExamAnswers(
     return !!saved.userId && !!saved.attemptId && saved.userId === userId && saved.attemptId === attempt.id;
   }
 
-  if (saved.version !== 1 || !saved.student) return false;
-
-  // A v1 browser draft had no attempt ID. Its student fields are used only
-  // for backward compatibility and must not be copied into v2 drafts.
-  return saved.student.studentName === student.studentName &&
-    saved.student.rollNo === student.rollNo &&
-    saved.student.studentClass === student.studentClass &&
-    saved.student.school === student.school;
+  // Legacy v1 drafts contain only mutable student profile fields. Even if
+  // their timestamps match, two accounts can share those fields and a browser.
+  // Without an authenticated user ID and server attempt ID, ownership cannot
+  // be established. Fail closed; the server attempt and result stay intact.
+  return false;
 }
 
 /** Reject malformed browser drafts before they can enter exam React state. */
