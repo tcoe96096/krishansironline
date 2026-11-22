@@ -66,3 +66,32 @@ A readable archive, schema-only copy, static CI success, or historical backup **
 - Official docs: [Database Backups](https://supabase.com/docs/guides/platform/backups) and [Free-plan backups FAQ](https://supabase.com/kb/faqs/platform/free-plan-backups). Free-tier projects should export their own logical dumps and retain independent offsite copies.
 - Supabase Database backups include Storage **metadata**, not the PDF/object bytes themselves. A Result Card recovery test must separately prove the private PDF objects are recoverable and match their immutable SHA-256 manifest.
 - Since neither a source-specific fresh dump nor a complete isolated restore with object recovery evidence is available, live SQL and merge gates remain **NO-GO**.
+
+
+## 2026-11-22 zero-rupee operating budget — mandatory release gate
+
+**Owner-approved additional spend: INR 0.** No plan upgrades, card activation, paid storage, billable Supabase/API resources, paid GitHub services, or paid external services. This is a hard stop, not a request for future spending authority.
+
+### Verified facts and cost-sensitive assumptions
+
+- GitHub repository `tcoe96096/krishansironline` currently reports `visibility=public`. The existing Result Card CI uses standard `ubuntu-latest` GitHub-hosted jobs and a disposable `postgres:17` service; it does not deploy. Public repository visibility alone is **not** an authorization to activate paid runners or exceed any quota.
+- Supabase organization `zzvopzivnbufgtdpoaqw` was independently read as `plan=free` and `tier=tier_free`. This does **not** prove the remaining free database, bandwidth, Storage or Edge Function quota. Do not provision resources, upload private PDFs, call billable services, or activate any plan to test this proposal.
+- A PostgreSQL service in an existing GitHub workflow is **synthetic CI**, not an independently recovered Supabase Preview or Production database. Do not relabel CI fixture data as live data or recovery evidence.
+- Do not run the local restore script against a cloud host; it creates a disposable database. A historical 2026-11-17 dump is not fresh recoverability evidence. Current source-specific backups and private Storage object bytes are not established.
+- No CI, SQL execution, database write, Preview/Production deploy, merge, PDF publish, delivery or DNS change may bypass the existing security/recovery/owner gates merely because the code is review-ready.
+
+### Free-only review execution policy
+
+1. Continue source review, static SQL checks, pure Node tests and already-configured standard GitHub-hosted CI **only when verified free eligibility and remaining quota are sufficient**. Do not configure paid larger runners, self-hosted billable machines, marketplace actions with fees, or paid cache/artifact storage.
+2. If available free minutes/storage/bandwidth cannot be confirmed, defer optional cloud jobs and perform local read-only/static review; mark CI evidence **NOT VERIFIED FOR THIS HEAD**, not PASS.
+3. Treat proposed private PDF Storage bucket, Edge Function and production-equivalent restored database as **NOT PROVISIONED**. Their resource quotas and recovery are independent gates. A free plan is not evidence of sufficient free capacity.
+4. Do not send private user records, auth tokens, passwords, Supabase keys, Storage object bytes or production dumps into public GitHub commits, CI logs or artifacts.
+5. A future paid requirement is a **blocked scope item**; report the exact missing capability without spending. No alternate billable provider or paid trial is permitted.
+
+### Current PR scope/reuse checkpoint
+
+Existing Draft PR #129 already contains the Result Card SQL atomic bundle, read-only catalog checks, RLS role matrix, PDF upload/download candidates, Node synthetic tests and disposable PostgreSQL contract workflow. Existing Results PR #122 is separate. Do not create another overlapping release implementation.
+
+**Before review-ready sign-off**, reconcile PR #129's changed shared paths (`.env.example`, `.github/workflows/pages.yml`, `src/components/AdminTestResults.tsx`, `src/components/ResultsPortal.tsx`, `src/components/AdminResultCardPanel.tsx`, `src/services/resultCardBackend.ts`, `src/vite-env.d.ts`) against current `main`, PR #122 and owner boundaries. A draft PR containing shared UI/config is not automatically a scoped Production RPC/RLS package; exclude unrelated edits from the eventual release.
+
+**Current decision:** review-only; cost ceiling respected; recovery and live JWT/RLS/storage tests unresolved. No Production claim.
