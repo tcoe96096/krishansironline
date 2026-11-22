@@ -7,7 +7,7 @@
  * Evidence can be fabricated; independent recovery review is mandatory.
  */
 import {createHash} from 'node:crypto';
-import {createReadStream,existsSync,lstatSync,realpathSync,statSync,readFileSync} from 'node:fs';
+import {createReadStream,existsSync,lstatSync,realpathSync,statSync,readFileSync,openSync,readSync,closeSync} from 'node:fs';
 import {dirname,isAbsolute,join,relative,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -27,7 +27,19 @@ const ISO_UTC=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 const BAD_FIELD=/(?:password|secret|token|credential|private.key|connection.string)/i;
 
 const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
-const validTime=x=>typeof x==='string'&&ISO_UTC.test(x)&&Number.isFinite(Date.parse(x));
+const validTime=x=>{
+ if(typeof x!=='string'||!ISO_UTC.test(x))return false;
+ const ms=Date.parse(x);
+ return Number.isFinite(ms)&&new Date(ms).toISOString().slice(0,19)===x.slice(0,19);
+};
+function isCustomPostgresBackup(path){
+ let fd;
+ try{
+  fd=openSync(path,'r');
+  const signature=Buffer.alloc(5);
+  return readSync(fd,signature,0,5,0)===5&&signature.toString('ascii')==='PGDMP';
+ }catch{return false;}finally{if(fd!==undefined)closeSync(fd);}
+}
 function hasSensitiveKeys(value){
  if(Array.isArray(value))return value.some(hasSensitiveKeys);
  if(!object(value))return false;
@@ -75,6 +87,8 @@ export async function checkRestoreEvidence(manifestFile){
   requireGate(validTime(source.backup_created_at),'Backup creation time must be UTC ISO 8601');
   requireGate(typeof source.pg_dump_version==='string'&&source.pg_dump_version.length>=3,
    'Backup pg_dump version required');
+  requireGate(source.backup_format==='postgres_custom',
+   'Backup must be declared as PostgreSQL custom-format archive');
  }
  if(object(restore)){
   requireGate(restore.target_environment==='disposable','Restore target must be disposable');
@@ -105,6 +119,8 @@ export async function checkRestoreEvidence(manifestFile){
     if(seen.has(location)){errors.push('Duplicate evidence artifact');continue;}
     seen.add(location);
     const actualSize=statSync(location).size;
+    if(kind==='backup_archive'&&!isCustomPostgresBackup(location))
+     errors.push('Backup archive does not have PostgreSQL PGDMP custom-format signature');
     if(actualSize!==info.bytes||await hashFile(location)!==info.sha256){
      errors.push('File size/digest mismatch for '+kind);
     }
