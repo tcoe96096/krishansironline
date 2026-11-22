@@ -50,11 +50,14 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
     }
     // UI is only a convenience layer. All Result Card RPCs still verify
     // super-admin privileges against the live database.
-    void requireSupabase().rpc('is_super_admin').then(({ data, error }) => {
-      if (active) setCanManageResultCards(!error && data === true);
-    }).catch(() => {
-      if (active) setCanManageResultCards(false);
-    });
+    void (async () => {
+      try {
+        const { data, error } = await requireSupabase().rpc('is_super_admin');
+        if (active) setCanManageResultCards(!error && data === true);
+      } catch {
+        if (active) setCanManageResultCards(false);
+      }
+    })();
     return () => { active = false; };
   }, [demoMode]);
 
