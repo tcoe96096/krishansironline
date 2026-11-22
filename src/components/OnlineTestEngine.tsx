@@ -72,18 +72,15 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
     const value = JSON.parse(raw) as Partial<PersistedTestSession> & {
       version?: number; student?: StudentLoginDetails; userId?: string; attemptId?: string;
     };
-    const student = value.student;
-    const validLegacy = value.version === 1 &&
-      !!student &&
-      typeof student.studentName === 'string' &&
-      typeof student.rollNo === 'string' &&
-      typeof student.studentClass === 'string' &&
-      typeof student.school === 'string';
+    // Legacy v1 browser drafts contain student PII and cannot prove ownership.
+    // Purge them on read instead of keeping them until an attempt is loaded.
+    // Version 2 must be bound to opaque account and server attempt IDs only.
     const validBoundSession = value.version === 2 &&
+      !Object.prototype.hasOwnProperty.call(value, 'student') &&
       typeof value.userId === 'string' && value.userId.length > 0 &&
       typeof value.attemptId === 'string' && value.attemptId.length > 0;
     if (
-      (!validLegacy && !validBoundSession) ||
+      !validBoundSession ||
       typeof value.testId !== 'string' ||
       typeof value.timeLeftSeconds !== 'number' ||
       !Number.isFinite(value.timeLeftSeconds) ||
