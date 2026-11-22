@@ -9,6 +9,7 @@
 import {createHash} from 'node:crypto';
 import {createReadStream,existsSync,lstatSync,realpathSync,statSync,readFileSync} from 'node:fs';
 import {dirname,isAbsolute,join,relative,resolve,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 export const PREVIEW_PROJECT_ID='zgpkmfqioqvincmgyfpi';
 export const PRODUCTION_PROJECT_ID='vsqwlkqqsxcehvdsdbna';
@@ -49,11 +50,6 @@ async function hashFile(path){
  const hash=createHash('sha256');
  for await (const chunk of createReadStream(path))hash.update(chunk);
  return hash.digest('hex');
-}
-function requiredString(o,k){
- if(typeof o?.[k]!=='string'||o[k].trim()===''||o[k].length>200)
-  throw new Error('Missing or invalid '+k);
- return o[k];
 }
 export async function checkRestoreEvidence(manifestFile){
  const errors=[];
@@ -134,7 +130,7 @@ export async function checkRestoreEvidence(manifestFile){
   errors
  };
 }
-if(process.argv[1]&&resolve(process.argv[1])===resolve(new URL(import.meta.url).pathname)){
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const manifestPath=process.argv[2];
  if(!manifestPath){process.stderr.write('Usage: node scripts/teacher-restore-evidence-check.mjs /path/to/manifest.json\n');process.exitCode=2;}
  else{
