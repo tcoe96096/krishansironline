@@ -48,3 +48,15 @@ test('only approved website origins can access browser-facing endpoint',()=>{
  assert.match(edge,/Request too large/);
  assert.match(edge,/Sign in required/);
 });
+
+const browserAdapter = readFileSync('src/services/resultCardBackend.ts','utf8');
+test('website result adapter remains disabled until an explicit release flag',()=>{
+ assert.match(browserAdapter,/VITE_RESULT_CARD_BACKEND_ENABLED === 'true'/);
+ assert.match(browserAdapter,/requireResultFeature\(\)/);
+ assert.match(browserAdapter,/requireSupabase\(\)\.rpc\('ksol_result_transition'/);
+ assert.match(browserAdapter,/functions\.invoke\(\s*'ksol-result-pdf-download'/);
+ assert.match(browserAdapter,/signedUrl\.origin !== new URL\(projectUrl\)\.origin/);
+ assert.match(browserAdapter,/RESULT_BUCKET_PATH/);
+ assert.doesNotMatch(browserAdapter,/SUPABASE_SERVICE_ROLE_KEY/);
+ assert.doesNotMatch(browserAdapter,/\.storage\.from\(/);
+});
