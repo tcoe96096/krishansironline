@@ -55,7 +55,8 @@ BEGIN
     RAISE EXCEPTION 'Not authorized' USING ERRCODE='42501';
   END IF;
   IF p_attempt_id IS NULL OR p_expected_version IS NULL OR p_expected_version<1
-    OR p_request_key IS NULL OR p_operation NOT IN ('release','revoke') THEN
+    OR p_request_key IS NULL OR p_operation IS NULL
+    OR p_operation NOT IN ('release','revoke') THEN
     RAISE EXCEPTION 'Invalid transition request' USING ERRCODE='22023';
   END IF;
   -- Serialize all operations for the same actor, operation and key.
