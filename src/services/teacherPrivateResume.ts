@@ -1,8 +1,8 @@
 import {requireSupabase} from '../lib/supabase';
 import {teacherCall} from './teacherManagement';
 import {isTeacherSnapshot} from '../lib/teacherSnapshotValidation';
-import {TEACHER_RESUME_BUCKET,DOCX_MIME,PDF_MIME,
- isOwnResumeReservation,resumeDraftWritable,validateTeacherResume} from '../lib/teacherResumePolicy';
+import {TEACHER_RESUME_BUCKET,isOwnResumeReservation,resumeDraftWritable,validateTeacherResume} from '../lib/teacherResumePolicy';
+import {validateTeacherResumeContent} from '../lib/teacherResumeContentPreflight';
 
 /** Store private teacher resumes only in an authenticated server-reserved key.
  * Client flags are UX only; server RPC and Storage RLS are authoritative.
@@ -11,13 +11,13 @@ import {TEACHER_RESUME_BUCKET,DOCX_MIME,PDF_MIME,
 export async function uploadOwnTeacherResume(file:File):Promise<void>{
  const validation=validateTeacherResume(file);
  if(validation)throw new Error(validation);
- // Fast signature check is not a malware or full file-format scan. Server must
- // quarantine and inspect actual bytes before any reviewer opens a document.
- const signature=new Uint8Array(await file.slice(0,8).arrayBuffer());
- const valid=file.type===PDF_MIME?
-  signature.length>=5&&signature[0]===37&&signature[1]===80&&signature[2]===68&&signature[3]===70&&signature[4]===45:
-  file.type===DOCX_MIME&&signature.length>=4&&signature[0]===80&&signature[1]===75&&signature[2]===3&&signature[3]===4;
- if(!valid)throw new Error('Document contents do not match the selected PDF/DOCX type.');
+ // Browser-side container preflight rejects obvious malformed and spoofed
+ // documents BEFORE creating a server reservation. This is NOT a malware scan.
+ // A separate independently operated scanner must still inspect stored bytes
+ // before any reviewer opens a PDF/DOCX; uploads remain quarantined meanwhile.
+ const bytes=new Uint8Array(await file.arrayBuffer());
+ if(!validateTeacherResumeContent(bytes,file.type))
+  throw new Error('Document contents do not match the selected PDF/DOCX type.');
  const supabase=requireSupabase();
  const {data,error}=await supabase.auth.getUser();
  const id=data.user?.id;

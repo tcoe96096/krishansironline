@@ -20,7 +20,7 @@ DO $guard$ BEGIN
  IF to_regclass('public.result_staff_grants') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM pg_catalog.pg_trigger t
-      WHERE t.tgrelid = 'public.result_staff_grants'::pg_catalog.regclass
+      WHERE t.tgrelid = to_regclass('public.result_staff_grants')
         AND t.tgname = 'teacher_v2_no_legacy_grant'
         AND NOT t.tgisinternal
     ) THEN
