@@ -552,8 +552,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
     if (submissionInFlight.current) return;
-    if (!studentDetails || !activeAttempt) {
-      alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
+    if (!studentDetails || !activeAttempt || !isTestActive || isSubmitted) {
+      if (!timeExpired) alert('कोई सक्रिय परीक्षा उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
     if (!timeExpired && attemptedCount < totalQuestions) {
