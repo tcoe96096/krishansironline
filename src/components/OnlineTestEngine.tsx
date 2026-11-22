@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { canRestoreExamAnswers } from '../utils/examSessionGuard';
+import { canRestoreExamAnswers, isSafeExamAnswerDraft } from '../utils/examSessionGuard';
 import { secondsUntilExamExpiry } from '../utils/examDeadline';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
@@ -93,8 +93,7 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
       !Number.isFinite(value.currentQuestionIndex) ||
       (value.questionLang !== 'hi' && value.questionLang !== 'en') ||
       (value.viewLayout !== 'cbt' && value.viewLayout !== 'all') ||
-      !value.selectedAnswers ||
-      !value.markedForReview
+      !isSafeExamAnswerDraft(value.selectedAnswers, value.markedForReview, value.currentQuestionIndex)
     ) {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
