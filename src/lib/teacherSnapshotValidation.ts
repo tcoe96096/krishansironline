@@ -20,17 +20,17 @@ export function isTeacherSnapshot(value:unknown):value is TeacherSnapshot {
      !Number.isSafeInteger(value.revision)||Number(value.revision)<1||
      !(value.experience_years===null||(Number.isInteger(value.experience_years)&&
        Number(value.experience_years)>=0&&Number(value.experience_years)<=70)))return false;
-  if(!Array.isArray(value.requested_scopes)||value.requested_scopes.length>60||!value.requested_scopes.every(scope=>
+  if(!Array.isArray(value.requested_scopes)||value.requested_scopes.length>60||!Array.from(value.requested_scopes).every(scope=>
      object(scope)&&TEACHER_CLASSES.some(x=>x===scope.classLevel)&&
      TEACHER_SUBJECTS.some(x=>x===scope.subject)&&TEACHER_WORK_TYPES.some(x=>x===scope.workType)))return false;
-  if(!Array.isArray(value.qualifications)||value.qualifications.length>20||!value.qualifications.every(q=>
+  if(!Array.isArray(value.qualifications)||value.qualifications.length>20||!Array.from(value.qualifications).every(q=>
      object(q)&&text(q.title)&&text(q.institution)&&Number.isInteger(q.year)&&
      Number(q.year)>=1950&&Number(q.year)<=new Date().getUTCFullYear()))return false;
-  if(!Array.isArray(value.assignments)||!value.assignments.every(a=>
+  if(!Array.isArray(value.assignments)||!Array.from(value.assignments).every(a=>
      object(a)&&text(a.id)&&TEACHER_CLASSES.some(x=>x===a.class_level)&&
      TEACHER_SUBJECTS.some(x=>x===a.subject)&&TEACHER_WORK_TYPES.some(x=>x===a.work_type)&&
      (a.status==='active'||a.status==='revoked')))return false;
-  if(!Array.isArray(value.resumes)||!value.resumes.every(r=>
+  if(!Array.isArray(value.resumes)||!Array.from(value.resumes).every(r=>
      object(r)&&text(r.id)&&text(r.original_filename)&&
      ['pending','verified','rejected'].some(x=>x===r.verification_status)))return false;
   return true;
