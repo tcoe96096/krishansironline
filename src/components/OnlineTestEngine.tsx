@@ -676,7 +676,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn)
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
@@ -696,7 +696,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <p className="mt-1 text-xs sm:text-sm text-slate-600">Supabase में प्रकाशित और आपकी कक्षा के लिए उपलब्ध ऑनलाइन टेस्ट चुनें।</p>
               {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
               {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
-              {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
+              {!catalogueLoading && !catalogueError && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
               {filteredTests.length} Tests Available
