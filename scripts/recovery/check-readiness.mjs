@@ -5,14 +5,15 @@
  * A green backup result is never permission to publish production.
  */
 import {createHash} from 'node:crypto';
-import {createReadStream,existsSync,lstatSync,readFileSync,mkdirSync,statSync,writeFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {createReadStream,existsSync,lstatSync,readFileSync,mkdirSync,statSync,writeFileSync,openSync,readSync,closeSync} from 'node:fs';
 import {basename,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PROJECT_REFS} from './create-verified-backup.mjs';
 
 const AGE_LIMIT_HOURS=36;
 const HASH=/^[a-f0-9]{64}$/i;
-export function evaluateExportReport({source,report,archiveExists,archiveBytes,actualHash,now=Date.now()}){
+export function evaluateExportReport({source,report,archiveExists,archiveBytes,actualHash,archiveVerified=false,now=Date.now()}){
  const reasons=[];
  if(!report||typeof report!=='object'||Array.isArray(report))reasons.push('No local verified export report');
  else{
@@ -26,6 +27,7 @@ export function evaluateExportReport({source,report,archiveExists,archiveBytes,a
    if(!Number.isFinite(date)||!Number.isFinite(age)||age<0||age>AGE_LIMIT_HOURS)reasons.push('Backup is not recent');
  }
  if(!archiveExists)reasons.push('Archive missing or inaccessible');
+ else if(!archiveVerified)reasons.push('PostgreSQL archive signature or TOC cannot be verified');
  return {
    source,projectRef:PROJECT_REFS[source],backupStatus:reasons.length?'BACKUP_NEEDS_ATTENTION':'READABLE_EXPORT_ONLY',
    restoreStatus:'NOT_VERIFIED',releaseGate:'NO_GO',reasons
@@ -43,7 +45,7 @@ export async function inspectReadiness(root,source='all',now=Date.now()){
     browserAuthExamResult:'NOT_VERIFIED',storageObjectBytes:'NOT_VERIFIED',sources:{},
     note:'This is backup-readiness evidence only, not a full isolated restore or merge authorization.'};
  for(const s of sources){
-   let report=null,exists=false,size=0,hash=null;
+   let report=null,exists=false,size=0,hash=null,archiveVerified=false;
    try{
      const path=join(resolve(root),'07-Recovery-Reports','last-'+s+'-export.json');
      if(!lstatSync(path).isSymbolicLink())report=JSON.parse(readFileSync(path,'utf8'));
@@ -55,10 +57,20 @@ export async function inspectReadiness(root,source='all',now=Date.now()){
          size=statSync(archive).size;
          hash=await hashFile(archive);
          exists=true;
+         let fd;
+         try {
+           fd=openSync(archive,'r');const sig=Buffer.alloc(5);
+           if(readSync(fd,sig,0,5,0)===5&&sig.toString('ascii')==='PGDMP'){
+             const listed=spawnSync('pg_restore',['--list',archive],{
+               encoding:'utf8',timeout:120000,windowsHide:true,maxBuffer:32*1024*1024
+             });
+             archiveVerified=!listed.error&&listed.status===0;
+           }
+         }finally{if(fd!==undefined)closeSync(fd)}
        }
      }
    }catch{/* Missing or malformed manifests fail closed, never guess status. */}
-   out.sources[s]=evaluateExportReport({source:s,report,archiveExists:exists,archiveBytes:size,actualHash:hash,now});
+   out.sources[s]=evaluateExportReport({source:s,report,archiveExists:exists,archiveBytes:size,actualHash:hash,archiveVerified,now});
  }
  out.allLocalBackupsReady=Object.values(out.sources).every(s=>s.backupStatus==='READABLE_EXPORT_ONLY');
  return out;
