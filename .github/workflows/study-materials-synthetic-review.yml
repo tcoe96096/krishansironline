@@ -33,5 +33,30 @@ jobs:
       # Repository has no root dependency lockfile. These isolated tests use
       # only built-in node:test/assert and Node 22's native TypeScript stripping.
       # No npm install, remote package fetch, backend access, or deployment.
-      - name: Run isolated synthetic tests
-        run: node --experimental-strip-types --test tests/studyMaterialsVideoEmbedMock.test.ts tests/studyMaterialsDownloadExpiryMock.test.ts tests/studyMaterialsMockAccess.test.ts
+      - name: Run isolated synthetic tests and retain evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --test --test-reporter=tap tests/studyMaterialsVideoEmbedMock.test.ts tests/studyMaterialsDownloadExpiryMock.test.ts tests/studyMaterialsMockAccess.test.ts 2>&1 | tee study-synthetic-test-results.tap
+      - name: Record test evidence summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Study Materials synthetic tests (mock only)'
+            echo 'These are policy-oracle tests, not production authorization or RPC/RLS evidence.'
+            echo 'Commit: ${{ github.sha }}'
+            if test -f study-synthetic-test-results.tap; then
+              grep -E '^# (tests|pass|fail|cancelled|skipped|duration_ms) ' study-synthetic-test-results.tap || true
+            else
+              echo 'Test runner did not produce an output file.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload synthetic TAP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-synthetic-tap
+          path: study-synthetic-test-results.tap
+          if-no-files-found: warn
+          retention-days: 7
