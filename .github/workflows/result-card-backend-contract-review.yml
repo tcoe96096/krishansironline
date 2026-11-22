@@ -66,6 +66,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check upload and download Edge functions (no deployment)
+        run: |
+          deno check supabase/functions/ksol-result-pdf-upload/index.ts
+          deno check supabase/functions/ksol-result-pdf-download/index.ts
       - name: Run synthetic fail-closed contract checks
         run: |
           node --check docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs
