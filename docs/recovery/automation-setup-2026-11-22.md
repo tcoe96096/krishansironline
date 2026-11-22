@@ -34,3 +34,61 @@ Current local scoped restore evidence stopped with `auth.users` missing from a s
 ## Privacy
 
 The local tool never contacts Supabase, executes SQL, restores any DB, deletes files or uploads evidence. The GitHub Action never reads local data. Do not commit local reports, backup archives, secrets, database credentials or student/teacher identities.
+
+
+## Phase 2 — automatically create verified LOCAL PostgreSQL exports (new, code-only)
+
+**This is NOT activated on your PC or cloud database.** It requires one-time setup by the Windows owner and an encrypted backup volume. No production database mutation and no automatic production release are performed. Backup export reads private records; never send archives, password/config/DPAPI secret files, private logs, or restore contents to GitHub or ChatGPT.
+
+### What is now implemented
+
+- `scripts/recovery/create-verified-backup.mjs` runs PostgreSQL `pg_dump` in custom format against an explicitly selected **Preview** or **Production** project. It validates target-project identity, rejects ambiguous host/username combinations, checks `PGDMP` and `pg_restore --list`, calculates SHA-256 and records whether the TOC includes `auth.users`, `storage.objects`, `student_profiles` and `test_attempts`. The source is never modified.
+- `scripts/recovery/windows/Initialize-KSOL-Backup.ps1` prompts locally for that project's database connection and password, stores only the password encrypted with Windows DPAPI for the current user and restricts the newly created private directories. It refuses unverified BitLocker volumes.
+- `scripts/recovery/windows/Invoke-KSOL-DailyBackup.ps1` retrieves the same-user DPAPI secret, checks BitLocker again, temporarily passes credentials to the read-only export process, then clears them from the PowerShell process environment.
+- `scripts/recovery/windows/Install-KSOL-DailyBackup.ps1` schedules that source's export with Task Scheduler. It requires the config to already exist, uses the signed-in Windows account, and never saves a Task Scheduler password.
+- New archives are created in **`D:\KSOL-BACKEND\09-Automated-Backups`**, separate from historic `01-Database-Backup`. The existing daily inventory now looks in **both** folders.
+- Reports are kept at `D:\KSOL-BACKEND\07-Recovery-Reports\last-preview-export.json` / `last-production-export.json`. They include digest and file metadata, never raw database rows or passwords.
+
+### One-time setup on your Windows PC
+
+Prerequisites: Windows PC running under your own account, Node.js 22+, official PostgreSQL `pg_dump` and `pg_restore` in PATH, your Supabase **database** connection details, sufficient free space, and a **BitLocker-protected** chosen backup volume. The scripts refuse unencrypted backup storage. If `D:` is not protected, use another encrypted drive. A cloud project cannot reach your Windows `D:` drive.
+
+Run from a **trusted checkout** of this PR's updated files in PowerShell:
+
+```powershell
+# Preview source: prompts once for Preview DB host/user/password on your own PC.
+& .\scripts\recovery\windows\Initialize-KSOL-Backup.ps1 -Source preview -BackupRoot 'D:\KSOL-BACKEND'
+
+# Run one read-only export and verify that the local report says READABLE_EXPORT_ONLY.
+& .\scripts\recovery\windows\Invoke-KSOL-DailyBackup.ps1 -Source preview -BackupRoot 'D:\KSOL-BACKEND'
+
+# Schedule Preview export daily. The PC must be signed in and able to connect.
+& .\scripts\recovery\windows\Install-KSOL-DailyBackup.ps1 -Source preview -BackupRoot 'D:\KSOL-BACKEND' -At '18:30'
+
+# Keep the existing local archive inventory at 19:30 (one-time installation):
+& .\scripts\recovery\windows\Install-KSOL-RecoveryCheck.ps1
+```
+
+For Production, configure it **separately**, never reuse Preview credentials or reports:
+```powershell
+& .\scripts\recovery\windows\Initialize-KSOL-Backup.ps1 -Source production -BackupRoot 'D:\KSOL-BACKEND'
+& .\scripts\recovery\windows\Invoke-KSOL-DailyBackup.ps1 -Source production -BackupRoot 'D:\KSOL-BACKEND'
+& .\scripts\recovery\windows\Install-KSOL-DailyBackup.ps1 -Source production -BackupRoot 'D:\KSOL-BACKEND' -At '18:45'
+```
+
+Each command will report an explicit error if prerequisites are absent. It does not delete any successful existing backup; failed partial exports are removed locally to avoid retaining unnecessary sensitive fragments. Do not add the password as a command argument or write it to GitHub Secrets.
+
+### What remains *not* automated or verified
+
+1. **A complete Supabase-compatible restore**, including cross-schema `auth.users`, grants, extensions, RLS, and account login; a simple local PostgreSQL database is not adequate. A downloaded physical backup and a `PGDMP` logical dump are different formats and require different restoration procedures. No restore has been performed by this pipeline.
+2. **Storage object bytes** outside PostgreSQL, custom role passwords, OAuth and application configuration, cross-student negative auth checks and actual exam Login → Submit → Grade → Result. SQL backups alone do not include Storage object content.
+3. **A second, encrypted, independent offsite copy.** Do not email raw dumps or upload to a public GitHub repo. Configure an approved private encrypted destination separately; there is no cloud-upload integration in this PR.
+4. **Windows Task installation and first live export.** This chat does not have access to your Windows machine, so the scripts cannot be activated here.
+5. **Production release** remains `NO_GO` until independent recovery evidence and authenticated safety tests plus a separate release decision. A source archive's readable TOC or green GitHub CI is never full recovery proof.
+
+### Compatibility note
+
+Supabase's `supabase db dump` command normally **excludes managed `auth` and `storage` schemas** and is not a standalone full recovery artifact. This Phase 2 exporter invokes `pg_dump` directly and explicitly checks that selected managed tables appear in the archive; insufficient permissions result in an incomplete/failing export rather than a false claim of recovery. See the Supabase database-backup and CLI reference documents before using the resulting archive to design a full restore:
+- https://supabase.com/docs/guides/platform/backups
+- https://supabase.com/docs/reference/cli/introduction
+- https://supabase.com/docs/guides/local-development/restoring-downloaded-backup
