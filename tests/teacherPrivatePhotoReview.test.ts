@@ -4,8 +4,10 @@ import {readFileSync} from 'node:fs';
 const read=(p:string)=>readFileSync(p,'utf8');
 
 test('Teacher Dashboard shows photo only when server-gated UI feature is enabled',()=>{
- const dashboard=read('teacher-beta/TeacherDashboardData.tsx');
+ const dashboard=read('src/components/TeacherSiteWorkspace.tsx');
+ const dedicatedDashboard=read('teacher-beta/TeacherDashboardData.tsx');
  assert.match(dashboard,/teacherPhotoUiEnabled&&<TeacherPrivatePhotoV2 canUpload=\{false\}\/>/);
+ assert.doesNotMatch(dedicatedDashboard,/TeacherPrivatePhotoV2/);
  const privatePhoto=read('src/services/teacherPrivatePhoto.ts');
  assert.match(privatePhoto,/teacher_v2_beta_capabilities/);
  assert.match(privatePhoto,/teacher_v2_snapshot/);
