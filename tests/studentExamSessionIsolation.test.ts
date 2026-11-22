@@ -50,3 +50,23 @@ test('malformed countdown and missing authenticated identity fail closed', () =>
   assert.equal(canRestoreExamAnswers({ ...saved, userId: '' }, 'test-1', 'student-user-1', student, attempt, 500), false);
   assert.equal(canRestoreExamAnswers({ ...saved, attemptId: '' }, 'test-1', 'student-user-1', student, attempt, 500), false);
 });
+
+test('legacy recovery rejects malformed attempt windows and non-finite save times', () => {
+  const legacy: SavedExamIdentity = { version: 1, testId: 'test-1', savedAt: saved.savedAt, student };
+  for (const [started_at, expires_at] of [
+    ['invalid', attempt.expires_at],
+    [attempt.started_at, 'invalid'],
+    ['2026-11-22T10:00:00Z', '2026-11-22T09:00:00Z'],
+  ]) {
+    assert.equal(canRestoreExamAnswers(legacy, 'test-1', 'student-user-1', student, { ...attempt, started_at, expires_at }, 500), false);
+  }
+  for (const savedAt of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    assert.equal(canRestoreExamAnswers({ ...legacy, savedAt }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  }
+  assert.equal(canRestoreExamAnswers({ ...legacy, savedAt: Date.parse(attempt.started_at) - 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...legacy, savedAt: Date.parse(attempt.expires_at) + 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
+});
+
+test('submitted attempts never restore browser answers even with matching IDs', () => {
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, { ...attempt, status: 'submitted' }, 500), false);
+});
