@@ -26,7 +26,19 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
   }
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;recordedVerification=null;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
- else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
+ else if(op==='teacher_v2_directory'||op==='teacher_v2_directory_filtered'){
+  if(!superAdmin){status=403;data={code:'42501'};}
+  else {
+   const selected=op==='teacher_v2_directory_filtered'?(args.p_status||'pending'):'all';
+   const matches=profile&&(
+     selected==='all'||
+     (selected==='pending'&&profile.status==='pending'&&profile.submitted_at!==null)||
+     (selected==='draft'&&profile.status==='pending'&&profile.submitted_at===null)||
+     (selected===profile.status&&selected!=='pending')
+   );
+   data=matches?[profile]:[];
+  }
+ }
  else if(op==='teacher_v2_verification_status'){
   if(!superAdmin){status=403;data={code:'42501'};}
   else data=!!(recordedVerification&&profile&&profile.status==='pending'&&profile.submitted_at
@@ -113,6 +125,8 @@ try{
  assert.equal(await directory.count(),0);
  superAdmin=true;active=true;profile.submitted_at='2026-11-16T10:00:00Z';await page.reload();
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ assert.equal(await directory.getByLabel('Filter teacher application status').inputValue(),'pending','Pending is the safe default filter');
+ await directory.getByLabel('Filter teacher application status').selectOption('all');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
@@ -154,6 +168,7 @@ try{
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  await page.goto(base+'/admin/');
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ await directory.getByLabel('Filter teacher application status').selectOption('approved');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
  await directory.getByLabel('Assignment class',{exact:true}).selectOption('11');
@@ -166,19 +181,24 @@ try{
  assert.equal(writes.at(-1).args.p_action,'revoke');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Access suspended for role review');
- await directory.getByRole('button',{name:'Suspend teacher and revoke access'}).click();await directory.getByRole('heading',{name:/Test Teacher.*suspended/}).waitFor();
+ await directory.getByRole('button',{name:'Suspend teacher and revoke access'}).click();
+ await directory.getByLabel('Filter teacher application status').selectOption('suspended');
+ await directory.getByRole('heading',{name:/Test Teacher.*suspended/}).waitFor();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Teacher identity reverified after suspension');
  await directory.getByRole('button',{name:'Restore teacher status without assignments',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
+ await directory.getByLabel('Filter teacher application status').selectOption('approved');
  await directory.getByRole('heading',{name:/Test Teacher.*approved/}).waitFor();
  assert.equal(profile.employee_id,'KSOL-T-123456ABCDEF');
  assert.equal(profile.assignments.every(a=>a.status==='revoked'),true);
  assert.equal(writes.at(-1).op,'teacher_v2_restore');
  profile.status='pending';profile.submitted_at='2026-11-16T10:00:00Z';profile.employee_id=null;
+ await directory.getByLabel('Filter teacher application status').selectOption('pending');
  await directory.getByRole('button',{name:'Refresh',exact:true}).click();
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Qualification documents require correction');
  await directory.getByRole('button',{name:'Reject application',exact:true}).click();await directory.getByLabel('Decision reason').waitFor({state:'hidden'});
+ await directory.getByLabel('Filter teacher application status').selectOption('rejected');
  await directory.getByRole('heading',{name:/Test Teacher.*rejected/}).waitFor();
  assert.equal(writes.at(-1).args.p_decision,'reject');
  assert.equal(profile.employee_id,null);
