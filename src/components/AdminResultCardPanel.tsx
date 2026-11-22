@@ -50,9 +50,17 @@ export const AdminResultCardPanel: React.FC<Props> = ({ attemptId, onClose }) =>
     setWorking(true); setError(''); setNotice('');
     try {
       const result = await uploadAndApproveResultCardPdf(attemptId, nextVersion, file, key);
-      setCurrent({ version: result.version, state: 'approved' });
+      // An idempotent replay can return the ORIGINAL outcome even when a
+      // different admin has already released/revoked that version. Refresh.
+      const confirmed = await getAdminResultCardStatus(attemptId);
+      if (!confirmed || confirmed.version !== result.version) {
+        throw new Error('PDF stored; current approval state needs review.');
+      }
+      setCurrent(confirmed);
       setFile(null); setUploadRetryKey(null);
-      setNotice('PDF सुरक्षित रूप से स्वीकृत है। विद्यार्थी के लिए जारी करना अभी बाकी है।');
+      setNotice(confirmed.state === 'approved'
+        ? 'PDF सुरक्षित रूप से स्वीकृत है। विद्यार्थी के लिए जारी करना अभी बाकी है।'
+        : 'PDF की वर्तमान स्थिति सर्वर से दोबारा सत्यापित की गई है।');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'PDF Approval असफल रहा।');
       // An uncertain response must be reconciled with the server before retry.
@@ -73,7 +81,11 @@ export const AdminResultCardPanel: React.FC<Props> = ({ attemptId, onClose }) =>
       const state = await transitionResultCard(
         attemptId, current.version, operation, crypto.randomUUID(),
       );
-      setCurrent({ version: current.version, state });
+      const confirmed = await getAdminResultCardStatus(attemptId);
+      if (!confirmed || confirmed.version !== current.version || confirmed.state !== state) {
+        throw new Error('Operation acknowledged but current Result Card status changed.');
+      }
+      setCurrent(confirmed);
       setRevokeConfirm(false);
       setNotice(state === 'released'
         ? 'Result Card जारी कर दिया गया है। अब विद्यार्थी इसे डाउनलोड कर सकता है।'
