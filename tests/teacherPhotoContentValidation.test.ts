@@ -46,3 +46,11 @@ test('complete WebP gate rejects an empty primary image payload',()=>{
  const empty=new Uint8Array([...header(12),0x56,0x50,0x38,0x4c,0,0,0,0]);
  assert.equal(hasConsistentWebpContainer(empty),false);
 });
+
+test('complete WebP gate rejects nonzero RIFF padding for odd metadata chunks',()=>{
+ const base=new Uint8Array([...header(14),0x56,0x50,0x38,0x4c,2,0,0,0,0x2f,0]);
+ const metadata=new Uint8Array([...base,0x45,0x58,0x49,0x46,1,0,0,0,0x41,0]);metadata[4]=24;
+ assert.equal(hasConsistentWebpContainer(metadata),true);
+ metadata[metadata.length-1]=0x7f;
+ assert.equal(hasConsistentWebpContainer(metadata),false);
+});
