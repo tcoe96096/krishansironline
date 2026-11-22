@@ -95,3 +95,19 @@ Existing Draft PR #129 already contains the Result Card SQL atomic bundle, read-
 **Before review-ready sign-off**, reconcile PR #129's changed shared paths (`.env.example`, `.github/workflows/pages.yml`, `src/components/AdminTestResults.tsx`, `src/components/ResultsPortal.tsx`, `src/components/AdminResultCardPanel.tsx`, `src/services/resultCardBackend.ts`, `src/vite-env.d.ts`) against current `main`, PR #122 and owner boundaries. A draft PR containing shared UI/config is not automatically a scoped Production RPC/RLS package; exclude unrelated edits from the eventual release.
 
 **Current decision:** review-only; cost ceiling respected; recovery and live JWT/RLS/storage tests unresolved. No Production claim.
+
+
+## 2026-11-22 scope reconciliation — mandatory PR split before approval
+
+Rechecked current `main` and the changed-file list for Draft PR #129. Current `main` is `30686103f3cfca124bccebed51ce77fe36b44149`; the branch is **110 ahead / 1 behind** at this review. Existing Results PR #122 and #135 both address CSV formula injection: no duplicate CSV work is required here.
+
+The existing PR #129 has **47 changed paths**, including the shared files `.env.example`, `.github/workflows/pages.yml`, `src/vite-env.d.ts`, and Result Card UI/service/Edge files. Although the UI and Edge files are Results-owned, this PR was requested as a **static backend RPC/RLS review-only** package. Therefore its current diff is not narrow enough for final approval. This finding is a scope gate, not permission to revert unrelated work.
+
+**Required split (NOT EXECUTED):**
+- Keep the isolated backend review PR restricted to `docs/results/*REVIEW_ONLY*`, explicitly marked `CANDIDATE-DO-NOT-APPLY` SQL, Result Card-only synthetic fixtures/tests, and Result Card-only review CI.
+- Move `src/components/AdminResultCardPanel.tsx`, `src/components/AdminTestResults.tsx`, `src/components/ResultsPortal.tsx`, `src/services/resultCardBackend.ts`, `supabase/functions/ksol-result-pdf-*/index.ts`, `.env.example`, `src/vite-env.d.ts` and shared Pages workflow changes to separately reviewed integration work. Do not activate or deploy them. Never discard them without preserving commits.
+- Do not edit or merge Student/Exam, Teacher v2, PR #109, ADVANCE Studio, credentials, Studio data or DNS.
+
+**Security and recovery NO-GO:** The current SQL bundle compiles against synthetic fixtures in CI, but that does not prove compatibility with Production catalog, real Supabase JWT/RLS, Storage bytes or rollback. The Preview-only Result Card migrations/RPCs cannot be inferred to exist in Production. Free-tier subscription is not proof of recoverable managed backup/PITR. Keep incremental cost exactly ₹0, and require verified remaining free quota before any cloud action. No database writes, SQL execution, merge, deployment, publish or delivery without independently verified restore and separate explicit owner approval.
+
+**Review exit checklist:** (a) narrow the PR diff without losing Results-owned integration history; (b) confirm updated `main` dependency diff and migration ordering; (c) run static CI on exact final commit; (d) obtain independent source-specific fresh backup, disposable Supabase-compatible restore and authenticated role/concurrency tests; (e) request distinct owner sign-offs. Until then **REVIEW PACKAGE IN PROGRESS, NOT PRODUCTION READY**.
