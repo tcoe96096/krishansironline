@@ -1,0 +1,55 @@
+name: Result Inbox synthetic isolation (review only)
+
+on:
+  push:
+    branches:
+      - test/results-inbox-isolation-mock-20261122
+    paths:
+      - 'tests/resultsInboxIsolationMock.test.ts'
+      - '.github/workflows/results-inbox-synthetic-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  result-inbox-policy:
+    name: Synthetic recipient isolation (no backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run isolated synthetic policy tests
+        shell: bash
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --test --test-reporter=tap tests/resultsInboxIsolationMock.test.ts 2>&1 | tee results-inbox-synthetic.tap
+      - name: Record evidence and limitations
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Result Inbox mock-only policy tests'
+            echo 'No authenticated backend, RPC/RLS, real student records, delivery, or storage access tested.'
+            echo 'Commit: ${{ github.sha }}'
+            if test -f results-inbox-synthetic.tap; then
+              grep -E '^# (tests|pass|fail|cancelled|skipped|duration_ms) ' results-inbox-synthetic.tap || true
+            else
+              echo 'No test report generated; inspect preceding step.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain TAP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-inbox-synthetic-tap
+          path: results-inbox-synthetic.tap
+          if-no-files-found: warn
+          retention-days: 7
