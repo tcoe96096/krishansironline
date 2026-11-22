@@ -63,3 +63,10 @@ test('admin can revoke released result even after student becomes ineligible',()
  assert.doesNotMatch(sql,/^\s*IF v_status IS DISTINCT FROM 'submitted'/m);
  assert.match(sql,/ELSIF p_operation='revoke' AND v_row.state='released'/);
 });
+
+test('candidate has exactly one transaction and no executable SQL after COMMIT',()=>{
+ assert.equal((sql.match(/^BEGIN;$/gm)||[]).length,1);
+ assert.equal((sql.match(/^COMMIT;$/gm)||[]).length,1);
+ const tail=sql.split(/^COMMIT;$/m)[1]||'';
+ assert.doesNotMatch(tail,/^\s*(?:CREATE|ALTER|INSERT|UPDATE|DELETE|DROP|GRANT|REVOKE|SELECT)\b/im);
+});
