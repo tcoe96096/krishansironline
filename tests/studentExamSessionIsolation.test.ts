@@ -135,3 +135,12 @@ test('legacy v1 rejects two distinct accounts sharing the same student details a
   assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
   assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-2', student, attempt, 500), false);
 });
+
+test('browser reader immediately discards legacy PII drafts and rejects v2 drafts carrying student details', () => {
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  assert.match(engine, /const validBoundSession = value\.version === 2 &&/);
+  assert.match(engine, /!Object\.prototype\.hasOwnProperty\.call\(value, 'student'\)/);
+  assert.match(engine, /!validBoundSession \|\|/);
+  assert.match(engine, /localStorage\.removeItem\(ACTIVE_TEST_SESSION_KEY\)/);
+  assert.doesNotMatch(engine, /const validLegacy = value\.version === 1/);
+});
