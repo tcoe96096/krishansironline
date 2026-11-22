@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { canRestoreExamAnswers } from '../utils/examSessionGuard';
+import { secondsUntilExamExpiry } from '../utils/examDeadline';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
@@ -376,21 +377,31 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     user?.id,
   ]);
 
-  // Countdown timer for the selected assessment
+  // Background tabs throttle intervals. Always recalculate from the server attempt's
+  // absolute deadline, including when the tab becomes visible or the page regains focus.
+  // Never extend the deadline from a browser draft's cached timeLeftSeconds.
   useEffect(() => {
-    if (!isTestActive || isSubmitted) return;
+    if (!isTestActive || isSubmitted || !activeAttempt) return;
+    const updateRemaining = () => {
+      const remaining = secondsUntilExamExpiry(activeAttempt.expires_at);
+      setTimeLeftSeconds((previous) => previous === remaining ? previous : remaining);
+    };
+    updateRemaining();
+    const interval = window.setInterval(updateRemaining, 1000);
+    document.addEventListener('visibilitychange', updateRemaining);
+    window.addEventListener('focus', updateRemaining);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', updateRemaining);
+      window.removeEventListener('focus', updateRemaining);
+    };
+  }, [isTestActive, isSubmitted, activeAttempt?.id, activeAttempt?.expires_at]);
 
-    if (timeLeftSeconds <= 0) {
-      handleSubmitQuiz(true);
-      return;
+  useEffect(() => {
+    if (isTestActive && !isSubmitted && activeAttempt && timeLeftSeconds <= 0) {
+      void handleSubmitQuiz(true);
     }
-
-    const interval = setInterval(() => {
-      setTimeLeftSeconds((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTestActive, isSubmitted, timeLeftSeconds]);
+  }, [isTestActive, isSubmitted, activeAttempt?.id, timeLeftSeconds]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -465,7 +476,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
-      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      const remaining = secondsUntilExamExpiry(attempt.expires_at);
       const saved = restoredSession;
       const canRestoreAnswers = canRestoreExamAnswers(
         saved, selectedTest.id, user.id, studentDetails, attempt, remaining,
@@ -667,7 +678,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setSelectedAnswers({});
       setMarkedForReview({});
       setCurrentQuestionIndex(0);
-      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      const remaining = secondsUntilExamExpiry(attempt.expires_at);
       const canStart = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
       setAutoSubmitPending(false);
