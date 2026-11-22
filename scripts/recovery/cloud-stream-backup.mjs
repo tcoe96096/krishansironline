@@ -34,9 +34,16 @@ export function validateCloudSettings(source,env,remote='ksolcrypt'){
 }
 export function isCryptRemote(configText,name){
  // Never print this output: it can contain OAuth tokens and weakly obscured keys.
- const matches=[...String(configText).matchAll(/^\[([^\]\n]+)\]\s*\r?\n([\s\S]*?)(?=^\[|\s*$)/gm)];
- return matches.some(([,section,properties])=>section===name&&/^\s*type\s*=\s*crypt\s*$/m.test(properties)
-   &&/^\s*remote\s*=\s*[^\s]+:[^\s]+\s*$/m.test(properties));
+ let current='',crypt=false,baseRemote=false;
+ const lines=String(configText).split(/\r?\n/);
+ for(const line of lines){
+   const heading=/^\[([^\]\n]+)\]\s*$/.exec(line);
+   if(heading){current=heading[1];continue}
+   if(current!==name)continue;
+   if(/^\s*type\s*=\s*crypt\s*$/.test(line))crypt=true;
+   if(/^\s*remote\s*=\s*[a-zA-Z][a-zA-Z0-9_-]*:[^\s]+\s*$/.test(line))baseRemote=true;
+ }
+ return crypt&&baseRemote;
 }
 export function assessDownloadedToc(text){
  const rows=REQUIRED.filter(label=>{
