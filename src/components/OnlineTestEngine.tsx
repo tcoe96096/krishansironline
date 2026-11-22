@@ -480,7 +480,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const canRestoreAnswers = canRestoreExamAnswers(
         saved, selectedTest.id, user.id, studentDetails, attempt, remaining,
       );
-      if (canRestoreAnswers && saved) {
+      if (canRestoreAnswers && saved && isSafeExamAnswerDraft(saved.selectedAnswers, saved.markedForReview, saved.currentQuestionIndex, selectedTest.questions.length)) {
         setSelectedAnswers(saved.selectedAnswers);
         setMarkedForReview(saved.markedForReview);
         setCurrentQuestionIndex(Math.min(Math.max(0, saved.currentQuestionIndex), Math.max(0, selectedTest.questions.length - 1)));
@@ -490,7 +490,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         setSelectedAnswers({});
         setMarkedForReview({});
         setCurrentQuestionIndex(0);
-        if (saved && !canRestoreAnswers) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        if (saved) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       }
       const active = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
