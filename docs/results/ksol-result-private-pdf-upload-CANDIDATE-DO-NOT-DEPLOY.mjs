@@ -88,13 +88,13 @@ Deno.serve(async (req) => {
   if (Number(req.headers.get("content-length") || 0) > maxMultipartBytes) {
     return response(413, { error: "PDF too large" }, origin);
   }
-  let form: FormData;
+  let form;
   try {
     // Do not trust Content-Length: stream and cap the ACTUAL request bytes.
     // req.formData() alone can buffer an unbounded request into memory.
     const reader = req.body?.getReader();
     if (!reader) return response(400, { error: "Missing request body" }, origin);
-    const chunks: Uint8Array[] = [];
+    const chunks = [];
     let total = 0;
     while (true) {
       const { done, value } = await reader.read();
