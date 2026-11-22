@@ -16,7 +16,8 @@ function fixture(t){
  const files={};
  for(const kind of REQUIRED_FILES){
   const path=kind+'.test';
-  const data='SYNTHETIC ONLY\n'+kind+'\nNo real data\n';
+  // PGDMP is only a magic header; synthetic bytes must never count as recovery.
+  const data=(kind==='backup_archive'?'PGDMP':'SYNTHETIC ONLY\n')+kind+'\nNo real data\n';
   writeFileSync(join(dir,path),data);
   files[kind]={path,bytes:Buffer.byteLength(data),sha256:createHash('sha256').update(data).digest('hex')};
  }
@@ -24,7 +25,7 @@ function fixture(t){
   schema_version:1,
   evidence_only:true,
   source_matches_current_preview:true,
-  source:{project_id:PREVIEW_PROJECT_ID,backup_created_at:'2026-11-21T12:00:00Z',pg_dump_version:'18.7'},
+  source:{project_id:PREVIEW_PROJECT_ID,backup_created_at:'2026-11-21T12:00:00Z',pg_dump_version:'18.7',backup_format:'postgres_custom'},
   restore:{target_environment:'disposable',target_id:'disposable-test-db-unique',
    started_at:'2026-11-21T13:00:00Z',finished_at:'2026-11-21T13:15:00Z',
    exit_code:0,run_result:'completed',pg_restore_version:'18.7'},
@@ -152,4 +153,44 @@ test('restore verifier contains no database commands, network calls or mutable o
  assert.doesNotMatch(code,/child_process|execSync|spawnSync|pg_restore\s+--|\.query\(|fetch\(/);
  assert.match(code,/releaseGate:'NO_GO'/);
  assert.match(code,/STRUCTURALLY_CONSISTENT_NOT_VERIFIED/);
+});
+
+
+test('a matching SHA-256 cannot disguise a non-Postgres file as a custom archive',async t=>{
+ const x=fixture(t);
+ const forged='SYNTHETIC TEXT FILE THAT IS NOT A POSTGRES BACKUP';
+ const path=join(x.dir,x.manifest.files.backup_archive.path);
+ writeFileSync(path,forged);
+ x.manifest.files.backup_archive.sha256=createHash('sha256').update(forged).digest('hex');
+ x.manifest.files.backup_archive.bytes=Buffer.byteLength(forged);
+ x.save();
+ const r=await checkRestoreEvidence(x.manifestFile);
+ assert.equal(r.structurallyComplete,false);
+ assert.ok(r.errors.some(e=>e.includes('PGDMP custom-format signature')));
+ assert.equal(r.releaseGate,'NO_GO');
+});
+
+test('invalid backup format claims cannot pass when archive header looks correct',async t=>{
+ const x=fixture(t);
+ x.manifest.source.backup_format='plain_sql';
+ x.save();
+ const r=await checkRestoreEvidence(x.manifestFile);
+ assert.equal(r.structurallyComplete,false);
+ assert.ok(r.errors.some(e=>e.includes('custom-format archive')));
+});
+
+test('UTC timestamps normalized by JavaScript are refused rather than silently changed',async t=>{
+ const x=fixture(t);
+ x.manifest.source.backup_created_at='2026-02-30T12:00:00Z';
+ x.save();
+ const r=await checkRestoreEvidence(x.manifestFile);
+ assert.equal(r.structurallyComplete,false);
+ assert.ok(r.errors.some(e=>e.includes('Backup creation time')));
+});
+
+test('PGDMP header plus all matching synthetic hashes still does not grant release',async t=>{
+ const x=fixture(t);
+ const r=await checkRestoreEvidence(x.manifestFile);
+ assert.equal(r.structurallyComplete,true);
+ assert.equal(r.releaseGate,'NO_GO');
 });
