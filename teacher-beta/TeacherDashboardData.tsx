@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {teacherCall} from '../src/services/teacherManagement';
 import {teacherDashboardSummary,type TeacherDashboardSummary} from '../src/lib/teacherDashboardModel';
+import {TeacherResumeScanSummary} from '../src/components/TeacherResumeScanSummary';
 
 /** Own-profile dashboard projection. Browser read-only: no role claims,
  * storage writes, grants, publication or implicit permissions.
@@ -62,6 +63,7 @@ export function TeacherDashboardData({userId}:{userId:string}) {
         <h4 className="text-sm font-bold text-slate-900">Resume Records</h4>
         {summary.resumeRecords.length===0?<p className="text-sm text-slate-600">No resume on record.</p>:
           <ul className="space-y-2">{summary.resumeRecords.map(r=><li key={r.id} className="rounded-xl border border-slate-200 p-3 text-sm text-slate-800"><span className="break-all">{r.filename}</span><span className="ml-2 text-xs text-slate-600">Verification: {r.status}</span></li>)}</ul>}
+        {summary.resumeRecords.length>0&&<TeacherResumeScanSummary teacherUserId={userId}/>}
         <p className="text-xs text-slate-500">Document details are read-only. Private files cannot be opened or uploaded from this dashboard.</p>
       </section>
       <div>
