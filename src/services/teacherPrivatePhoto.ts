@@ -1,5 +1,5 @@
 import {requireSupabase} from '../lib/supabase';
-import {hasWebpContainerHeader} from '../lib/teacherPhotoContentValidation';
+import {hasConsistentWebpContainer} from '../lib/teacherPhotoContentValidation';
 import {teacherCall,type TeacherSnapshot} from './teacherManagement';
 import {isTeacherSnapshot} from '../lib/teacherSnapshotValidation';
 import {TEACHER_PHOTO_BUCKET,TEACHER_PHOTO_MAX_BYTES,TEACHER_PHOTO_MIME,privateTeacherPhotoPath,teacherPhotoWriteAllowed,validatePrivatePhotoInput} from '../lib/teacherPhotoStoragePolicy';
@@ -59,9 +59,9 @@ export async function readOwnTeacherPhoto():Promise<Blob|null>{
   if(code==='404')return null;
   throw new Error('Private photo read was denied or unavailable.');
  }
- if(!data||!['image/webp','application/octet-stream'].includes(data.type)||data.size<12||data.size>TEACHER_PHOTO_MAX_BYTES)
+ if(!data||!['image/webp','application/octet-stream'].includes(data.type)||data.size<20||data.size>TEACHER_PHOTO_MAX_BYTES)
    throw new Error('Invalid private photo response.');
- if(!hasWebpContainerHeader(new Uint8Array(await data.slice(0,12).arrayBuffer())))
+ if(!hasConsistentWebpContainer(new Uint8Array(await data.arrayBuffer())))
    throw new Error('Private photo contents are not a valid WebP container.');
  return data;
 }
