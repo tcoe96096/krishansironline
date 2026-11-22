@@ -6,6 +6,7 @@ on:
       - 'scripts/recovery/**'
       - 'tests/ksolRecoveryInventory.test.mjs'
       - 'tests/ksolAutomaticBackup.test.mjs'
+      - 'tests/ksolRecoveryReadiness.test.mjs'
       - '.github/workflows/ksol-recovery-readiness.yml'
   workflow_dispatch:
   schedule:
@@ -24,8 +25,22 @@ jobs:
       - name: Synthetic local recovery regression checks
         run: |
           node --check scripts/recovery/create-verified-backup.mjs
+          node --check scripts/recovery/check-readiness.mjs
           node --check scripts/recovery/inspect-local-backups.mjs
-          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs
+          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs tests/ksolRecoveryReadiness.test.mjs
+      - name: Parse Windows PowerShell scripts without executing them
+        shell: pwsh
+        run: |
+          $all = Get-ChildItem 'scripts/recovery/windows' -Filter '*.ps1'
+          foreach ($file in $all) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$($file.Name): $($_.Message)" }
+              exit 1
+            }
+          }
       - name: Advisory status, never authorize a merge
         shell: bash
         run: |
