@@ -1,4 +1,5 @@
-import {teacherBetaEnabled,teacherAdvancedEnabled} from '../lib/teacherBetaFlags';
+import {teacherBetaEnabled,teacherAdvancedEnabled,teacherPhotoUiEnabled} from '../lib/teacherBetaFlags';
+import {TeacherReviewPrivatePhoto} from './TeacherReviewPrivatePhoto';
 import React,{useEffect,useRef,useState} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {teacherCall,type TeacherSnapshot} from '../services/teacherManagement';
@@ -49,7 +50,7 @@ export function AdminTeacherDirectoryV2({demoMode=false}:{demoMode?:boolean}){
    p_teacher_user_id:p.user_id,p_profile_revision:p.revision
  }).then(recorded=>{if(selectedRef.current===p.user_id&&recorded===true)setVerifiedRevision(p.revision);})
  .catch(()=>{if(selectedRef.current===p.user_id)setError('Verification status unavailable. Confirm backend activation before reviewing.');});}}>Review profile and access</button>
- {selected===p.user_id&&<div className="space-y-3"><label className="block">Decision reason (shown to teacher)<textarea maxLength={1000} className="block w-full rounded border p-2" value={reason} onChange={e=>setReason(e.target.value)}/></label>
+ {selected===p.user_id&&<div className="space-y-3">{teacherPhotoUiEnabled&&<TeacherReviewPrivatePhoto teacherUserId={p.user_id}/>}<label className="block">Decision reason (shown to teacher)<textarea maxLength={1000} className="block w-full rounded border p-2" value={reason} onChange={e=>setReason(e.target.value)}/></label>
  {p.status==='pending'&&p.submitted_at&&<>
  <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
   <label className="block text-sm font-medium">Opaque verification case reference (no ID numbers)
