@@ -1,127 +1,79 @@
--- KSOL Result Card atomic release/revoke SQL candidate — REVIEW ONLY
--- NOT A MIGRATION: proposed new tables and functions are intentionally
--- commented out. Do not execute without reviewed production dependencies,
--- verified backup/restore, authenticated tests and separate owner approval.
+-- KSOL Result Card — atomic release/revoke contract (REVIEW ONLY).
+-- ALL LINES ARE COMMENTS. NOT A MIGRATION. NO EXECUTABLE DDL OR DML.
+-- Names, types, keys and privileges must be reconciled against the CURRENT
+-- Production and Preview catalogs before a separate executable proposal.
 --
--- Proposed private schema objects (names must be checked for conflicts):
--- CREATE TABLE private.result_release_state (
---   attempt_id uuid PRIMARY KEY REFERENCES public.test_attempts(id),
---   current_version integer NOT NULL CHECK (current_version > 0),
---   state text NOT NULL CHECK (state IN ('approved','released','revoked')),
---   released_at timestamptz,
---   revoked_at timestamptz,
---   updated_at timestamptz NOT NULL DEFAULT now()
--- );
--- CREATE TABLE private.result_release_requests (
---   actor_id uuid NOT NULL,
---   operation text NOT NULL CHECK (operation IN ('release','revoke')),
---   request_key uuid NOT NULL,
---   attempt_id uuid NOT NULL,
---   expected_version integer NOT NULL CHECK (expected_version > 0),
---   payload_digest text NOT NULL CHECK (payload_digest ~ '^[0-9a-f]{64}
---   PRIMARY KEY (actor_id,operation,request_key)
--- );
--- CREATE TABLE private.result_release_audit (
---   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
---   actor_id uuid NOT NULL,
---   attempt_id uuid NOT NULL,
---   result_version integer NOT NULL,
---   operation text NOT NULL,
---   old_state text NOT NULL,
---   new_state text NOT NULL,
---   request_key uuid NOT NULL,
---   created_at timestamptz NOT NULL DEFAULT now()
--- );
+-- Proposed logical state (NOT confirmed to exist):
+-- private.result_release_state:
+--   attempt_id UUID PK, referencing verified public.test_attempts(id)
+--   current_version positive INTEGER
+--   state ENUM-like CHECK in ('approved','released','revoked')
+--   released_at, revoked_at, updated_at TIMESTAMPTZ
+--   immutable recipient identity and private PDF object version/digest binding
 --
--- Proposed transactional RPC pseudocode (must be implemented with qualified
--- names, fixed search_path and verified publisher authorization):
--- BEGIN;
---   v_actor := auth.uid();
---   IF v_actor IS NULL OR NOT public.is_super_admin() THEN
---     RAISE EXCEPTION 'Not authorized' USING ERRCODE='42501';
---   END IF;
---   SELECT ... FROM private.result_release_state
---     WHERE attempt_id=p_attempt_id FOR UPDATE;
---   -- Deny missing row; deny version mismatch; deny illegal state change.
---   -- Verify attempt is submitted and recipient is eligible.
---   -- Require canonical actor UUID, operation, request UUID and SHA-256 digest.
---   -- Enforce UNIQUE(actor,operation,key) under concurrent requests;
---   -- compare canonical payload_digest, attempt_id and expected_version.
---   -- Identical replay returns stored outcome without another audit event;
---   -- same key with changed payload/target/version must be rejected.
---   -- A unique violation is not permission to return an unverified outcome.
---   -- Change approved->released or released->revoked only.
---   -- Insert immutable audit + idempotency row in same transaction.
--- COMMIT;
+-- Proposed idempotency ledger (NOT confirmed to exist):
+-- private.result_release_requests:
+--   actor_id UUID NOT NULL (from auth.uid(), never request body)
+--   operation TEXT CHECK in ('release','revoke')
+--   request_key UUID NOT NULL
+--   attempt_id UUID NOT NULL
+--   expected_version INTEGER CHECK > 0
+--   payload_digest CHAR(64) NOT NULL with exact lowercase hex validation
+--   outcome JSONB NOT NULL (canonical persisted response; redact secrets)
+--   UNIQUE (actor_id, operation, request_key)
+--   For same actor/action/key: identical canonical payload, attempt, version
+--   and digest -> return stored outcome; any mismatch -> conflict, no mutation.
+--   Digest must bind operation, target, version and all meaningful payload fields.
 --
--- Suggested grants:
--- REVOKE ALL ON private.result_release_state FROM PUBLIC, anon, authenticated;
--- REVOKE ALL ON private.result_release_requests FROM PUBLIC, anon, authenticated;
--- REVOKE ALL ON private.result_release_audit FROM PUBLIC, anon, authenticated;
--- -- No client direct mutations; exposed RPC must check actor and state.
+-- Proposed append-only private audit (NOT confirmed to exist):
+-- private.result_release_audit:
+--   event_id immutable unique key
+--   actor_id, attempt_id, recipient binding, result_version
+--   operation, previous_state, next_state, request_key_hash, happened_at
+--   Audit writes only inside trusted transition transaction.
+--   Deny browser INSERT/UPDATE/DELETE/TRUNCATE; protect against privileged
+--   mutation by ownership and separately audited operational procedures.
+--   No cascade deletion of immutable release/revocation history.
 --
--- Mandatory pre-deployment details:
--- * Confirm public.test_attempts(id) is UUID primary/unique key.
--- * Confirm role function public.is_super_admin() and session validity.
--- * Determine whether attempt/result versions exist and how immutable PDF
---   object version/digest is bound to the released result.
--- * Choose RLS/definer ownership carefully: private schema not automatically
---   exposed via Data API, but defense-in-depth RLS may still be appropriate.
--- * Ensure revoke immediately denies new view/download/print, and that
---   signed URLs cannot bypass this invariant.
--- * Validate concurrency and duplicate requests with distinct real JWTs.
--- * Verify private audit retention and migration rollback plan.
-),
---   outcome text NOT NULL,
---   PRIMARY KEY (actor_id,operation,request_key)
--- );
--- CREATE TABLE private.result_release_audit (
---   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
---   actor_id uuid NOT NULL,
---   attempt_id uuid NOT NULL,
---   result_version integer NOT NULL,
---   operation text NOT NULL,
---   old_state text NOT NULL,
---   new_state text NOT NULL,
---   request_key uuid NOT NULL,
---   created_at timestamptz NOT NULL DEFAULT now()
--- );
+-- Transaction contract (PSEUDOCODE ONLY, no SQL to execute):
+--  1. Bind actor from authenticated server session; reject NULL/expired.
+--  2. Resolve separately delegated server-owned publisher permission and
+--     permitted result scope. Super-admin status alone must not imply
+--     unrestricted private document access or delivery.
+--  3. Reject malformed request UUID, target, expected version, action,
+--     canonical digest and recipient mismatch BEFORE mutation.
+--  4. BEGIN transaction and lock the canonical target result FOR UPDATE.
+--  5. Read the idempotency ledger under UNIQUE(actor,operation,key), with
+--     conflict serialization and rechecking the existing committed row.
+--     Never interpret unique violation as successful replay by itself.
+--  6. For existing key: compare ALL canonical fields and return stored
+--     outcome only on exact match; otherwise fail with conflict.
+--  7. For new key: reject missing target, stale version, inactive recipient,
+--     invalid assignment or state transition. Allowed: approved -> released;
+--     released -> revoked. No automatic resend or rollback of audit.
+--  8. Update state/version binding; insert immutable audit event and
+--     idempotency outcome in SAME database transaction; COMMIT atomically.
+--  9. If any step fails, ROLLBACK; do not dispatch notification or PDF.
+-- 10. Storage object bytes are outside the PostgreSQL transaction. Confirm
+--     immutable private PDF object exists, content SHA-256 matches manifest,
+--     and release cannot reference a missing/modified object.
 --
--- Proposed transactional RPC pseudocode (must be implemented with qualified
--- names, fixed search_path and verified publisher authorization):
--- BEGIN;
---   v_actor := auth.uid();
---   IF v_actor IS NULL OR NOT public.is_super_admin() THEN
---     RAISE EXCEPTION 'Not authorized' USING ERRCODE='42501';
---   END IF;
---   SELECT ... FROM private.result_release_state
---     WHERE attempt_id=p_attempt_id FOR UPDATE;
---   -- Deny missing row; deny version mismatch; deny illegal state change.
---   -- Verify attempt is submitted and recipient is eligible.
---   -- Read request key under unique(actor,operation,key) constraint;
---   -- if identical payload replay, return original outcome; else reject.
---   -- Change approved->released or released->revoked only.
---   -- Insert immutable audit + idempotency row in same transaction.
--- COMMIT;
+-- Proposed grants/RLS (NOT executable):
+--   Private state, idempotency and audit: no PUBLIC/anon/authenticated
+--   direct SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER.
+--   Apply RLS and FORCE RLS only after verified owner/definer compatibility.
+--   SECURITY DEFINER, if required: restricted non-login owner, fixed
+--   search_path, schema-qualified objects, explicit EXECUTE grants, internal
+--   auth.uid()/role/scope checks; verify inherited grants and role memberships.
+--   Student read: authenticated exact active recipient, released, current
+--   version, not revoked/withdrawn, private object only; recheck per request.
+--   Revoke must block new view/print/download; no public or long-lived signed
+--   URLs. Reauthorize after fetching bytes and before response; note the
+--   residual time-of-check/time-of-use race requires architectural review.
 --
--- Suggested grants:
--- REVOKE ALL ON private.result_release_state FROM PUBLIC, anon, authenticated;
--- REVOKE ALL ON private.result_release_requests FROM PUBLIC, anon, authenticated;
--- REVOKE ALL ON private.result_release_audit FROM PUBLIC, anon, authenticated;
--- -- No client direct mutations; exposed RPC must check actor and state.
---
--- Mandatory pre-deployment details:
--- * Confirm public.test_attempts(id) is UUID primary/unique key.
--- * Confirm role function public.is_super_admin() and session validity.
--- * Determine whether attempt/result versions exist and how immutable PDF
---   object version/digest is bound to the released result.
--- * Choose RLS/definer ownership carefully: private schema not automatically
---   exposed via Data API, but defense-in-depth RLS may still be appropriate.
--- * Ensure revoke immediately denies new view/download/print, and that
---   signed URLs cannot bypass this invariant.
--- * Validate concurrency and duplicate requests with distinct real JWTs.
--- * Verify private audit retention and migration rollback plan.
-
--- NOTE: review-only comments cannot enforce transactional uniqueness, actual
--- role delegation, Storage byte-integrity or real JWT isolation. Require
--- a separately reviewed executable candidate after verified catalog/recovery.
+-- MANDATORY PRECONDITIONS: verify live catalog, backup provenance, successful
+-- Supabase-compatible isolated restore (auth, RLS, grants, FKs, storage bytes),
+-- real distinct-JWT negative/concurrent tests, source-specific rollback plan,
+-- approved migration ordering, reviewed CI at exact SHA, explicit owner signoff.
+-- Additional spend strictly INR 0; never activate unverified billable quota.
+-- No SQL execution, DB writes, merge, deployment, publish, or delivery.
