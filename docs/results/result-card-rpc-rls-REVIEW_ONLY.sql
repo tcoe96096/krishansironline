@@ -1,0 +1,67 @@
+-- KSOL Result Card Backend RPC/RLS REVIEW-ONLY candidate
+-- NOT AN EXECUTABLE MIGRATION. Never run this file in Preview or Production.
+-- All identifiers below are placeholders and must be mapped to verified catalogs.
+-- Deliberately uses SQL comments only to prevent accidental application.
+--
+-- Dependency inventory (read-only): exact schema/table/column/enum types;
+-- auth.uid() -> canonical active student ID mapping; teacher assignments;
+-- role permissions; storage buckets; current version/release/audit schema;
+-- existing triggers, functions, SECURITY DEFINER owners, grants, policies.
+--
+-- Proposed tables (logical, NOT DDL):
+-- result_record(id PK, recipient_student_id FK, current_version, state,
+--               revoked_at, updated_at, created_by)
+-- result_version(result_id FK, version, private_object_key, digest,
+--                PRIMARY KEY(result_id,version))
+-- result_transition_audit(event_id PK, result_id, version, actor_user_id,
+--                         action, decision, happened_at, request_key_hash)
+-- result_request_idempotency(actor_user_id, action, request_key_hash,
+--                            payload_digest, result_id, outcome,
+--                            UNIQUE(actor_user_id,action,request_key_hash))
+--
+-- Proposed access invariant:
+-- authenticated user maps to exactly one active canonical recipient;
+-- result.recipient_student_id equals that recipient; state='released';
+-- revoked_at IS NULL; requested version = current_version;
+-- version row exists; storage object is private.
+--
+-- RLS contract: ENABLE + FORCE where compatible with verified owners;
+-- DENY anon; SELECT limited to own released/current result metadata;
+-- no client INSERT/UPDATE/DELETE on transitions, versions or audit;
+-- admin/teacher editorial access uses separate verified assignment scopes;
+-- audit reads independently authorized. No blanket authenticated access.
+--
+-- RPC release/revoke algorithm:
+-- 1. Require verified auth context and independently checked publisher grant.
+-- 2. Reject invalid input; bind actor to auth context (never client actor ID).
+-- 3. Begin transaction; lock target result FOR UPDATE.
+-- 4. Check assignment, expected version, legal state transition, recipient.
+-- 5. Check (actor, action, idempotency-key-hash) uniqueness. Identical
+--    payload replay returns same outcome; conflicting digest denies.
+-- 6. Update state/revocation and insert private audit atomically.
+-- 7. Commit; never dispatch result delivery as part of this candidate.
+--
+-- RPC recipient read algorithm:
+-- 1. Validate auth.uid() and active unique student-account mapping.
+-- 2. Check result ownership + released/current/non-revoked on EVERY read.
+-- 3. Check object key belongs to current result version; stream via
+--    revocation-aware authenticated server proxy, not public URL.
+-- 4. Cache-Control: private, no-store; no browser persistence of tokens.
+--
+-- SECURITY DEFINER: avoid unless necessary; if needed, fixed search_path,
+-- qualified object names, non-login restricted owner, explicit EXECUTE
+-- grants only, internal caller/role checks and privilege escalation review.
+--
+-- Required tests (separate authenticated JWTs):
+-- owner vs other student; inactive/unmapped/ambiguous account; teacher
+-- assigned/unassigned; admin with/without publisher grant; anon; draft,
+-- approved, withdrawn, revoked, stale versions; concurrent release/revoke;
+-- replay same/different payload; expired session; logout/cache; private
+-- audit denial; storage cross-object access; immediate revocation.
+--
+-- ROLLBACK RULE: restoration/roll-forward must be designed against the
+-- verified schema and tested disposable backup. Do not delete audit history
+-- or silently roll back a published release; use compensating transitions.
+--
+-- BLOCKERS: exact production catalog diff, independent backup+restore,
+-- reviewer-approved SQL, real authenticated tests, CI and owner approval.
