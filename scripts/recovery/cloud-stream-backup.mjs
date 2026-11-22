@@ -27,7 +27,7 @@ export function validateCloudSettings(source,env,remote='ksolcrypt'){
  // Supabase shared Session Pooler is *.pooler.supabase.com:5432 (NOT *.supabase.co).
  // The pooler host is regional: the project reference is encoded in the USERNAME.
  const direct=Boolean(ref)&&host==='db.'+ref+'.supabase.co'&&user==='postgres'&&port===5432;
- const sessionPooler=Boolean(ref)&&/^[a-z0-9-]+\\.pooler\\.supabase\\.com$/.test(host)&&user==='postgres.'+ref&&port===5432;
+ const sessionPooler=Boolean(ref)&&/^[a-z0-9-]+[.]pooler[.]supabase[.]com$/.test(host)&&user==='postgres.'+ref&&port===5432;
  if(!direct&&!sessionPooler)errors.push('Source project identity, port or connection mode mismatch');
  if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(String(env.KSOL_DB_NAME||'')))errors.push('Invalid database name');
  if(!Number.isInteger(port)||port<1||port>65535)errors.push('Invalid database port');
