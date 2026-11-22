@@ -8,6 +8,9 @@ on:
       - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
       - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
       - 'tests/resultCardPdfStorageSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfDownloadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
@@ -18,6 +21,9 @@ on:
       - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
       - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
       - 'tests/resultCardPdfStorageSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfDownloadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
@@ -33,4 +39,6 @@ jobs:
         with:
           node-version: '22'
       - name: Run synthetic fail-closed contract checks
-        run: node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs
+        run: |
+          node --check docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs
+          node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs tests/resultCardPdfDownloadCandidateStaticReview.test.mjs
