@@ -2,7 +2,7 @@
 /** KSOL local recovery inventory: offline, read-only to backup bytes and NEVER a restore. */
 import { createHash } from 'node:crypto';
 import { createReadStream, mkdirSync, openSync, readSync, closeSync, readdirSync, lstatSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -27,12 +27,19 @@ function parseArgs(argv){
 function readHeader(path){let fd;try{fd=openSync(path,'r');const b=Buffer.alloc(5);return readSync(fd,b,0,5,0)===5 && b.toString('ascii')==='PGDMP';}finally{if(fd!==undefined)closeSync(fd)}}
 async function digest(path){const hash=createHash('sha256');for await(const chunk of createReadStream(path))hash.update(chunk);return hash.digest('hex')}
 export async function inspectLocalBackup(root, now=Date.now()) {
- const folder=join(resolve(root),'01-Database-Backup');
+ const folders=[join(resolve(root),'09-Automated-Backups'),join(resolve(root),'01-Database-Backup')];
  let entries=[];
- try{entries=readdirSync(folder,{withFileTypes:true}).filter(x=>x.isFile()&&SUPPORTED.test(x.name)).map(x=>{
-   const full=join(folder,x.name); const l=lstatSync(full);return {full,name:x.name,mtime:l.mtimeMs,bytes:l.size,isLink:l.isSymbolicLink()};
- }).filter(x=>!x.isLink).sort((a,b)=>b.mtime-a.mtime);}catch(error){if(error.code!=='ENOENT')throw error}
+ for(const folder of folders){
+   try{
+     entries.push(...readdirSync(folder,{withFileTypes:true}).filter(x=>x.isFile()&&SUPPORTED.test(x.name)).map(x=>{
+       const full=join(folder,x.name); const l=lstatSync(full);
+       return {full,name:x.name,mtime:l.mtimeMs,bytes:l.size,isLink:l.isSymbolicLink()};
+     }).filter(x=>!x.isLink));
+   }catch(error){if(error.code!=='ENOENT')throw error}
+ }
+ entries.sort((a,b)=>b.mtime-a.mtime);
  const latest=entries[0];
+ const folder=latest?dirname(latest.full):folders[1];
  const result={timestamp:new Date(now).toISOString(),backupDirectory:folder,archiveCount:entries.length,
     archiveStatus:'MISSING_BACKUP',fresh:false,restoreStatus:'NOT_VERIFIED',releaseGate:'NO_GO',
     note:'This local inspection cannot certify Supabase auth/storage, RLS, complete restore or production release.',reasons:[]};
@@ -42,7 +49,7 @@ export async function inspectLocalBackup(root, now=Date.now()) {
  const readable=!!pg&&!pg.error&&pg.status===0;
  // Filesystem modification time is an operational freshness hint, not verified backup creation time.
  const ageHours=(now-latest.mtime)/3600000;
- Object.assign(result,{latestBackup:basename(latest.name),latestBytes:latest.bytes,ageHours:Math.round(ageHours*100)/100,
+ Object.assign(result,{latestBackup:basename(latest.name),archiveSource:/^ksol-(preview|production)-/.exec(latest.name)?.[1]||'legacy-unlabeled',latestBytes:latest.bytes,ageHours:Math.round(ageHours*100)/100,
   sha256:await digest(latest.full),pgRestoreAvailable:pg?pg.error?.code!=='ENOENT':null},
   assessBackup({exists:true,customFormat,readable,bytes:latest.bytes,ageHours}));
  return result;
