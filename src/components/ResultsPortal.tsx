@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
+import { isResultCardBackendEnabled, getMyReleasedResultCardVersion, getMyResultCardPdfDownloadUrl } from '../services/resultCardBackend';
 import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-react';
 
 /**
@@ -16,6 +17,7 @@ export const ResultsPortal: React.FC = () => {
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [downloadingAttempt, setDownloadingAttempt] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +55,26 @@ export const ResultsPortal: React.FC = () => {
   const formatDate = (value: string | null) => value
     ? new Date(value).toLocaleString(isEnglish ? 'en-IN' : 'hi-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : (isEnglish ? 'Not submitted' : 'जमा नहीं हुआ');
+
+  const downloadPublishedResultPdf = async (attemptId: string) => {
+    setDownloadingAttempt(attemptId);
+    setError('');
+    try {
+      const version = await getMyReleasedResultCardVersion(attemptId);
+      if (version === null) {
+        throw new Error(isEnglish
+          ? 'This result card has not been released yet.'
+          : 'यह रिजल्ट कार्ड अभी जारी नहीं हुआ है।');
+      }
+      const signedUrl = await getMyResultCardPdfDownloadUrl(attemptId, version);
+      // The service validates the signed URL origin and private bucket path.
+      window.location.assign(signedUrl);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Result PDF download failed.');
+    } finally {
+      setDownloadingAttempt(null);
+    }
+  };
 
   return (
     <section id="results" className="py-14 bg-white border-b border-slate-200/80">
@@ -125,11 +147,23 @@ export const ResultsPortal: React.FC = () => {
                         </span>
                       </div>
                       {submitted ? (
+                        <>
                         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
                           <div><Award className="mx-auto mb-1 h-4 w-4 text-sky-800" /><strong className="block text-lg text-slate-900">{attempt.score ?? 0}/{attempt.total_marks ?? 0}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Score' : 'अंक'}</span></div>
                           <div><strong className="block text-lg text-slate-900">{Number(attempt.percentage ?? 0).toFixed(1)}%</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Percentage' : 'प्रतिशत'}</span></div>
                           <div><strong className="block text-lg text-slate-900">{attempt.correct_count ?? 0}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Correct' : 'सही उत्तर'}</span></div>
                         </div>
+                        {isResultCardBackendEnabled() && (
+                          <button type="button"
+                            onClick={() => void downloadPublishedResultPdf(attempt.id)}
+                            disabled={downloadingAttempt !== null}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-800 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50">
+                            {downloadingAttempt === attempt.id
+                              ? (isEnglish ? 'Checking publication…' : 'प्रकाशन जाँच रहे हैं…')
+                              : (isEnglish ? 'Download official Result Card PDF' : 'आधिकारिक रिजल्ट कार्ड PDF डाउनलोड करें')}
+                          </button>
+                        )}
+                        </>
                       ) : (
                         <p className="mt-3 text-xs text-slate-600">
                           {inProgress
