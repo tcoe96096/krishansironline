@@ -62,6 +62,7 @@ export function isSafeExamAnswerDraft(
   markedForReview: unknown,
   questionIndex: unknown,
   questionCount?: number,
+  optionCounts?: readonly number[],
 ): boolean {
   const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === 'object' && !Array.isArray(value) &&
@@ -70,9 +71,12 @@ export function isSafeExamAnswerDraft(
       !Number.isSafeInteger(questionIndex) || (questionIndex as number) < 0) return false;
   if (questionCount !== undefined && (!Number.isSafeInteger(questionCount) || questionCount <= 0 ||
       (questionIndex as number) >= questionCount)) return false;
+  if (optionCounts !== undefined && (questionCount === undefined || optionCounts.length !== questionCount ||
+      !optionCounts.every((count) => Number.isSafeInteger(count) && count > 0 && count <= 21))) return false;
   const validIndex = (key: string) => /^(0|[1-9][0-9]*)$/.test(key) &&
     Number.isSafeInteger(Number(key)) && (questionCount === undefined || Number(key) < questionCount);
   return Object.entries(selectedAnswers).every(([key, answer]) =>
-    validIndex(key) && typeof answer === 'number' && Number.isSafeInteger(answer) && answer >= 0 && answer <= 20) &&
+    validIndex(key) && typeof answer === 'number' && Number.isSafeInteger(answer) && answer >= 0 && answer <= 20 &&
+    (optionCounts === undefined || answer < optionCounts[Number(key)])) &&
     Object.entries(markedForReview).every(([key, marked]) => validIndex(key) && typeof marked === 'boolean');
 }
