@@ -58,7 +58,7 @@ export async function readOwnTeacherPhoto():Promise<Blob|null>{
   if(code==='404')return null;
   throw new Error('Private photo read was denied or unavailable.');
  }
- if(!data||!['image/webp','application/octet-stream'].includes(data.type)||data.size>TEACHER_PHOTO_MAX_BYTES)
+ if(!data||!['image/webp','application/octet-stream'].includes(data.type)||data.size<1||data.size>TEACHER_PHOTO_MAX_BYTES)
    throw new Error('Invalid private photo response.');
  return data;
 }
