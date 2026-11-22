@@ -92,3 +92,40 @@ Supabase's `supabase db dump` command normally **excludes managed `auth` and `st
 - https://supabase.com/docs/guides/platform/backups
 - https://supabase.com/docs/reference/cli/introduction
 - https://supabase.com/docs/guides/local-development/restoring-downloaded-backup
+
+
+## Phase 3 — one-command owner setup, offline readiness and second encrypted copy
+
+All below is **prepared code, not activated on the owner's computer**. It cannot run from ChatGPT because the Windows drive and locally encrypted credentials are inaccessible here.
+
+For an owner who has an encrypted \`D:\` drive, Node 22+, PostgreSQL CLI and both project's database connection details, a *single entry-point* configures the read-only exports and scheduled checks:
+
+\`\`\`powershell
+& .\scripts\recovery\windows\Install-KSOL-RecoveryPipeline.ps1 -BackupRoot 'D:\KSOL-BACKEND' -EnableProduction
+\`\`\`
+
+It securely prompts for separate Preview and Production credentials, runs a **first locally verified** read-only dump, schedules Preview at 18:30 and Production at 18:45, the existing archive inspection at 19:30 and both-project offline readiness reporting at 19:45. If a prerequisite is missing, it stops rather than inventing a green status. Omit \`-EnableProduction\` to configure only Preview.
+
+The local readiness reporter can also run manually:
+
+\`\`\`powershell
+node .\scripts\recovery\check-readiness.mjs --root 'D:\KSOL-BACKEND' --source all
+\`\`\`
+
+It checks *both* latest source-specific manifests, matching archive files, SHA-256, age and a fresh \`pg_restore --list\` verification. It writes \`07-Recovery-Reports\latest-recovery-readiness.json\` with clearly separate \`backupStatus\` and \`fullSupabaseRestore: NOT_VERIFIED\`, always \`releaseGate: NO_GO\`. The Windows Task records a nonzero exit code if an archive is missing/corrupt/stale. This is a **local alert/report**; it is not an email or push notification.
+
+Optional verified **second private copy** on another BitLocker-protected drive (example \`E:\Private-Recovery\`):
+
+\`\`\`powershell
+& .\scripts\recovery\windows\Copy-KSOL-BackupToSecondDrive.ps1 -Source preview -BackupRoot 'D:\KSOL-BACKEND' -SecondaryRoot 'E:\Private-Recovery'
+& .\scripts\recovery\windows\Copy-KSOL-BackupToSecondDrive.ps1 -Source production -BackupRoot 'D:\KSOL-BACKEND' -SecondaryRoot 'E:\Private-Recovery'
+\`\`\`
+
+The destination must already exist and cannot be the same drive. The script validates both volumes' protection, verifies each source against its manifest before copying, and rechecks the copy's SHA-256. It never deletes a successful copy and does not send database data to a cloud provider. Schedule these commands on Windows only after the independent second volume is connected. This local second copy is not an independently verified **offsite/cloud** backup.
+
+### Remaining irreducible external prerequisites
+
+- **The owner must activate the scripts on their signed-in Windows PC and supply database credentials privately.** No remote assistant or GitHub Action can see the local \`D:\` drive or fetch Windows DPAPI secrets.
+- **Real full recovery is still unverified:** restore a current real backup into a *fresh Supabase-compatible disposable environment* with correct auth, storage, roles, extensions and RLS. Then reconcile source/restore records and perform authenticated Student Login → Exam → Submit → Server Grade → Result and cross-user negative tests. Do not repeat the failed standalone PostgreSQL \`public/private\`-only attempt or fabricate \`auth.users\`.
+- **Cloud-offsite copy and user-facing push notification** require an explicitly chosen, secure external destination/channel and separate connection approval; neither is silently created or granted access.
+- **No production deployment, DB migration, merge or permission change** is performed by the recovery scripts or GitHub CI.
