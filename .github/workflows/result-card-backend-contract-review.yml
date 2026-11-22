@@ -14,6 +14,12 @@ on:
       - 'src/services/resultCardBackend.ts'
       - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
       - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-fixture.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
+      - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'src/components/ResultsPortal.tsx'
+      - 'supabase/functions/ksol-result-pdf-upload/index.ts'
+      - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'tests/resultCardPdfUploadCandidateStaticReview.test.mjs'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
@@ -32,6 +38,12 @@ on:
       - 'src/services/resultCardBackend.ts'
       - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
       - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-fixture.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
+      - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'src/components/ResultsPortal.tsx'
+      - 'supabase/functions/ksol-result-pdf-upload/index.ts'
+      - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'tests/resultCardPdfUploadCandidateStaticReview.test.mjs'
       - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
@@ -53,3 +65,43 @@ jobs:
           node --check docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs
           node --check docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs
           node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs tests/resultCardPdfDownloadCandidateStaticReview.test.mjs tests/resultCardApprovePdfSqlStaticReview.test.mjs tests/resultCardPdfUploadCandidateStaticReview.test.mjs
+
+  postgres-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 8
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure disposable PostgreSQL client is available
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Compile real Result Card SQL and exercise synthetic release/revoke
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-assertions.sql
