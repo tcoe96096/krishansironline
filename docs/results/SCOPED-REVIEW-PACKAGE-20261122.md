@@ -54,3 +54,15 @@ No migrations under `supabase/migrations/`, no Edge Functions, no UI/shared conf
 - **Synthetic hardening:** added explicit fail-closed tests rejecting changed target or expected version under the same actor/action/key even when the supplied digest is identical. This supplements the older digest-only model and does not prove actual DB transaction concurrency.
 - **CI boundary:** No verified GitHub Actions workflow is attached to this scoped branch, and available free GitHub Actions quota was not independently confirmed. No paid workflow or unverified runner activation was initiated. These commits are source-level changes, **not** evidence that Node tests ran or passed.
 - **Outstanding gates:** actual Preview/Production schema/grants diff; fresh independently recoverable backup and full compatible restore with Storage object bytes; real authenticated JWT/RLS and release/revoke race tests; free-quota-confirmed exact-SHA CI; independent code/security review; separate owner approval. Production remains **NO-GO**.
+
+
+## 2026-11-23 02:26 IST — incremental scoped review
+
+- Read-only GitHub comparison: current `main=f93f34471b606a96789b633ce74f2aaccbbc9d40`; scoped branch was 12 commits ahead / 3 behind before this increment. No merge/rebase attempted. Exactly six changed paths remain inside `docs/results/` and `tests/resultCardBackendContractReview.test.mjs`.
+- Rechecked draft Results PR #129 (broad), and separate #122/#135 (CSV injection). No duplicate implementation or modifications to those PRs.
+- Fixed a **pure synthetic contract inconsistency**: the existing replay validator accepted uppercase/mixed-case SHA-256 while the SQL proposal requires exact lowercase hexadecimal. The model and negative test now reject noncanonical digest strings. This is not a live security patch.
+- Clarified the role matrix: super-admin is not implicitly Result Publisher, private PDF reader, or audit reader. Each is a separately server-owned, scope-checked permission.
+- New commits this increment: `daf4747040a72434130133e85ead8d922ac60723` (synthetic digest model/test) and `b7f761c27d344c91b0aab56f391d09383e3218c6` (role matrix).
+- GitHub commit-associated workflow query returned no runs for this scoped head. **No exact-SHA CI pass is claimed**; tests were authored, not executed by this run. Existing broad PR CI cannot substitute.
+- Unchanged NO-GO gates: source-specific current backup and independently successful compatible restore (including private PDF bytes); verified Preview-vs-Production catalog/grants/roles diff; real JWT/RLS/concurrent release/revoke and revocation tests; exact-SHA free-quota-confirmed CI; security review; explicit owner approval.
+- ₹0 incremental spend. No paid resources, SQL execution, DB writes, migrations, merge, Preview/Production deployment, publishing, delivery, DNS or other modules touched.
