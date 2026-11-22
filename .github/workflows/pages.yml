@@ -20,8 +20,15 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      # Only enable after approved, tested Result Card backend rollout.
+      # Result Card stays disabled until separate DB/Storage recovery approval.
       VITE_RESULT_CARD_BACKEND_ENABLED: ${{ vars.VITE_RESULT_CARD_BACKEND_ENABLED || 'false' }}
+      # Core registration and private teacher profile photos enabled; all advanced and resume features remain OFF.
+      # SQL feature capabilities and RBAC are independently enforced server-side.
+      VITE_TEACHER_BETA_ENABLED: 'true'
+      VITE_TEACHER_ADVANCED_ENABLED: 'false'
+      VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+      VITE_TEACHER_RESUME_ENABLED: 'false'
+      VITE_TEACHER_PHOTO_ENABLED: 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
