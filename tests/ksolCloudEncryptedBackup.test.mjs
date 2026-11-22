@@ -77,3 +77,14 @@ test('backup failure categories never log credential-bearing stderr',()=>{
  assert.match(content,/const uploadDiagnostic=collectDiagnostic/);
  assert.doesNotMatch(content,/console\.error\([^\n]*\.stderr/);
 });
+
+test('backup exports have phase markers and terminate before workflow timeout',()=>{
+ const source=readFileSync('scripts/recovery/cloud-stream-backup.mjs','utf8');
+ for(const phase of ['DATABASE_PREFLIGHT_OK','DRIVE_PREFLIGHT_OK','EXPORT_UPLOAD_START','EXPORT_UPLOAD_COMPLETE','READBACK_START','READBACK_INTEGRITY_OK'])
+  assert.ok(source.includes('KSOL_BACKUP_PHASE: '+phase),'missing safe phase '+phase);
+ assert.match(source,/timeout:18\*60\*1000/);
+ assert.match(source,/timeout:6\*60\*1000/);
+ assert.match(source,/EXPORT_UPLOAD_STOPPED/);
+ assert.match(source,/READBACK_STOPPED/);
+ assert.doesNotMatch(source,/console\.log\([^\n]*(password|token|PGPASSWORD)/i);
+});
