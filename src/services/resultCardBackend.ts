@@ -31,6 +31,34 @@ function assertVersionedAttempt(attemptId: string, expectedVersion: number) {
  * Super-admin only; authorization and idempotency are enforced by the RPC.
  * Callers must retain the SAME requestKey when retrying an uncertain response.
  */
+/**
+ * Super-admin only. A trusted server must upload the immutable PDF first and
+ * compute its SHA-256; the RPC verifies private Storage object metadata.
+ * Approval is NOT publication and cannot make a PDF visible to students.
+ */
+export async function approveResultCardPdf(
+  attemptId: string,
+  expectedVersion: number,
+  artifactSha256: string,
+  requestKey: string,
+): Promise<'approved'> {
+  requireResultFeature();
+  assertVersionedAttempt(attemptId, expectedVersion);
+  if (!/^[0-9a-f]{64}$/.test(artifactSha256) || !UUID_RE.test(requestKey)) {
+    throw new Error('Invalid result approval payload.');
+  }
+  const { data, error } = await requireSupabase().rpc('ksol_result_approve_pdf', {
+    p_attempt_id: attemptId,
+    p_expected_version: expectedVersion,
+    p_artifact_sha256: artifactSha256,
+    p_request_key: requestKey,
+  });
+  if (error || data !== 'approved') {
+    throw new Error('Result approval was not completed.');
+  }
+  return 'approved';
+}
+
 export async function transitionResultCard(
   attemptId: string,
   expectedVersion: number,
