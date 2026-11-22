@@ -21,11 +21,15 @@ export function validateCloudSettings(source,env,remote='ksolcrypt'){
  const errors=[];
  if(!Object.hasOwn(PROJECT_REFS,source))errors.push('Explicit preview or production source required');
  const ref=PROJECT_REFS[source];
- const host=String(env.KSOL_DB_HOST||'').toLowerCase();
- const user=String(env.KSOL_DB_USER||'').toLowerCase();
- if(!host.endsWith('.supabase.co')||(ref&&!host.includes(ref)&&!user.includes(ref)))errors.push('Source project identity mismatch');
- if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(String(env.KSOL_DB_NAME||'')))errors.push('Invalid database name');
+ const host=String(env.KSOL_DB_HOST||'').trim().toLowerCase();
+ const user=String(env.KSOL_DB_USER||'').trim();
  const port=Number(env.KSOL_DB_PORT);
+ // Supabase shared Session Pooler is *.pooler.supabase.com:5432 (NOT *.supabase.co).
+ // The pooler host is regional: the project reference is encoded in the USERNAME.
+ const direct=Boolean(ref)&&host==='db.'+ref+'.supabase.co'&&user==='postgres'&&port===5432;
+ const sessionPooler=Boolean(ref)&&/^[a-z0-9-]+\\.pooler\\.supabase\\.com$/.test(host)&&user==='postgres.'+ref&&port===5432;
+ if(!direct&&!sessionPooler)errors.push('Source project identity, port or connection mode mismatch');
+ if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(String(env.KSOL_DB_NAME||'')))errors.push('Invalid database name');
  if(!Number.isInteger(port)||port<1||port>65535)errors.push('Invalid database port');
  if(!user||user.length>160)errors.push('Invalid database username');
  if(!env.KSOL_DB_PASSWORD)errors.push('Missing private database password');
@@ -68,7 +72,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
    throw new Error('Private rclone remote MUST be a configured crypt overlay; upload aborted');
  const name='ksol-'+source+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+process.pid+'.dump';
  const target=remote+':'+source+'/'+name;
- const pgEnv={...env,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20'};
+ const pgEnv={...env,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20',PGSSLMODE:'require'};
  delete pgEnv.KSOL_DB_PASSWORD;
  const args=['--no-password','--format=custom',
   '--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
