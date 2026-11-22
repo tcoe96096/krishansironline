@@ -116,3 +116,45 @@ test('fail closed on missing or untrusted publisher authorization', () => {
     assert.equal(transition({actorAuthorized,expectedVersion:3,actualVersion:3,state:'approved',action:'release'}),'DENY');
   }
 });
+
+/**
+ * Canonical ledger replay must bind target and version as well as the digest.
+ * This remains a pure model; it cannot prove database locks or isolation.
+ */
+const strictReplay = (prior, request) => {
+  if (!request || !validActor(request.actor) ||
+      !['release','revoke'].includes(request.action) ||
+      !validKey(request.key) || !validKey(request.attemptId) ||
+      !Number.isSafeInteger(request.expectedVersion) ||
+      request.expectedVersion <= 0 || !validDigest(request.digest)) {
+    return 'DENY_INVALID';
+  }
+  if (!prior) return 'NEW';
+  if (!validActor(prior.actor) || !['release','revoke'].includes(prior.action) ||
+      !validKey(prior.key) || !validKey(prior.attemptId) ||
+      !Number.isSafeInteger(prior.expectedVersion) ||
+      prior.expectedVersion <= 0 || !validDigest(prior.digest)) {
+    return 'DENY_INVALID';
+  }
+  if (prior.actor !== request.actor || prior.action !== request.action ||
+      prior.key !== request.key) return 'NEW';
+  return prior.digest === request.digest &&
+    prior.attemptId === request.attemptId &&
+    prior.expectedVersion === request.expectedVersion
+    ? 'SAME_OUTCOME' : 'DENY_CONFLICT';
+};
+test('replay never accepts same digest with changed attempt or version', () => {
+  const p = {
+    actor, action:'release', key,
+    attemptId:'44444444-4444-4444-8444-444444444444',
+    expectedVersion:3, digest:digestA
+  };
+  assert.equal(strictReplay(p,{...p}), 'SAME_OUTCOME');
+  assert.equal(strictReplay(p,{...p,attemptId:'55555555-5555-4555-8555-555555555555'}), 'DENY_CONFLICT');
+  assert.equal(strictReplay(p,{...p,expectedVersion:4}), 'DENY_CONFLICT');
+  assert.equal(strictReplay(p,{...p,digest:digestB}), 'DENY_CONFLICT');
+  assert.equal(strictReplay(p,{...p,attemptId:undefined}), 'DENY_INVALID');
+  assert.equal(strictReplay(p,{...p,expectedVersion:undefined}), 'DENY_INVALID');
+  assert.equal(strictReplay(p,{...p,expectedVersion:0}), 'DENY_INVALID');
+  assert.equal(strictReplay({...p,expectedVersion:undefined},p), 'DENY_INVALID');
+});
