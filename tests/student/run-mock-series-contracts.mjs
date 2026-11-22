@@ -10,6 +10,7 @@ const cases=[
  'mock-series-navigation-contract.test.mjs',
  'mock-series-privacy-lifecycle-contract.test.mjs',
  'mock-series-a11y-boundaries-contract.test.mjs',
+ 'mock-series-bilingual-states-contract.test.mjs',
 ];
 const result=spawnSync(process.execPath,['--test',...cases.map(name=>resolve(directory,name))],{
  cwd:directory,stdio:'inherit',env:{...process.env,NODE_ENV:'test'},timeout:120000,
