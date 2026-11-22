@@ -33,3 +33,28 @@ Release/revoke requires verified actor, explicit permission, result ID, expected
 
 ## Blockers at time of writing
 No verified recovery/restore evidence, authenticated production-equivalent RLS/RPC test, or validated Production Result Card RPC is established by this document. The Result Inbox mock branch `test/results-inbox-isolation-mock-20261122` is separate; its 480-case synthetic matrix is NOT backend proof. Existing Results PR #122 is separate. Do not touch Teacher v2, PR #109, Student/Exam, ADVANCE Studio, DNS or active Studio data.
+
+
+## 2026-11-22: independently checked Recovery evidence (NO-GO)
+
+This section records **observed evidence**, not an executed backup/restore test.
+No database query, SQL, cloud database write, merge, deployment, or new backup was performed.
+
+- Live project inventory identifies separate Production (`vsqwlkqqsxcehvdsdbna`) and Preview (`zgpkmfqioqvincmgyfpi`) projects; project health alone is not a recovery point.
+- The 2026-11-17 Preview dump `ksol-preview-backup.dump` was reported locally as 690,893 bytes; its custom-format TOC was readable (860 entries). This file is historical, not a current Production/Preview backup.
+- The uploaded local restore summary reports `Restore exit code: 1` plus localhost password-authentication errors; independent full restore was **not** successful.
+- A later 2026-11-18 local `ksol_restore_clean` check showed 33 public functions and 0 RLS policies. A separate isolated schema/RLS test reported `PASS_WITH_SKIPPED` and cannot prove a complete Source → Restore preservation of auth, grants, storage or application flows.
+- Latest Result Card contract/workflow CI and website build artifacts are build/static evidence only. No successful independent fresh Result Card database restore artifact was identified in the checked GitHub workflow runs or accessible uploaded recovery records.
+- The local recovery verifier under `scripts/results/KSOL-Verify-Fresh-Restore-LOCAL.ps1` now fails closed for remote host targets, unreadable/stale backups, and parses PostgreSQL `-At` boolean values correctly. **The verifier has not been run in this audit.** Its `--no-privileges` restore cannot prove original SQL grants/ACL.
+- Supabase migrations and Edge Function inventories alone do not verify a recoverable snapshot or Storage object backup.
+
+**Gate status: RECOVERY NOT VERIFIED.** Do not run SQL, activate the backend, deploy Edge Functions, enable the frontend flag, merge, or deliver results based on this evidence.
+
+### Evidence required to unblock
+
+1. Fresh, source-specific **Production** and **Preview** backup identifiers/artifacts, creation timestamp, integrity SHA-256 and documented private retention location. Do not share secrets or full personal data in PRs.
+2. Complete successful restore (`exit code 0`) into a genuinely isolated, Supabase-compatible disposable environment. Capture clean restore logs and reconcile row counts, schemas, FK constraints, triggers, indexes, functions, RLS and effective grants.
+3. Verify that `auth` identity mapping and private Storage object inventory/retrieval survive recovery, and show an application-level read-only Result Card flow in the disposable environment. Preserve audit and revocation semantics.
+4. Confirm restore source state against the current source snapshot, record any excluded objects explicitly, and obtain a separate Production-specific recoverability/rollback sign-off before owner activation approval.
+
+A readable archive, schema-only copy, static CI success, or historical backup **must not** be recorded as `RECOVERY VERIFIED`.
