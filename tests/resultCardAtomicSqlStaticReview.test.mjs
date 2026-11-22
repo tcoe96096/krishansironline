@@ -37,3 +37,8 @@ test('no automatic result send or grant to anonymous role',()=>{
  assert.doesNotMatch(sql,/\bSELECT\s+public\.send_result_to_student\s*\(/i);
  assert.doesNotMatch(sql,/GRANT EXECUTE ON FUNCTION[^;]+TO anon/i);
 });
+
+test('rejects null operation and null eligibility explicitly',()=>{
+ assert.match(sql,/p_operation IS NULL/);
+ assert.match(sql,/student_account_is_eligible\(v_student\) IS DISTINCT FROM TRUE/);
+});
