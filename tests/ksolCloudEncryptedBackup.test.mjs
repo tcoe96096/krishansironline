@@ -13,10 +13,16 @@ test('only exact explicitly selected Supabase source is accepted',()=>{
  assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_PASSWORD:''}).ok,false);
  assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_PORT:'65536'}).ok,false);
  assert.equal(validateCloudSettings('preview',base,'../../unsafe').ok,false);
- assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.co',
+ assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.com',
     KSOL_DB_USER:'postgres.'+PROJECT_REFS.preview}).ok,true);
- assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.co',
+ assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.com',
     KSOL_DB_USER:'postgres.'+PROJECT_REFS.production}).ok,false);
+ assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.co',
+    KSOL_DB_USER:'postgres.'+PROJECT_REFS.preview}).ok,false);
+ assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.com.evil.invalid',
+    KSOL_DB_USER:'postgres.'+PROJECT_REFS.preview}).ok,false);
+ assert.equal(validateCloudSettings('preview',{...base,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.com',
+    KSOL_DB_USER:'postgres.'+PROJECT_REFS.preview,KSOL_DB_PORT:'6543'}).ok,false);
 });
 test('cloud storage MUST have a crypt overlay, not raw Google Drive remote',()=>{
  const config=String.raw`[gdrive]
