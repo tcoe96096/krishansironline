@@ -44,3 +44,13 @@ No migrations under `supabase/migrations/`, no Edge Functions, no UI/shared conf
 - **Recovery gap:** local `--no-privileges` restores do not prove SQL grants; Supabase Free tier must not be treated as providing managed/PITR backups. PDF object bytes require separate private Storage recovery proof.
 - CI evidence: GitHub's commit-associated workflow query for the prior scoped branch head returned **no runs**; no green CI can be claimed for this scoped branch. A code-only commit also does not imply a test has executed. Validate with verified free quota and attach exact commit SHA/run IDs.
 - Release remains **NO-GO** until fresh Preview/Production source-specific backup, successful isolated compatible restore, real JWT/RLS/concurrency tests, scoped green CI, security review and separate explicit owner authorization. Incremental spending remains **₹0**.
+
+
+## 2026-11-23 scoped review correction and evidence
+
+- Rechecked current main at `f93f34471b606a96789b633ce74f2aaccbbc9d40`. Before this run's changes, the scoped branch was **9 commits ahead / 3 behind** main and the diff remained exactly six files: five `docs/results/` files and one synthetic Node test. No rebase or merge performed.
+- Confirmed existing Results PR #129 is draft/unmerged and includes broader work. PRs #122/#135 remain draft/unmerged CSV-injection work; none were edited.
+- **Defect fixed in this scoped package:** `result-card-release-revoke-atomic-SQL-CANDIDATE-REVIEW_ONLY.sql` had a truncated `payload_digest` CHECK fragment and a duplicated partial table/audit/pseudocode block. Replaced it with one coherent **comment-only** logical contract, including canonical payload, attempt/version conflict detection, ledger outcome and audit atomicity. This does **not** create a runnable migration.
+- **Synthetic hardening:** added explicit fail-closed tests rejecting changed target or expected version under the same actor/action/key even when the supplied digest is identical. This supplements the older digest-only model and does not prove actual DB transaction concurrency.
+- **CI boundary:** No verified GitHub Actions workflow is attached to this scoped branch, and available free GitHub Actions quota was not independently confirmed. No paid workflow or unverified runner activation was initiated. These commits are source-level changes, **not** evidence that Node tests ran or passed.
+- **Outstanding gates:** actual Preview/Production schema/grants diff; fresh independently recoverable backup and full compatible restore with Storage object bytes; real authenticated JWT/RLS and release/revoke race tests; free-quota-confirmed exact-SHA CI; independent code/security review; separate owner approval. Production remains **NO-GO**.
