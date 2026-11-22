@@ -30,3 +30,12 @@ Inspected `docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY
 **Scope isolation:** The current PR #129 diff includes existing shared UI/config paths as well as Result Card files. Before merge, review each non-`docs/results/`, `scripts/results/`, `tests/resultCard*` and dedicated Result Card workflow path for ownership; do not accidentally overwrite Student/Exam, Teacher v2, PR #109 or Studio changes. No unrelated path was changed by this follow-up.
 
 **Decision:** Continue review-only. Require source-specific fresh backup, Supabase-compatible disposable restore, byte-level private object verification, real-role RLS/RPC tests and owner approval. Static CI cannot satisfy these gates.
+
+
+## Follow-up: private PDF revoke-during-fetch race — 2026-11-22 (review only)
+
+The private PDF proxy previously checked the caller-JWT release manifest **before** a service-role Storage fetch, then verified bytes and returned the PDF without checking whether an admin had revoked the release during that fetch. This was a concrete authorization time-of-check/time-of-use (TOCTOU) window.
+
+Both the review-only example and the undeployed Edge Function source now re-fetch the **same** manifest with the caller JWT **after** Storage retrieval and SHA-256 verification and immediately before constructing the PDF response. If that check fails or returns a different object key, the endpoint denies the response. A new static regression test checks both sources and ordering. No server deployment, database call or SQL execution was performed.
+
+**Remaining risk:** This is not a mathematically atomic revoke-versus-HTTP-response guarantee; a revoke can commit between the final manifest check and network response. Stronger linearization needs a reviewed coordinated read/stream authorization design and real concurrent JWT testing. Never claim instant recall of already-downloaded bytes. Keep release NO-GO until the owner accepts the exact semantics and isolated integration tests pass.
