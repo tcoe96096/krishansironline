@@ -100,3 +100,14 @@ test('browser recovery rejects poisoned answer maps without reading student PII'
   const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
   assert.match(engine, /isSafeExamAnswerDraft\(value\.selectedAnswers, value\.markedForReview, value\.currentQuestionIndex\)/);
 });
+
+test('offline recovery rejects answers and cursor outside the current published question count', () => {
+  assert.equal(isSafeExamAnswerDraft({ 0: 2, 2: 1 }, { 1: true }, 2, 3), true);
+  assert.equal(isSafeExamAnswerDraft({ 3: 1 }, {}, 0, 3), false);
+  assert.equal(isSafeExamAnswerDraft({}, { 3: true }, 0, 3), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 3, 3), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 0), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, Number.NaN), false);
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  assert.match(engine, /isSafeExamAnswerDraft\(saved\.selectedAnswers, saved\.markedForReview, saved\.currentQuestionIndex, selectedTest\.questions\.length\)/);
+});
