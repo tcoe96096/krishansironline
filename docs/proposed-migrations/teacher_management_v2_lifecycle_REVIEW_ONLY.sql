@@ -20,7 +20,7 @@ DO $guard$ BEGIN
  IF to_regclass('public.result_staff_grants') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM pg_catalog.pg_trigger t
-      WHERE t.tgrelid = 'public.result_staff_grants'::pg_catalog.regclass
+      WHERE t.tgrelid = to_regclass('public.result_staff_grants')
         AND t.tgname = 'teacher_v2_no_legacy_grant'
         AND NOT t.tgisinternal
     ) THEN
@@ -67,7 +67,7 @@ BEGIN
  END LOOP;
  FOR s IN SELECT value FROM jsonb_array_elements(p_scopes) LOOP
   IF (s->>'classLevel') IS NULL OR (s->>'classLevel') NOT IN ('6','7','8','9','10','11','12')
-   OR (s->>'subject') IS NULL OR (s->>'subject') NOT IN ('Political Science','History','Geography','Economics','Other')
+   OR (s->>'subject') IS NULL OR (s->>'subject') NOT IN ('Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other')
    OR (s->>'workType') IS NULL OR (s->>'workType') NOT IN ('materials.draft','materials.review','assessment.draft','result.review') THEN
    RAISE EXCEPTION 'Invalid scope' USING ERRCODE='22023'; END IF;
  END LOOP;
@@ -102,7 +102,14 @@ BEGIN
  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user_id::text,0));
  SELECT * INTO p FROM public.teacher_profiles WHERE user_id=p_user_id FOR UPDATE;
  IF NOT FOUND OR p.status<>'pending' OR p.submitted_at IS NULL OR p_revision IS DISTINCT FROM p.revision THEN RAISE EXCEPTION 'Application changed; reload before review'; END IF;
- IF p_decision='approve' AND p_verified IS DISTINCT FROM true THEN RAISE EXCEPTION 'Identity verification required'; END IF;
+ -- Fail-closed staging review: the caller-owned p_verified boolean is NOT
+ -- identity evidence. This initial lifecycle function may be installed before
+ -- the independent-evidence override, so it must NEVER approve a teacher.
+ -- The separately reviewed override is the only approval implementation.
+ IF p_decision='approve' THEN
+   RAISE EXCEPTION 'Independent verification review override required before teacher approval'
+     USING ERRCODE='42501';
+ END IF;
  IF p_decision='approve' AND NOT private.teacher_v2_feature_enabled('registration') THEN RAISE EXCEPTION 'Teacher approval disabled' USING ERRCODE='42501'; END IF;
  -- Never issue an approved employee identity with zero authorized work scopes.
  -- Legacy class-10 teachers require explicit verified subject mapping before approval.
@@ -166,7 +173,7 @@ BEGIN
  IF auth.uid() IS NULL OR (auth.uid()<>p_user_id AND NOT coalesce(public.is_super_admin(),false)) THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  SELECT jsonb_build_object('user_id',p.user_id,'employee_id',p.employee_id,'revision',p.revision,'submitted_at',p.submitted_at,'application_reason',p.application_reason,'decision_reason',p.decision_reason,'reviewed_at',p.reviewed_at,'requested_scopes',p.requested_scopes,'display_name',p.display_name,'contact_email',p.contact_email,'phone',p.phone,'experience_years',p.experience_years,'status',p.status,'approved_by',p.approved_by,'approved_at',p.approved_at,'created_at',p.created_at,'updated_at',p.updated_at)||jsonb_build_object('qualifications',coalesce((SELECT jsonb_agg(jsonb_build_object('title',q.title,'institution',q.institution,'year',q.passing_year)) FROM public.teacher_qualifications q WHERE q.teacher_user_id=p.user_id),'[]'::jsonb),
  'assignments',coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'teacher_user_id',a.teacher_user_id,'class_level',a.class_level,'subject',a.subject,'work_type',a.work_type,'status',a.status,'assigned_by',a.assigned_by,'assigned_at',a.assigned_at,'revoked_by',a.revoked_by,'revoked_at',a.revoked_at)) FROM public.teacher_assignments a WHERE a.teacher_user_id=p.user_id),'[]'::jsonb),
- 'resumes',coalesce((SELECT jsonb_agg(jsonb_build_object('id',d.id,'original_filename',d.original_filename,'verification_status',d.verification_status)) FROM public.teacher_resume_documents d WHERE d.teacher_user_id=p.user_id),'[]'::jsonb)) INTO v FROM public.teacher_profiles p WHERE p.user_id=p_user_id;
+ 'resumes',coalesce((SELECT jsonb_agg(jsonb_build_object('id',d.id,'original_filename',d.original_filename,'verification_status',d.verification_status)) FROM public.teacher_resume_documents d WHERE d.teacher_user_id=p.user_id AND d.upload_state='uploaded'),'[]'::jsonb)) INTO v FROM public.teacher_profiles p WHERE p.user_id=p_user_id;
  RETURN v;
 END $$;
 CREATE OR REPLACE FUNCTION public.teacher_v2_directory(p_offset integer DEFAULT 0,p_search text DEFAULT '')

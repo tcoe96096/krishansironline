@@ -27,8 +27,10 @@ test('teacher snapshot validates nested server response shapes',()=>{
 test('empty nested collections are accepted, sparse arrays and incorrect revisions are rejected',()=>{
   const empty={...valid,requested_scopes:[],qualifications:[],assignments:[],resumes:[]};
   assert.equal(isTeacherSnapshot(empty),true);
+  assert.equal(isTeacherSnapshot({...empty,requested_scopes:new Array(1)}),false);
   assert.equal(isTeacherSnapshot({...empty,qualifications:new Array(1)}),false);
   assert.equal(isTeacherSnapshot({...empty,assignments:new Array(1)}),false);
+  assert.equal(isTeacherSnapshot({...empty,resumes:new Array(1)}),false);
   assert.equal(isTeacherSnapshot({...empty,revision:0}),false);
   assert.equal(isTeacherSnapshot({...empty,experience_years:'5'}),false);
 });

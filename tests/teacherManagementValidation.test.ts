@@ -1,4 +1,6 @@
 import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';
+import {TEACHER_SUBJECTS} from '../src/lib/teacherManagementValidation';
 import {normalizeTeacherAssignments,validateTeacherQualifications,validateTeacherResume,isValidTeacherEmployeeId,validateTeacherProfile,validateTeacherRequestedScopes,validateTeacherRequestedWorkTypes} from '../src/lib/teacherManagementValidation';
 
 const a=normalizeTeacherAssignments([
@@ -150,3 +152,33 @@ assert.throws(()=>normalizeTeacherAssignments([,] as any),
 assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','assessment.draft','materials.review','result.review']),true);
 assert.equal(validateTeacherRequestedWorkTypes(['materials.draft','assessment.draft','materials.review','result.review','materials.draft']),false);
 assert.equal(validateTeacherRequestedScopes('6','Other',['6','7','8','9','10','11','12'],['Political Science','History','Geography','Economics','Other']),true);
+
+
+// Teacher subject choices must match the REVIEW_ONLY SQL constraints at every
+// server boundary; client-only options would otherwise be rejected after activation.
+const expectedTeacherSubjects = ["Hindi","English","Sanskrit","Mathematics","Science","Social Science","Physics","Chemistry","Biology","Computer Science","Political Science","History","Geography","Economics","Accountancy","Business Studies","Psychology","Physical Education","Fine Arts","Other"];
+
+assert.deepEqual([...TEACHER_SUBJECTS],expectedTeacherSubjects);
+for(const subject of ['Hindi','English','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Accountancy','Business Studies','Physical Education']){
+ assert.equal(normalizeTeacherAssignments([{classLevel:'8',subject,workType:'materials.draft'}]).length,1);
+}
+assert.deepEqual(normalizeTeacherAssignments([
+ {classLevel:'6',subject:'Hindi',workType:'materials.draft'},
+ {classLevel:'7',subject:'English',workType:'materials.draft'},
+ {classLevel:'8',subject:'Science',workType:'materials.draft'},
+ {classLevel:'8',subject:'Science',workType:'materials.draft'},
+]),[
+ {classLevel:'6',subject:'Hindi',workType:'materials.draft'},
+ {classLevel:'7',subject:'English',workType:'materials.draft'},
+ {classLevel:'8',subject:'Science',workType:'materials.draft'}
+]);
+for(const sqlFile of [
+ 'docs/proposed-migrations/teacher_management_v2_functions_REVIEW_ONLY.sql',
+ 'docs/proposed-migrations/teacher_management_v2_schema_REVIEW_ONLY.sql',
+ 'docs/proposed-migrations/teacher_management_v2_lifecycle_REVIEW_ONLY.sql'
+]){
+ const sql=readFileSync(sqlFile,'utf8');
+ const sqlCatalog=expectedTeacherSubjects.map(s=>"'"+s+"'").join(',');
+ assert.ok(sql.includes(sqlCatalog),sqlFile+' has an outdated subject catalog');
+ assert.ok(!sql.includes("'Political Science','History','Geography','Economics','Other'"),sqlFile+' still includes the obsolete catalog');
+}

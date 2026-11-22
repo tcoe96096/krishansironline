@@ -25,7 +25,10 @@ test('Independent Super Admin review controls IDs and assignments',()=>{
   const funcs=read('functions'),lifecycle=read('lifecycle');
   assert.match(funcs,/CREATE OR REPLACE FUNCTION public\.teacher_v2_issue_employee_id/);
   assert.match(funcs,/REVOKE ALL ON FUNCTION public\.teacher_v2_issue_employee_id\(uuid\) FROM PUBLIC, anon, authenticated/);
-  assert.ok(lifecycle.includes('p_verified IS DISTINCT FROM true'));
+  assert.ok(lifecycle.includes("IF p_decision='approve' THEN"));
+  assert.ok(lifecycle.includes('Independent verification review override required before teacher approval'));
+  assert.ok(!lifecycle.includes('p_verified IS DISTINCT FROM true'));
+  assert.ok(!lifecycle.includes("AND p_verified IS DISTINCT FROM true"));
   assert.ok(lifecycle.includes('auth.uid()=p_user_id'));
   assert.ok(lifecycle.includes("p_decision='approve' AND jsonb_array_length(p_assignments)=0"));
   assert.ok(lifecycle.includes('teacher_v2_issue_employee_id(p_user_id)'));
@@ -93,7 +96,10 @@ test('Server-side beta flags default closed and cannot be toggled by clients',()
 test('Teacher review and lifecycle enforce scope, identity and revocation boundaries',()=>{
   const lifecycle=read('lifecycle');
   const functions=read('functions');
-  assert.ok(lifecycle.includes('p_verified IS DISTINCT FROM true'));
+  assert.ok(lifecycle.includes("IF p_decision='approve' THEN"));
+  assert.ok(lifecycle.includes('Independent verification review override required before teacher approval'));
+  assert.ok(!lifecycle.includes('p_verified IS DISTINCT FROM true'));
+  assert.ok(!lifecycle.includes("AND p_verified IS DISTINCT FROM true"));
   assert.ok(lifecycle.includes('p_revision IS DISTINCT FROM p.revision'));
   assert.ok(lifecycle.includes('teacher_v2_issue_employee_id(p_user_id)'));
   assert.ok(lifecycle.includes('teacher_v2_set_assignment(p_user_id'));
