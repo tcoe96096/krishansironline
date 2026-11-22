@@ -61,14 +61,17 @@ export function isSafeExamAnswerDraft(
   selectedAnswers: unknown,
   markedForReview: unknown,
   questionIndex: unknown,
+  questionCount?: number,
 ): boolean {
   const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === 'object' && !Array.isArray(value) &&
     Object.getPrototypeOf(value) === Object.prototype;
   if (!isRecord(selectedAnswers) || !isRecord(markedForReview) ||
       !Number.isSafeInteger(questionIndex) || (questionIndex as number) < 0) return false;
+  if (questionCount !== undefined && (!Number.isSafeInteger(questionCount) || questionCount <= 0 ||
+      (questionIndex as number) >= questionCount)) return false;
   const validIndex = (key: string) => /^(0|[1-9][0-9]*)$/.test(key) &&
-    Number.isSafeInteger(Number(key));
+    Number.isSafeInteger(Number(key)) && (questionCount === undefined || Number(key) < questionCount);
   return Object.entries(selectedAnswers).every(([key, answer]) =>
     validIndex(key) && typeof answer === 'number' && Number.isSafeInteger(answer) && answer >= 0 && answer <= 20) &&
     Object.entries(markedForReview).every(([key, marked]) => validIndex(key) && typeof marked === 'boolean');
