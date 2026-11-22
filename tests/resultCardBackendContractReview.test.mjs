@@ -53,16 +53,54 @@ test('release and revoke require authorized actor and matching version', () => {
   assert.equal(transition({actorAuthorized:false,expectedVersion:2,actualVersion:2,state:'approved',action:'release'}),'DENY');
   assert.equal(transition({actorAuthorized:true,expectedVersion:1,actualVersion:2,state:'approved',action:'release'}),'DENY');
 });
+// Pure model: validate replay identity and digest BEFORE any deduplication.
+// The database implementation must additionally enforce unique(actor,action,key)
+// under concurrent transactions; this function cannot prove database atomicity.
+const validActor = (x) => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
+const validDigest = (x) => typeof x === 'string' && /^[0-9a-f]{64}$/i.test(x);
+const validKey = (x) => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 const replay = (prior, actor, action, key, digest) => {
+  if (!validActor(actor) || !['release','revoke'].includes(action) ||
+      !validKey(key) || !validDigest(digest)) return 'DENY_INVALID';
   if (!prior) return 'NEW';
+  if (!validActor(prior.actor) || !['release','revoke'].includes(prior.action) ||
+      !validKey(prior.key) || !validDigest(prior.digest)) return 'DENY_INVALID';
   if (prior.actor===actor && prior.action===action && prior.key===key)
     return prior.digest===digest ? 'SAME_OUTCOME' : 'DENY_CONFLICT';
   return 'NEW';
 };
-test('same idempotency key and changed payload fail closed', () => {
-  const p={actor:'admin1',action:'release',key:'request1',digest:'abc'};
-  assert.equal(replay(p,'admin1','release','request1','abc'),'SAME_OUTCOME');
-  assert.equal(replay(p,'admin1','release','request1','def'),'DENY_CONFLICT');
+const actor='11111111-1111-4111-8111-111111111111';
+const key='22222222-2222-4222-8222-222222222222';
+const digestA='a'.repeat(64);
+const digestB='b'.repeat(64);
+test('idempotency replay is scoped to actor, action, key and digest', () => {
+  const p={actor,action:'release',key,digest:digestA};
+  assert.equal(replay(p,actor,'release',key,digestA),'SAME_OUTCOME');
+  assert.equal(replay(p,actor,'release',key,digestB),'DENY_CONFLICT');
+  assert.equal(replay(p,actor,'revoke',key,digestA),'NEW');
+  assert.equal(replay(p,'33333333-3333-4333-8333-333333333333','release',key,digestA),'NEW');
+});
+test('idempotency rejects absent or malformed identity, action, key and digest', () => {
+  assert.equal(replay(null,actor,'release',key,digestA),'NEW');
+  for (const value of [undefined,null,'',{},'not-a-uuid']) {
+    assert.equal(replay(null,value,'release',key,digestA),'DENY_INVALID');
+    assert.equal(replay(null,actor,'release',value,digestA),'DENY_INVALID');
+  }
+  for (const value of [undefined,null,'',0,'xyz','a'.repeat(63)]) {
+    assert.equal(replay(null,actor,'release',key,value),'DENY_INVALID');
+  }
+  for (const action of [undefined,null,'', 'approve', 'RELEASE']) {
+    assert.equal(replay(null,actor,action,key,digestA),'DENY_INVALID');
+  }
+  assert.equal(replay({actor,action:'release',key,digest:undefined},actor,'release',key,digestA),'DENY_INVALID');
+});
+test('reject ambiguous identity/version and stale access', () => {
+  for (const field of ['requestedVersion','currentVersion']) {
+    assert.equal(permit({...base,[field]:undefined}),false);
+    assert.equal(permit({...base,[field]:Number.MAX_SAFE_INTEGER+1}),false);
+  }
+  assert.equal(permit({...base,owns:false,clientStudentId:'victim'}),false);
+  assert.equal(permit({...base,sessionValid:false,owns:true}),false);
 });
 
 test('fail closed on absent, invalid or ambiguous version identifiers', () => {
