@@ -121,6 +121,28 @@ export async function transitionResultCard(
 }
 
 /**
+ * Returns the signed-in student's current published result version.
+ * No teacher/admin or other-student record is returned by this RPC.
+ * Null means unavailable or not yet published.
+ */
+export async function getMyReleasedResultCardVersion(
+  attemptId: string,
+): Promise<number | null> {
+  requireResultFeature();
+  if (!UUID_RE.test(attemptId)) throw new Error('Invalid result attempt.');
+  const { data, error } = await requireSupabase().rpc(
+    'ksol_my_released_result_version',
+    { p_attempt_id: attemptId },
+  );
+  if (error) throw new Error('Unable to verify result publication.');
+  if (data === null) return null;
+  if (!Number.isSafeInteger(data) || data < 1) {
+    throw new Error('Invalid released result version.');
+  }
+  return data;
+}
+
+/**
  * Student download link: the server rechecks ownership, eligibility and
  * current exact released version. No public/storage object URLs are cached.
  */
