@@ -46,7 +46,7 @@ export function canRestoreExamAnswers(
   // A later attempt must never inherit old answers.
   const started = Date.parse(attempt.started_at);
   const expires = Date.parse(attempt.expires_at);
-  if (!Number.isFinite(started) || !Number.isFinite(expires) ||
+  if (!Number.isFinite(started) || !Number.isFinite(expires) || !Number.isFinite(saved.savedAt) ||
       saved.savedAt < started || saved.savedAt > expires) return false;
 
   return saved.student.studentName === student.studentName &&
