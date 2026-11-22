@@ -8,6 +8,8 @@ $ErrorActionPreference='Stop'
 if (!(Test-Path -LiteralPath $BackupRoot -PathType Container)) { throw "Backup root not found: $BackupRoot" }
 $root=[System.IO.Path]::GetFullPath($BackupRoot)
 $volumeRoot=[System.IO.Path]::GetPathRoot($root).TrimEnd('\')
+$isAdmin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (!$isAdmin) { throw 'Open PowerShell as Administrator (same Windows account). BitLocker status requires elevated permissions.' }
 if (!(Get-Command Get-BitLockerVolume -ErrorAction SilentlyContinue)) { throw 'Cannot verify disk encryption; cannot store personal database backup here' }
 $volume=Get-BitLockerVolume -MountPoint $volumeRoot -ErrorAction Stop
 if (!$volume -or $volume.ProtectionStatus -ne 'On') { throw "Disk encryption is not verified on $volumeRoot. Enable BitLocker or choose another encrypted drive." }
