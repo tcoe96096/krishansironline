@@ -50,3 +50,16 @@ test('release row binds private PDF to version and 64-character SHA-256',()=>{
  assert.match(sql,/pdf_object_key = attempt_id::text \|\| '\/v' \|\| result_version::text/);
  assert.match(sql,/artifact_sha256 \|\| '\.pdf'/);
 });
+
+test('candidate has exactly one transaction and no SQL after COMMIT',()=>{
+ assert.equal((sql.match(/^BEGIN;$/gm)||[]).length,1);
+ assert.equal((sql.match(/^COMMIT;$/gm)||[]).length,1);
+ const after=sql.split(/^COMMIT;$/m)[1]??'';
+ assert.ok(after.split(/\r?\n/).every(line=>line.trim()===''||line.trim().startsWith('--')),
+   'Only comments may follow COMMIT;');
+});
+test('admin can revoke released result even after student becomes ineligible',()=>{
+ assert.match(sql,/IF p_operation='release' AND \(/);
+ assert.doesNotMatch(sql,/^\s*IF v_status IS DISTINCT FROM 'submitted'/m);
+ assert.match(sql,/ELSIF p_operation='revoke' AND v_row.state='released'/);
+});
