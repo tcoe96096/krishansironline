@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 
 // Pure fail-closed contract model. No DB connection and no production claims.
 const permit = (x) => Boolean(
-  x.authenticated && x.active && x.eligible && x.owns &&
-  x.released && !x.revoked && !x.withdrawn &&
+  x.authenticated === true && x.active === true && x.eligible === true && x.owns === true &&
+  x.released === true && x.revoked === false && x.withdrawn === false &&
   Number.isSafeInteger(x.requestedVersion) && x.requestedVersion > 0 &&
   Number.isSafeInteger(x.currentVersion) && x.currentVersion > 0 &&
-  x.requestedVersion === x.currentVersion && x.objectPrivate &&
-  x.sessionValid
+  x.requestedVersion === x.currentVersion && x.objectPrivate === true &&
+  x.sessionValid === true
 );
 const base = Object.freeze({
   authenticated:true, active:true, eligible:true, owns:true,
@@ -170,5 +170,19 @@ test('canonical SHA-256 rejects uppercase, mixed-case and whitespace', () => {
       attemptId:'44444444-4444-4444-8444-444444444444',
       expectedVersion:3,digest:invalid
     }),'DENY_INVALID');
+  }
+});
+
+// Untrusted JSON truthiness (e.g. 'false' and 1) must never grant access.
+test('fail closed on non-boolean access predicates', () => {
+  for (const field of ['authenticated','active','eligible','owns','released','objectPrivate','sessionValid']) {
+    for (const value of [1,'true','false',{},[]]) {
+      assert.equal(permit({...base,[field]:value}),false,`${field}=${String(value)}`);
+    }
+  }
+  for (const field of ['revoked','withdrawn']) {
+    for (const value of [undefined,null,0,'', 'false',{},[]]) {
+      assert.equal(permit({...base,[field]:value}),false,`${field}=${String(value)}`);
+    }
   }
 });
