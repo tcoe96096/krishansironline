@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { canRestoreExamAnswers, type SavedExamIdentity } from '../src/utils/examSessionGuard';
+import { canRestoreExamAnswers, isSafeExamAnswerDraft, type SavedExamIdentity } from '../src/utils/examSessionGuard';
 
 const student = { studentName: 'Synthetic Student', rollNo: 'SYN-001', studentClass: '9th', school: 'Synthetic School' };
 const attempt = {
@@ -84,4 +84,19 @@ test('v2 recovery rejects corrupted timestamps and server attempt windows', () =
     assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, { ...attempt, started_at, expires_at }, 500), false);
   }
   assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
+});
+
+test('browser recovery rejects poisoned answer maps without reading student PII', () => {
+  assert.equal(isSafeExamAnswerDraft({ 0: 2, 12: 0 }, { 12: true, 0: false }, 12), true);
+  for (const answers of [null, [], '2', { 0: '2' }, { 0: -1 }, { 0: 21 }, { 0: Number.NaN }, { '-1': 0 }, { '01': 0 }, { '__proto__': 0, 1: 2 }]) {
+    assert.equal(isSafeExamAnswerDraft(answers, {}, 0), false);
+  }
+  for (const reviews of [null, [], { 0: 'true' }, { 0: 1 }, { '-1': false }, { '01': true }]) {
+    assert.equal(isSafeExamAnswerDraft({}, reviews, 0), false);
+  }
+  for (const index of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '1']) {
+    assert.equal(isSafeExamAnswerDraft({}, {}, index), false);
+  }
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  assert.match(engine, /isSafeExamAnswerDraft\(value\.selectedAnswers, value\.markedForReview, value\.currentQuestionIndex\)/);
 });
