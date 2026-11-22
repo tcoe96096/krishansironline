@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
-import { isResultCardBackendEnabled, getMyReleasedResultCardVersion, getMyResultCardPdfDownloadUrl } from '../services/resultCardBackend';
+import { isResultCardBackendEnabled, getMyReleasedResultCardVersion, getMyResultCardPdfDownload } from '../services/resultCardBackend';
 import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-react';
 
 /**
@@ -66,9 +66,20 @@ export const ResultsPortal: React.FC = () => {
           ? 'This result card has not been released yet.'
           : 'यह रिजल्ट कार्ड अभी जारी नहीं हुआ है।');
       }
-      const signedUrl = await getMyResultCardPdfDownloadUrl(attemptId, version);
-      // The service validates the signed URL origin and private bucket path.
-      window.location.assign(signedUrl);
+      const pdf = await getMyResultCardPdfDownload(attemptId, version);
+      // Authorization is rechecked for each download; do not persist a link.
+      const objectUrl = URL.createObjectURL(pdf);
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = `result-card-${attemptId}-v${version}.pdf`;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Result PDF download failed.');
     } finally {
