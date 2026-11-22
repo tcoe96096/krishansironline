@@ -5,7 +5,8 @@
   "source": {
     "project_id": "zgpkmfqioqvincmgyfpi",
     "backup_created_at": "REPLACE_WITH_BACKUP_UTC_TIMESTAMP",
-    "pg_dump_version": "REPLACE_WITH_TOOL_VERSION"
+    "pg_dump_version": "REPLACE_WITH_TOOL_VERSION",
+    "backup_format": "postgres_custom"
   },
   "restore": {
     "target_environment": "disposable",
