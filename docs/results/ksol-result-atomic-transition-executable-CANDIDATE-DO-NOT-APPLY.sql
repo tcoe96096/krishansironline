@@ -18,7 +18,12 @@ CREATE TABLE IF NOT EXISTS private.ksol_result_release (
 );
 CREATE TABLE IF NOT EXISTS private.ksol_result_request (
   actor_id uuid NOT NULL,
-  operation text NOT NULL CHECK(operation IN ('release','revoke')),
+  operation text NOT NULL CHECK(operation IN ('release','revoke','approve')),
+  artifact_sha256 text CHECK(artifact_sha256 IS NULL OR artifact_sha256 ~ '^[0-9a-f]{64}$'),
+  CONSTRAINT ksol_request_approval_digest CHECK(
+    (operation='approve' AND artifact_sha256 IS NOT NULL) OR
+    (operation IN ('release','revoke') AND artifact_sha256 IS NULL)
+  ),
   request_key uuid NOT NULL,
   attempt_id uuid NOT NULL,
   expected_version integer NOT NULL,
