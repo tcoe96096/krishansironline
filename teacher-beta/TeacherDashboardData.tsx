@@ -70,8 +70,11 @@ export function TeacherDashboardData({userId}:{userId:string}) {
         <h4 className="text-sm font-bold text-slate-900">Approved Class / Subject Assignments</h4>
         {summary.approvedScopes.length===0?
           <p role="status" className="mt-2 text-sm text-slate-600">No active approved assignments.</p>:
-          <ul className="mt-3 flex flex-wrap gap-2">{summary.approvedScopes.map(scope=>
-            <li key={scope.id} className="rounded-full border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-900">{scope.label}</li>)}
+          <ul aria-label="Approved teacher work assignments" className="mt-3 grid gap-3 sm:grid-cols-2">{summary.approvedScopes.map(scope=>
+            <li key={scope.id} className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+              <p className="text-sm font-bold text-teal-950">{scope.label}</p>
+              <p className="mt-1 text-xs font-semibold text-teal-800">Approved work: {scope.workLabel}</p>
+            </li>)}
           </ul>
         }
         <p className="mt-2 text-xs text-slate-500">Requested classes are not permissions. Only server-confirmed, active assignments for an approved teacher appear here. Study and Result editing remain gated by separate permissions.</p>
