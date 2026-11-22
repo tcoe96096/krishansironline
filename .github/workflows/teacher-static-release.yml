@@ -50,4 +50,12 @@ jobs:
           sha256sum -c /tmp/ksol-admin-index.sha
       - name: Verify disabled core flags in Pages workflow
         run: |
-          node --input-type=module -e "import fs from 'node:fs';const y=fs.readFileSync('.github/workflows/pages.yml','utf8');for(const key of ['VITE_TEACHER_BETA_ENABLED','VITE_TEACHER_ADVANCED_ENABLED','VITE_TEACHER_RESULT_ANALYTICS_ENABLED','VITE_TEACHER_RESUME_ENABLED','VITE_TEACHER_PHOTO_ENABLED']){if(!y.includes(key+\": 'false'\"))throw Error(key+' must be disabled');}if(!y.includes('https://teacher-disabled.supabase.test'))throw Error('Missing isolated fake Supabase URL');"
+          node --input-type=module <<'NODE'
+          import {readFileSync} from 'node:fs';
+          const y=readFileSync('.github/workflows/pages.yml','utf8');
+          const flags=['VITE_TEACHER_BETA_ENABLED','VITE_TEACHER_ADVANCED_ENABLED','VITE_TEACHER_RESULT_ANALYTICS_ENABLED','VITE_TEACHER_RESUME_ENABLED','VITE_TEACHER_PHOTO_ENABLED'];
+          for(const key of flags){
+            if(!y.includes(key+": 'false'"))throw Error(key+' must be disabled');
+          }
+          if(!y.includes('https://teacher-disabled.supabase.test'))throw Error('Missing isolated fake Supabase URL');
+          NODE
