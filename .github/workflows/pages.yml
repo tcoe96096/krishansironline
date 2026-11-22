@@ -20,6 +20,13 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      # Core registration only: all optional high-privilege modules remain OFF.
+      # SQL feature capabilities and RBAC are independently enforced server-side.
+      VITE_TEACHER_BETA_ENABLED: 'true'
+      VITE_TEACHER_ADVANCED_ENABLED: 'false'
+      VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+      VITE_TEACHER_RESUME_ENABLED: 'false'
+      VITE_TEACHER_PHOTO_ENABLED: 'false'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
