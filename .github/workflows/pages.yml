@@ -20,6 +20,8 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      # Only enable after approved, tested Result Card backend rollout.
+      VITE_RESULT_CARD_BACKEND_ENABLED: ${{ vars.VITE_RESULT_CARD_BACKEND_ENABLED || 'false' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
