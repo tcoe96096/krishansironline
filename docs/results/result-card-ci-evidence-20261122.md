@@ -18,3 +18,19 @@ GitHub Actions runs fetched for commit `028c86da988b70b4b79ecead5bfb240fddde122f
 - Recovery backup + successful restore evidence.
 - Confirm current PR head CI green and code review.
 - Separate owner approval for SQL execution, merge and publication.
+
+
+## Follow-up CI check — 2026-11-22
+
+Checked the exact prior head `cd4618ddafd316fab9fc9438d3aeead4f7e188be` through GitHub Actions:
+
+| Workflow | Run ID | Conclusion |
+| --- | --- | --- |
+| Result Card Backend Review Contract | [45020911134](https://github.com/tcoe96096/krishansironline/actions/runs/45020911134) | success |
+| Result Card review-only SQL contract checks | [45020911197](https://github.com/tcoe96096/krishansironline/actions/runs/45020911197) | success |
+| Validate website build | [45020911163](https://github.com/tcoe96096/krishansironline/actions/runs/45020911163) | success |
+| Preview build (no production deploy) | [45020911141](https://github.com/tcoe96096/krishansironline/actions/runs/45020911141) | success |
+| Hosting compliance - GitHub Pages only | [45020911135](https://github.com/tcoe96096/krishansironline/actions/runs/45020911135) | success |
+| Teacher Core Beta isolated checks - no deployment | [45020911126](https://github.com/tcoe96096/krishansironline/actions/runs/45020911126) | success (incidental, not Teacher v2 acceptance) |
+
+All six were successful **on that specific SHA**, before the latest review-only documentation commits. This does not certify the latest PR head, actual SQL execution, Supabase authenticated permissions, private Storage byte recovery or Production release.
