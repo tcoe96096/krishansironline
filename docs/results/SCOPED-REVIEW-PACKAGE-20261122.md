@@ -66,3 +66,12 @@ No migrations under `supabase/migrations/`, no Edge Functions, no UI/shared conf
 - GitHub commit-associated workflow query returned no runs for this scoped head. **No exact-SHA CI pass is claimed**; tests were authored, not executed by this run. Existing broad PR CI cannot substitute.
 - Unchanged NO-GO gates: source-specific current backup and independently successful compatible restore (including private PDF bytes); verified Preview-vs-Production catalog/grants/roles diff; real JWT/RLS/concurrent release/revoke and revocation tests; exact-SHA free-quota-confirmed CI; security review; explicit owner approval.
 - ₹0 incremental spend. No paid resources, SQL execution, DB writes, migrations, merge, Preview/Production deployment, publishing, delivery, DNS or other modules touched.
+
+
+## 2026-11-23 04:21 IST — exact-head verification (read-only)
+
+- Compared `main` against this scoped branch via GitHub: main `f93f34471b606a96789b633ce74f2aaccbbc9d40`, branch head `73419c8c7f3b5b31ba83fb38a050db60aabbc2e8`, **16 ahead / 3 behind**, six changed paths only (five review docs/SQL comments and one pure Node synthetic test). No merge/rebase.
+- Inspected latest head commit: `73419c8c` changes only the synthetic access predicate to require exact Boolean flags, and adds negative truthiness cases. It is **not** a Production RLS policy change.
+- GitHub's commit-associated PR workflow-run lookup returned **zero runs**, and combined commit status returned **zero statuses** for `73419c8c`. Neither means a test passed; exact-head CI evidence is still absent. Do not pay for or start runners without confirmed free quota.
+- Read the entire scoped synthetic test source and confirmed it uses `node:test` without database connections. No test execution or live JWT/RLS/Storage/concurrency verification is claimed by this review.
+- Remaining gates: reconcile Preview/Production read-only catalogs and migration dependencies; verify real JWT role/RLS, atomic concurrency and audit with independent approval; fresh source-specific backup plus successful isolated compatible restore including private PDF bytes; exact-head green CI with verified free quota; independent security review and separate owner approval. **NO-GO**, ₹0 incremental budget, no SQL execution/database writes/deployments.
