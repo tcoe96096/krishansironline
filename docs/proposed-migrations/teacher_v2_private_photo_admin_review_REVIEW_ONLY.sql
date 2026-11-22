@@ -24,14 +24,28 @@ BEGIN
  END IF;
 END $preflight$;
 
+-- Internal gate: direct private.teacher_v2_feature_enabled() calls are not
+-- executable by authenticated. Keep that capability reader unexposed; this
+-- narrow SECURITY DEFINER helper checks the trusted Super Admin role too.
+CREATE OR REPLACE FUNCTION private.teacher_v2_superadmin_photo_read_allowed()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $
+ SELECT auth.uid() IS NOT NULL
+   AND private.teacher_v2_feature_enabled('profile_photos')
+   AND public.is_super_admin();
+$;
+REVOKE ALL ON FUNCTION private.teacher_v2_superadmin_photo_read_allowed()
+ FROM PUBLIC,anon,authenticated,service_role;
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.teacher_v2_superadmin_photo_read_allowed()
+ TO authenticated;
+
 -- A privileged reviewer may download the exact photo that accompanies an
 -- application being independently verified. The UI never signs or publishes it.
 CREATE POLICY teacher_v2_photo_super_admin_review ON storage.objects
  FOR SELECT TO authenticated
  USING (
   bucket_id='teacher-profile-photos-private'
-  AND private.teacher_v2_feature_enabled('profile_photos')
-  AND public.is_super_admin()
+  AND private.teacher_v2_superadmin_photo_read_allowed()
  );
 COMMIT;
 
