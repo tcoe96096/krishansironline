@@ -21,9 +21,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - name: Install locked dependencies
-        run: npm ci
+      # This repository currently has no npm lockfile; do not use npm ci/cache.
+      - name: Install dependencies without writing a lockfile
+        run: npm install --no-package-lock --ignore-scripts
       - name: Typecheck
         run: npm run lint
       - name: Teacher identity regression tests
