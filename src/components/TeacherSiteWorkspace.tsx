@@ -2,7 +2,8 @@ import React,{useState} from 'react';
 import {GraduationCap,ClipboardCheck,LogIn,LayoutDashboard,LogOut,ShieldCheck} from 'lucide-react';
 import {useAuth} from '../context/AuthContext';
 import {requireSupabase} from '../lib/supabase';
-import {teacherBetaEnabled} from '../lib/teacherBetaFlags';
+import {teacherBetaEnabled,teacherPhotoUiEnabled} from '../lib/teacherBetaFlags';
+import {TeacherPrivatePhotoV2} from './TeacherPrivatePhotoV2';
 import {TeacherManagementV2} from './TeacherManagementV2';
 import {TeacherDashboardData} from '../../teacher-beta/TeacherDashboardData';
 
@@ -69,7 +70,7 @@ export function TeacherSiteWorkspace({section,onNavigate}:{section:TeacherArea;o
    {active&&!loading&&user?<TeacherManagementV2 key={user.id}/>:<div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Teacher Registration</h2><p className="mt-2 text-sm text-slate-600">{!active?'Registration चालू होने पर इसी पेज में आवेदन फॉर्म खुलेगा।':'आवेदन करने के लिए Google Login आवश्यक है।'}</p>{active&&!user&&!loading&&<button type="button" disabled={busy||!configured} onClick={()=>void signIn('teacherRegistration')} className={'mt-4 '+styles.action}>Login to register</button>}</div>}
   </section>}
   {section==='teacherDashboard'&&<section className="mt-6" aria-label="Teacher dashboard page">
-   {active&&!loading&&user?<TeacherDashboardData key={user.id} userId={user.id}/>:<div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Teacher Dashboard</h2><p className="mt-2 text-sm text-slate-600">{!active?'Backend Activation के बाद यहाँ Teacher Dashboard उपलब्ध होगा।':'Teacher Dashboard के लिए Login करें।'}</p>{active&&!user&&!loading&&<button type="button" disabled={busy||!configured} onClick={()=>void signIn('teacherDashboard')} className={'mt-4 '+styles.action}>Teacher Login</button>}</div>}
+   {active&&!loading&&user?<div className="space-y-5"><TeacherDashboardData key={user.id} userId={user.id}/>{teacherPhotoUiEnabled&&<TeacherPrivatePhotoV2 canUpload={false}/>}</div>:<div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Teacher Dashboard</h2><p className="mt-2 text-sm text-slate-600">{!active?'Backend Activation के बाद यहाँ Teacher Dashboard उपलब्ध होगा।':'Teacher Dashboard के लिए Login करें।'}</p>{active&&!user&&!loading&&<button type="button" disabled={busy||!configured} onClick={()=>void signIn('teacherDashboard')} className={'mt-4 '+styles.action}>Teacher Login</button>}</div>}
   </section>}
   <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600"><ShieldCheck className="h-5 w-5 text-teal-700"/> शिक्षक की स्वयं चुनी गई Classes और Subjects अधिकार नहीं हैं; Admin द्वारा स्वीकृत Assignment ही मान्य है।</div>
  </div>;
