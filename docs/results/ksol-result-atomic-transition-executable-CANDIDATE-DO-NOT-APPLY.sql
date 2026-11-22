@@ -7,7 +7,11 @@ CREATE TABLE IF NOT EXISTS private.ksol_result_release (
   attempt_id uuid PRIMARY KEY REFERENCES public.test_attempts(id) ON DELETE RESTRICT,
   result_version integer NOT NULL DEFAULT 1 CHECK(result_version>0),
   -- Immutable, version-bound private PDF identity; no unbound releases.
-  artifact_sha256 text NOT NULL CHECK (artifact_sha256 ~ '^[0-9a-f]{64} CHECK(state IN ('approved','released','revoked')),
+  artifact_sha256 text NOT NULL CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
+  pdf_object_key text NOT NULL UNIQUE CHECK (
+    pdf_object_key = attempt_id::text || '/v' || result_version::text || '/' || artifact_sha256 || '.pdf'
+  ),
+  state text NOT NULL DEFAULT 'approved' CHECK(state IN ('approved','released','revoked')),
   released_at timestamptz,
   revoked_at timestamptz,
   updated_at timestamptz NOT NULL DEFAULT now()
