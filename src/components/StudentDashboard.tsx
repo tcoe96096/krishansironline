@@ -122,7 +122,7 @@ export const StudentDashboard: React.FC = () => {
     </div>
     <div className="flex items-center justify-between gap-3"><div><h4 className="text-lg font-extrabold text-slate-900">मेरे लिए उपलब्ध टेस्ट</h4><p className="text-xs text-slate-500">आपकी कक्षा के प्रकाशित टेस्ट</p></div><button type="button" onClick={()=>void loadDashboard()} disabled={loading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-sky-800 disabled:opacity-50">{loading?'लोड हो रहा है…':'↻ रिफ्रेश'}</button></div>
     {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-    {loading ? <p className="text-sm text-slate-500">टेस्ट लोड हो रहे हैं…</p> : available.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">अभी आपकी कक्षा के लिए कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p> :
+    {loading ? <p className="text-sm text-slate-500">टेस्ट लोड हो रहे हैं…</p> : error && tests.length === 0 ? <p role="status" className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">टेस्ट सूची अभी उपलब्ध नहीं है। ऊपर रिफ्रेश दबाकर फिर प्रयास करें। / Tests unavailable. Please retry.</p> : available.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">अभी आपकी कक्षा के लिए कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p> :
       <div className="grid gap-3 md:grid-cols-2">{available.map(test => {
         const attempt=attemptByTest.get(test.id); const title=test.title.hi || test.title.en;
         return <article key={test.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
