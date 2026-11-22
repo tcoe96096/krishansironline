@@ -56,6 +56,8 @@ test('website result adapter remains disabled until an explicit release flag',()
  assert.match(browserAdapter,/requireSupabase\(\)\.rpc\('ksol_result_transition'/);
  assert.match(browserAdapter,/requireSupabase\(\)\.rpc\('ksol_result_approve_pdf'/);
  assert.match(browserAdapter,/functions\.invoke\(\s*'ksol-result-pdf-download'/);
+ assert.match(browserAdapter,/functions\.invoke\(\s*'ksol-result-pdf-upload'/);
+ assert.match(browserAdapter,/body\.append\('pdf', pdf\)/);
  assert.match(browserAdapter,/signedUrl\.origin !== new URL\(projectUrl\)\.origin/);
  assert.match(browserAdapter,/RESULT_BUCKET_PATH/);
  assert.doesNotMatch(browserAdapter,/SUPABASE_SERVICE_ROLE_KEY/);
