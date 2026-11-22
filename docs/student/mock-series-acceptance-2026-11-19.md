@@ -38,3 +38,11 @@ Use **synthetic users only** and mock `mock_test_series`, `getPublishedTests`, a
 5. **Network failure/retry:** reject each of the three requests independently; assert alert, no stale rows or links, then retry with valid fixture and assert recovery.
 
 **Release blocker:** A successful build does not satisfy these assertions. Authenticated authorization, 30-day recovery and server grading require separate student-owned integration tests and verified recovery evidence; no Preview/Production mutations or deployment are authorized by this document.
+
+## CI evidence reconciliation — 22 November 2026 (draft only)
+
+- Exact pre-update head: `33db522f9c345f7b0fe726132af124873dc38353`. Five completed, successful pull-request checks were verified: Hosting compliance - GitHub Pages only; Student Mock Series Source Contracts; Preview build (no production deploy); Validate website build; Teacher Core Beta isolated checks - no deployment. The shared Teacher CI check does not authorize changes to Teacher source.
+- Student runner: `node tests/student/run-mock-series-contracts.mjs` executes four static source-contract suites. Green CI does **not** establish real Chromium runtime, 320px mobile layout, authenticated student access, server grading or expiry enforcement.
+- Next acceptance: run a fully intercepted synthetic browser harness with held class-A responses after class-B navigation, malformed/duplicate published IDs, expired attempts, retry, Hindi/English accessible labels and 320/375/768px overflow checks. Capture exact SHA, browser version, viewport, fixtures and logs; do not connect to real student accounts.
+- Authenticated ownership, cross-student RLS, answer-key isolation and server-authoritative grading remain independent **NO-GO** gates until verified recovery, safe JWT testing and separate owner approval. Do not mutate Preview or Production.
+- At review, `main` was `a464cd4ae7b0c892220687feba4a49f9a19c6652`; draft branch was 38 ahead / 13 behind. Recheck integration conflicts and overlapping student PRs before proposing any merge.
