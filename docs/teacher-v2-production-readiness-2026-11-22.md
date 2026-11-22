@@ -9,7 +9,9 @@
 - CI #14: 118/118 Teacher tests passed; TypeScript, main website build, Teacher SQL parse-only checks, disabled isolated Teacher portal build, and unified-preview artifact assembly passed.
 - Review-only (not hosted) artifact: https://github.com/tcoe96096/krishansironline/actions/runs/45003996108/artifacts/14746679426
 - Artifact was built with synthetic Supabase URL/key and ALL Teacher capabilities disabled; it does not demonstrate live login, SQL installation, OAuth or RLS.
-- Separate browser smoke testing is being added to PR #128; verify its final GitHub Actions result before release consideration.
+- Verified green CI #15: https://github.com/tcoe96096/krishansironline/actions/runs/45004066483 — 118/118 unit/static/recovery tests, TypeScript, main build, SQL parse-only, isolated portal assembly and Chromium synthetic browser smoke passed.
+- Chromium smoke explicitly passed mobile registration, multi-qualification/scope, disabled backend, non-Super-Admin denial, independent verification, scope approval, grant/revoke, suspend/restore and publication boundaries using mock responses only.
+- Latest review artifact: https://github.com/tcoe96096/krishansironline/actions/runs/45004066483/artifacts/14747186061
 
 ## Database targets — externally checked, no mutations
 
