@@ -2,6 +2,27 @@
 -- Deploy only after independent backup+restore, JWT checks and owner approval.
 -- No teacher/student/studio migrations included. Never auto-apply on PR merge.
 BEGIN;
+-- Never silently overwrite a preexisting release function/table when a
+-- Preview/Production database has changed since this candidate was reviewed.
+DO $ksol_result_preflight$
+BEGIN
+  IF pg_catalog.to_regclass('private.ksol_result_release') IS NOT NULL
+    OR pg_catalog.to_regclass('private.ksol_result_request') IS NOT NULL
+    OR pg_catalog.to_regclass('private.ksol_result_audit') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_transition(uuid,integer,text,uuid)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,integer,text,uuid)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_can_view_released_result(uuid,integer)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_pdf_manifest(uuid,integer)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_my_released_result_version(uuid)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_admin_status(uuid)') IS NOT NULL
+    OR EXISTS (
+      SELECT 1 FROM storage.buckets
+      WHERE id='result-cards-private' OR name='result-cards-private'
+    ) THEN
+    RAISE EXCEPTION 'Result Card objects already exist: stop and reconcile existing deployment';
+  END IF;
+END
+$ksol_result_preflight$;
 -- MODULE 1 docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql
 CREATE SCHEMA IF NOT EXISTS private;
 CREATE TABLE IF NOT EXISTS private.ksol_result_release (
