@@ -3,6 +3,18 @@
 -- Preconditions: independent backup+restore, Supabase Storage version check,
 -- service role/Edge Function design review and separate explicit owner approval.
 BEGIN;
+-- Fail closed on an existing bucket; do not silently accept a public bucket
+-- or changed MIME/size rules. A separate operator review is required.
+DO $ksol_bucket_guard$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM storage.buckets
+    WHERE id='result-cards-private' OR name='result-cards-private'
+  ) THEN
+    RAISE EXCEPTION 'Result card bucket already exists; manual review required';
+  END IF;
+END
+$ksol_bucket_guard$;
 INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
 VALUES (
   'result-cards-private',
@@ -10,8 +22,7 @@ VALUES (
   false,
   10485760,
   ARRAY['application/pdf']::text[]
-)
-ON CONFLICT (id) DO NOTHING;
+);
 -- No storage.objects policies are added here. A private bucket does NOT
 -- automatically guarantee safe service-role access or safe signed URLs.
 -- No authenticated/anon direct object SELECT, INSERT, UPDATE, DELETE grants.
