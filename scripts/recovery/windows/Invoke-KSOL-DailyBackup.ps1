@@ -6,6 +6,8 @@ param(
 $ErrorActionPreference='Stop'
 $root=[System.IO.Path]::GetFullPath($BackupRoot)
 $volumeRoot=[System.IO.Path]::GetPathRoot($root).TrimEnd('\')
+$isAdmin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (!$isAdmin) { throw 'Open PowerShell as Administrator (same Windows account). BitLocker status requires elevated permissions.' }
 if (!(Get-Command Get-BitLockerVolume -ErrorAction SilentlyContinue)) { throw 'Disk encryption could not be verified' }
 $volume=Get-BitLockerVolume -MountPoint $volumeRoot -ErrorAction Stop
 if (!$volume -or $volume.ProtectionStatus -ne 'On') { throw 'Backup volume must be protected by BitLocker before storing database data' }
