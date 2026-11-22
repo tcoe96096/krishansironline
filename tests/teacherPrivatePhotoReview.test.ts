@@ -31,9 +31,10 @@ test('Teacher admin reviews photo privately through trusted RLS, not public link
 test('Resume intake is never automatically a verified document',()=>{
  const service=read('src/services/teacherPrivateResume.ts');
  const sql=read('docs/proposed-migrations/teacher_v2_private_resume_storage_REVIEW_ONLY.sql');
+ const schema=read('docs/proposed-migrations/teacher_management_v2_schema_REVIEW_ONLY.sql');
  assert.match(service,/teacher_v2_resume_reserve/);
  assert.match(service,/teacher_v2_resume_finalize/);
  assert.match(sql,/upload_state='reserved'/);
- assert.match(sql,/verification_status/);
+ assert.match(schema,/verification_status text NOT NULL DEFAULT 'pending'/);
  assert.doesNotMatch(sql,/CREATE POLICY .+ FOR DELETE/);
 });
