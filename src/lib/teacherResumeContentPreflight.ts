@@ -72,7 +72,7 @@ function docxContainerValid(b:Uint8Array):boolean{
   try{name=textDecoder.decode(b.subarray(pos+46,pos+46+nameLen));}
   catch{return false;}
   if(name.startsWith('/')||name.includes('\\')||
-   name.split('/').some(part=>part==='..'||part==='.'||part==='')||
+   (name.endsWith('/')?name.slice(0,-1):name).split('/').some(part=>part==='..'||part==='.'||part==='')||
    seen.has(name))return false;
   const lower=name.toLowerCase();
   if(lower.includes('vbaproject')||lower.includes('/activex/')||
