@@ -41,7 +41,8 @@ test('private media service requires fresh auth, server capability and owner ver
  assert.match(service,/contentType:TEACHER_PHOTO_MIME/);
  assert.match(service,/upsert:true/);
  // A successful Storage response must never accept an empty or oversized photo blob.
- assert.match(service,/data\.size<12\|\|data\.size>TEACHER_PHOTO_MAX_BYTES/);
+ assert.match(service,/data\.size<20\|\|data\.size>TEACHER_PHOTO_MAX_BYTES/);
+ assert.match(service,/hasConsistentWebpContainer\(new Uint8Array\(await data\.arrayBuffer\(\)\)\)/);
  assert.doesNotMatch(service,/getPublicUrl|createSignedUrl|service_role|localStorage|sessionStorage|\.remove\(/);
 });
 test('proposal is private, owner-derived, defaults off and grants no cross-user media access',()=>{
