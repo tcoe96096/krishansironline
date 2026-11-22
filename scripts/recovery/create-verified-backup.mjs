@@ -66,7 +66,7 @@ export async function createVerifiedBackup({root,source,now=new Date(),environme
  if(!evaluated.ok)throw new Error(evaluated.errors.join('; '));
  if(!environment.KSOL_DB_PASSWORD)throw new Error('Backup credential has not been configured locally');
  const base=ensurePrivateRoot(root);
- const destination=join(base,'01-Database-Backup');
+ const destination=join(base,'09-Automated-Backups');
  const reports=join(base,'07-Recovery-Reports');
  mkdirSync(destination,{recursive:true,mode:0o700});
  mkdirSync(reports,{recursive:true,mode:0o700});
