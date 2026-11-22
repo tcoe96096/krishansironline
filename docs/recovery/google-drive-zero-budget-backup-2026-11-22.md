@@ -38,3 +38,15 @@ This setup is **not yet active**. No local disk access, Google Drive OAuth appro
 - rclone streaming rcat: https://rclone.org/commands/rclone_rcat/
 - GitHub Actions public runner charges: https://docs.github.com/en/actions/concepts/billing-and-usage
 - Supabase database dump exclusions and managed objects: https://supabase.com/docs/reference/cli/global-flags
+
+
+## Important 2026 Google OAuth continuity preflight (must be addressed before opting in)
+
+- The shared rclone Google Drive OAuth client is being retired during 2026. Per the official rclone Drive documentation, create your own OAuth client ID (using free Google Drive API access) instead of depending on a retired shared client. **Do not enable a billable Google Cloud product or add a payment method** for this project.
+- For an OAuth consent screen with External audience and Testing publishing status, Google refresh tokens typically expire after **7 days** when requesting Google Drive access. A daily backup that works for one week and silently stops is unacceptable; check the consent screen status and Google policies before treating automation as permanent. The appropriate published/production configuration may have additional Google verification requirements. See https://developers.google.com/identity/protocols/oauth2 .
+- If you encrypt your *rclone configuration file itself*, set the separate GitHub repository secret \`KSOL_RCLONE_CONFIG_PASSWORD\` so the cloud workflow can unlock the configuration through \`RCLONE_CONFIG_PASS\`. The encryption key for rclone Crypt should be kept in an independent owner-controlled recovery record; GitHub Secrets are not themselves a disaster-recovery archive.
+- A green archive readback, like a green local TOC, is not an authenticated application restore. If Google OAuth expires or cloud quota is reached, the workflow must report failure and keep release \`NO_GO\`.
+
+## First owner-side setup check (no account credentials required)
+
+From an ordinary PowerShell window, run only \`rclone version\`. If it prints a version, proceed to interactive private OAuth/crypt setup. If it is not found, install rclone **from its official free download** (https://rclone.org/downloads/). Never paste OAuth URLs containing authorization codes, local rclone config, passwords or tokens into a chat. Since the remote cloud workflow cannot access Windows D: and needs no Windows BitLocker, no VHDX or D: drive encryption operation is necessary to *create that cloud-only backup*.
