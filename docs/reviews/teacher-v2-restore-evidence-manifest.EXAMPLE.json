@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "evidence_only": true,
+  "source_matches_current_preview": false,
+  "source": {
+    "project_id": "zgpkmfqioqvincmgyfpi",
+    "backup_created_at": "REPLACE_WITH_BACKUP_UTC_TIMESTAMP",
+    "pg_dump_version": "REPLACE_WITH_TOOL_VERSION",
+    "backup_format": "postgres_custom"
+  },
+  "restore": {
+    "target_environment": "disposable",
+    "target_id": "REPLACE_WITH_UNIQUE_DISPOSABLE_DATABASE_ID",
+    "started_at": "REPLACE_WITH_UTC_START",
+    "finished_at": "REPLACE_WITH_UTC_END",
+    "exit_code": 1,
+    "run_result": "NOT_VERIFIED",
+    "pg_restore_version": "REPLACE_WITH_TOOL_VERSION"
+  },
+  "files": {
+    "backup_archive": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    },
+    "restore_log": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    },
+    "source_inventory": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    },
+    "restored_inventory": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    },
+    "reconciliation_report": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    },
+    "smoke_report": {
+      "path": "REPLACE_WITH_RELATIVE_FILE_PATH",
+      "sha256": "REPLACE_WITH_64_CHAR_SHA256",
+      "bytes": 0
+    }
+  },
+  "reconciliation": {
+    "schema": false,
+    "tables": false,
+    "row_counts": false,
+    "constraints": false,
+    "indexes": false,
+    "functions": false,
+    "triggers": false,
+    "rls_policies": false,
+    "effective_grants": false,
+    "auth_dependencies": false,
+    "storage_metadata": false,
+    "smoke_read": false,
+    "smoke_write_rollback": false
+  }
+}

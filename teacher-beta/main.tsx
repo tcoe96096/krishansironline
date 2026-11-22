@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {AuthProvider, useAuth} from '../src/context/AuthContext';
 import {TeacherManagementV2} from '../src/components/TeacherManagementV2';
 import {AdminTeacherDirectoryV2} from '../src/components/AdminTeacherDirectoryV2';
-import {teacherBetaEnabled} from '../src/lib/teacherBetaFlags';
+import {teacherBetaEnabled,teacherPhotoUiEnabled} from '../src/lib/teacherBetaFlags';
 import {requireSupabase} from '../src/lib/supabase';
 import {teacherCall} from '../src/services/teacherManagement';
 import {teacherDashboardLoginCallback, teacherLoginCallback} from '../src/lib/teacherLoginCallback';
@@ -133,7 +133,7 @@ function TeacherBetaPortal(){
             <p className="mt-1 text-sm text-slate-600">Separate from Login and Dashboard. New applications require a signed-in identity and independent Admin approval.</p>
           </div>
           {user&&!demo?<>
-            <TeacherPhotoPicker teacherName={teacherName} photoUrl={null} onPhotoSelected={()=>{}} onRemove={()=>{}} disabled/>
+            {!teacherPhotoUiEnabled&&<TeacherPhotoPicker teacherName={teacherName} photoUrl={null} onPhotoSelected={()=>{}} onRemove={()=>{}} disabled/>}
             <TeacherManagementV2 key={user.id}/>
           </>:<TeacherRegistrationDesignPreview photoUrl={registrationPhotoUrl} onPhotoSelected={previewRegistrationPhoto} onRemovePhoto={()=>setRegistrationPhotoUrl(null)}/>}
           {(!user&&!demo)&&<button disabled={!configured} onClick={()=>void signInTeacher('registration').catch(()=>setError('Google login unavailable. Please try again.'))} className={actionClass+' disabled:opacity-50'}>Sign in to Apply</button>}

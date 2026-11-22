@@ -1,4 +1,6 @@
-import {teacherBetaEnabled,teacherAdvancedEnabled} from '../lib/teacherBetaFlags';
+import {teacherBetaEnabled,teacherAdvancedEnabled,teacherPhotoUiEnabled,teacherResumeUiEnabled} from '../lib/teacherBetaFlags';
+import {TeacherPrivatePhotoV2} from './TeacherPrivatePhotoV2';
+import {TeacherPrivateResumeV2} from './TeacherPrivateResumeV2';
 import React,{useEffect,useState,useRef} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {teacherCall,saveTeacherApplication,type TeacherSnapshot} from '../services/teacherManagement';
@@ -24,11 +26,11 @@ export function TeacherScopeEditor({value,onChange,allowAnalytics=false}:{value:
 export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>void}={}){
  const inFlight=useRef(false);
  const {user}=useAuth();const [snapshot,setSnapshot]=useState<TeacherSnapshot|null>(null),[ready,setReady]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0);
- const [registrationOpen,setRegistrationOpen]=useState(false);
+ const [registrationOpen,setRegistrationOpen]=useState(false),[photoServerEnabled,setPhotoServerEnabled]=useState(false),[resumeServerEnabled,setResumeServerEnabled]=useState(false);
  const [name,setName]=useState(''),[email,setEmail]=useState(''),[phone,setPhone]=useState(''),[years,setYears]=useState('');
  const [qualifications,setQualifications]=useState<TeacherQualificationInput[]>([]),[scopes,setScopes]=useState<TeacherAssignmentInput[]>([]);
- useEffect(()=>{let current=true;setSnapshot(null);setRegistrationOpen(false);setReady(false);setError('');setName('');setEmail('');setPhone('');setYears('');setQualifications([]);setScopes([]);
- if(user&&teacherBetaEnabled)void teacherCall<{registration:boolean;resumes?:boolean;analytics?:boolean}>('teacher_v2_beta_capabilities').then(caps=>{if(current){setRegistrationOpen(caps?.registration===true);}return teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id});}).then(p=>{if(!current)return;if(p!==null&&!isTeacherSnapshot(p)){setError('Teacher profile returned an invalid response.');setReady(false);return;}setSnapshot(p);setReady(true);if(p){setName(p.display_name);setEmail(p.contact_email||'');setPhone(p.phone||'');setYears(p.experience_years===null?'':String(p.experience_years));setQualifications(p.qualifications);setScopes(p.requested_scopes);}}).catch(()=>{if(current){setReady(false);setError('Unable to load teacher profile or registration permissions. Please retry.');}});return()=>{current=false;};},[user?.id,reload]);
+ useEffect(()=>{let current=true;setSnapshot(null);setRegistrationOpen(false);setPhotoServerEnabled(false);setResumeServerEnabled(false);setReady(false);setError('');setName('');setEmail('');setPhone('');setYears('');setQualifications([]);setScopes([]);
+ if(user&&teacherBetaEnabled)void teacherCall<{registration:boolean;resumes?:boolean;analytics?:boolean;photos?:boolean}>('teacher_v2_beta_capabilities').then(caps=>{if(current){setRegistrationOpen(caps?.registration===true);setPhotoServerEnabled(caps?.photos===true);setResumeServerEnabled(caps?.resumes===true);}return teacherCall<TeacherSnapshot|null>('teacher_v2_snapshot',{p_user_id:user.id});}).then(p=>{if(!current)return;if(p!==null&&!isTeacherSnapshot(p)){setError('Teacher profile returned an invalid response.');setReady(false);return;}setSnapshot(p);setReady(true);if(p){setName(p.display_name);setEmail(p.contact_email||'');setPhone(p.phone||'');setYears(p.experience_years===null?'':String(p.experience_years));setQualifications(p.qualifications);setScopes(p.requested_scopes);}}).catch(()=>{if(current){setReady(false);setError('Unable to load teacher profile or registration permissions. Please retry.');}});return()=>{current=false;};},[user?.id,reload]);
  if(!user)return null;
  if(!teacherBetaEnabled)return <section aria-label="Teacher Management v2" className="rounded-2xl border bg-white p-5"><h2 className="font-bold">Teacher Management v2</h2><p>Basic Teacher Beta awaits owner-approved activation.</p></section>;
  const act=async(action:()=>Promise<unknown>,message:string,refresh=true)=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setNotice('');try{await action();if(refresh){setReload(n=>n+1);onProfileChanged?.();}setNotice(message);}catch(e){setError(e instanceof Error?e.message:'Operation failed.');}finally{inFlight.current=false;setBusy(false);}};
@@ -42,6 +44,8 @@ export function TeacherManagementV2({onProfileChanged}:{onProfileChanged?:()=>vo
  {snapshot.requested_scopes.map((scope,i)=><p key={`requested-${i}`}>Requested: Class {scope.classLevel} · {scope.subject}</p>)}
  {snapshot.assignments.map(a=><p key={a.id}>Class {a.class_level} · {a.subject}{teacherAdvancedEnabled?' · '+a.work_type:''} · {a.status}</p>)}
  {snapshot.status==='pending'&&snapshot.submitted_at&&registrationOpen&&<button disabled={busy} onClick={()=>void act(()=>teacherCall('teacher_v2_withdraw'),'Application withdrawn.')}>Withdraw to edit</button>}</div>}
+ {teacherPhotoUiEnabled&&photoServerEnabled&&snapshot&&<TeacherPrivatePhotoV2 canUpload={registrationOpen&&snapshot.status==='pending'&&snapshot.submitted_at===null}/>}
+ {teacherResumeUiEnabled&&resumeServerEnabled&&registrationOpen&&snapshot?.status==='pending'&&snapshot.submitted_at===null&&<TeacherPrivateResumeV2 onUploaded={()=>setReload(n=>n+1)}/>}
  {!registrationOpen&&<p role="status">New teacher registration is currently closed. Saved profile details remain read-only.</p>}
  {!locked&&registrationOpen&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act(()=>saveTeacherApplication({displayName:name,contactEmail:email,phone,experienceYears:years===''?null:Number(years)},qualifications,scopes,'',true,snapshot?.revision??null),'Application submitted for independent verification.');}}><fieldset disabled={busy} className="space-y-5">
  {!snapshot&&<p className="text-xs text-amber-800">Existing staff: have Super Admin verify your assignments and close legacy staff access before entering v2. Applicants cannot change their own permissions.</p>}
