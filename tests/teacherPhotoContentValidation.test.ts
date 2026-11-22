@@ -15,8 +15,9 @@ test('rejects truncated, spoofed, empty or invalid private photo responses',()=>
 });
 test('private photo read validates downloaded bytes before returning a blob',()=>{
  const source=readFileSync('src/services/teacherPrivatePhoto.ts','utf8');
- assert.match(source,/hasWebpContainerHeader\(new Uint8Array\(await data\.slice\(0,12\)\.arrayBuffer\(\)\)\)/);
+ assert.match(source,/hasConsistentWebpContainer\(new Uint8Array\(await data\.arrayBuffer\(\)\)\)/);
  assert.doesNotMatch(source,/getPublicUrl|createSignedUrl/);
+ assert.doesNotMatch(source,/hasWebpContainerHeader\(/);
 });
 
 test('complete WebP gate rejects mismatched RIFF sizes and missing image chunks',()=>{
