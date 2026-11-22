@@ -1,7 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {teacherCall} from '../src/services/teacherManagement';
-import {teacherPhotoUiEnabled} from '../src/lib/teacherBetaFlags';
-import {TeacherPrivatePhotoV2} from '../src/components/TeacherPrivatePhotoV2';
 import {teacherDashboardSummary,type TeacherDashboardSummary} from '../src/lib/teacherDashboardModel';
 
 /** Own-profile dashboard projection. Browser read-only: no role claims,
@@ -36,7 +34,6 @@ export function TeacherDashboardData({userId}:{userId:string}) {
     {loading&&<p role="status" className="mt-4 text-sm text-slate-600">Checking your teacher record…</p>}
     {!loading&&error&&<p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{error} No teacher assignments are being displayed.</p>}
     {!loading&&summary&&!error&&<div className="mt-4 space-y-4">
-      {teacherPhotoUiEnabled&&<TeacherPrivatePhotoV2 canUpload={false}/>}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
           <p className="text-xs font-bold text-slate-500">Registration / Verification Status</p>
