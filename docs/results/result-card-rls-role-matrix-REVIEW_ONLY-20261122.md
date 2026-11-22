@@ -28,9 +28,9 @@ Source: read-only `pg_policies` query on Preview, 2026-11-22. This is a proposal
 | Read own delivered notice | Deny | Allow | Deny | Allow with audit |
 | Mark notice read | Deny | Only own read_at | Deny | Explicit admin workflow |
 | Edit result draft | Deny | Deny | Only assigned scope | Authorized |
-| Release / revoke result | Deny | Deny | Deny unless explicitly delegated and verified | Authorized with immutable audit |
-| Download result | Deny | Own current released nonrevoked only | No inherited access | Explicit privileged access, audited |
-| Read private audit | Deny | Deny | Deny | Authorized only |
+| Release / revoke result | Deny | Deny | Only explicit server-owned publisher delegation for exact result scope | Only explicit server-owned publisher delegation for exact result scope; immutable audit |
+| Download result | Deny | Own current released nonrevoked only | No inherited access | Separately approved exact-result private access; audited, never inferred from admin role |
+| Read private audit | Deny | Deny | Deny | Separately authorized audit-reader role only |
 
 ## Deployment order (review gate)
 1. Independently verify recoverable backup and disposable restore.
@@ -46,3 +46,11 @@ Source: read-only `pg_policies` query on Preview, 2026-11-22. This is a proposal
 Reject anonymous, wrong student, inactive student, forged role, stale version, draft, revoked, withdrawn, expired session, replay with different payload, unassigned teacher, private audit reader, and public storage URL. Assert immediate denial after revocation, including view/download/print. All rejections must avoid disclosing another student's metadata.
 
 **Status:** No database write, migration execution, delivery, merge, or deployment. Real authenticated and restore tests NOT run.
+
+## Role contract clarification — 2026-11-23
+
+- `is_super_admin()` is a legacy helper, **not** a substitute for the proposed server-owned, scoped Result Publisher or private audit-reader permission. Neither admin status nor a teacher staff grant implies document download or result release.
+- Grant verification must bind authenticated `auth.uid()`, active account, exact target result, immutable recipient mapping, approved assignment/scope and revocation state **inside** each trusted RPC. Never trust client role, student ID, or cached UI flags.
+- Private audit read and PDF download are distinct permissions from release/revoke. The role matrix describes **future requirements**, not present Preview/Production behavior.
+- Canonical `payload_digest` in the ledger must be 64 lowercase hexadecimal characters and cover action, target, version and all meaningful fields. An uppercase equivalent is invalid, not an alternate replay key. The pure synthetic test now enforces this; no live RPC is changed.
+- Existing Preview `result_delivery_notices` policies do not prove private Result Card release-state or publisher authorization. No Production catalog acceptance is implied.
