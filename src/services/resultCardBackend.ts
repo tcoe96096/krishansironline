@@ -31,6 +31,28 @@ function assertVersionedAttempt(attemptId: string, expectedVersion: number) {
  * Super-admin only; authorization and idempotency are enforced by the RPC.
  * Callers must retain the SAME requestKey when retrying an uncertain response.
  */
+export type AdminResultCardStatus =
+  { version: number; state: 'approved' | 'released' | 'revoked' };
+
+/** Status is derived only from an authenticated super-admin RPC. */
+export async function getAdminResultCardStatus(
+  attemptId: string,
+): Promise<AdminResultCardStatus | null> {
+  requireResultFeature();
+  if (!UUID_RE.test(attemptId)) throw new Error('Invalid result attempt.');
+  const { data, error } = await requireSupabase().rpc('ksol_result_admin_status', {
+    p_attempt_id: attemptId,
+  });
+  if (error) throw new Error('Unable to read Result Card publication status.');
+  if (data === null) return null;
+  if (typeof data?.version !== 'number' || !Number.isSafeInteger(data.version) ||
+      data.version < 1 ||
+      (data.state !== 'approved' && data.state !== 'released' && data.state !== 'revoked')) {
+    throw new Error('Unexpected Result Card status.');
+  }
+  return { version: data.version, state: data.state };
+}
+
 /**
  * Super-admin upload candidate. The Edge server verifies the user, computes
  * the digest, stores a private immutable PDF and requests approval in SQL.
