@@ -17,3 +17,11 @@ test('malformed or missing teacher snapshots fail closed',()=>{
  assert.equal(isOwnTeacherSnapshot({...snapshot,revision:0},'teacher-a'),false);
  assert.equal(isOwnTeacherSnapshot({...snapshot,assignments:null},'teacher-a'),false);
 });
+
+test('nested untrusted snapshot fields fail closed',()=>{
+ assert.equal(isOwnTeacherSnapshot({...snapshot,requested_scopes:[{classLevel:6,subject:'History',workType:'materials.draft'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,qualifications:[{title:'B.Ed',institution:'College',year:'2020'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,resumes:[{id:1,original_filename:'cv.pdf',verification_status:'pending'}]},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,status:'admin'},'teacher-a'),false);
+ assert.equal(isOwnTeacherSnapshot({...snapshot,user_id:'teacher-b'},'teacher-a'),false);
+});
