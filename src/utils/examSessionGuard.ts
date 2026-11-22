@@ -35,20 +35,21 @@ export function canRestoreExamAnswers(
     return false;
   }
 
+  // All drafts must have a finite save time inside the authoritative attempt
+  // window. Matching opaque IDs alone cannot validate a corrupted draft.
+  const started = Date.parse(attempt.started_at);
+  const expires = Date.parse(attempt.expires_at);
+  if (!Number.isFinite(started) || !Number.isFinite(expires) || started >= expires ||
+      !Number.isFinite(saved.savedAt) || saved.savedAt < started || saved.savedAt > expires) return false;
+
   if (saved.version === 2) {
     return !!saved.userId && !!saved.attemptId && saved.userId === userId && saved.attemptId === attempt.id;
   }
 
   if (saved.version !== 1 || !saved.student) return false;
 
-  // A v1 browser draft had no attempt ID. Allow backward-compatible recovery
-  // only if it was saved during this exact server attempt's validity window.
-  // A later attempt must never inherit old answers.
-  const started = Date.parse(attempt.started_at);
-  const expires = Date.parse(attempt.expires_at);
-  if (!Number.isFinite(started) || !Number.isFinite(expires) || !Number.isFinite(saved.savedAt) ||
-      saved.savedAt < started || saved.savedAt > expires) return false;
-
+  // A v1 browser draft had no attempt ID. Its student fields are used only
+  // for backward compatibility and must not be copied into v2 drafts.
   return saved.student.studentName === student.studentName &&
     saved.student.rollNo === student.rollNo &&
     saved.student.studentClass === student.studentClass &&
