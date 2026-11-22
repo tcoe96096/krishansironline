@@ -87,12 +87,38 @@ Deno.serve(async (req: Request) => {
 
   // Multipart body: pdf (binary File), attemptId, expectedVersion, requestKey.
   // Browser must never supply arbitrary Storage paths, credentials or digest.
-  if (Number(req.headers.get("content-length") || 0) > LIMIT_BYTES + 65536) {
+  const maxMultipartBytes = LIMIT_BYTES + 65536;
+  if (Number(req.headers.get("content-length") || 0) > maxMultipartBytes) {
     return response(413, { error: "PDF too large" }, origin);
   }
-  let form;
+  let form: FormData;
   try {
-    form = await req.formData();
+    // Do not trust Content-Length: stream and cap the ACTUAL request bytes.
+    // req.formData() alone can buffer an unbounded request into memory.
+    const reader = req.body?.getReader();
+    if (!reader) return response(400, { error: "Missing request body" }, origin);
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxMultipartBytes) {
+        await reader.cancel();
+        return response(413, { error: "PDF too large" }, origin);
+      }
+      chunks.push(value);
+    }
+    const boundedBytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      boundedBytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const multipart = new Response(boundedBytes.buffer, {
+      headers: { "Content-Type": req.headers.get("content-type") ?? "" },
+    });
+    form = await multipart.formData();
   } catch {
     return response(400, { error: "Invalid multipart request" }, origin);
   }
