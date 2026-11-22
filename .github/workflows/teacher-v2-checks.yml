@@ -28,5 +28,7 @@ jobs:
         run: npm install --no-package-lock --ignore-scripts
       - name: Typecheck
         run: npm run lint
-      - name: Teacher identity regression tests
+      - name: Build website bundle
+        run: npm run build
+      - name: Teacher v2 regression tests
         run: npx tsx --test tests/teacherSnapshotIdentity.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts
