@@ -182,6 +182,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
   const phase=readResult.code!==0?'CLOUD_DOWNLOAD:'+readDiagnostic():
    tocResult.code!==0?'ARCHIVE_TOC:'+tocDiagnostic():
    overflow?'ARCHIVE_TOC_OVERFLOW':tocInputError()?'ARCHIVE_TOC_PIPE':'CHECKSUM_MISMATCH';
+  console.error('KSOL_BACKUP_DIAGNOSTIC: cloud_exit='+String(readResult.code)+' toc_exit='+String(tocResult.code)+' bytes_match='+(checkedBytes===bytes)+' toc_overflow='+overflow+' toc_pipe_error='+tocInputError());
   throw new Error('Encrypted cloud download/readback verification failed ['+phase+']; do not claim backup ready');
  }
  console.log('KSOL_BACKUP_PHASE: READBACK_INTEGRITY_OK');
