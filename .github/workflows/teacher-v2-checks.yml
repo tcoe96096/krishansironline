@@ -8,6 +8,10 @@ on:
       - 'tests/teacher*.test.ts'
       - 'tests/teacher*.test.mjs'
       - 'scripts/teacher*'
+      - 'scripts/parse-teacher-core-sql.py'
+      - 'scripts/assemble-teacher-unified-preview.mjs'
+      - 'teacher-beta/**'
+      - 'vite.teacher-beta.config.ts'
       - 'docs/proposed-migrations/teacher*.sql'
       - '.github/workflows/teacher-v2-checks.yml'
   workflow_dispatch:
@@ -18,7 +22,7 @@ permissions:
 jobs:
   teacher-v2-validation:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,3 +37,35 @@ jobs:
         run: npm run build
       - name: Teacher v2 regression tests
         run: npx tsx --test tests/teacher*.test.ts tests/teacher*.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse Teacher SQL proposals without connecting to a database
+        run: |
+          python -m pip install pglast==8.8
+          python scripts/parse-teacher-core-sql.py
+      - name: Build isolated, inactive Teacher portal
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: synthetic-test-key
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts --base=/krishansironline-preview-unified/teacher-beta/
+      - name: Assemble and verify isolated unified preview
+        run: |
+          node scripts/assemble-teacher-unified-preview.mjs dist teacher-beta-dist
+          test -s dist/index.html
+          test -s dist/admin/index.html
+          for route in index.html staff-workspace/index.html registration/index.html login/index.html dashboard/index.html admin/index.html; do
+            test -s "dist/teacher-beta/$route"
+          done
+      - name: Upload review-only Preview artifact (never publish)
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacher-v2-review-${{ github.event.pull_request.number || github.run_id }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
