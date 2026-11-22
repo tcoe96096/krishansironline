@@ -12,6 +12,6 @@ export function teacherPhotoWriteAllowed(profile:TeacherPhotoProfile|null,authen
  return !!profile&&profile.user_id===authenticatedUserId&&profile.status==='pending'&&profile.submitted_at===null;
 }
 export function validatePrivatePhotoInput(file:{size:number;type:string}){
- return ['image/jpeg','image/png','image/webp'].includes(file.type)&&Number.isFinite(file.size)
+ return ['image/jpeg','image/png','image/webp'].includes(file.type)&&Number.isSafeInteger(file.size)
   &&file.size>0&&file.size<=TEACHER_PHOTO_MAX_BYTES;
 }
