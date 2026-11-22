@@ -2,12 +2,11 @@ name: Teacher v2 isolated checks
 on:
   pull_request:
     paths:
-      - 'src/lib/teacherSnapshotValidation.ts'
-      - 'src/services/teacherManagement.ts'
-      - 'src/lib/teacherManagementValidation.ts'
-      - 'tests/teacherSnapshotIdentity.test.ts'
-      - 'tests/teacherManagementClient.test.ts'
-      - 'tests/teacherManagementValidation.test.ts'
+      - 'src/lib/teacher*.ts'
+      - 'src/services/teacher*.ts'
+      - 'src/components/Teacher*.tsx'
+      - 'tests/teacher*.test.ts'
+      - 'docs/proposed-migrations/teacher*.sql'
       - '.github/workflows/teacher-v2-checks.yml'
   workflow_dispatch:
 
@@ -31,4 +30,4 @@ jobs:
       - name: Build website bundle
         run: npm run build
       - name: Teacher v2 regression tests
-        run: npx tsx --test tests/teacherSnapshotIdentity.test.ts tests/teacherManagementClient.test.ts tests/teacherManagementValidation.test.ts
+        run: npx tsx --test tests/teacher*.test.ts
