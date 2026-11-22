@@ -31,3 +31,13 @@ test('complete WebP gate rejects mismatched RIFF sizes and missing image chunks'
  const badLength=valid.slice();badLength[16]=3;
  assert.equal(hasConsistentWebpContainer(badLength),false);
 });
+
+test('complete WebP gate rejects truncated trailing RIFF chunks and accepts aligned metadata chunks',()=>{
+ const base=new Uint8Array([...header(14),0x56,0x50,0x38,0x4c,2,0,0,0,0x2f,0]);
+ const junk=new Uint8Array([...base,0x00]);junk[4]=15;
+ assert.equal(hasConsistentWebpContainer(junk),false);
+ const metadata=new Uint8Array([...base,0x45,0x58,0x49,0x46,1,0,0,0,0x41,0]);metadata[4]=24;
+ assert.equal(hasConsistentWebpContainer(metadata),true);
+ const truncated=metadata.slice(0,-1);truncated[4]=23;
+ assert.equal(hasConsistentWebpContainer(truncated),false);
+});

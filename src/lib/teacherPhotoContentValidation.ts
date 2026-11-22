@@ -19,5 +19,14 @@ export function hasConsistentWebpContainer(bytes:Uint8Array):boolean{
  const chunk=String.fromCharCode(...bytes.subarray(12,16));
  if(!['VP8 ','VP8L','VP8X'].includes(chunk))return false;
  const chunkSize=(bytes[16]|bytes[17]<<8|bytes[18]<<16|bytes[19]<<24)>>>0;
- return chunkSize<=bytes.length-20 && chunkSize+(chunkSize%2)<=bytes.length-20;
+ if(chunkSize>bytes.length-20)return false;
+ let offset=12;
+ while(offset<bytes.length){
+  if(bytes.length-offset<8)return false;
+  const n=(bytes[offset+4]|bytes[offset+5]<<8|bytes[offset+6]<<16|bytes[offset+7]<<24)>>>0;
+  const remaining=bytes.length-offset-8;
+  if(n>remaining||n+(n%2)>remaining)return false;
+  offset+=8+n+(n%2);
+ }
+ return offset===bytes.length;
 }
