@@ -26,7 +26,19 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
   }
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;recordedVerification=null;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
- else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
+ else if(op==='teacher_v2_directory'||op==='teacher_v2_directory_filtered'){
+  if(!superAdmin){status=403;data={code:'42501'};}
+  else {
+   const selected=op==='teacher_v2_directory_filtered'?(args.p_status||'pending'):'all';
+   const matches=profile&&(
+     selected==='all'||
+     (selected==='pending'&&profile.status==='pending'&&profile.submitted_at!==null)||
+     (selected==='draft'&&profile.status==='pending'&&profile.submitted_at===null)||
+     (selected===profile.status&&selected!=='pending')
+   );
+   data=matches?[profile]:[];
+  }
+ }
  else if(op==='teacher_v2_verification_status'){
   if(!superAdmin){status=403;data={code:'42501'};}
   else data=!!(recordedVerification&&profile&&profile.status==='pending'&&profile.submitted_at
