@@ -19,7 +19,7 @@ test('only exact explicitly selected Supabase source is accepted',()=>{
     KSOL_DB_USER:'postgres.'+PROJECT_REFS.production}).ok,false);
 });
 test('cloud storage MUST have a crypt overlay, not raw Google Drive remote',()=>{
- const config=String.raw\`[gdrive]
+ const config=String.raw`[gdrive]
 type = drive
 token = SECRET_SHOULD_NOT_BE_LOGGED
 
@@ -31,7 +31,7 @@ password2 = OBSCURED
 
 [another]
 type = local
-\`;
+`;
  assert.equal(isCryptRemote(config,'ksolcrypt'),true);
  assert.equal(isCryptRemote(config,'gdrive'),false);
  assert.equal(isCryptRemote('[ksolcrypt]\ntype = drive\nremote = gdrive:KSOL-Private\n','ksolcrypt'),false);
