@@ -7,6 +7,7 @@ on:
       - 'tests/ksolRecoveryInventory.test.mjs'
       - 'tests/ksolAutomaticBackup.test.mjs'
       - 'tests/ksolRecoveryReadiness.test.mjs'
+      - 'tests/ksolCloudEncryptedBackup.test.mjs'
       - '.github/workflows/ksol-recovery-readiness.yml'
   workflow_dispatch:
   schedule:
@@ -26,8 +27,9 @@ jobs:
         run: |
           node --check scripts/recovery/create-verified-backup.mjs
           node --check scripts/recovery/check-readiness.mjs
+          node --check scripts/recovery/cloud-stream-backup.mjs
           node --check scripts/recovery/inspect-local-backups.mjs
-          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs tests/ksolRecoveryReadiness.test.mjs
+          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs tests/ksolRecoveryReadiness.test.mjs tests/ksolCloudEncryptedBackup.test.mjs
       - name: Parse Windows PowerShell scripts without executing them
         shell: pwsh
         run: |
