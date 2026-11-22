@@ -45,13 +45,15 @@ CREATE TABLE IF NOT EXISTS public.teacher_resume_documents (
   size_bytes integer NOT NULL CHECK (size_bytes BETWEEN 1 AND 5242880),
   CONSTRAINT teacher_resume_storage_key_no_traversal CHECK (left(storage_path,1)<>'/' AND strpos(storage_path,'..')=0 AND strpos(storage_path,'//')=0 AND strpos(storage_path,chr(92))=0),
   verification_status text NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
+  -- Reserved metadata must NEVER appear as a submitted document until finalization.
+  upload_state text NOT NULL DEFAULT 'reserved' CHECK (upload_state IN ('reserved','uploaded')),
   uploaded_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS public.teacher_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   teacher_user_id uuid NOT NULL REFERENCES public.teacher_profiles(user_id) ON DELETE CASCADE,
   class_level text NOT NULL CHECK (class_level IN ('6','7','8','9','10','11','12')),
-  subject text NOT NULL CHECK (subject IN ('Political Science','History','Geography','Economics','Other')),
+  subject text NOT NULL CHECK (subject IN ('Hindi','English','Sanskrit','Mathematics','Science','Social Science','Physics','Chemistry','Biology','Computer Science','Political Science','History','Geography','Economics','Accountancy','Business Studies','Psychology','Physical Education','Fine Arts','Other')),
   work_type text NOT NULL CHECK (work_type IN ('materials.draft','materials.review','assessment.draft','result.review')),
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked')),
   assigned_by uuid NOT NULL REFERENCES auth.users(id),

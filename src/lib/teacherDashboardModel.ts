@@ -5,6 +5,11 @@ export type TeacherDashboardSummary = {
   status: 'not_registered'|'draft'|'pending'|'approved'|'rejected'|'suspended';
   statusLabel: string;
   employeeId: string|null;
+  contactEmail: string|null;
+  phone: string|null;
+  experienceYears: number|null;
+  qualifications: {title:string;institution:string;year:number}[];
+  resumeRecords: {id:string;filename:string;status:string}[];
   approvedScopes: {id:string;label:string}[];
 };
 
@@ -16,7 +21,8 @@ export function teacherDashboardSummary(value:unknown,userId:string):TeacherDash
   if(!userId)throw new Error('Authenticated teacher identity required.');
   if(value===null)return {
     displayName:null,status:'not_registered',statusLabel:'No teacher registration found',
-    employeeId:null,approvedScopes:[],
+    employeeId:null,contactEmail:null,phone:null,experienceYears:null,
+    qualifications:[],resumeRecords:[],approvedScopes:[],
   };
   if(!isTeacherSnapshot(value) || value.user_id!==userId)throw new Error('Invalid teacher profile response.');
   const approved=value.status==='approved';
@@ -38,6 +44,11 @@ export function teacherDashboardSummary(value:unknown,userId:string):TeacherDash
     displayName:value.display_name,
     status,statusLabel,
     employeeId:approved?value.employee_id:null,
+    contactEmail:value.contact_email,
+    phone:value.phone,
+    experienceYears:value.experience_years,
+    qualifications:value.qualifications.map(q=>({title:q.title,institution:q.institution,year:q.year})),
+    resumeRecords:value.resumes.map(r=>({id:r.id,filename:r.original_filename,status:r.verification_status})),
     approvedScopes,
   };
 }

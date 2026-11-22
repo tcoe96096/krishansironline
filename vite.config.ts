@@ -14,6 +14,10 @@ const seoPages = [
   { slug: 'current-affairs', title: 'Current Affairs & General Awareness | Krishan Sir', description: 'Read educational current affairs and general awareness updates for students and competitive exam learners.' },
   { slug: 'about', title: 'About Krishan Sir | Teacher Profile', description: 'Learn about Krishan Kumar, TGT Social Science, and the Krishan Sir Online Learning Portal.' },
   { slug: 'contact', title: 'Contact & Student Doubt Desk | Krishan Sir', description: 'Contact Krishan Sir and send an academic doubt or learning support request.' },
+  { slug: 'teacher', title: 'Teacher Management | Krishan Sir', description: 'Teacher registration, secure login and dashboard inside Krishan Sir Online Learning.' },
+  { slug: 'teacher-registration', title: 'Teacher Registration | Krishan Sir', description: 'Teacher registration with qualifications and class/subject requests, subject to activation and approval.' },
+  { slug: 'teacher-login', title: 'Teacher Login | Krishan Sir', description: 'Secure teacher login on Krishan Sir Online Learning.' },
+  { slug: 'teacher-dashboard', title: 'Teacher Dashboard | Krishan Sir', description: 'Private teacher profile, approval status and class/subject assignments.' },
   { slug: 'admin', title: 'Admin Control Center | Krishan Sir', description: 'Restricted administration portal for authorized website administrators.' },
 ];
 
@@ -32,7 +36,7 @@ const generateSeoPages = () => ({
         .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${canonical}" />`)
         .replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${page.title}" />`)
         .replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${page.description}" />`);
-      if (page.slug === 'admin') html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\n</head>');
+      if (['admin', 'teacher-login', 'teacher-dashboard', 'teacher-registration'].includes(page.slug)) html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\n</head>');
       const directory = path.resolve(__dirname, 'dist', page.slug);
       mkdirSync(directory, { recursive: true });
       writeFileSync(path.join(directory, 'index.html'), html);

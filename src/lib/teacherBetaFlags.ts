@@ -5,3 +5,4 @@ export const teacherBetaEnabled=flags.core;
 export const teacherAdvancedEnabled=flags.advanced;
 export const teacherAnalyticsEnabled=flags.analytics;
 export const teacherResumeUiEnabled=flags.resumes;
+export const teacherPhotoUiEnabled=flags.photos;
