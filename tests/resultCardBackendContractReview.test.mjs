@@ -57,7 +57,7 @@ test('release and revoke require authorized actor and matching version', () => {
 // The database implementation must additionally enforce unique(actor,action,key)
 // under concurrent transactions; this function cannot prove database atomicity.
 const validActor = (x) => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
-const validDigest = (x) => typeof x === 'string' && /^[0-9a-f]{64}$/i.test(x);
+const validDigest = (x) => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);
 const validKey = (x) => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 const replay = (prior, actor, action, key, digest) => {
   if (!validActor(actor) || !['release','revoke'].includes(action) ||
@@ -157,4 +157,18 @@ test('replay never accepts same digest with changed attempt or version', () => {
   assert.equal(strictReplay(p,{...p,expectedVersion:undefined}), 'DENY_INVALID');
   assert.equal(strictReplay(p,{...p,expectedVersion:0}), 'DENY_INVALID');
   assert.equal(strictReplay({...p,expectedVersion:undefined},p), 'DENY_INVALID');
+});
+
+// A SHA-256 digest in this contract is canonical lowercase hex, not a
+// case-insensitive string. Mixed-case digests cannot bypass ledger matching.
+test('canonical SHA-256 rejects uppercase, mixed-case and whitespace', () => {
+  for (const invalid of ['A'.repeat(64), 'a'.repeat(63)+'B',
+    ' '+digestA, digestA+' ', '0x'+digestA]) {
+    assert.equal(replay(null,actor,'release',key,invalid),'DENY_INVALID');
+    assert.equal(strictReplay(null,{
+      actor,action:'release',key,
+      attemptId:'44444444-4444-4444-8444-444444444444',
+      expectedVersion:3,digest:invalid
+    }),'DENY_INVALID');
+  }
 });
