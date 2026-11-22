@@ -7,7 +7,6 @@ import { requireSupabase } from '../lib/supabase';
  * This never sends PDFs directly from the browser or accesses private tables.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const RESULT_BUCKET_PATH = '/storage/v1/object/sign/result-cards-private/';
 
 export type ResultOperation = 'release' | 'revoke';
 export type ResultState = 'released' | 'revoked';
@@ -165,38 +164,27 @@ export async function getMyReleasedResultCardVersion(
 }
 
 /**
- * Student download link: the server rechecks ownership, eligibility and
- * current exact released version. No public/storage object URLs are cached.
+ * Fetches the student's current authorized private PDF as bytes.
+ * The server rechecks exact ownership and release state on every request,
+ * returning no reusable signed Storage URL. Do not persist the Blob.
  */
-export async function getMyResultCardPdfDownloadUrl(
+export async function getMyResultCardPdfDownload(
   attemptId: string,
   expectedVersion: number,
-): Promise<string> {
+): Promise<Blob> {
   requireResultFeature();
   assertVersionedAttempt(attemptId, expectedVersion);
   const { data, error } = await requireSupabase().functions.invoke(
     'ksol-result-pdf-download',
     { body: { attemptId, expectedVersion } },
   );
-  if (error) throw new Error('Result download could not be authorized.');
-
-  const response = data as { signedUrl?: unknown; expiresInSeconds?: unknown } | null;
-  if (typeof response?.signedUrl !== 'string' ||
-      response.expiresInSeconds !== 30) {
-    throw new Error('Invalid result download response.');
+  if (error || !(data instanceof Blob) ||
+      data.type !== 'application/pdf' ||
+      data.size < 8 || data.size > 10485760) {
+    throw new Error('Result download could not be authorized.');
   }
-  const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (!projectUrl) throw new Error('Result download service is not configured.');
-  let signedUrl: URL;
-  try {
-    signedUrl = new URL(response.signedUrl);
-  } catch {
-    throw new Error('Invalid result download link.');
+  if (await data.slice(0, 5).text() !== '%PDF-') {
+    throw new Error('Invalid Result Card PDF response.');
   }
-  if (signedUrl.origin !== new URL(projectUrl).origin ||
-      !signedUrl.pathname.startsWith(RESULT_BUCKET_PATH) ||
-      !signedUrl.searchParams.has('token')) {
-    throw new Error('Result download link is not from the private result bucket.');
-  }
-  return signedUrl.toString();
+  return data;
 }
