@@ -21,6 +21,7 @@ on:
       - 'src/components/AdminResultCardPanel.tsx'
       - 'src/components/AdminTestResults.tsx'
       - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql'
       - 'supabase/functions/ksol-result-pdf-upload/index.ts'
       - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
@@ -48,6 +49,7 @@ on:
       - 'src/components/AdminResultCardPanel.tsx'
       - 'src/components/AdminTestResults.tsx'
       - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql'
       - 'supabase/functions/ksol-result-pdf-upload/index.ts'
       - 'supabase/functions/ksol-result-pdf-download/index.ts'
       - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
@@ -111,11 +113,5 @@ jobs:
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-fixture.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql
-          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-assertions.sql
