@@ -1,0 +1,33 @@
+name: KSOL recovery readiness (advisory only)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/**'
+      - 'tests/ksolRecoveryInventory.test.mjs'
+      - '.github/workflows/ksol-recovery-readiness.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '25 2 * * *' # Daily 07:55 IST, only after merged to default branch
+permissions:
+  contents: read
+jobs:
+  static-recovery-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Synthetic local recovery regression checks
+        run: node --test tests/ksolRecoveryInventory.test.mjs
+      - name: Advisory status, never authorize a merge
+        shell: bash
+        run: |
+          echo '## KSOL Recovery - advisory (not verified)' >> "$GITHUB_STEP_SUMMARY"
+          echo '- CI can verify the inspection tool, **not** access a Windows D: drive.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Backup availability: **UNKNOWN** (must be checked on the owner PC).' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Independently verified full isolated restore: **NOT VERIFIED**.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Release gate: **NO-GO** until real backup+restore evidence is independently approved.' >> "$GITHUB_STEP_SUMMARY"
+          echo '::warning::Recovery evidence is not confirmed; CI success is not release approval.'
