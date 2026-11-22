@@ -1,0 +1,53 @@
+name: Teacher static release safety checks (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages.yml'
+      - '.github/workflows/teacher-static-release.yml'
+      - 'teacher-beta/**'
+      - 'vite.teacher-beta.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-release-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-package-lock --ignore-scripts
+      - name: Validate existing website
+        run: |
+          npm run lint
+          npm run build
+          sha256sum dist/index.html > /tmp/ksol-main-index.sha
+          sha256sum dist/admin/index.html > /tmp/ksol-admin-index.sha
+      - name: Build inactive Teacher portal under isolated path
+        env:
+          VITE_SUPABASE_URL: https://teacher-disabled.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: disabled-preview-only
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: |
+          npx vite build --config vite.teacher-beta.config.ts --base=/teacher-beta/
+          test ! -e dist/teacher-beta
+          mkdir -p dist/teacher-beta
+          cp -a teacher-beta-dist/. dist/teacher-beta/
+          for route in index.html staff-workspace/index.html registration/index.html login/index.html dashboard/index.html admin/index.html; do
+            test -s "dist/teacher-beta/$route"
+          done
+          sha256sum -c /tmp/ksol-main-index.sha
+          sha256sum -c /tmp/ksol-admin-index.sha
+      - name: Verify disabled core flags in Pages workflow
+        run: |
+          node --input-type=module -e "import fs from 'node:fs';const y=fs.readFileSync('.github/workflows/pages.yml','utf8');for(const key of ['VITE_TEACHER_BETA_ENABLED','VITE_TEACHER_ADVANCED_ENABLED','VITE_TEACHER_RESULT_ANALYTICS_ENABLED','VITE_TEACHER_RESUME_ENABLED','VITE_TEACHER_PHOTO_ENABLED']){if(!y.includes(key+\": 'false'\"))throw Error(key+' must be disabled');}if(!y.includes('https://teacher-disabled.supabase.test'))throw Error('Missing isolated fake Supabase URL');"
