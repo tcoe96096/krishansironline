@@ -45,15 +45,9 @@ $report.Add("Backup file: " + $backup.FullName)
 $report.Add("Size: " + $backup.Length)
 $report.Add("Modified: " + $backup.LastWriteTime.ToString("o"))
 $report.Add("SHA256: " + (Get-FileHash -LiteralPath $BackupPath -Algorithm SHA256).Hash)
-$fresh = ($backup.LastWriteTime -ge (Get-Date).AddDays(-1))
-$report.Add("Backup current within 24h: " + $fresh)
-if (-not $fresh) {
-  $report.Add("FAIL: stale backup; obtain a fresh source-specific dump before restore.")
-  Save-Report
-  exit 1
-}
-# A readable archive is necessary, but never sufficient for a verified restore.
-& $pgRestore --list $BackupPath > $null 2>&1
+# The Windows file modified time is not trustworthy proof of dump freshness:
+# copying a week-old dump today changes that timestamp. Parse pg_restore TOC.
+$archiveLines = @(& $pgRestore --list $BackupPath 2>&1 | ForEach-Object { $_.ToString() })
 $archiveExit = $LASTEXITCODE
 $report.Add("Archive list exit code: " + $archiveExit)
 if ($archiveExit -ne 0) {
@@ -61,6 +55,30 @@ if ($archiveExit -ne 0) {
   Save-Report
   exit 1
 }
+$archiveLine = [string]($archiveLines | Where-Object { $_ -match '^\s*;\s*Archive created at\s+' } | Select-Object -First 1)
+$archiveText = $archiveLine -replace '^\s*;\s*Archive created at\s+', ''
+$archiveTime = [datetime]::MinValue
+$validArchiveTime = [datetime]::TryParse(
+  $archiveText,
+  [System.Globalization.CultureInfo]::InvariantCulture,
+  [System.Globalization.DateTimeStyles]::AssumeLocal,
+  [ref]$archiveTime
+)
+if (-not $validArchiveTime) {
+  $report.Add("FAIL: dump creation time could not be verified from archive metadata.")
+  Save-Report
+  exit 1
+}
+$report.Add("Archive creation time: " + $archiveTime.ToString("o"))
+$fresh = ($archiveTime -ge (Get-Date).AddDays(-1)) -and
+  ($archiveTime -le (Get-Date).AddMinutes(5))
+$report.Add("Archive creation current within 24h: " + $fresh)
+if (-not $fresh) {
+  $report.Add("FAIL: stale archive; a freshly copied old dump is NOT fresh recovery evidence.")
+  Save-Report
+  exit 1
+}
+$report.Add("Source project identity still requires an independent provenance manifest.")
 $db = "ksol_result_restore_" + (Get-Date -Format "yyyyMMddHHmmss") + "_" + (Get-Random -Minimum 1000 -Maximum 9999)
 $report.Add("Disposable local database: " + $db)
 Write-Host "PostgreSQL will request your LOCAL password. Never paste it into ChatGPT."
