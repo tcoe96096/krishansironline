@@ -1,0 +1,36 @@
+name: Student Mock Series Source Contracts
+
+on:
+  push:
+    branches:
+      - 'fix/student-mock-series-published-availability-20261119'
+    paths:
+      - 'src/components/StudentMockTestSeries.tsx'
+      - 'tests/student/**'
+      - '.github/workflows/student-mock-series-contracts.yml'
+  pull_request:
+    paths:
+      - 'src/components/StudentMockTestSeries.tsx'
+      - 'tests/student/**'
+      - '.github/workflows/student-mock-series-contracts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: student-mock-series-contracts-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  student-source-contracts:
+    name: Student source contracts (static only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run isolated Student mock-series source contracts
+        run: node tests/student/run-mock-series-contracts.mjs
