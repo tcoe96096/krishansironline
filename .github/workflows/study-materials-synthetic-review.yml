@@ -1,0 +1,37 @@
+name: Study Materials synthetic security (review only)
+
+on:
+  push:
+    branches:
+      - test/study-synthetic-clean-main-20261122
+    paths:
+      - 'tests/studyMaterialsVideoEmbedMock.test.ts'
+      - 'tests/studyMaterialsDownloadExpiryMock.test.ts'
+      - 'tests/studyMaterialsMockAccess.test.ts'
+      - '.github/workflows/study-materials-synthetic-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-security:
+    name: Synthetic security tests (no backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CI: 'true'
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Repository has no root dependency lockfile. These isolated tests use
+      # only built-in node:test/assert and Node 22's native TypeScript stripping.
+      # No npm install, remote package fetch, backend access, or deployment.
+      - name: Run isolated synthetic tests
+        run: node --experimental-strip-types --test tests/studyMaterialsVideoEmbedMock.test.ts tests/studyMaterialsDownloadExpiryMock.test.ts tests/studyMaterialsMockAccess.test.ts
