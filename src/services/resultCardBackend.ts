@@ -32,6 +32,43 @@ function assertVersionedAttempt(attemptId: string, expectedVersion: number) {
  * Callers must retain the SAME requestKey when retrying an uncertain response.
  */
 /**
+ * Super-admin upload candidate. The Edge server verifies the user, computes
+ * the digest, stores a private immutable PDF and requests approval in SQL.
+ * This is not publication; release requires a separate authorized action.
+ */
+export async function uploadAndApproveResultCardPdf(
+  attemptId: string,
+  expectedVersion: number,
+  pdf: File,
+  requestKey: string,
+): Promise<{ state: 'approved'; sha256: string; version: number }> {
+  requireResultFeature();
+  assertVersionedAttempt(attemptId, expectedVersion);
+  if (!UUID_RE.test(requestKey) || !(pdf instanceof File) ||
+      pdf.type !== 'application/pdf' || pdf.size < 8 || pdf.size > 10485760) {
+    throw new Error('Invalid result PDF upload.');
+  }
+  const body = new FormData();
+  body.append('attemptId', attemptId);
+  body.append('expectedVersion', String(expectedVersion));
+  body.append('requestKey', requestKey);
+  body.append('pdf', pdf);
+  const { data, error } = await requireSupabase().functions.invoke(
+    'ksol-result-pdf-upload',
+    { body },
+  );
+  if (error) throw new Error('Result PDF upload or approval failed.');
+  const response = data as { state?: unknown; sha256?: unknown; version?: unknown } | null;
+  if (response?.state !== 'approved' ||
+      typeof response.sha256 !== 'string' ||
+      !/^[0-9a-f]{64}$/.test(response.sha256) ||
+      response.version !== expectedVersion) {
+    throw new Error('Unexpected PDF approval response.');
+  }
+  return { state: 'approved', sha256: response.sha256, version: expectedVersion };
+}
+
+/**
  * Super-admin only. A trusted server must upload the immutable PDF first and
  * compute its SHA-256; the RPC verifies private Storage object metadata.
  * Approval is NOT publication and cannot make a PDF visible to students.
