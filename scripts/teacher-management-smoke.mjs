@@ -168,6 +168,7 @@ try{
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  await page.goto(base+'/admin/');
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ await directory.getByLabel('Filter teacher application status').selectOption('approved');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
  await directory.getByLabel('Assignment class',{exact:true}).selectOption('11');
