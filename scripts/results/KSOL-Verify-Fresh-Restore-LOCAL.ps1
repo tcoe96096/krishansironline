@@ -16,6 +16,14 @@ $report = New-Object System.Collections.Generic.List[string]
 $report.Add("KSOL RESULT CARD INDEPENDENT LOCAL RESTORE PROOF")
 $report.Add("Date: " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss K"))
 $report.Add("Target: local Postgres only; no Supabase write or deployment.")
+# Fail closed if someone passes a remote database host. This verifier may
+# create a disposable database and must NEVER target a cloud Supabase host.
+if ($PgHostName -notin @("localhost", "127.0.0.1", "::1")) {
+  $report.Add("FAIL: only localhost/127.0.0.1/::1 is allowed; remote host denied.")
+  $report | Set-Content -Path $out -Encoding UTF8
+  Write-Host ("Report: " + $out)
+  exit 2
+}
 function Save-Report {
   $report | Set-Content -Path $out -Encoding UTF8
   Write-Host ("Report: " + $out)
@@ -39,6 +47,20 @@ $report.Add("Modified: " + $backup.LastWriteTime.ToString("o"))
 $report.Add("SHA256: " + (Get-FileHash -LiteralPath $BackupPath -Algorithm SHA256).Hash)
 $fresh = ($backup.LastWriteTime -ge (Get-Date).AddDays(-1))
 $report.Add("Backup current within 24h: " + $fresh)
+if (-not $fresh) {
+  $report.Add("FAIL: stale backup; obtain a fresh source-specific dump before restore.")
+  Save-Report
+  exit 1
+}
+# A readable archive is necessary, but never sufficient for a verified restore.
+& $pgRestore --list $BackupPath > $null 2>&1
+$archiveExit = $LASTEXITCODE
+$report.Add("Archive list exit code: " + $archiveExit)
+if ($archiveExit -ne 0) {
+  $report.Add("FAIL: archive TOC is unreadable.")
+  Save-Report
+  exit 1
+}
 $db = "ksol_result_restore_" + (Get-Date -Format "yyyyMMddHHmmss") + "_" + (Get-Random -Minimum 1000 -Maximum 9999)
 $report.Add("Disposable local database: " + $db)
 Write-Host "PostgreSQL will request your LOCAL password. Never paste it into ChatGPT."
@@ -64,7 +86,19 @@ if ($checkExit -ne 0) { $report.Add("FAIL: inspect failed"); Save-Report; exit 1
 $tableCount = [int](($checkOut | Where-Object { $_ -match '^table_count=' } | Select-Object -First 1) -replace '^table_count=', '')
 $functionsCount = [int](($checkOut | Where-Object { $_ -match '^public_function_count=' } | Select-Object -First 1) -replace '^public_function_count=', '')
 $policiesCount = [int](($checkOut | Where-Object { $_ -match '^rls_policy_count=' } | Select-Object -First 1) -replace '^rls_policy_count=', '')
-$hasAttempts = (($checkOut | Where-Object { $_ -match '^result_source_attempts=' } | Select-Object -First 1) -eq 'result_source_attempts=true')
+# PostgreSQL's -At boolean output is usually "t"/"f", not "true"/"false".
+$attemptLine = [string]($checkOut | Where-Object { $_ -match '^result_source_attempts=' } | Select-Object -First 1)
+$hasAttempts = ($attemptLine -match '^result_source_attempts=(t|true|1)
+$passed = $fresh -and ($tableCount -ge 10) -and ($functionsCount -ge 10) -and ($policiesCount -gt 0) -and $hasAttempts
+$report.Add("VERIFICATION PASS (basic): " + $passed)
+if (-not $passed) { $report.Add("FAIL: stale or incomplete restore. Do not claim Production recovery readiness.") }
+$report.Add("The new local database is retained for inspection: " + $db)
+$report.Add("Archive restore used --no-privileges; original GRANT/ACL completeness is NOT verified.")
+$report.Add("Basic restore proof alone is NOT Production PITR/rollback verification.")
+Save-Report
+if ($passed) { exit 0 } else { exit 1 }
+)
+$report.Add("Result source attempts table detected: " + $hasAttempts)
 $passed = $fresh -and ($tableCount -ge 10) -and ($functionsCount -ge 10) -and ($policiesCount -gt 0) -and $hasAttempts
 $report.Add("VERIFICATION PASS (basic): " + $passed)
 if (-not $passed) { $report.Add("FAIL: stale or incomplete restore. Do not claim Production recovery readiness.") }
