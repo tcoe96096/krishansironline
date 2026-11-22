@@ -6,7 +6,7 @@ import type {TeacherSnapshot} from '../src/services/teacherManagement';
 
 const userId='11111111-1111-4111-8111-111111111111';
 const approvedProfile:TeacherSnapshot={
-  user_id:userId,employee_id:'KSOL-T-EXAMPLE',display_name:'Example Teacher',
+  user_id:userId,employee_id:'KSOL-T-ABCDEF123456',display_name:'Example Teacher',
   contact_email:'teacher@example.test',phone:null,experience_years:3,
   status:'approved',revision:4,submitted_at:null,application_reason:null,
   decision_reason:null,reviewed_at:null,requested_scopes:[
@@ -24,7 +24,7 @@ const approvedProfile:TeacherSnapshot={
 test('dashboard shows employee ID and only active server-approved assignments',()=>{
  const summary=teacherDashboardSummary(approvedProfile,userId);
  assert.equal(summary.status,'approved');
- assert.equal(summary.employeeId,'KSOL-T-EXAMPLE');
+ assert.equal(summary.employeeId,'KSOL-T-ABCDEF123456');
  assert.deepEqual(summary.approvedScopes,[{id:'one',label:'Class 10 · History'}]);
  assert.equal(summary.approvedScopes.some(s=>s.label.includes('Political Science')),false,
    'Requested scope does not confer access');
@@ -33,9 +33,9 @@ test('missing profile and pending drafts cannot pretend to be approved teachers'
  const missing=teacherDashboardSummary(null,userId);
  assert.deepEqual({status:missing.status,employeeId:missing.employeeId,approvedScopes:missing.approvedScopes},
   {status:'not_registered',employeeId:null,approvedScopes:[]});
- const draft=teacherDashboardSummary({...approvedProfile,status:'pending',submitted_at:null},userId);
+ const draft=teacherDashboardSummary({...approvedProfile,status:'pending',employee_id:null,submitted_at:null},userId);
  assert.equal(draft.status,'draft');
- const pending=teacherDashboardSummary({...approvedProfile,status:'pending',submitted_at:'2026-11-18T10:00:00Z'},userId);
+ const pending=teacherDashboardSummary({...approvedProfile,status:'pending',employee_id:null,submitted_at:'2026-11-18T10:00:00Z'},userId);
  assert.equal(pending.status,'pending');
  for(const summary of [draft,pending]){
   assert.equal(summary.employeeId,null);
@@ -44,7 +44,7 @@ test('missing profile and pending drafts cannot pretend to be approved teachers'
 });
 test('rejected and suspended profiles cannot display authorized scopes or issued ID',()=>{
  for(const status of ['rejected','suspended'] as const){
-  const summary=teacherDashboardSummary({...approvedProfile,status},userId);
+  const summary=teacherDashboardSummary({...approvedProfile,status,employee_id:status==='rejected'?null:approvedProfile.employee_id},userId);
   assert.equal(summary.status,status);
   assert.equal(summary.employeeId,null);
   assert.deepEqual(summary.approvedScopes,[]);
