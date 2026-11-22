@@ -77,5 +77,25 @@ test('malformed or blank result identity fails closed before any action', () => 
   for (const studentId of ['', ' ', 'synthetic-S1 '])
     assert.deepEqual(decide(owner, { ...released, studentId }, 'inbox', 2), DENY);
 });
+test('all result states, versions and recipient identities remain isolated across every action', () => {
+  const actions: Action[] = ['inbox', 'view', 'download', 'print'];
+  const states: Result['state'][] = ['draft', 'approved', 'released', 'withdrawn'];
+  const actors: Actor[] = [owner, { kind: 'student', id: 'synthetic-S2', active: true },
+    { kind: 'student', id: 'synthetic-S1', active: false },
+    { kind: 'teacher', id: 'synthetic-S1' }, { kind: 'admin', id: 'synthetic-S1' }];
+  let cases = 0;
+  for (const action of actions) for (const state of states) for (const revoked of [false, true])
+    for (const actor of actors) for (const requestedVersion of [1, 2, 3]) {
+      const decision = decide(actor, { ...released, state, revoked }, action, requestedVersion);
+      const eligible = actor.kind === 'student' && actor.id === released.studentId &&
+        actor.active && state === 'released' && !revoked && requestedVersion === released.version;
+      assert.equal(decision.allowed, eligible);
+      assert.equal(decision.downloadUrl, null);
+      assert.equal(decision.document, null);
+      if (!eligible) assert.deepEqual(decision, DENY);
+      cases++;
+    }
+  assert.equal(cases, 480);
+});
 // Production requires authenticated backend recipient checks, release/audit
 // transactions, version revocation, private storage RLS, and browser QA.
