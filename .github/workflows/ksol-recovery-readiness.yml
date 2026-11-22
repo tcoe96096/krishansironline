@@ -1,0 +1,54 @@
+name: KSOL recovery readiness (advisory only)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/**'
+      - 'tests/ksolRecoveryInventory.test.mjs'
+      - 'tests/ksolAutomaticBackup.test.mjs'
+      - 'tests/ksolRecoveryReadiness.test.mjs'
+      - 'tests/ksolCloudEncryptedBackup.test.mjs'
+      - '.github/workflows/ksol-recovery-readiness.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '25 2 * * *' # Daily 07:55 IST, only after merged to default branch
+permissions:
+  contents: read
+jobs:
+  static-recovery-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Synthetic local recovery regression checks
+        run: |
+          node --check scripts/recovery/create-verified-backup.mjs
+          node --check scripts/recovery/check-readiness.mjs
+          node --check scripts/recovery/cloud-stream-backup.mjs
+          node --check scripts/recovery/inspect-local-backups.mjs
+          node --test tests/ksolRecoveryInventory.test.mjs tests/ksolAutomaticBackup.test.mjs tests/ksolRecoveryReadiness.test.mjs tests/ksolCloudEncryptedBackup.test.mjs
+      - name: Parse Windows PowerShell scripts without executing them
+        shell: pwsh
+        run: |
+          $all = Get-ChildItem 'scripts/recovery/windows' -Filter '*.ps1'
+          foreach ($file in $all) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$($file.Name): $($_.Message)" }
+              exit 1
+            }
+          }
+      - name: Advisory status, never authorize a merge
+        shell: bash
+        run: |
+          echo '## KSOL Recovery - advisory (not verified)' >> "$GITHUB_STEP_SUMMARY"
+          echo '- CI can verify the inspection tool, **not** access a Windows D: drive.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Backup availability: **UNKNOWN** (must be checked on the owner PC).' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Independently verified full isolated restore: **NOT VERIFIED**.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Release gate: **NO-GO** until real backup+restore evidence is independently approved.' >> "$GITHUB_STEP_SUMMARY"
+          echo '::warning::Recovery evidence is not confirmed; CI success is not release approval.'
