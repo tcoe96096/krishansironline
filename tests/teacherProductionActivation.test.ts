@@ -2,12 +2,13 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-test('Production GitHub Pages activates only core Teacher Registration, never advanced tools',()=>{
+test('Production GitHub Pages activates registration and private photos, never advanced tools',()=>{
  const workflow=readFileSync('.github/workflows/pages.yml','utf8');
  assert.match(workflow,/VITE_SUPABASE_URL:.*vars\.VITE_SUPABASE_URL/);
  assert.match(workflow,/VITE_SUPABASE_PUBLISHABLE_KEY:.*vars\.VITE_SUPABASE_PUBLISHABLE_KEY/);
  assert.match(workflow,/VITE_TEACHER_BETA_ENABLED:\s*'true'/);
- for(const key of ['ADVANCED','RESULT_ANALYTICS','RESUME','PHOTO']){
+ assert.match(workflow,/VITE_TEACHER_PHOTO_ENABLED:\s*'true'/);
+ for(const key of ['ADVANCED','RESULT_ANALYTICS','RESUME']){
   assert.ok(workflow.includes('VITE_TEACHER_'+key+'_ENABLED: \'false\''),'Unsafe feature toggle '+key);
  }
  assert.match(workflow,/branches: \["main"\]/);
