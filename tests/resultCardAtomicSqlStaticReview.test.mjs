@@ -42,3 +42,11 @@ test('rejects null operation and null eligibility explicitly',()=>{
  assert.match(sql,/p_operation IS NULL/);
  assert.match(sql,/student_account_is_eligible\(v_student\) IS DISTINCT FROM TRUE/);
 });
+
+test('release row binds private PDF to version and 64-character SHA-256',()=>{
+ assert.match(sql,/artifact_sha256 text NOT NULL CHECK/);
+ assert.match(sql,/\^\[0-9a-f\]\{64\}\$/);
+ assert.match(sql,/pdf_object_key text NOT NULL UNIQUE CHECK/);
+ assert.match(sql,/pdf_object_key = attempt_id::text \|\| '\/v' \|\| result_version::text/);
+ assert.match(sql,/artifact_sha256 \|\| '\.pdf'/);
+});
