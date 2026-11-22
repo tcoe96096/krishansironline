@@ -88,7 +88,7 @@ test('v2 recovery rejects corrupted timestamps and server attempt windows', () =
 
 test('browser recovery rejects poisoned answer maps without reading student PII', () => {
   assert.equal(isSafeExamAnswerDraft({ 0: 2, 12: 0 }, { 12: true, 0: false }, 12), true);
-  for (const answers of [null, [], '2', { 0: '2' }, { 0: -1 }, { 0: 21 }, { 0: Number.NaN }, { '-1': 0 }, { '01': 0 }, { '__proto__': 0, 1: 2 }]) {
+  for (const answers of [null, [], '2', { 0: '2' }, { 0: -1 }, { 0: 21 }, { 0: Number.NaN }, { '-1': 0 }, { '01': 0 }, JSON.parse('{"__proto__":0,"1":2}')]) {
     assert.equal(isSafeExamAnswerDraft(answers, {}, 0), false);
   }
   for (const reviews of [null, [], { 0: 'true' }, { 0: 1 }, { '-1': false }, { '01': true }]) {
