@@ -67,3 +67,23 @@ test('website result adapter remains disabled until an explicit release flag',()
  assert.doesNotMatch(browserAdapter,/SUPABASE_SERVICE_ROLE_KEY/);
  assert.doesNotMatch(browserAdapter,/\.storage\.from\(/);
 });
+
+test('both PDF proxy sources recheck caller-JWT release after byte verification',()=>{
+ const sources = [
+  edge,
+  readFileSync('supabase/functions/ksol-result-pdf-download/index.ts','utf8'),
+ ];
+ for (const source of sources) {
+  const first = source.indexOf('const manifest = await callJson(');
+  const digest = source.indexOf('const actualSha256 =');
+  const second = source.indexOf('const finalManifest = await callJson(');
+  const response = source.indexOf('return new Response(contents, { status: 200, headers });');
+  assert.ok(first >= 0 && digest > first && second > digest && response > second,
+    'Second authorization must occur after hash validation and before PDF response');
+  assert.match(source,/if \(!finalManifest\.ok \|\| finalManifest\.data !== objectKey\)/);
+  const tail = source.slice(second,response);
+  assert.match(tail,/Authorization: authorization/);
+  assert.doesNotMatch(tail,/Authorization: `Bearer \$\{serviceKey\}`/);
+  assert.match(tail,/Result no longer available/);
+ }
+});
