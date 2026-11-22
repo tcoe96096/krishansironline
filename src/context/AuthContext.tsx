@@ -214,7 +214,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .eq('role', 'admin')
+          .in('role', ['admin', 'super_admin'])
+          .limit(1)
           .maybeSingle();
         if (!active) return;
         if (error) {
