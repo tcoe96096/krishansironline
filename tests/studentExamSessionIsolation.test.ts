@@ -111,3 +111,16 @@ test('offline recovery rejects answers and cursor outside the current published 
   const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
   assert.match(engine, /isSafeExamAnswerDraft\(saved\.selectedAnswers, saved\.markedForReview, saved\.currentQuestionIndex, selectedTest\.questions\.length\)/);
 });
+
+
+test('offline recovery refuses an answer index outside the published bilingual option range', () => {
+  assert.equal(isSafeExamAnswerDraft({ 0: 2, 1: 1 }, { 1: true }, 0, 2, [3, 2]), true);
+  assert.equal(isSafeExamAnswerDraft({ 0: 3 }, {}, 0, 2, [3, 2]), false);
+  assert.equal(isSafeExamAnswerDraft({ 1: 2 }, {}, 0, 2, [3, 2]), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, [3]), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, [3, 0]), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, [3, Number.NaN]), false);
+  assert.equal(isSafeExamAnswerDraft({ 0: 0 }, {}, 0, 2, [3, 2]), true);
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  assert.match(engine, /selectedTest\.questions\.map\(\(question\) => Math\.min\(question\.options\.en\.length, question\.options\.hi\.length\)\)/);
+});
