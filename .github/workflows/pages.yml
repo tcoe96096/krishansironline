@@ -35,6 +35,26 @@ jobs:
       - name: Build Vite website
         run: npm run build
 
+      - name: Build isolated, inactive Teacher portal
+        env:
+          # This static site is only a visual preview; no operational Teacher RPCs.
+          # NEVER point this step at Production Supabase until RLS/UAT is accepted.
+          VITE_SUPABASE_URL: https://teacher-disabled.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: disabled-preview-only
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: |
+          npx vite build --config vite.teacher-beta.config.ts --base=/teacher-beta/
+          test ! -e dist/teacher-beta
+          mkdir -p dist/teacher-beta
+          cp -a teacher-beta-dist/. dist/teacher-beta/
+          for route in index.html registration/index.html login/index.html dashboard/index.html admin/index.html staff-workspace/index.html; do
+            test -s "dist/teacher-beta/$route"
+          done
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
