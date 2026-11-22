@@ -6,6 +6,8 @@ on:
     paths:
       - 'tests/resultCardBackendContractReview.test.mjs'
       - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
+      - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
       - '.github/workflows/result-card-backend-contract-review.yml'
   pull_request:
@@ -23,4 +25,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run synthetic fail-closed contract checks
-        run: node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs
+        run: node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs
