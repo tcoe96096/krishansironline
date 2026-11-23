@@ -29,16 +29,10 @@ for i in $(seq 1 60); do
 done
 if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' >&2; exit 2; fi
 
-# Fail fast if the disposable image cannot supply known required Supabase extensions.
-# Never run extension installs or schema changes against source databases.
-for ext in pg_net supabase_vault pg_cron; do
-  available="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
-    "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name='$ext')::int" 2>/dev/null)" || available=0
-  if [[ "$available" != 1 ]]; then
-    echo "RESTORE_NOT_RUN: SUPABASE_IMAGE_MISSING_EXTENSION_$ext" >&2
-    exit 2
-  fi
-done
+# Do not hardcode extension requirements for every archive. Synthetic and
+# application-only archives may not require pg_cron, pg_net or vault. Let the
+# actual pg_restore attempt report an unavailable extension if the archive
+# references one, rather than blocking a compatible backup before restore.
 
 
 # Supabase role grants are omitted by pg_restore --no-acl --no-owner.
