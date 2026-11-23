@@ -52,6 +52,14 @@ if [[ "$roles_ready" != 4 ]]; then
   exit 2
 fi
 
+# Supabase initializes public with restricted schema privileges. Grant the
+# disposable restore account CREATE locally; never alter source databases.
+docker exec "$name" psql -X -U postgres -d ksol_recovery -v ON_ERROR_STOP=1 \
+  -c 'GRANT USAGE, CREATE ON SCHEMA public TO postgres' >/dev/null 2>/dev/null || {
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_SCHEMA_PRIVILEGE_SETUP_FAILED' >&2
+    exit 2
+  }
+
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
 # Capture diagnostics in a private temporary file, emit only safe categories.
