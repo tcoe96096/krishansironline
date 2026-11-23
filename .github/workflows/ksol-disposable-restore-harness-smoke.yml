@@ -76,6 +76,16 @@ jobs:
             exit 1
           fi
           echo 'Missing required Supabase tables correctly rejected'
+      - name: Verify extension diagnosis allowlist never prints arbitrary identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The classifier is intentionally inline in the restore script, with
+          # the failed TOC identifier validated against fixed extension names.
+          grep -Fq 'RESTORE_FAILED_KNOWN_EXTENSION:' scripts/recovery/restore-archive-to-disposable-postgres.sh
+          grep -Fq 'RESTORE_EXTENSION_FAILURE_SCOPE:' scripts/recovery/restore-archive-to-disposable-postgres.sh
+          grep -Fq 'SERVER_PRELOAD_CONFIGURATION' scripts/recovery/restore-archive-to-disposable-postgres.sh
+          grep -Fq 'FIXED_DATABASE_REQUIREMENT' scripts/recovery/restore-archive-to-disposable-postgres.sh
       - name: Confirm no leftover restore container
         shell: bash
         run: |
