@@ -31,11 +31,33 @@ if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' 
 
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
+# Capture diagnostics in a private temporary file, emit only safe categories.
+# Raw SQL, object names and sensitive stderr must never enter Actions logs.
+restore_errors="$(mktemp)"
+chmod 600 "$restore_errors"
 if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
-  --username postgres --dbname ksol_recovery >/dev/null 2>/dev/null; then
-  echo 'RESTORE_FAILED: pg_restore returned nonzero (details suppressed)' >&2
+  --username postgres --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
+  category='OTHER_RESTORE_ERROR'
+  if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
+    category='SUPABASE_ROLE_MISMATCH'
+  elif grep -Eiq 'extension .* is not available|could not open extension control file' "$restore_errors"; then
+    category='MISSING_EXTENSION'
+  elif grep -Eiq 'permission denied|must be owner|insufficient privilege' "$restore_errors"; then
+    category='PERMISSIONS'
+  elif grep -Eiq 'already exists|duplicate key|multiple primary keys' "$restore_errors"; then
+    category='OBJECT_CONFLICT'
+  elif grep -Eiq 'unrecognized configuration parameter|syntax error|unsupported version' "$restore_errors"; then
+    category='POSTGRES_COMPATIBILITY'
+  elif grep -Eiq 'No space left on device|could not extend file|disk full' "$restore_errors"; then
+    category='DISPOSABLE_STORAGE_LIMIT'
+  elif grep -Eiq 'unexpected end of file|could not read from input file|input file is too short|not a valid archive' "$restore_errors"; then
+    category='ARCHIVE_STREAM_INVALID'
+  fi
+  rm -f "$restore_errors"
+  echo "RESTORE_FAILED_CATEGORY: $category (raw diagnostics suppressed)" >&2
   exit 2
 fi
+rm -f "$restore_errors"
 # Avoid exposing table names, values or metadata to logs.
 count="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
   "SELECT count(*) FROM pg_catalog.pg_class WHERE relkind IN ('r','p') AND relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname LIKE 'pg_%' OR nspname='information_schema');" 2>/dev/null)" || {
