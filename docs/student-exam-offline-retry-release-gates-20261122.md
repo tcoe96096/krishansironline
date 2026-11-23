@@ -27,3 +27,14 @@
 
 ## ₹0 and release controls
 Do not enable paid GitHub Actions minutes/storage, paid Supabase resources, paid APIs or new cloud services. Verify remaining **actual** free quotas before starting CI; local focused tests are preferred if limits are unknown. No Preview/Production database changes, migrations, permission activation, deployment or merge without verified recovery, authenticated negative/positive tests and separate owner approval. Teacher, Result Card, StudyMaterialsView and Studios are out of scope.
+
+## Proposed replay contract (NOT implemented; requires backend-owner review)
+
+- **Scope key:** authenticated `auth.uid()` + server-issued `attempt_id` + `test_id`. The server derives ownership from the JWT/RLS, not a client-provided student identifier. A queue entry cannot authorize a different account.
+- **Request:** `attempt_id`, monotonic `client_revision`, unique opaque `operation_id`, and bounded answer edits referencing published question IDs/options. Do not include answer keys or PII. This is a proposed interface, **not** an existing RPC signature.
+- **Server transaction:** check ownership, enrollment eligibility, active attempt status and server expiry; atomically deduplicate `operation_id` within the attempt and reject stale revisions. Return canonical revision/status without disclosing other users' data. No client clock controls expiry.
+- **Response classes:** acknowledged/reconciled; already-applied (same operation, same payload); conflict (refetch authoritative attempt); expired/submitted/revoked (terminal, discard pending replay); unauthenticated (pause and require reauthentication); transient network failure (retain only same-owner pending draft, no repeated submission storm).
+- **Replay discipline:** at most one in-flight operation per attempt; bounded exponential backoff while online; revalidate `auth.uid()` and server attempt before replay; clear queue on sign-out, account switch or revocation; never replay a final submission without server-side idempotency evidence.
+- **Server-grade acceptance:** duplicate submit, reordered edits, concurrent tabs, lost acknowledgement, expired attempt, changed enrollment, and foreign-user replay must each be exercised with synthetic authenticated accounts in a disposable environment. Verify one authoritative result and immutable prior result history.
+
+**Ownership boundary:** these are proposed cross-module contracts only. Do not change Supabase RPC/RLS or PR #91 from this branch; obtain backend-owner agreement and independently verified recovery before implementation/activation.
