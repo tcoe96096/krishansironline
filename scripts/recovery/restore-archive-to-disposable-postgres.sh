@@ -24,7 +24,7 @@ docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,
   postgres:17-alpine >/dev/null
 ready=0
 for i in $(seq 1 60); do
-  if docker exec "$name" pg_isready -U postgres -d ksol_recovery >/dev/null 2>&1; then ready=1; break; fi
+  if docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
   sleep 1
 done
 if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' >&2; exit 2; fi
