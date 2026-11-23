@@ -173,3 +173,16 @@ test('v2 recovery rejects stale or future draft boundaries without changing serv
   assert.equal(canRestoreExamAnswers({ ...saved, savedAt: started - 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
   assert.equal(canRestoreExamAnswers({ ...saved, savedAt: expires + 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
 });
+
+
+test('offline recovery rejects sparse or non-array bilingual option snapshots', () => {
+  const sparse = new Array<number>(2);
+  sparse[0] = 3;
+  const inherited = Object.create(Array.prototype) as number[];
+  inherited.length = 2;
+  inherited[0] = 3;
+  inherited[1] = 2;
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, sparse), false);
+  assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, inherited), false);
+  assert.equal(isSafeExamAnswerDraft({ 0: 1 }, {}, 0, 2, [3, 2]), true);
+});
