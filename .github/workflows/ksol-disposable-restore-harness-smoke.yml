@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d --name ksol-synthetic-source --network none -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=synthetic postgres:18-alpine >/dev/null
+          docker run -d --name ksol-synthetic-source --network none -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=synthetic postgres:17-alpine >/dev/null
           trap 'docker rm -f ksol-synthetic-source >/dev/null 2>&1 || true' EXIT
           ready=0
           for i in $(seq 1 60); do
