@@ -26,11 +26,11 @@ name="ksol-disposable-restore-$$"
 password="$(openssl rand -hex 24)"
 cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
+# Preview source uses PostgreSQL 17.11; use a current compatible PG17
+# Supabase image rather than older 17.6 binaries/extension packages.
+# This does NOT make managed-schema restoration automatically safe.
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
-  # Preview source uses PostgreSQL 17.11; use a current compatible PG17
-  # Supabase image rather than older 17.6 binaries/extension packages.
-  # This does NOT make managed-schema restoration automatically safe.
   supabase/postgres:17.12.0.002 >/dev/null
 ready=0
 for i in $(seq 1 60); do
