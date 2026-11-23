@@ -93,7 +93,10 @@ chmod 600 "$restore_errors"
 # Never print the captured stderr; it may contain private SQL or object names.
 restore_flags=(--verbose --exit-on-error --no-owner --no-acl)
 if [[ "$verify_scope" == application ]]; then
-  restore_flags+=(--schema=public)
+  # Recover only KSOL public schema and rows, not platform-owned schemas or
+  # post-data indexes, foreign keys, policies or triggers. Those are assessed
+  # separately; this is DATA SALVAGE verification, not a deployable DB.
+  restore_flags+=(--schema=public --section=pre-data --section=data)
 fi
 if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
   --username "$restore_user" --dbname "$restore_db" >/dev/null 2>"$restore_errors"; then
@@ -220,11 +223,18 @@ if [[ "$verify_scope" == application ]]; then
   [[ "$verified" == 1 ]] || {
     echo 'RESTORE_FAILED: required application tables missing' >&2; exit 2;
   }
-  docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc \
-    'SELECT 1 FROM public.student_profiles LIMIT 1; SELECT 1 FROM public.test_attempts LIMIT 1;' >/dev/null 2>/dev/null || {
+  # Require nonempty actual rows rather than only successfully created tables.
+  # The backup may contain personal data, so return only a single boolean.
+  readable="$(docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc \
+    "SELECT (EXISTS(SELECT 1 FROM public.student_profiles) AND EXISTS(SELECT 1 FROM public.test_attempts))::int;" 2>/dev/null)" || {
     echo 'RESTORE_FAILED: application tables unreadable' >&2; exit 2;
   }
-  echo 'KSOL_APPLICATION_SCHEMA_RESTORE_OK=YES'
+  [[ "$readable" == 1 ]] || {
+    echo 'RESTORE_FAILED: required application tables have no rows' >&2
+    exit 2
+  }
+  echo 'KSOL_APPLICATION_DATA_READABLE=YES'
+  echo 'KSOL_APPLICATION_CONSTRAINTS_RLS_INDEXES=NOT_VERIFIED'
   echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'
   echo 'RELEASE_GATE=NO_GO'
   exit 0
