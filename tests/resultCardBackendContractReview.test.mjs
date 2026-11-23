@@ -200,6 +200,7 @@ const canonicalBinding = ({authenticatedRecipient, attemptId, resultId, matches,
   matches[0]?.resultId === resultId &&
   matches[0]?.recipientId === authenticatedRecipient &&
   matches[0]?.version === version &&
+  matches[0]?.objectDigest === objectDigest &&
   Number.isSafeInteger(version) && version > 0 &&
   validDigest(objectDigest) && objectPrivate === true;
 
@@ -207,7 +208,7 @@ test('canonical binding fails closed on missing, ambiguous or cross-recipient re
   const recipientId='66666666-6666-4666-8666-666666666666';
   const attemptId='44444444-4444-4444-8444-444444444444';
   const resultId='77777777-7777-4777-8777-777777777777';
-  const match={recipientId,attemptId,resultId,version:3};
+  const match={recipientId,attemptId,resultId,version:3,objectDigest:digestA};
   const good={authenticatedRecipient:recipientId,attemptId,resultId,matches:[match],version:3,objectDigest:digestA,objectPrivate:true};
   assert.equal(canonicalBinding(good),true);
   for (const changes of [
@@ -215,6 +216,8 @@ test('canonical binding fails closed on missing, ambiguous or cross-recipient re
     {matches:[{...match,recipientId:actor}]},
     {matches:[{...match,resultId:attemptId}]},
     {matches:[{...match,version:2}]},
+    {matches:[{...match,objectDigest:digestB}]},
+    {objectDigest:digestB},
     {authenticatedRecipient:actor},
     {objectDigest:undefined}, {objectDigest:'A'.repeat(64)},
     {objectPrivate:'true'}, {version:undefined}
