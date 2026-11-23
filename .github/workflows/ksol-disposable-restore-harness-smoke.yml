@@ -30,7 +30,7 @@ jobs:
           trap 'docker rm -f ksol-synthetic-source >/dev/null 2>&1 || true' EXIT
           ready=0
           for i in $(seq 1 60); do
-            if docker exec ksol-synthetic-source pg_isready -U postgres -d synthetic >/dev/null 2>&1; then ready=1; break; fi
+            if docker exec ksol-synthetic-source psql -X -U postgres -d synthetic -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
             sleep 1
           done
           test "$ready" = 1
@@ -44,7 +44,7 @@ jobs:
           trap 'docker rm -f ksol-schema-negative >/dev/null 2>&1 || true' EXIT
           ready=0
           for i in $(seq 1 60); do
-            if docker exec ksol-schema-negative pg_isready -U postgres -d synthetic >/dev/null 2>&1; then ready=1; break; fi
+            if docker exec ksol-schema-negative psql -X -U postgres -d synthetic -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
             sleep 1
           done
           test "$ready" = 1
