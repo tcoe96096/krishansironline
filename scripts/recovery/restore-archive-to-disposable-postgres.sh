@@ -41,27 +41,16 @@ for ext in pg_net supabase_vault pg_cron; do
 done
 
 
-# Supabase-managed grants/default privileges reference platform roles absent from
-# vanilla PostgreSQL. Create inert NOLOGIN placeholders ONLY inside this
-# offline, network-disabled disposable container. No real users or credentials.
-# This does not recreate Supabase services or authorize a production restore.
-docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d ksol_recovery \
-  -c "DO \$\$ DECLARE role_name text; BEGIN
-    FOREACH role_name IN ARRAY ARRAY[
-      'anon','authenticated','service_role','authenticator',
-      'supabase_admin','supabase_auth_admin','supabase_storage_admin',
-      'supabase_realtime_admin','supabase_functions_admin',
-      'supabase_read_only_user','dashboard_user','pgbouncer',
-      'pgsodium_keyholder','pgsodium_keyiduser','pgsodium_keymaker'
-    ] LOOP
-      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN
-        EXECUTE format('CREATE ROLE %I NOLOGIN',role_name);
-      END IF;
-    END LOOP;
-  END \$\$;" >/dev/null 2>/dev/null || {
-    echo 'RESTORE_FAILED: disposable Supabase role compatibility setup failed' >&2
-    exit 2
-  }
+# The official Supabase image provisions its platform roles itself.
+# Do not attempt to recreate them: its postgres account can lack CREATEROLE,
+# and --no-owner --no-acl avoids replaying role-specific grants.
+# This check is read-only and confined to the disposable container.
+roles_ready="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+  "SELECT count(*) FROM pg_roles WHERE rolname IN ('anon','authenticated','service_role','supabase_admin')" 2>/dev/null)" || roles_ready=0
+if [[ "$roles_ready" != 4 ]]; then
+  echo 'RESTORE_NOT_RUN: SUPABASE_IMAGE_PLATFORM_ROLES_INCOMPLETE' >&2
+  exit 2
+fi
 
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
