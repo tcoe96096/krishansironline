@@ -186,3 +186,14 @@ test('offline recovery rejects sparse or non-array bilingual option snapshots', 
   assert.equal(isSafeExamAnswerDraft({}, {}, 0, 2, inherited), false);
   assert.equal(isSafeExamAnswerDraft({ 0: 1 }, {}, 0, 2, [3, 2]), true);
 });
+
+
+test('mounted exam clears prior account answers, attempt and browser draft on auth switch', () => {
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  assert.match(engine, /previousAuthenticatedUserId\.current = nextUserId/);
+  assert.match(engine, /previousUserId === undefined \|\| previousUserId === nextUserId/);
+  const switchGuard = engine.slice(engine.indexOf('const previousAuthenticatedUserId'), engine.indexOf('const [submissionStatus'));
+  for (const action of ['setIsTestActive(false)', 'setActiveAttempt(null)', 'setServerResult(null)', 'setSelectedAnswers({})', 'setMarkedForReview({})', 'setRestoredSession(null)', "localStorage.removeItem(ACTIVE_TEST_SESSION_KEY)"]) {
+    assert.ok(switchGuard.includes(action), 'missing account-switch cleanup: ' + action);
+  }
+});
