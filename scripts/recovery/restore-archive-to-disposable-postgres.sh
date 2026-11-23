@@ -21,7 +21,7 @@ cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
-  postgres:17-alpine >/dev/null
+  supabase/postgres:17.6.1.136 >/dev/null
 ready=0
 for i in $(seq 1 60); do
   if docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
@@ -29,27 +29,31 @@ for i in $(seq 1 60); do
 done
 if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' >&2; exit 2; fi
 
-# Supabase-managed grants/default privileges reference platform roles absent from
-# vanilla PostgreSQL. Create inert NOLOGIN placeholders ONLY inside this
-# offline, network-disabled disposable container. No real users or credentials.
-# This does not recreate Supabase services or authorize a production restore.
-docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d ksol_recovery \
-  -c "DO \$\$ DECLARE role_name text; BEGIN
-    FOREACH role_name IN ARRAY ARRAY[
-      'anon','authenticated','service_role','authenticator',
-      'supabase_admin','supabase_auth_admin','supabase_storage_admin',
-      'supabase_realtime_admin','supabase_functions_admin',
-      'supabase_read_only_user','dashboard_user','pgbouncer',
-      'pgsodium_keyholder','pgsodium_keyiduser','pgsodium_keymaker'
-    ] LOOP
-      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN
-        EXECUTE format('CREATE ROLE %I NOLOGIN',role_name);
-      END IF;
-    END LOOP;
-  END \$\$;" >/dev/null 2>/dev/null || {
-    echo 'RESTORE_FAILED: disposable Supabase role compatibility setup failed' >&2
+# Fail fast if the disposable image cannot supply known required Supabase extensions.
+# Never run extension installs or schema changes against source databases.
+for ext in pg_net supabase_vault pg_cron; do
+  available="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+    "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name='$ext')::int" 2>/dev/null)" || available=0
+  if [[ "$available" != 1 ]]; then
+    echo "RESTORE_NOT_RUN: SUPABASE_IMAGE_MISSING_EXTENSION_$ext" >&2
     exit 2
-  }
+  fi
+done
+
+
+# Supabase role grants are omitted by pg_restore --no-acl --no-owner.
+# Do not require platform roles in the disposable container; the image may
+# intentionally provision them only during its complete production bootstrap.
+# Never create or modify source database roles.
+
+# The official Supabase image restricts several platform schemas. For the
+# isolated recovery only, use the image's built-in privileged supabase_admin
+# account rather than the lower-privileged postgres login. No source access.
+restore_user=supabase_admin
+if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
+  echo 'RESTORE_NOT_RUN: SUPABASE_ADMIN_DISPOSABLE_ACCESS_UNAVAILABLE' >&2
+  exit 2
+fi
 
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
@@ -58,7 +62,7 @@ docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d ksol_recovery \
 restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
 if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
-  --username postgres --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
+  --username "$restore_user" --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     category='SUPABASE_ROLE_MISMATCH'
@@ -83,6 +87,14 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
         echo "MISSING_EXTENSION_KNOWN_NAME: $ext" >&2
       fi
     done
+  fi
+  if [[ "$category" == 'PERMISSIONS' ]]; then
+    if grep -Eiq 'permission denied for schema' "$restore_errors"; then echo 'PERMISSION_SCOPE: SCHEMA' >&2; fi
+    if grep -Eiq 'permission denied to create extension|must be superuser to create this extension' "$restore_errors"; then echo 'PERMISSION_SCOPE: EXTENSION_CREATION' >&2; fi
+    if grep -Eiq 'must be owner of extension|must be owner of schema|must be owner of table' "$restore_errors"; then echo 'PERMISSION_SCOPE: OWNERSHIP' >&2; fi
+    if grep -Eiq 'permission denied to create role|permission denied to alter role' "$restore_errors"; then echo 'PERMISSION_SCOPE: ROLE_MANAGEMENT' >&2; fi
+    if grep -Eiq 'permission denied for database' "$restore_errors"; then echo 'PERMISSION_SCOPE: DATABASE' >&2; fi
+    if grep -Eiq 'permission denied to set parameter|permission denied to set role' "$restore_errors"; then echo 'PERMISSION_SCOPE: SESSION' >&2; fi
   fi
   # Surface presence of additional error categories without leaking raw details.
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
