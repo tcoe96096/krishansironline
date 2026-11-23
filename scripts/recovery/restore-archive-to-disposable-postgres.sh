@@ -107,6 +107,17 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
     if grep -Eiq 'permission denied for database' "$restore_errors"; then echo 'PERMISSION_SCOPE: DATABASE' >&2; fi
     if grep -Eiq 'permission denied to set parameter|permission denied to set role' "$restore_errors"; then echo 'PERMISSION_SCOPE: SESSION' >&2; fi
   fi
+  # Report only generic conflict classes; never echo archive object names,
+  # SQL statements, schema identifiers or raw pg_restore diagnostics.
+  if [[ "$category" == 'OBJECT_CONFLICT' ]]; then
+    if grep -Eiq 'schema .* already exists' "$restore_errors"; then echo 'CONFLICT_SCOPE: SCHEMA' >&2; fi
+    if grep -Eiq 'extension .* already exists' "$restore_errors"; then echo 'CONFLICT_SCOPE: EXTENSION' >&2; fi
+    if grep -Eiq 'relation .* already exists|table .* already exists' "$restore_errors"; then echo 'CONFLICT_SCOPE: TABLE_OR_RELATION' >&2; fi
+    if grep -Eiq 'type .* already exists' "$restore_errors"; then echo 'CONFLICT_SCOPE: TYPE' >&2; fi
+    if grep -Eiq 'function .* already exists|procedure .* already exists' "$restore_errors"; then echo 'CONFLICT_SCOPE: FUNCTION' >&2; fi
+    if grep -Eiq 'constraint .* already exists|multiple primary keys' "$restore_errors"; then echo 'CONFLICT_SCOPE: CONSTRAINT' >&2; fi
+    if grep -Eiq 'duplicate key value violates unique constraint' "$restore_errors"; then echo 'CONFLICT_SCOPE: DUPLICATE_DATA' >&2; fi
+  fi
   # Surface presence of additional error categories without leaking raw details.
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     echo 'RESTORE_DIAGNOSTIC: ROLE_MISMATCH_PRESENT' >&2
