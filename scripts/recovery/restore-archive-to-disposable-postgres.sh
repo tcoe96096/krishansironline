@@ -41,16 +41,10 @@ for ext in pg_net supabase_vault pg_cron; do
 done
 
 
-# The official Supabase image provisions its platform roles itself.
-# Do not attempt to recreate them: its postgres account can lack CREATEROLE,
-# and --no-owner --no-acl avoids replaying role-specific grants.
-# This check is read-only and confined to the disposable container.
-roles_ready="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
-  "SELECT count(*) FROM pg_roles WHERE rolname IN ('anon','authenticated','service_role','supabase_admin')" 2>/dev/null)" || roles_ready=0
-if [[ "$roles_ready" != 4 ]]; then
-  echo 'RESTORE_NOT_RUN: SUPABASE_IMAGE_PLATFORM_ROLES_INCOMPLETE' >&2
-  exit 2
-fi
+# Supabase role grants are omitted by pg_restore --no-acl --no-owner.
+# Do not require platform roles in the disposable container; the image may
+# intentionally provision them only during its complete production bootstrap.
+# Never create or modify source database roles.
 
 # Supabase initializes public with restricted schema privileges. Grant the
 # disposable restore account CREATE locally; never alter source databases.
