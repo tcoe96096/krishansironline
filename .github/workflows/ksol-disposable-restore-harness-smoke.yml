@@ -36,6 +36,22 @@ jobs:
           test "$ready" = 1
           docker exec ksol-synthetic-source psql -X -U postgres -d synthetic -v ON_ERROR_STOP=1 -c 'CREATE TABLE synthetic_restore_check (id integer PRIMARY KEY); INSERT INTO synthetic_restore_check VALUES (1), (2);' >/dev/null
           docker exec ksol-synthetic-source pg_dump -U postgres -d synthetic --format=custom | KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY bash scripts/recovery/restore-archive-to-disposable-postgres.sh
+      # This tests the expected schema gate, not the entire Supabase platform.
+      - name: Verify Supabase-shaped synthetic archive restores the required catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name ksol-schema-positive --network none -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=synthetic postgres:17-alpine >/dev/null
+          trap 'docker rm -f ksol-schema-positive >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec ksol-schema-positive psql -X -U postgres -d synthetic -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          docker exec ksol-schema-positive psql -X -U postgres -d synthetic -v ON_ERROR_STOP=1             -c 'CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE TABLE auth.users (id integer PRIMARY KEY); CREATE TABLE storage.objects (id integer PRIMARY KEY); CREATE TABLE public.student_profiles (id integer PRIMARY KEY); CREATE TABLE public.test_attempts (id integer PRIMARY KEY); INSERT INTO public.student_profiles VALUES (1);' >/dev/null
+          docker exec ksol-schema-positive pg_dump -U postgres -d synthetic --format=custom |
+            KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 bash scripts/recovery/restore-archive-to-disposable-postgres.sh
       - name: Verify required Supabase table check rejects incomplete synthetic backup
         shell: bash
         run: |
