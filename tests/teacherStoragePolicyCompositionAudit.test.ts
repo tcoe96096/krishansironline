@@ -18,7 +18,8 @@ test('private media audit inspects both buckets and remains read only', () => {
   assert.match(sql, /teacher-resumes-private/);
   assert.match(sql, /b\.public/);
   assert.match(sql, /b\.allowed_mime_types/);
-  const executable = sql.replace(/--[^\n]*/g, '');
+  // SQL command names inside quoted pg_policies.cmd values are data, not executable DML.
+  const executable = sql.replace(/--[^\n]*/g, '').replace(/'(?:''|[^'])*'/g, "''");
   assert.doesNotMatch(executable, /\b(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|CREATE|DROP|GRANT|REVOKE|CALL|DO)\b/i);
   assert.match(sql, /Empty inventory is NOT a PASS/i);
   assert.match(sql, /real anon, owner, other teacher, admin and reviewer/i);
