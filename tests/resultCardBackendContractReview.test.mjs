@@ -191,7 +191,10 @@ test('fail closed on non-boolean access predicates', () => {
 // Canonical result-to-attempt identity remains UNVERIFIED in the live catalogs.
 // This synthetic guard deliberately denies absent, ambiguous or cross-recipient
 // mappings; it does not assume result_record.id === test_attempts.id.
-const canonicalBinding = ({authenticatedRecipient, attemptId, resultId, matches, version, objectDigest, objectPrivate}) =>
+const canonicalBinding = (input) => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  const {authenticatedRecipient, attemptId, resultId, matches, version, objectDigest, objectPrivate} = input;
+  return Boolean(
   typeof authenticatedRecipient === 'string' && validKey(authenticatedRecipient) &&
   typeof attemptId === 'string' && validKey(attemptId) &&
   typeof resultId === 'string' && validKey(resultId) &&
@@ -202,7 +205,8 @@ const canonicalBinding = ({authenticatedRecipient, attemptId, resultId, matches,
   matches[0]?.version === version &&
   matches[0]?.objectDigest === objectDigest &&
   Number.isSafeInteger(version) && version > 0 &&
-  validDigest(objectDigest) && objectPrivate === true;
+  validDigest(objectDigest) && objectPrivate === true);
+};
 
 test('canonical binding fails closed on missing, ambiguous or cross-recipient result mapping', () => {
   const recipientId='66666666-6666-4666-8666-666666666666';
@@ -222,4 +226,14 @@ test('canonical binding fails closed on missing, ambiguous or cross-recipient re
     {objectDigest:undefined}, {objectDigest:'A'.repeat(64)},
     {objectPrivate:'true'}, {version:undefined}
   ]) assert.equal(canonicalBinding({...good,...changes}),false,JSON.stringify(changes));
+});
+
+// Invalid envelope must be rejected as a decision, never crash the caller.
+test('canonical binding denies malformed input envelopes without throwing', () => {
+  for (const value of [undefined, null, false, 0, '', [], 'string']) {
+    assert.doesNotThrow(() => canonicalBinding(value));
+    assert.equal(canonicalBinding(value), false);
+  }
+  assert.equal(canonicalBinding({}), false);
+  assert.equal(canonicalBinding({matches:[null]}), false);
 });
