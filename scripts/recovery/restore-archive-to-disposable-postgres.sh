@@ -55,6 +55,17 @@ if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELE
   exit 2
 fi
 
+# Supabase's image bootstraps template1 with platform objects. Restoring a
+# full Supabase archive into a template1-derived database creates conflicts.
+# Create a *new empty* database from template0, inside this disposable instance.
+# No drop/clean is performed on source databases or platform bootstrap DB.
+restore_db=ksol_recovery_clean
+if ! docker exec "$name" psql -X -U "$restore_user" -d postgres -v ON_ERROR_STOP=1 \
+  -c "CREATE DATABASE $restore_db WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
+  echo 'RESTORE_NOT_RUN: CLEAN_TEMPLATE0_DATABASE_CREATION_FAILED' >&2
+  exit 2
+fi
+
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
 # Capture diagnostics in a private temporary file, emit only safe categories.
@@ -62,7 +73,7 @@ fi
 restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
 if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
-  --username "$restore_user" --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
+  --username "$restore_user" --dbname "$restore_db" >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     category='SUPABASE_ROLE_MISMATCH'
@@ -112,7 +123,7 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
 fi
 rm -f "$restore_errors"
 # Avoid exposing table names, values or metadata to logs.
-count="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+count="$(docker exec "$name" psql -X -U postgres -d "$restore_db" -Atqc \
   "SELECT count(*) FROM pg_catalog.pg_class WHERE relkind IN ('r','p') AND relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname LIKE 'pg_%' OR nspname='information_schema');" 2>/dev/null)" || {
   echo 'RESTORE_FAILED: catalog check failed' >&2; exit 2;
 }
@@ -122,7 +133,7 @@ fi
 # Real Supabase backup mode: confirm required application and platform tables
 # exist in the restored catalog. Only boolean results leave the container.
 if [[ "${KSOL_EXPECT_SUPABASE_SCHEMA:-0}" == '1' ]]; then
-  present="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+  present="$(docker exec "$name" psql -X -U postgres -d "$restore_db" -Atqc \
     "SELECT (to_regclass('auth.users') IS NOT NULL AND to_regclass('storage.objects') IS NOT NULL AND to_regclass('public.student_profiles') IS NOT NULL AND to_regclass('public.test_attempts') IS NOT NULL)::int;" 2>/dev/null)" || {
     echo 'RESTORE_FAILED: expected schema check failed' >&2; exit 2;
   }
