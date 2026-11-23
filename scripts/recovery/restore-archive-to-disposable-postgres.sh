@@ -93,6 +93,14 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
       fi
     done
   fi
+  if [[ "$category" == 'PERMISSIONS' ]]; then
+    if grep -Eiq 'permission denied for schema' "$restore_errors"; then echo 'PERMISSION_SCOPE: SCHEMA' >&2; fi
+    if grep -Eiq 'permission denied to create extension|must be superuser to create this extension' "$restore_errors"; then echo 'PERMISSION_SCOPE: EXTENSION_CREATION' >&2; fi
+    if grep -Eiq 'must be owner of extension|must be owner of schema|must be owner of table' "$restore_errors"; then echo 'PERMISSION_SCOPE: OWNERSHIP' >&2; fi
+    if grep -Eiq 'permission denied to create role|permission denied to alter role' "$restore_errors"; then echo 'PERMISSION_SCOPE: ROLE_MANAGEMENT' >&2; fi
+    if grep -Eiq 'permission denied for database' "$restore_errors"; then echo 'PERMISSION_SCOPE: DATABASE' >&2; fi
+    if grep -Eiq 'permission denied to set parameter|permission denied to set role' "$restore_errors"; then echo 'PERMISSION_SCOPE: SESSION' >&2; fi
+  fi
   # Surface presence of additional error categories without leaking raw details.
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     echo 'RESTORE_DIAGNOSTIC: ROLE_MISMATCH_PRESENT' >&2
