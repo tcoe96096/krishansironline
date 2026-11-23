@@ -21,13 +21,25 @@ cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
-  postgres:17-alpine >/dev/null
+  supabase/postgres:17.6.1.136 >/dev/null
 ready=0
 for i in $(seq 1 60); do
   if docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
   sleep 1
 done
 if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' >&2; exit 2; fi
+
+# Fail fast if the disposable image cannot supply known required Supabase extensions.
+# Never run extension installs or schema changes against source databases.
+for ext in pg_net supabase_vault pg_cron; do
+  available="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+    "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name='$ext')::int" 2>/dev/null)" || available=0
+  if [[ "$available" != 1 ]]; then
+    echo "RESTORE_NOT_RUN: SUPABASE_IMAGE_MISSING_EXTENSION_$ext" >&2
+    exit 2
+  fi
+done
+
 
 # Supabase-managed grants/default privileges reference platform roles absent from
 # vanilla PostgreSQL. Create inert NOLOGIN placeholders ONLY inside this
