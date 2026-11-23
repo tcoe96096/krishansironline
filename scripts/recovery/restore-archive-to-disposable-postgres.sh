@@ -21,7 +21,7 @@ cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
-  postgres:18-alpine >/dev/null
+  postgres:17-alpine >/dev/null
 ready=0
 for i in $(seq 1 60); do
   if docker exec "$name" pg_isready -U postgres -d ksol_recovery >/dev/null 2>&1; then ready=1; break; fi
