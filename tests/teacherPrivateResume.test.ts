@@ -47,8 +47,10 @@ test('submitted, approved, suspended and unrelated profiles cannot upload',()=>{
 test('service enforces authenticated owner, server capability, file magic, reservation and finalize',()=>{
  const s=readFileSync('src/services/teacherPrivateResume.ts','utf8');
  assert.match(s,/validateTeacherResume\(file\)/);
- assert.match(s,/signature\[0\]===37/); // %PDF-
- assert.match(s,/signature\[0\]===80&&signature\[1\]===75/); // PK ZIP header
+ assert.match(s,/validateTeacherResumeContent\(bytes,file\.type\)/); // centralized PDF/DOCX byte preflight
+ const preflight=readFileSync('src/lib/teacherResumeContentPreflight.ts','utf8');
+ assert.match(preflight,/PDF_MIME/);
+ assert.match(preflight,/DOCX_MIME/);
  assert.match(s,/auth\.getUser\(\)/);
  assert.match(s,/teacher_v2_beta_capabilities/);
  assert.match(s,/resumes!==true/);

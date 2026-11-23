@@ -26,7 +26,25 @@ await context.route('https://teacher-test.supabase.test/**',async route=>{
   }
  }else if(op==='teacher_v2_withdraw'){profile.submitted_at=null;profile.revision++;recordedVerification=null;data=true;writes.push({op,args});}
  else if(op==='is_super_admin')data=superAdmin;
- else if(op==='teacher_v2_directory'){if(superAdmin)data=[profile];else{status=403;data={code:'42501'};}}
+ else if(op==='teacher_v2_directory'||op==='teacher_v2_directory_filtered'){
+  if(!superAdmin){status=403;data={code:'42501'};}
+  else{
+   const profileStatus=profile?.status==='pending'&&!profile.submitted_at?'draft':profile?.status;
+   const requestedStatus=op==='teacher_v2_directory_filtered'?args.p_status??'pending':'all';
+   const search=String(args.p_search??'').toLowerCase().trim();
+   const matchesSearch=!search||[profile?.display_name,profile?.employee_id,profile?.contact_email]
+     .some(value=>String(value??'').toLowerCase().includes(search));
+   data=profile&&(requestedStatus==='all'||requestedStatus===profileStatus)&&matchesSearch?[profile]:[];
+  }
+ }
+ else if(op==='teacher_v2_queue_summary'){
+  if(!superAdmin){status=403;data={code:'42501'};}
+  else{
+   const profileStatus=profile?.status==='pending'&&!profile.submitted_at?'draft':profile?.status;
+   data={total:profile?1:0,pending:Number(profileStatus==='pending'),drafts:Number(profileStatus==='draft'),
+    approved:Number(profileStatus==='approved'),rejected:Number(profileStatus==='rejected'),suspended:Number(profileStatus==='suspended')};
+  }
+ }
  else if(op==='teacher_v2_verification_status'){
   if(!superAdmin){status=403;data={code:'42501'};}
   else data=!!(recordedVerification&&profile&&profile.status==='pending'&&profile.submitted_at
@@ -113,6 +131,7 @@ try{
  assert.equal(await directory.count(),0);
  superAdmin=true;active=true;profile.submitted_at='2026-11-16T10:00:00Z';await page.reload();
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ await directory.getByLabel('Filter teacher application status').selectOption('all');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Independently verified teaching identity');
  assert.equal(await directory.getByRole('button',{name:'Approve verified teacher'}).isDisabled(),true);
@@ -154,6 +173,7 @@ try{
  assert.equal(await page.getByRole('heading',{name:'Create study material draft',exact:true}).count(),0);
  await page.goto(base+'/admin/');
  await page.getByRole('button',{name:adminNavLabel,exact:true}).click();
+ await directory.getByLabel('Filter teacher application status').selectOption('all');
  await directory.getByRole('button',{name:'Review profile and access',exact:true}).click();
  await directory.getByLabel('Decision reason').fill('Grant verified class and subject material work');
  await directory.getByLabel('Assignment class',{exact:true}).selectOption('11');

@@ -18,6 +18,7 @@ import { ContactSection } from './components/ContactSection';
 import { ResultsPortal } from './components/ResultsPortal';
 import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { TeacherSiteWorkspace } from './components/TeacherSiteWorkspace';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
 import { ClassLevel } from './types';
@@ -45,7 +46,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'admin' | 'adminPreview';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'teacher' | 'teacherRegistration' | 'teacherLogin' | 'teacherDashboard' | 'admin' | 'adminPreview';
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -59,6 +60,10 @@ const VALID_PAGES: PageId[] = [
   'about',
   'contact',
   'studentDashboard',
+  'teacher',
+  'teacherRegistration',
+  'teacherLogin',
+  'teacherDashboard',
   'admin',
   'adminPreview',
 ];
@@ -203,6 +208,10 @@ const MainApp: React.FC = () => {
     '/about': 'about',
     '/contact': 'contact',
     '/student-dashboard': 'studentDashboard',
+    '/teacher': 'teacher',
+    '/teacher-registration': 'teacherRegistration',
+    '/teacher-login': 'teacherLogin',
+    '/teacher-dashboard': 'teacherDashboard',
     '/admin': 'admin',
     '/admin-preview': 'adminPreview',
   };
@@ -210,7 +219,9 @@ const MainApp: React.FC = () => {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
     materials: '/study-materials/',
     polity: '/constitution/', affairs: '/current-affairs/',
-    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/', admin: '/admin/', adminPreview: '/admin-preview/',
+    results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/',
+    teacher: '/teacher/', teacherRegistration: '/teacher-registration/', teacherLogin: '/teacher-login/', teacherDashboard: '/teacher-dashboard/',
+    admin: '/admin/', adminPreview: '/admin-preview/',
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -281,11 +292,12 @@ const MainApp: React.FC = () => {
         onOpenAuth={() => setIsAuthOpen(true)}
       />}
 
-      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} showTeacherPreview={activePage === 'home'} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} showTeacherPreview={false} />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
         {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
+        {(['teacher', 'teacherRegistration', 'teacherLogin', 'teacherDashboard'] as PageId[]).includes(activePage) && <TeacherSiteWorkspace section={activePage as 'teacher'|'teacherRegistration'|'teacherLogin'|'teacherDashboard'} onNavigate={navigateTo} />}
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
         {publishedCustomPage && <article data-studio-published-page={publishedCustomPage.slug} className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 sm:px-8">

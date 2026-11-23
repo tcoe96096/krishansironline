@@ -1,0 +1,115 @@
+name: Teacher v2 isolated checks
+on:
+  pull_request:
+    paths:
+      - 'src/lib/teacher*.ts'
+      - 'src/services/teacher*.ts'
+      - 'src/components/Teacher*.tsx'
+      - 'tests/teacher*.test.ts'
+      - 'tests/teacher*.test.mjs'
+      - 'scripts/teacher*'
+      - 'scripts/parse-teacher-core-sql.py'
+      - 'scripts/assemble-teacher-unified-preview.mjs'
+      - 'teacher-beta/**'
+      - 'src/App.tsx'
+      - 'src/components/Header.tsx'
+      - 'src/components/AdminDashboard.tsx'
+      - 'vite.config.ts'
+      - 'vite.teacher-beta.config.ts'
+      - 'docs/proposed-migrations/teacher*.sql'
+      - 'docs/teacher-v2-*.md'
+      - '.github/workflows/teacher-v2-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  teacher-v2-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # This repository currently has no npm lockfile; do not use npm ci/cache.
+      - name: Install dependencies without writing a lockfile
+        run: npm install --no-package-lock --ignore-scripts
+      - name: Typecheck
+        run: npm run lint
+      - name: Build website bundle
+        run: npm run build
+      - name: Teacher v2 regression tests
+        run: npx tsx --test tests/teacher*.test.ts tests/teacher*.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse Teacher SQL proposals without connecting to a database
+        run: |
+          python -m pip install pglast==8.8
+          python scripts/parse-teacher-core-sql.py
+      - name: Build isolated, inactive Teacher portal
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: synthetic-test-key
+          VITE_TEACHER_BETA_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts --base=/krishansironline-preview-unified/teacher-beta/
+      - name: Assemble and verify isolated unified preview
+        run: |
+          node scripts/assemble-teacher-unified-preview.mjs dist teacher-beta-dist
+          test -s dist/index.html
+          test -s dist/admin/index.html
+          for route in index.html staff-workspace/index.html registration/index.html login/index.html dashboard/index.html admin/index.html; do
+            test -s "dist/teacher-beta/$route"
+          done
+      - name: Install synthetic browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock --legacy-peer-deps playwright
+          npx playwright install --with-deps chromium
+      - name: Build isolated portal for mock-browser tests
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: synthetic-test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+        run: npx vite build --config vite.teacher-beta.config.ts
+      - name: Start synthetic browser preview locally
+        run: |
+          npx vite preview --config vite.teacher-beta.config.ts --port 4177 --host 127.0.0.1 > /tmp/ksol-teacher-mock.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4177/teacher-beta/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Teacher registration, approval and access browser smoke
+        env:
+          TEACHER_TEST_BASE_URL: http://127.0.0.1:4177/teacher-beta
+          TEACHER_TEST_PORTAL: 'true'
+        run: node scripts/teacher-management-smoke.mjs
+      - name: Start current KSOL website for integrated Teacher browser test
+        run: |
+          npx vite preview --config vite.config.ts --port 4184 --host 127.0.0.1 > /tmp/ksol-integrated-teacher.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4184/teacher/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Main-site Teacher mobile and registration/login/dashboard smoke
+        env:
+          INTEGRATED_SITE_TEST_BASE_URL: http://127.0.0.1:4184
+        run: node scripts/teacher-integrated-website-smoke.mjs
+      - name: Upload review-only Preview artifact (never publish)
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacher-v2-review-${{ github.event.pull_request.number || github.run_id }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

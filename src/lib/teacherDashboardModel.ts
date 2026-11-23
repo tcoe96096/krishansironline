@@ -10,7 +10,15 @@ export type TeacherDashboardSummary = {
   experienceYears: number|null;
   qualifications: {title:string;institution:string;year:number}[];
   resumeRecords: {id:string;filename:string;status:string}[];
-  approvedScopes: {id:string;label:string}[];
+  approvedScopes: {id:string;label:string;workType:string;workLabel:string}[];
+};
+
+/** Human-readable work responsibilities; never treat a label as authorization. */
+const TEACHER_WORK_LABELS:Readonly<Record<string,string>>={
+  'materials.draft':'Study Materials · Draft',
+  'materials.review':'Study Materials · Review',
+  'assessment.draft':'Assessments · Draft',
+  'result.review':'Results · Review',
 };
 
 /** A read-only, fail-closed projection of the signed-in teacher's server snapshot.
@@ -38,7 +46,12 @@ export function teacherDashboardSummary(value:unknown,userId:string):TeacherDash
   }[status];
   const approvedScopes=approved?value.assignments
     .filter(scope=>scope.status==='active')
-    .map(scope=>({id:scope.id,label:'Class '+scope.class_level+' · '+scope.subject}))
+    .map(scope=>({
+      id:scope.id,
+      label:'Class '+scope.class_level+' · '+scope.subject,
+      workType:scope.work_type,
+      workLabel:TEACHER_WORK_LABELS[scope.work_type]??'Unknown work assignment',
+    }))
     :[];
   return {
     displayName:value.display_name,
