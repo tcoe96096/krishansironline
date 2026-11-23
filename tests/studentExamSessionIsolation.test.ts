@@ -209,3 +209,17 @@ test('account switch also clears stale submission status and auto-submit retry U
   assert.match(switchGuard, /setAutoSubmitPending\(false\)/);
   assert.match(switchGuard, /setIsSubmitted\(false\)/);
 });
+
+
+test('v2 recovery rejects malformed runtime versions and mismatched server attempt states', () => {
+  // Browser storage is untrusted JSON; TypeScript declarations do not validate it at runtime.
+  for (const version of [0, 3, '2', null, {}, []]) {
+    const malformed = { ...saved, version } as unknown as SavedExamIdentity;
+    assert.equal(canRestoreExamAnswers(malformed, 'test-1', 'student-user-1', student, attempt, 500), false);
+  }
+  for (const status of ['submitted', 'expired', 'unknown', null]) {
+    const malformedAttempt = { ...attempt, status } as unknown as typeof attempt;
+    assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, malformedAttempt, 500), false);
+  }
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
+});
