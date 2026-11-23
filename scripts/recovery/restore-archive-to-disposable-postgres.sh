@@ -9,6 +9,13 @@ if [[ "${KSOL_DISPOSABLE_RESTORE_ACK:-}" != 'I_UNDERSTAND_ISOLATED_ONLY' ]]; the
   echo 'RESTORE_NOT_RUN: explicit disposable-only acknowledgment required' >&2
   exit 2
 fi
+# Application-only verification is a scoped recovery proof, NEVER a substitute
+# for full Supabase auth/storage/platform recovery.
+verify_scope="${KSOL_RESTORE_VERIFY_SCOPE:-full}"
+if [[ "$verify_scope" != full && "$verify_scope" != application ]]; then
+  echo 'RESTORE_NOT_RUN: INVALID_VERIFY_SCOPE' >&2
+  exit 2
+fi
 if [[ -t 0 ]]; then
   echo 'RESTORE_NOT_RUN: archive must be provided on stdin' >&2
   exit 2
@@ -68,7 +75,11 @@ restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
 # Stop at the FIRST SQL error: later errors are often cascading symptoms.
 # Never print the captured stderr; it may contain private SQL or object names.
-if ! docker exec -i "$name" pg_restore --verbose --exit-on-error --no-owner --no-acl \
+restore_flags=(--verbose --exit-on-error --no-owner --no-acl)
+if [[ "$verify_scope" == application ]]; then
+  restore_flags+=(--schema=public)
+fi
+if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
   --username "$restore_user" --dbname "$restore_db" >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
@@ -175,6 +186,25 @@ if [[ "${KSOL_EXPECT_SUPABASE_SCHEMA:-0}" == '1' ]]; then
     exit 2
   fi
   echo 'KSOL_REQUIRED_SUPABASE_TABLES_PRESENT=YES'
+fi
+if [[ "$verify_scope" == application ]]; then
+  # Check both KSOL application tables in the isolated database, including
+  # basic SQL readability. No counts, rows, private identifiers or data printed.
+  verified="$(docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc \
+    "SELECT (to_regclass('public.student_profiles') IS NOT NULL AND to_regclass('public.test_attempts') IS NOT NULL)::int;" 2>/dev/null)" || {
+    echo 'RESTORE_FAILED: application schema check failed' >&2; exit 2;
+  }
+  [[ "$verified" == 1 ]] || {
+    echo 'RESTORE_FAILED: required application tables missing' >&2; exit 2;
+  }
+  docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc \
+    'SELECT 1 FROM public.student_profiles LIMIT 1; SELECT 1 FROM public.test_attempts LIMIT 1;' >/dev/null 2>/dev/null || {
+    echo 'RESTORE_FAILED: application tables unreadable' >&2; exit 2;
+  }
+  echo 'KSOL_APPLICATION_SCHEMA_RESTORE_OK=YES'
+  echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'
+  echo 'RELEASE_GATE=NO_GO'
+  exit 0
 fi
 echo 'KSOL_DISPOSABLE_POSTGRES_RESTORE_OK: nonempty table catalog verified'
 echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'

@@ -52,6 +52,9 @@ jobs:
           docker exec ksol-schema-positive psql -X -U postgres -d synthetic -v ON_ERROR_STOP=1             -c 'CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE TABLE auth.users (id integer PRIMARY KEY); CREATE TABLE storage.objects (id integer PRIMARY KEY); CREATE TABLE public.student_profiles (id integer PRIMARY KEY); CREATE TABLE public.test_attempts (id integer PRIMARY KEY); INSERT INTO public.student_profiles VALUES (1);' >/dev/null
           docker exec ksol-schema-positive pg_dump -U postgres -d synthetic --format=custom |
             KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 bash scripts/recovery/restore-archive-to-disposable-postgres.sh
+          # Application-only recovery must work without claiming platform recovery.
+          docker exec ksol-schema-positive pg_dump -U postgres -d synthetic --format=custom |
+            KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_RESTORE_VERIFY_SCOPE=application bash scripts/recovery/restore-archive-to-disposable-postgres.sh
       - name: Verify required Supabase table check rejects incomplete synthetic backup
         shell: bash
         run: |
