@@ -42,6 +42,10 @@ export function canRestoreExamAnswers(
   if (!Number.isFinite(started) || !Number.isFinite(expires) || started >= expires ||
       !Number.isFinite(saved.savedAt) || saved.savedAt < started || saved.savedAt > expires) return false;
 
+  // A v2 draft must never carry legacy student profile/PII fields, even when
+  // opaque account and attempt IDs match. Fail closed at the guard boundary.
+  if (saved.version === 2 && Object.prototype.hasOwnProperty.call(saved, 'student')) return false;
+
   if (saved.version === 2) {
     return !!saved.userId && !!saved.attemptId && saved.userId === userId && saved.attemptId === attempt.id;
   }
