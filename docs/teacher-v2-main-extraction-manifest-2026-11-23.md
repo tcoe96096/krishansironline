@@ -17,3 +17,11 @@
 
 ## Independent security and recovery gates
 Do not mutate Preview or Production until an actual full-backup restore has been independently verified (TOC or synthetic test is insufficient), the owner separately authorizes Preview changes, and authenticated positive **and negative** tests cover anonymous, applicant A/B, approved/suspended teacher, reviewer and admin. Test RPC EXECUTE/RLS grants, unauthorized role escalation, photo/resume access across users, failed scan/quarantine and reviewer self-approval denial. Production requires a distinct later owner authorization after Preview acceptance. Additional budget ceiling: ₹0; no billable services, storage or Actions usage.
+
+## Refreshed integration audit — 2026-11-24 (read-only GitHub evidence)
+- Current main SHA: `c26f3ce15755617b0cd07b4c05e087cf46a2d1a1`; branch head before this documentation update: `6dd59a9cb38d7a12e073a20d4a70469ce28da3d1`.
+- GitHub compare: **152 ahead / 33 behind**, diverged; 72 changed paths. The branch is NOT a main-based release candidate.
+- Last verified Teacher v2 isolated checks for `6dd59a9`: workflow run [45217584760](https://github.com/tcoe96096/krishansironline/actions/runs/45217584760), completed/success. No claim about this documentation commit's CI until separately verified.
+- Shared-file conflicts to isolate before any extraction: `src/App.tsx`, `src/components/Header.tsx`, `src/components/AdminDashboard.tsx`, `vite.config.ts`. Treat these as interface proposals, not cherry-pick targets. Compare overlapping Teacher-owned paths with PR #126 first; PR #109 remains strictly read-only.
+- Acceptance remains **NO_GO**: a successful isolated CI does not establish GitHub Pages integration, persistent Supabase RPCs, authenticated cross-account RLS/storage tests, or independently verified full backup restore. A limited application-data salvage is not full Supabase recovery.
+- Next safe extraction: start from the then-current main; inspect exact teacher-owned source/test deltas one by one; keep SQL as REVIEW ONLY and flags OFF; do not duplicate existing #116/#117 UI or #126 changes. No Preview/Production writes, deployment, merge, DNS changes or paid services. Budget ceiling ₹0.
