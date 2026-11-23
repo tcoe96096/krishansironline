@@ -68,8 +68,10 @@ export function isSafeExamAnswerDraft(
       !Number.isSafeInteger(questionIndex) || (questionIndex as number) < 0) return false;
   if (questionCount !== undefined && (!Number.isSafeInteger(questionCount) || questionCount <= 0 ||
       (questionIndex as number) >= questionCount)) return false;
-  if (optionCounts !== undefined && (questionCount === undefined || optionCounts.length !== questionCount ||
-      !optionCounts.every((count) => Number.isSafeInteger(count) && count > 0 && count <= 21))) return false;
+  if (optionCounts !== undefined && (questionCount === undefined || !Array.isArray(optionCounts) ||
+      optionCounts.length !== questionCount ||
+      !Array.from({ length: questionCount }, (_, index) => index in optionCounts &&
+        Number.isSafeInteger(optionCounts[index]) && optionCounts[index] > 0 && optionCounts[index] <= 21).every(Boolean))) return false;
   const validIndex = (key: string) => /^(0|[1-9][0-9]*)$/.test(key) &&
     Number.isSafeInteger(Number(key)) && (questionCount === undefined || Number(key) < questionCount);
   return Object.entries(selectedAnswers).every(([key, answer]) =>
