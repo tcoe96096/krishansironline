@@ -17,6 +17,7 @@ on:
       - 'vite.config.ts'
       - 'vite.teacher-beta.config.ts'
       - 'docs/proposed-migrations/teacher*.sql'
+      - 'docs/teacher-v2-*.md'
       - '.github/workflows/teacher-v2-checks.yml'
   workflow_dispatch:
 
