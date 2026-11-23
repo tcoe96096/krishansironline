@@ -1,0 +1,64 @@
+name: KSOL disposable restore harness synthetic smoke
+on:
+  pull_request:
+    paths:
+      - 'scripts/recovery/restore-archive-to-disposable-postgres.sh'
+      - '.github/workflows/ksol-disposable-restore-harness-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-harness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify missing acknowledgement fails closed
+        shell: bash
+        run: |
+          if printf 'invalid' | bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
+            echo 'FAIL: missing acknowledgement accepted'
+            exit 1
+          fi
+      - name: Build disposable synthetic PostgreSQL archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name ksol-synthetic-source --network none -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=synthetic postgres:17-alpine >/dev/null
+          trap 'docker rm -f ksol-synthetic-source >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec ksol-synthetic-source psql -X -U postgres -d synthetic -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          docker exec ksol-synthetic-source psql -X -U postgres -d synthetic -v ON_ERROR_STOP=1 -c 'CREATE TABLE synthetic_restore_check (id integer PRIMARY KEY); INSERT INTO synthetic_restore_check VALUES (1), (2);' >/dev/null
+          docker exec ksol-synthetic-source pg_dump -U postgres -d synthetic --format=custom | KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY bash scripts/recovery/restore-archive-to-disposable-postgres.sh
+      - name: Verify required Supabase table check rejects incomplete synthetic backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name ksol-schema-negative --network none -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=synthetic postgres:17-alpine >/dev/null
+          trap 'docker rm -f ksol-schema-negative >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec ksol-schema-negative psql -X -U postgres -d synthetic -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          docker exec ksol-schema-negative psql -X -U postgres -d synthetic -v ON_ERROR_STOP=1 -c 'CREATE TABLE synthetic_restore_check (id integer PRIMARY KEY);' >/dev/null
+          if docker exec ksol-schema-negative pg_dump -U postgres -d synthetic --format=custom | KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
+            echo 'FAIL: incomplete synthetic schema was accepted'
+            exit 1
+          fi
+          echo 'Missing required Supabase tables correctly rejected'
+      - name: Confirm no leftover restore container
+        shell: bash
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep -q '^ksol-disposable-restore-'; then
+            echo 'FAIL: disposable restore container not cleaned'
+            exit 1
+          fi
+          echo 'Disposable restore container cleanup confirmed'

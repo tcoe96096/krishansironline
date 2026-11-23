@@ -1,0 +1,30 @@
+name: KSOL restore destination identity guard
+on:
+  pull_request:
+    paths:
+      - 'scripts/recovery/validate-isolated-restore-target.mjs'
+      - 'scripts/recovery/validate-isolated-restore-target.test.mjs'
+      - '.github/workflows/ksol-restore-target-identity-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check protected database destination identity rules
+        run: node --test scripts/recovery/validate-isolated-restore-target.test.mjs
+      - name: Confirm fail-closed behavior without credentials
+        run: |
+          if node scripts/recovery/validate-isolated-restore-target.mjs; then
+            echo 'Unexpected success without destination identity'
+            exit 1
+          fi
+          echo 'Missing destination identity correctly rejected; no database access performed'
