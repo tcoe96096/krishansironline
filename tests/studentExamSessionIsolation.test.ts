@@ -144,3 +144,32 @@ test('browser reader immediately discards legacy PII drafts and rejects v2 draft
   assert.match(engine, /localStorage\.removeItem\(ACTIVE_TEST_SESSION_KEY\)/);
   assert.doesNotMatch(engine, /const validLegacy = value\.version === 1/);
 });
+
+
+test('offline recovery rejects non-plain answer containers and unsafe numeric keys', () => {
+  const inheritedAnswers = Object.create({ 0: 1 });
+  const nullPrototypeAnswers = Object.create(null);
+  nullPrototypeAnswers[0] = 1;
+  for (const answers of [
+    inheritedAnswers,
+    nullPrototypeAnswers,
+    new Map([[0, 1]]),
+    { '9007199254740992': 1 },
+    { '1e2': 1 },
+    { '1.0': 1 },
+  ]) {
+    assert.equal(isSafeExamAnswerDraft(answers, {}, 0, 2, [3, 3]), false);
+  }
+  assert.equal(isSafeExamAnswerDraft({}, Object.create(null), 0, 2, [3, 3]), false);
+  assert.equal(isSafeExamAnswerDraft({}, { constructor: true }, 0, 2, [3, 3]), false);
+  assert.equal(isSafeExamAnswerDraft({ 0: 1 }, { 0: true }, 0, 2, [3, 3]), true);
+});
+
+test('v2 recovery rejects stale or future draft boundaries without changing server attempts', () => {
+  const started = Date.parse(attempt.started_at);
+  const expires = Date.parse(attempt.expires_at);
+  assert.equal(canRestoreExamAnswers({ ...saved, savedAt: started }, 'test-1', 'student-user-1', student, attempt, 500), true);
+  assert.equal(canRestoreExamAnswers({ ...saved, savedAt: expires }, 'test-1', 'student-user-1', student, attempt, 500), true);
+  assert.equal(canRestoreExamAnswers({ ...saved, savedAt: started - 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...saved, savedAt: expires + 1 }, 'test-1', 'student-user-1', student, attempt, 500), false);
+});
