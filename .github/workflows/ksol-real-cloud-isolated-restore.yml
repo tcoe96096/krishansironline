@@ -1,0 +1,76 @@
+name: KSOL real encrypted backup isolated restore (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledgment:
+        description: 'Type RESTORE_TO_DISPOSABLE_ONLY to confirm no Production/Preview writes'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ksol-real-restore-isolated
+  cancel-in-progress: false
+jobs:
+  real-backup-isolated-restore:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'tcoe96096/krishansironline' &&
+      github.event.repository.private == false &&
+      vars.KSOL_CLOUD_BACKUP_ENABLED == 'true' &&
+      inputs.acknowledgment == 'RESTORE_TO_DISPOSABLE_ONLY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
+      RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
+    steps:
+      - name: Checkout trusted default branch only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install rclone (no database credentials needed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+      - name: Stream latest Preview encrypted backup to offline disposable PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RCLONE_CONFIG_B64" || { echo 'RESTORE_NOT_RUN: encrypted cloud config unavailable'; exit 2; }
+          export RCLONE_CONFIG="$RUNNER_TEMP/ksol-private-rclone.conf"
+          trap 'rm -f "$RCLONE_CONFIG"' EXIT
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
+          unset RCLONE_CONFIG_B64
+          chmod 600 "$RCLONE_CONFIG"
+          # Validate crypt overlay before any decrypted archive is streamed.
+          node --input-type=module -e '
+            import {spawnSync} from "node:child_process";
+            import {isCryptRemote} from "./scripts/recovery/cloud-stream-backup.mjs";
+            const p=spawnSync("rclone",["config","show","ksolcrypt"],{encoding:"utf8",maxBuffer:1048576});
+            if(p.status!==0||!isCryptRemote(p.stdout,"ksolcrypt")) {
+              console.error("RESTORE_NOT_RUN: encrypted remote validation failed");process.exit(2);
+            }
+          '
+          # Backup names encode UTC timestamp. Never log names or private paths.
+          mapfile -t names < <(rclone lsf ksolcrypt:preview --files-only 2>/dev/null)
+          test "${#names[@]}" -gt 0 || { echo 'RESTORE_NOT_RUN: no Preview cloud archive found'; exit 2; }
+          latest=''
+          for name in "${names[@]}"; do
+            if [[ "$name" =~ ^ksol-preview-[0-9T-Z-]+-[0-9]+[.]dump$ ]]; then
+              if [[ -z "$latest" || "$name" > "$latest" ]]; then latest="$name"; fi
+            fi
+          done
+          test -n "$latest" || { echo 'RESTORE_NOT_RUN: no valid archive filename'; exit 2; }
+          # Do not use source database credentials; no Supabase connections.
+          # Docker destination has --network none, no ports, tmpfs only, auto-cleanup.
+          if ! rclone cat "ksolcrypt:preview/$latest" 2>/dev/null |
+            KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 \
+              bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
+            echo 'REAL_RESTORE_FAILED: isolated restore unsuccessful (details suppressed)'
+            exit 2
+          fi
+          echo 'Real Preview cloud archive restored to isolated disposable PostgreSQL; full Supabase recovery NOT verified.' >> "$GITHUB_STEP_SUMMARY"
