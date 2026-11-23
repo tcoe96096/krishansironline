@@ -84,12 +84,50 @@ if [[ "$verify_scope" == application ]]; then
     exit 2
   }
 else
-  restore_db=ksol_recovery_clean
-  if ! docker exec "$name" psql -X -U "$restore_user" -d postgres -v ON_ERROR_STOP=1 \
-    -c "CREATE DATABASE $restore_db WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
-    echo 'RESTORE_NOT_RUN: CLEAN_TEMPLATE0_DATABASE_CREATION_FAILED' >&2
+  # pg_cron can be installed only in the database named by cron.database_name.
+  # On the official PG17 Supabase image that is normally "postgres".
+  # The previous template0 restore DB was named ksol_recovery_clean, which
+  # guaranteed a pg_cron restore failure even if all packages were available.
+  #
+  # This is a brand-new, network-isolated, tmpfs-only disposable Docker
+  # instance. NEVER issue these commands against Preview/Production.
+  # Keep all restored cron jobs inert, including SQL-only cron jobs.
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+    -c "ALTER SYSTEM SET cron.launch_active_jobs = 'off'" >/dev/null 2>/dev/null; then
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_DISABLE_FAILED' >&2
     exit 2
   fi
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+    -Atqc 'SELECT pg_reload_conf()' 2>/dev/null | grep -qx t; then
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_RELOAD_FAILED' >&2
+    exit 2
+  fi
+  cron_safe=0
+  for i in $(seq 1 20); do
+    safe="$(docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc \
+      "SELECT (current_setting('cron.database_name', true) = 'postgres' AND current_setting('cron.launch_active_jobs', true) = 'off')::int;" 2>/dev/null)" || safe=''
+    if [[ "$safe" == 1 ]]; then cron_safe=1; break; fi
+    sleep 1
+  done
+  [[ "$cron_safe" == 1 ]] || {
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_TARGET_OR_SAFETY_CHECK_FAILED' >&2
+    exit 2
+  }
+
+  # Only this disposable container's preinstalled postgres database is
+  # re-created. No source credentials, host mounts, external network or
+  # persistent volumes exist here. No cleanup of any source DB is possible.
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+    -c 'DROP DATABASE postgres WITH (FORCE)' >/dev/null 2>/dev/null; then
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_POSTGRES_RECREATE_FAILED' >&2
+    exit 2
+  fi
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+    -c "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_POSTGRES_RECREATE_FAILED' >&2
+    exit 2
+  fi
+  restore_db=postgres
 fi
 
 # Stream directly to pg_restore in the isolated container, no dump file or
