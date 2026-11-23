@@ -79,7 +79,7 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
   # SQL, private object names or untrusted text from the archive.
   if [[ "$category" == 'MISSING_EXTENSION' ]]; then
     for ext in vector pg_graphql pg_net pgcrypto uuid-ossp pg_trgm btree_gist btree_gin citext hstore unaccent pg_stat_statements pgjwt pgsodium vault http pg_cron pgmq postgis pg_repack; do
-      if grep -Eiq "extension [\\"']?$ext[\\"']? is not available|extension control file.*$ext[.]control" "$restore_errors"; then
+      if grep -Eiq "extension .*${ext}.* is not available|extension control file.*${ext}[.]control" "$restore_errors"; then
         echo "MISSING_EXTENSION_KNOWN_NAME: $ext" >&2
       fi
     done
