@@ -1,0 +1,35 @@
+name: KSOL isolated synthetic PostgreSQL restore smoke
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Run isolated PostgreSQL 18 synthetic restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name ksol-restore-smoke -e POSTGRES_PASSWORD=synthetic-only -e POSTGRES_USER=smoke -e POSTGRES_DB=smoke postgres:18
+          trap 'docker rm -f ksol-restore-smoke >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 40); do
+            if docker exec ksol-restore-smoke pg_isready -U smoke -d smoke >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec ksol-restore-smoke pg_isready -U smoke -d smoke
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.restore_smoke (id integer PRIMARY KEY, value text NOT NULL);'
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c "INSERT INTO public.restore_smoke VALUES (1, 'synthetic'), (2, 'test');"
+          docker exec ksol-restore-smoke pg_dump -U smoke -d smoke --format=custom --no-owner --no-acl --table=public.restore_smoke --file=/tmp/synthetic.dump
+          docker exec ksol-restore-smoke pg_restore --list /tmp/synthetic.dump >/dev/null
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c 'DROP TABLE public.restore_smoke;'
+          docker exec ksol-restore-smoke pg_restore -U smoke --exit-on-error --no-owner --no-acl --dbname=smoke /tmp/synthetic.dump
+          actual="$(docker exec ksol-restore-smoke psql -U smoke -d smoke -At -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.restore_smoke')"
+          test "$actual" = 2
+          echo 'SYNTHETIC_RESTORE_OK: isolated PostgreSQL harness only; real cloud backup NOT restored'
+          echo 'FULL_SUPABASE_RESTORE: NOT_VERIFIED'
+          echo 'RELEASE_GATE: NO_GO'
+          docker exec ksol-restore-smoke rm -f /tmp/synthetic.dump
