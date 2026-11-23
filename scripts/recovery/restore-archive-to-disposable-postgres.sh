@@ -75,6 +75,25 @@ if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
   elif grep -Eiq 'unexpected end of file|could not read from input file|input file is too short|not a valid archive' "$restore_errors"; then
     category='ARCHIVE_STREAM_INVALID'
   fi
+  # Report only recognized public extension identifiers, never raw stderr,
+  # SQL, private object names or untrusted text from the archive.
+  if [[ "$category" == 'MISSING_EXTENSION' ]]; then
+    for ext in vector pg_graphql pg_net pgcrypto uuid-ossp pg_trgm btree_gist btree_gin citext hstore unaccent pg_stat_statements pgjwt pgsodium vault http pg_cron pgmq postgis pg_repack; do
+      if grep -Eiq "extension [\\"']?$ext[\\"']? is not available|extension control file.*$ext[.]control" "$restore_errors"; then
+        echo "MISSING_EXTENSION_KNOWN_NAME: $ext" >&2
+      fi
+    done
+  fi
+  # Surface presence of additional error categories without leaking raw details.
+  if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
+    echo 'RESTORE_DIAGNOSTIC: ROLE_MISMATCH_PRESENT' >&2
+  fi
+  if grep -Eiq 'permission denied|must be owner|insufficient privilege' "$restore_errors"; then
+    echo 'RESTORE_DIAGNOSTIC: PERMISSIONS_PRESENT' >&2
+  fi
+  if grep -Eiq 'already exists|duplicate key|multiple primary keys' "$restore_errors"; then
+    echo 'RESTORE_DIAGNOSTIC: OBJECT_CONFLICT_PRESENT' >&2
+  fi
   rm -f "$restore_errors"
   echo "RESTORE_FAILED_CATEGORY: $category (raw diagnostics suppressed)" >&2
   exit 2
