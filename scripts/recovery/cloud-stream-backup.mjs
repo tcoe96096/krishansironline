@@ -152,7 +152,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  // Read BACK the decrypted cloud object only through memory to confirm its
  // integrity and archive TOC. Never cache raw records, data or backup bytes.
  const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
- const toc=spawn('pg_restore',['--list','-'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
+ const toc=spawn('pg_restore',['--list'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
  let checkedBytes=0,checkedText='',overflow=false;const checkedHash=createHash('sha256');
  read.stdout.on('data',chunk=>{checkedBytes+=chunk.length;checkedHash.update(chunk)});
  const tocInputError=drainAfterTocInputCloses(read.stdout,toc.stdin);
