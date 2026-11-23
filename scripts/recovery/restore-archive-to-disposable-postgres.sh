@@ -149,6 +149,33 @@ if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
       break
     fi
   done
+  # Identify the actual failed extension from the FIRST failing pg_restore TOC
+  # entry only. Names come from a fixed public PostgreSQL/Supabase allowlist,
+  # never from untrusted dump content, object identifiers or SQL text.
+  if grep -Eq 'from TOC entry [0-9]+; [0-9]+ [0-9]+ EXTENSION[[:space:]]' "$restore_errors"; then
+    echo 'RESTORE_FAILED_PLATFORM_COMPONENT: EXTENSION' >&2
+    for ext in pg_cron pg_net supabase_vault pg_stat_statements pgcrypto uuid-ossp plpgsql vector pg_graphql pgsodium pgjwt citext pg_trgm unaccent pgmq hstore btree_gist btree_gin http postgis pg_repack; do
+      if grep -Eiq "from TOC entry [0-9]+; [0-9]+ [0-9]+ EXTENSION - ${ext}([[:space:]]|$)" "$restore_errors"; then
+        echo "RESTORE_FAILED_KNOWN_EXTENSION: $ext" >&2
+        break
+      fi
+    done
+    if grep -Eiq 'shared_preload_libraries|must be loaded via shared_preload_libraries|must be preloaded' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: SERVER_PRELOAD_CONFIGURATION' >&2
+    elif grep -Eiq 'can only be installed in database|can only be created in database|must be installed in database' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: FIXED_DATABASE_REQUIREMENT' >&2
+    elif grep -Eiq 'schema .* does not exist|schema .* must exist' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: SCHEMA_BOOTSTRAP_REQUIRED' >&2
+    elif grep -Eiq 'extension .* already exists' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: PLATFORM_BOOTSTRAP_CONFLICT' >&2
+    elif grep -Eiq 'permission denied|must be superuser|must be owner|not permitted' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: ROLE_OR_PRIVILEGE' >&2
+    elif grep -Eiq 'version .* is not available|has no installation script|could not open extension control file' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: VERSION_OR_PACKAGE' >&2
+    else
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: UNCLASSIFIED' >&2
+    fi
+  fi
   # Report only recognized public extension identifiers, never raw stderr,
   # SQL, private object names or untrusted text from the archive.
   if [[ "$category" == 'MISSING_EXTENSION' ]]; then
