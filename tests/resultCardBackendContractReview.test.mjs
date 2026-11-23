@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 // Pure fail-closed contract model. No DB connection and no production claims.
 const permit = (x) => Boolean(
+  x && typeof x === 'object' && !Array.isArray(x) &&
   x.authenticated === true && x.active === true && x.eligible === true && x.owns === true &&
   x.released === true && x.revoked === false && x.withdrawn === false &&
   Number.isSafeInteger(x.requestedVersion) && x.requestedVersion > 0 &&
@@ -38,7 +39,9 @@ test('revocation overrides previously valid access on every new request', () => 
   assert.equal(permit(base),true);
   assert.equal(permit({...base,revoked:true}),false);
 });
-const transition = ({actorAuthorized, expectedVersion, actualVersion, state, action}) => {
+const transition = (input) => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return 'DENY';
+  const {actorAuthorized, expectedVersion, actualVersion, state, action} = input;
   if (actorAuthorized !== true ||
       !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0 ||
       !Number.isSafeInteger(actualVersion) || actualVersion <= 0 ||
@@ -236,4 +239,16 @@ test('canonical binding denies malformed input envelopes without throwing', () =
   }
   assert.equal(canonicalBinding({}), false);
   assert.equal(canonicalBinding({matches:[null]}), false);
+});
+
+// Invalid access/transition envelopes must fail closed, never throw.
+test('access and release/revoke deny malformed envelopes', () => {
+  for (const value of [undefined, null, false, 0, '', [], 'invalid']) {
+    assert.doesNotThrow(() => permit(value));
+    assert.equal(permit(value), false);
+    assert.doesNotThrow(() => transition(value));
+    assert.equal(transition(value), 'DENY');
+  }
+  assert.equal(permit({}), false);
+  assert.equal(transition({}), 'DENY');
 });
