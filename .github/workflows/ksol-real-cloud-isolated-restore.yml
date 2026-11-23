@@ -70,7 +70,20 @@ jobs:
           if ! rclone cat "ksolcrypt:preview/$latest" 2>/dev/null |
             KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 \
               bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
-            echo 'REAL_RESTORE_FAILED: isolated restore unsuccessful (details suppressed)'
+            # A full pg_dump can contain Supabase-managed extension objects.
+            # Diagnose separately whether core application tables and their
+            # data can be restored. This NEVER passes the full-recovery gate.
+            echo 'KSOL_FULL_SUPABASE_RESTORE=FAILED'
+            echo 'KSOL_APPLICATION_ONLY_RECOVERY_ATTEMPT=START'
+            if rclone cat "ksolcrypt:preview/$latest" 2>/dev/null |
+              KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_RESTORE_VERIFY_SCOPE=application \
+                bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
+              echo 'KSOL_APPLICATION_ONLY_RECOVERY=VERIFIED'
+              echo 'Full Supabase restore failed; isolated KSOL public schema restore succeeded. Full recovery NOT verified.' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo 'KSOL_APPLICATION_ONLY_RECOVERY=FAILED'
+            fi
+            echo 'REAL_RESTORE_FAILED: full Supabase isolated restore unsuccessful'
             exit 2
           fi
           echo 'Real Preview cloud archive restored to isolated disposable PostgreSQL; full Supabase recovery NOT verified.' >> "$GITHUB_STEP_SUMMARY"
