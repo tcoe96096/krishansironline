@@ -32,12 +32,23 @@ trap cleanup EXIT
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
   supabase/postgres:17.12.0.002 >/dev/null
+# Newer Supabase images may accept postgres connections before their full
+# initialization/role bootstrap is finished. Wait for the exact restore user
+# and destination DB instead of accepting an early postgres-only response.
+# This only probes the isolated --network none container, never source DBs.
+restore_user=supabase_admin
 ready=0
-for i in $(seq 1 60); do
-  if docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
+for i in $(seq 1 90); do
+  if docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
+    ready=1
+    break
+  fi
   sleep 1
 done
-if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' >&2; exit 2; fi
+if [[ "$ready" != 1 ]]; then
+  echo 'RESTORE_NOT_RUN: SUPABASE_ADMIN_DISPOSABLE_ACCESS_UNAVAILABLE' >&2
+  exit 2
+fi
 
 # Do not hardcode extension requirements for every archive. Synthetic and
 # application-only archives may not require pg_cron, pg_net or vault. Let the
@@ -50,14 +61,9 @@ if [[ "$ready" != 1 ]]; then echo 'RESTORE_FAILED: isolated database not ready' 
 # intentionally provision them only during its complete production bootstrap.
 # Never create or modify source database roles.
 
-# The official Supabase image restricts several platform schemas. For the
-# isolated recovery only, use the image's built-in privileged supabase_admin
-# account rather than the lower-privileged postgres login. No source access.
-restore_user=supabase_admin
-if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
-  echo 'RESTORE_NOT_RUN: SUPABASE_ADMIN_DISPOSABLE_ACCESS_UNAVAILABLE' >&2
-  exit 2
-fi
+# All subsequent restore operations use the exact built-in privileged
+# disposable role checked by the bounded startup readiness loop above.
+# No source database connections or permanent privilege changes.
 
 # Full restore: a blank database avoids clashes with Supabase's managed
 # objects. Application-only restore: reuse the disposable Supabase-bootstrap
