@@ -197,3 +197,15 @@ test('mounted exam clears prior account answers, attempt and browser draft on au
     assert.ok(switchGuard.includes(action), 'missing account-switch cleanup: ' + action);
   }
 });
+
+
+test('account switch also clears stale submission status and auto-submit retry UI', () => {
+  const engine = readFileSync('src/components/OnlineTestEngine.tsx', 'utf8');
+  const start = engine.indexOf('const previousAuthenticatedUserId');
+  const end = engine.indexOf('const [submissionStatus', start);
+  assert.ok(start >= 0 && end > start);
+  const switchGuard = engine.slice(start, end);
+  assert.match(switchGuard, /setSubmissionStatus\(\{ loading: false \}\)/);
+  assert.match(switchGuard, /setAutoSubmitPending\(false\)/);
+  assert.match(switchGuard, /setIsSubmitted\(false\)/);
+});
