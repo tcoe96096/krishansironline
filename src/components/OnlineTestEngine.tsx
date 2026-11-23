@@ -200,6 +200,29 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Prevent timer and manual-submit events from sending duplicate RPC requests.
   const submissionInFlight = useRef(false);
 
+  const previousAuthenticatedUserId = useRef<string | null | undefined>(undefined);
+
+  // A mounted exam view can survive sign-out/account switch. Never expose
+  // the previous account's answers or server attempt in React state.
+  useEffect(() => {
+    if (authLoading) return;
+    const nextUserId = user?.id ?? null;
+    const previousUserId = previousAuthenticatedUserId.current;
+    previousAuthenticatedUserId.current = nextUserId;
+    if (previousUserId === undefined || previousUserId === nextUserId) return;
+    setIsTestActive(false);
+    setIsSubmitted(false);
+    setActiveAttempt(null);
+    setServerResult(null);
+    setSelectedAnswers({});
+    setMarkedForReview({});
+    setRestoredSession(null);
+    setCurrentQuestionIndex(0);
+    setAutoSubmitPending(false);
+    localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+    localStorage.removeItem('krishan_sir_active_student');
+  }, [authLoading, user?.id]);
+
   const [submissionStatus, setSubmissionStatus] = useState<{
     loading: boolean;
     success?: boolean;
