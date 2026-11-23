@@ -26,9 +26,12 @@ name="ksol-disposable-restore-$$"
 password="$(openssl rand -hex 24)"
 cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
+# Preview source uses PostgreSQL 17.11; use a current compatible PG17
+# Supabase image rather than older 17.6 binaries/extension packages.
+# This does NOT make managed-schema restoration automatically safe.
 docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,size=2g \
   -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=ksol_recovery \
-  supabase/postgres:17.6.1.136 >/dev/null
+  supabase/postgres:17.12.0.002 >/dev/null
 ready=0
 for i in $(seq 1 60); do
   if docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
@@ -149,6 +152,33 @@ if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
       break
     fi
   done
+  # Identify the actual failed extension from the FIRST failing pg_restore TOC
+  # entry only. Names come from a fixed public PostgreSQL/Supabase allowlist,
+  # never from untrusted dump content, object identifiers or SQL text.
+  if grep -Eq 'from TOC entry [0-9]+; [0-9]+ [0-9]+ EXTENSION[[:space:]]' "$restore_errors"; then
+    echo 'RESTORE_FAILED_PLATFORM_COMPONENT: EXTENSION' >&2
+    for ext in pg_cron pg_net supabase_vault pg_stat_statements pgcrypto uuid-ossp plpgsql vector pg_graphql pgsodium pgjwt citext pg_trgm unaccent pgmq hstore btree_gist btree_gin http postgis pg_repack; do
+      if grep -Eiq "from TOC entry [0-9]+; [0-9]+ [0-9]+ EXTENSION - ${ext}([[:space:]]|$)" "$restore_errors"; then
+        echo "RESTORE_FAILED_KNOWN_EXTENSION: $ext" >&2
+        break
+      fi
+    done
+    if grep -Eiq 'shared_preload_libraries|must be loaded via shared_preload_libraries|must be preloaded' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: SERVER_PRELOAD_CONFIGURATION' >&2
+    elif grep -Eiq 'can only be installed in database|can only be created in database|must be installed in database' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: FIXED_DATABASE_REQUIREMENT' >&2
+    elif grep -Eiq 'schema .* does not exist|schema .* must exist' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: SCHEMA_BOOTSTRAP_REQUIRED' >&2
+    elif grep -Eiq 'extension .* already exists' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: PLATFORM_BOOTSTRAP_CONFLICT' >&2
+    elif grep -Eiq 'permission denied|must be superuser|must be owner|not permitted' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: ROLE_OR_PRIVILEGE' >&2
+    elif grep -Eiq 'version .* is not available|has no installation script|could not open extension control file' "$restore_errors"; then
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: VERSION_OR_PACKAGE' >&2
+    else
+      echo 'RESTORE_EXTENSION_FAILURE_SCOPE: UNCLASSIFIED' >&2
+    fi
+  fi
   # Report only recognized public extension identifiers, never raw stderr,
   # SQL, private object names or untrusted text from the archive.
   if [[ "$category" == 'MISSING_EXTENSION' ]]; then
