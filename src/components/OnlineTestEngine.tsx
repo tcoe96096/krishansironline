@@ -219,6 +219,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setRestoredSession(null);
     setCurrentQuestionIndex(0);
     setAutoSubmitPending(false);
+    // A previous account's submit feedback must not remain visible after switch.
+    setSubmissionStatus({ loading: false });
     localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
     localStorage.removeItem('krishan_sir_active_student');
   }, [authLoading, user?.id]);
