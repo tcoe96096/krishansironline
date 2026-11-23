@@ -9,48 +9,27 @@ jobs:
   synthetic-restore:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: smoke
-          POSTGRES_PASSWORD: synthetic-only
-          POSTGRES_DB: smoke
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U smoke -d smoke"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      PGHOST: localhost
-      PGPORT: 5432
-      PGUSER: smoke
-      PGPASSWORD: synthetic-only
-      PGDATABASE: smoke
     steps:
-      - name: Install PostgreSQL client 18
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client-18
-      - name: Verify isolated synthetic dump and restore
+      - name: Run isolated PostgreSQL 18 synthetic restore
         shell: bash
         run: |
           set -euo pipefail
-          export PGOPTIONS='-c search_path=public'
-          test "$PGHOST" = localhost
-          test "$PGDATABASE" = smoke
-          psql -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.restore_smoke (id integer PRIMARY KEY, value text NOT NULL);'
-          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.restore_smoke VALUES (1, 'synthetic'), (2, 'test');"
-          pg_dump --format=custom --no-owner --no-acl --table=public.restore_smoke --file="$RUNNER_TEMP/synthetic.dump"
-          pg_restore --list "$RUNNER_TEMP/synthetic.dump" >/dev/null
-          psql -v ON_ERROR_STOP=1 -c 'DROP TABLE public.restore_smoke;'
-          pg_restore --exit-on-error --no-owner --no-acl --dbname=smoke "$RUNNER_TEMP/synthetic.dump"
-          actual="$(psql -At -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.restore_smoke')"
+          docker run -d --name ksol-restore-smoke -e POSTGRES_PASSWORD=synthetic-only -e POSTGRES_USER=smoke -e POSTGRES_DB=smoke postgres:18
+          trap 'docker rm -f ksol-restore-smoke >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 40); do
+            if docker exec ksol-restore-smoke pg_isready -U smoke -d smoke >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec ksol-restore-smoke pg_isready -U smoke -d smoke
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.restore_smoke (id integer PRIMARY KEY, value text NOT NULL);'
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c "INSERT INTO public.restore_smoke VALUES (1, 'synthetic'), (2, 'test');"
+          docker exec ksol-restore-smoke pg_dump -U smoke -d smoke --format=custom --no-owner --no-acl --table=public.restore_smoke --file=/tmp/synthetic.dump
+          docker exec ksol-restore-smoke pg_restore --list /tmp/synthetic.dump >/dev/null
+          docker exec ksol-restore-smoke psql -U smoke -d smoke -v ON_ERROR_STOP=1 -c 'DROP TABLE public.restore_smoke;'
+          docker exec ksol-restore-smoke pg_restore -U smoke --exit-on-error --no-owner --no-acl --dbname=smoke /tmp/synthetic.dump
+          actual="$(docker exec ksol-restore-smoke psql -U smoke -d smoke -At -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.restore_smoke')"
           test "$actual" = 2
           echo 'SYNTHETIC_RESTORE_OK: isolated PostgreSQL harness only; real cloud backup NOT restored'
           echo 'FULL_SUPABASE_RESTORE: NOT_VERIFIED'
           echo 'RELEASE_GATE: NO_GO'
-          rm -f "$RUNNER_TEMP/synthetic.dump"
+          docker exec ksol-restore-smoke rm -f /tmp/synthetic.dump
