@@ -223,3 +223,11 @@ test('v2 recovery rejects malformed runtime versions and mismatched server attem
   }
   assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
 });
+
+
+test('v2 guard rejects drafts carrying legacy student PII despite matching opaque IDs', () => {
+  assert.equal(canRestoreExamAnswers(saved, 'test-1', 'student-user-1', student, attempt, 500), true);
+  assert.equal(canRestoreExamAnswers({ ...saved, student }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...saved, student: undefined }, 'test-1', 'student-user-1', student, attempt, 500), false);
+  assert.equal(canRestoreExamAnswers({ ...saved, student: null } as unknown as SavedExamIdentity, 'test-1', 'student-user-1', student, attempt, 500), false);
+});
