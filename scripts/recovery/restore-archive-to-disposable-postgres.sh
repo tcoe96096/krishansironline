@@ -46,13 +46,14 @@ done
 # intentionally provision them only during its complete production bootstrap.
 # Never create or modify source database roles.
 
-# Supabase initializes public with restricted schema privileges. Grant the
-# disposable restore account CREATE locally; never alter source databases.
-docker exec "$name" psql -X -U postgres -d ksol_recovery -v ON_ERROR_STOP=1 \
-  -c 'GRANT USAGE, CREATE ON SCHEMA public TO postgres' >/dev/null 2>/dev/null || {
-    echo 'RESTORE_NOT_RUN: DISPOSABLE_SCHEMA_PRIVILEGE_SETUP_FAILED' >&2
-    exit 2
-  }
+# The official Supabase image restricts several platform schemas. For the
+# isolated recovery only, use the image's built-in privileged supabase_admin
+# account rather than the lower-privileged postgres login. No source access.
+restore_user=supabase_admin
+if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
+  echo 'RESTORE_NOT_RUN: SUPABASE_ADMIN_DISPOSABLE_ACCESS_UNAVAILABLE' >&2
+  exit 2
+fi
 
 # Stream directly to pg_restore in the isolated container, no dump file or
 # decrypted backup in logs. Suppress raw stderr (may contain private SQL/data).
@@ -61,7 +62,7 @@ docker exec "$name" psql -X -U postgres -d ksol_recovery -v ON_ERROR_STOP=1 \
 restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
 if ! docker exec -i "$name" pg_restore --no-owner --no-acl \
-  --username postgres --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
+  --username "$restore_user" --dbname ksol_recovery >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     category='SUPABASE_ROLE_MISMATCH'
