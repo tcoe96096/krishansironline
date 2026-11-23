@@ -44,6 +44,19 @@ count="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
 if ! [[ "$count" =~ ^[0-9]+$ ]] || (( count == 0 )); then
   echo 'RESTORE_FAILED: no restored user tables' >&2; exit 2
 fi
+# Real Supabase backup mode: confirm required application and platform tables
+# exist in the restored catalog. Only boolean results leave the container.
+if [[ "${KSOL_EXPECT_SUPABASE_SCHEMA:-0}" == '1' ]]; then
+  present="$(docker exec "$name" psql -X -U postgres -d ksol_recovery -Atqc \
+    "SELECT (to_regclass('auth.users') IS NOT NULL AND to_regclass('storage.objects') IS NOT NULL AND to_regclass('public.student_profiles') IS NOT NULL AND to_regclass('public.test_attempts') IS NOT NULL)::int;" 2>/dev/null)" || {
+    echo 'RESTORE_FAILED: expected schema check failed' >&2; exit 2;
+  }
+  if [[ "$present" != '1' ]]; then
+    echo 'RESTORE_FAILED: required Supabase tables missing' >&2
+    exit 2
+  fi
+  echo 'KSOL_REQUIRED_SUPABASE_TABLES_PRESENT=YES'
+fi
 echo 'KSOL_DISPOSABLE_POSTGRES_RESTORE_OK: nonempty table catalog verified'
 echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'
 echo 'RELEASE_GATE=NO_GO'
