@@ -56,15 +56,31 @@ if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELE
   exit 2
 fi
 
-# Supabase's image bootstraps template1 with platform objects. Restoring a
-# full Supabase archive into a template1-derived database creates conflicts.
-# Create a *new empty* database from template0, inside this disposable instance.
-# No drop/clean is performed on source databases or platform bootstrap DB.
-restore_db=ksol_recovery_clean
-if ! docker exec "$name" psql -X -U "$restore_user" -d postgres -v ON_ERROR_STOP=1 \
-  -c "CREATE DATABASE $restore_db WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
-  echo 'RESTORE_NOT_RUN: CLEAN_TEMPLATE0_DATABASE_CREATION_FAILED' >&2
-  exit 2
+# Full restore: a blank database avoids clashes with Supabase's managed
+# objects. Application-only restore: reuse the disposable Supabase-bootstrap
+# database, because the public schema may depend on preinstalled auth or
+# extensions schemas and functions. Both databases live only in this disposable
+# --network none container. Never touch source Production/Preview databases.
+if [[ "$verify_scope" == application ]]; then
+  restore_db=ksol_recovery
+  # The bootstrap target may have a public schema, but it must not already
+  # contain any of the two KSOL tables we are trying to restore.
+  collision="$(docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc \
+    "SELECT (to_regclass('public.student_profiles') IS NOT NULL OR to_regclass('public.test_attempts') IS NOT NULL)::int;" 2>/dev/null)" || {
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_APPLICATION_TARGET_CHECK_FAILED' >&2
+    exit 2
+  }
+  [[ "$collision" == 0 ]] || {
+    echo 'RESTORE_NOT_RUN: DISPOSABLE_APPLICATION_TARGET_NOT_EMPTY' >&2
+    exit 2
+  }
+else
+  restore_db=ksol_recovery_clean
+  if ! docker exec "$name" psql -X -U "$restore_user" -d postgres -v ON_ERROR_STOP=1 \
+    -c "CREATE DATABASE $restore_db WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
+    echo 'RESTORE_NOT_RUN: CLEAN_TEMPLATE0_DATABASE_CREATION_FAILED' >&2
+    exit 2
+  fi
 fi
 
 # Stream directly to pg_restore in the isolated container, no dump file or
@@ -107,6 +123,13 @@ if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
     echo 'RESTORE_DIAGNOSTIC: SUPERUSER_OR_ROLE_PRIVILEGE_REQUIRED' >&2
   fi
   if grep -Eiq 'schema .* does not exist' "$restore_errors"; then echo 'RESTORE_DEPENDENCY_SCOPE: SCHEMA' >&2; fi
+  # These are fixed, public platform schema identifiers, not private names.
+  # Only emit a matching allowlisted category.
+  for schema in auth storage extensions public; do
+    if grep -Eiq "schema [\"']?${schema}[\"']? does not exist" "$restore_errors"; then
+      echo "RESTORE_DEPENDENCY_KNOWN_SCHEMA: ${schema^^}" >&2
+    fi
+  done
   if grep -Eiq '(relation|table|sequence) .* does not exist' "$restore_errors"; then echo 'RESTORE_DEPENDENCY_SCOPE: RELATION' >&2; fi
   if grep -Eiq '(function|procedure) .* does not exist' "$restore_errors"; then echo 'RESTORE_DEPENDENCY_SCOPE: FUNCTION' >&2; fi
   if grep -Eiq '(type|domain|operator|collation) .* does not exist' "$restore_errors"; then echo 'RESTORE_DEPENDENCY_SCOPE: TYPE_OR_OPERATOR' >&2; fi
