@@ -68,7 +68,7 @@ restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
 # Stop at the FIRST SQL error: later errors are often cascading symptoms.
 # Never print the captured stderr; it may contain private SQL or object names.
-if ! docker exec -i "$name" pg_restore --exit-on-error --no-owner --no-acl \
+if ! docker exec -i "$name" pg_restore --verbose --exit-on-error --no-owner --no-acl \
   --username "$restore_user" --dbname "$restore_db" >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
@@ -103,6 +103,15 @@ if ! docker exec -i "$name" pg_restore --exit-on-error --no-owner --no-acl \
   if grep -Eiq 'unsupported version in file header|input file appears to be a text format' "$restore_errors"; then
     echo 'RESTORE_DIAGNOSTIC: ARCHIVE_FORMAT_INCOMPATIBILITY' >&2
   fi
+  # pg_restore reports the failed TOC entry type with --verbose. Publish only an
+  # allowlisted object kind, never the archived schema/object name or SQL.
+  # The regex intentionally anchors immediately after the TOC entry's two OIDs.
+  for toc_kind in 'TABLE DATA' 'FK CONSTRAINT' 'DEFAULT ACL' 'EVENT TRIGGER' 'MATERIALIZED VIEW' 'SEQUENCE SET' 'TABLE ATTACH' 'SEQUENCE OWNED BY' 'SCHEMA' 'EXTENSION' 'TYPE' 'DOMAIN' 'FUNCTION' 'PROCEDURE' 'AGGREGATE' 'CAST' 'TABLE' 'VIEW' 'INDEX' 'SEQUENCE' 'CONSTRAINT' 'TRIGGER' 'POLICY' 'RULE' 'ACL' 'COMMENT' 'PUBLICATION' 'COLLATION' 'OPERATOR'; do
+    if grep -Eq "from TOC entry [0-9]+; [0-9]+ [0-9]+ ${toc_kind}([[:space:]]|$)" "$restore_errors"; then
+      echo "RESTORE_FAILED_TOC_KIND: ${toc_kind// /_}" >&2
+      break
+    fi
+  done
   # Report only recognized public extension identifiers, never raw stderr,
   # SQL, private object names or untrusted text from the archive.
   if [[ "$category" == 'MISSING_EXTENSION' ]]; then
