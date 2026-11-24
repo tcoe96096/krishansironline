@@ -270,7 +270,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
 
   return (
     <section className="py-10 bg-white border-b border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] items-start gap-6">
         <div className="min-w-0">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
