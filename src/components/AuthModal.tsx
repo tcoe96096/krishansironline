@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { X, UserRound, LogOut, ShieldCheck, GraduationCap, School, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle2, MapPin, LockKeyhole, BookOpen } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
+import { publicHref } from '../data/publicInfo';
 
 type AuthModalProps = { isOpen: boolean; onClose: (outcome?: 'success' | 'cancel') => void };
 
@@ -193,6 +194,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-[#102b50] to-teal-500 transition-all duration-300" style={{ width: `${registrationStep / 3 * 100}%` }} /></div>
                     </div>
 
+                    <aside className="mb-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-relaxed text-sky-950">
+                      <p>{en?'Before entering personal data, read the privacy notice and terms. If under 18, review these with your parent or guardian.':'व्यक्तिगत जानकारी भरने से पहले गोपनीयता सूचना और नियम पढ़ें। 18 वर्ष से कम आयु में अभिभावक के साथ इन्हें पढ़ें।'}</p>
+                      <div className="mt-2 flex flex-wrap gap-3 font-semibold">
+                        <a href={publicHref('privacy-policy')} target="_blank" rel="noopener noreferrer" className="underline">{en?'Privacy Policy':'गोपनीयता नीति'}</a>
+                        <a href={publicHref('terms-and-conditions')} target="_blank" rel="noopener noreferrer" className="underline">{en?'Terms & Conditions':'नियम एवं शर्तें'}</a>
+                        <a href={publicHref('child-safety')} target="_blank" rel="noopener noreferrer" className="underline">{en?'Child Safety':'बाल सुरक्षा'}</a>
+                      </div>
+                    </aside>
                     {registrationStep === 1 && <div className="space-y-3">
                       <div><label className={labelClass}>{en ? 'Student full name' : 'विद्यार्थी का पूरा नाम'}</label><input required value={studentName} onChange={e=>setStudentName(e.target.value)} placeholder={en ? 'Enter full name' : 'पूरा नाम लिखें'} className={inputClass} autoComplete="name" /></div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
