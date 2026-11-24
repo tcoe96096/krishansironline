@@ -926,52 +926,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
           </nav>}
         </div>
 
-        {/* SELECTED TEST OVERVIEW — shown only for a real published test */}
-        <div className={`relative mb-4 sm:mb-5 overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-md shadow-sky-950/5 ${selectedTest.id && !isTestActive ? '' : 'hidden'}`}>
-          <div className="h-2 w-full bg-gradient-to-r from-sky-800 via-cyan-500 to-emerald-400" />
-          <div className="p-4 sm:p-6">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
-          <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-sky-800">
-                <Award className="h-3.5 w-3.5" />
-                <span>ONLINE CBT EXAMINATION</span>
-              </div>
-              <h1 className="font-display text-xl font-extrabold leading-tight tracking-tight text-[#12396f] sm:text-2xl">
-                Class {selectedTest.classLevel} {selectedTest.subject}
-              </h1>
-              <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-600 sm:text-base">{selectedTest.title.hi}</p>
-            </div>
-            <div className="relative z-10 flex flex-wrap items-center gap-2 sm:justify-end">
-              <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-1 text-[11px] font-semibold">
-                <button onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>हिंदी</button>
-                <button onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-amber-300 text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-white/10'}`}>English</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Essential information only; live countdown is shown in the sticky exam dashboard. */}
-          <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-center">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल प्रश्न / Questions</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-slate-900 sm:text-xl">{totalQuestions} MCQs</div>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <div className="text-[10px] font-semibold text-slate-500 sm:text-[11px]">कुल अंक / Total Marks</div>
-              <div className="mt-0.5 font-mono text-lg font-extrabold text-teal-700 sm:text-xl">{selectedTest.totalMarks}</div>
-            </div>
-            {!studentDetails && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
-                <div className="text-[10px] font-semibold text-amber-800 sm:text-[11px]">समय / Duration</div>
-                <div className="mt-0.5 font-mono text-lg font-extrabold text-amber-900 sm:text-xl">{TOTAL_TEST_MINUTES} मिनट</div>
-              </div>
-            )}
-          </div>
-          </div>
-        </div>
-
-        {/* COMPACT CANDIDATE STRIP */}
-        {studentDetails && (
+        {/* Candidate identity and layout controls belong only to a confirmed exam. */}
+        {studentDetails && matchingActiveAttempt && isTestActive && !isSubmitted && (
           <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-900 text-sm font-extrabold text-white">
@@ -983,7 +939,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800">Class {studentDetails.studentClass}</span>
                   <span className="text-[11px] font-medium text-slate-500">Roll No. <span className="font-mono font-bold text-slate-700">{studentDetails.rollNo}</span></span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-slate-500">Candidate / परीक्षार्थी</p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-600 break-words">{questionLang === 'en' ? selectedTest.title.en : selectedTest.title.hi}</p>
               </div>
             </div>
 
