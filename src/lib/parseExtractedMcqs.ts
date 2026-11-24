@@ -6,11 +6,13 @@ export type ImportedMcq = {
 };
 export type ParseResult = { questions: ImportedMcq[]; warnings: string[] };
 
-const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)\s*|(\d{1,4})\s*[.)\-:]\s*)(.+)$/i;
+const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(?:\(([0-9०-९]{1,4})\)\s*|([0-9०-९]{1,4})\s*[.)\-:]\s*)(.+)$/i;
 const answerSuffix = /(?:^|\s)(?:correct\s+answer|answer|सही\s+उत्तर|उत्तर)\s*[:：\-]\s*\(?([A-Da-dकखगघ])\)?\s*$/i;
 const optionMarker = /(^|\s)(?:\(([A-Da-dकखगघ])\)|([A-Da-dकखगघ])[.)\-:])\s*/g;
 const answerKeyHeading = /^(?:answer\s*(?:key|sheet|list)|answers|correct\s*answers|उत्तर\s*(?:कुंजी|माला|सूची)|उत्तरमाला)(?:\s*[:：\-]\s*|\s*$)/i;
-const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)|(\d{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-dकखगघ])\)?(?=$|[\s,;|])/gi;
+const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\(([0-9०-९]{1,4})\)|([0-9०-९]{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-dकखगघ])\)?(?=$|[\s,;|])/gi;
+
+const questionNumberFromSource = (raw: string): number => Number(raw.replace(/[०-९]/g, digit => String(digit.charCodeAt(0) - 0x0966)));
 
 const optionIndex = (letter: string): number => {
   const hindi = 'कखगघ'.indexOf(letter);
@@ -50,7 +52,7 @@ export function parseExtractedMcqs(text: string): ParseResult {
   function collectAnswers(source: string): void {
     // The answer key is treated as untrusted source data and not proof of correctness.
     for (const entry of source.matchAll(answerEntry)) {
-      const questionNumber = Number(entry[1] || entry[2]);
+      const questionNumber = questionNumberFromSource(entry[1] || entry[2]);
       const answerOptionIndex = optionIndex(entry[3]);
       if (!keyedAnswers.has(questionNumber)) keyedAnswers.set(questionNumber, new Set());
       keyedAnswers.get(questionNumber)!.add(answerOptionIndex);
@@ -105,7 +107,7 @@ export function parseExtractedMcqs(text: string): ParseResult {
     const question = line.match(questionStart);
     if (question) {
       flush();
-      number = Number(question[1] || question[2]);
+      number = questionNumberFromSource(question[1] || question[2]);
       stem = question[3].trim();
       const firstOption = [...stem.matchAll(optionMarker)][0];
       if (firstOption && firstOption.index !== undefined) {
