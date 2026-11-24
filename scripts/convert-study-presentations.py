@@ -61,7 +61,8 @@ def isolated(args, folder, timeout=120):
 def convert(presentation_id):
     if not re.fullmatch(r"[0-9a-f-]{36}", presentation_id):
         raise ValueError("Invalid presentation id")
-    with tempfile.TemporaryDirectory(prefix="ksol-ppt-") as tmp:
+    tmp = tempfile.mkdtemp(prefix="ksol-ppt-")
+    try:
         folder = pathlib.Path(tmp)
         folder.chmod(0o777)
         source = folder / "source.pptx"
@@ -89,6 +90,12 @@ def convert(presentation_id):
             request("/storage/v1/object/ksol-ppt-slides/" + presentation_id + f"/slide-{index}.png",
                     "POST", image.read_bytes(), "image/png", {"x-upsert": "true", "cache-control": "no-cache"})
         return count
+    finally:
+        # LibreOffice runs as an unprivileged UID and creates private directories.
+        # Remove only the unique worker-created temporary tree, without following links.
+        subprocess.run(["sudo", "rm", "-rf", "--one-file-system", "--", tmp],
+                       check=True, timeout=60)
+
 
 def main():
     stale = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=45)).isoformat()
