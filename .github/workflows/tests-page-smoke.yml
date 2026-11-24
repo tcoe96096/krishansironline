@@ -79,19 +79,6 @@ jobs:
                 if (url.hostname !== 'catalogue-fixture.invalid') return route.abort();
                 const headers = {'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,OPTIONS','content-type':'application/json'};
                 if (route.request().method() === 'OPTIONS') return route.fulfill({status:204,headers});
-                if (url.pathname.endsWith('/rpc/read_test_attempt_draft')) return send({answers:draftAnswers,revision:draftRevision,saved_at:null,expires_at:expiry,server_now:new Date().toISOString()});
-                if (url.pathname.endsWith('/rpc/save_test_attempt_draft')) {
-                  const body=route.request().postDataJSON();
-                  if(body.p_expected_revision!==draftRevision) return send({conflict:true,revision:draftRevision,saved_at:null});
-                  draftAnswers=body.p_answers; draftRevision++;
-                  return send({conflict:false,revision:draftRevision,saved_at:new Date().toISOString(),expires_at:expiry,server_now:new Date().toISOString()});
-                }
-                if (url.pathname.endsWith('/rpc/finish_test_attempt_draft')) {
-                  const body=route.request().postDataJSON();
-                  assert.equal(body.p_expected_revision,draftRevision);
-                  finalized++;
-                  return send({...makeAttempt(1,'submitted',1),id:'fixture-attempt',expires_at:expiry});
-                }
                 if (url.pathname.endsWith('/rpc/start_test_attempt')) { starts++; return route.fulfill({status:403,headers,body:'{}'}); }
                 const catalogue = url.pathname === '/rest/v1/tests';
                 return route.fulfill({status:catalogue && failCatalogue ? 503 : 200,headers,body:JSON.stringify(catalogue ? (failCatalogue ? {message:'Fixture unavailable'} : fixtures) : [])});
@@ -194,6 +181,19 @@ jobs:
                 if (url.pathname === '/rest/v1/user_roles') return send(null);
                 if (url.pathname === '/rest/v1/tests') return send(fixtures);
                 if (url.pathname === '/rest/v1/test_attempts') return send(history);
+                if (url.pathname.endsWith('/rpc/read_test_attempt_draft')) return send({answers:draftAnswers,revision:draftRevision,saved_at:null,expires_at:expiry,server_now:new Date().toISOString()});
+                if (url.pathname.endsWith('/rpc/save_test_attempt_draft')) {
+                  const body=route.request().postDataJSON();
+                  if(body.p_expected_revision!==draftRevision) return send({conflict:true,revision:draftRevision,saved_at:null});
+                  draftAnswers=body.p_answers; draftRevision++;
+                  return send({conflict:false,revision:draftRevision,saved_at:new Date().toISOString(),expires_at:expiry,server_now:new Date().toISOString()});
+                }
+                if (url.pathname.endsWith('/rpc/finish_test_attempt_draft')) {
+                  const body=route.request().postDataJSON();
+                  assert.equal(body.p_expected_revision,draftRevision);
+                  finalized++;
+                  return send({...makeAttempt(1,'submitted',1),id:'fixture-attempt',expires_at:expiry});
+                }
                 if (url.pathname.endsWith('/rpc/start_test_attempt')) {
                   const body = route.request().postDataJSON();
                   starts.push(body.p_test_id);
