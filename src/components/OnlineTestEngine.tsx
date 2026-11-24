@@ -119,7 +119,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [databaseTests, setDatabaseTests] = useState<OnlineTest[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [testSearch, setTestSearch] = useState('');
-  const [testClassFilter, setTestClassFilter] = useState('all');
+  const [testClassFilter, setTestClassFilter] = useState(initialClassFilter || 'all');
+  const [catalogueScope, setCatalogueScope] = useState<'my' | 'all'>('my');
+  const [testChapterFilter, setTestChapterFilter] = useState('all');
+  const [catalogueSort, setCatalogueSort] = useState('class');
+  const [cataloguePage, setCataloguePage] = useState(1);
+  const [catalogueRetry, setCatalogueRetry] = useState(0);
+  const cataloguePageSize = 12;
+  const catalogueEn = language === 'en';
   const [testSubjectFilter, setTestSubjectFilter] = useState('all');
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
@@ -129,14 +136,42 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const availableTests = user && profile
     ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
     : databaseTests;
-  const filteredTests = databaseTests.filter((test) => {
+  const myClassScope = !!user && !!profile && catalogueScope === 'my';
+  const catalogueBase = myClassScope ? availableTests : databaseTests;
+  const effectiveClassFilter = myClassScope ? String(profile?.class_level) : testClassFilter;
+  const classTests = catalogueBase.filter(test => effectiveClassFilter === 'all' || String(test.classLevel) === effectiveClassFilter);
+  const subjectTests = classTests.filter(test => testSubjectFilter === 'all' || test.subject === testSubjectFilter);
+  const filteredTests = subjectTests.filter(test => {
     const query = testSearch.trim().toLowerCase();
-    const matchesQuery = !query || (test.title.hi + ' ' + test.title.en + ' ' + test.subject + ' ' + test.chapter + ' ' + test.classLevel).toLowerCase().includes(query);
-    const matchesClass = testClassFilter === 'all' || String(test.classLevel) === testClassFilter;
-    return matchesQuery && matchesClass && (testSubjectFilter === 'all' || test.subject === testSubjectFilter);
+    const matchesQuery = !query || [test.title.hi, test.title.en, test.subject, test.chapter, test.classLevel].join(' ').toLowerCase().includes(query);
+    return matchesQuery && (testChapterFilter === 'all' || test.chapter === testChapterFilter);
+  }).sort((a, b) => {
+    if (catalogueSort === 'duration') return a.durationMinutes - b.durationMinutes;
+    if (catalogueSort === 'marks') return b.totalMarks - a.totalMarks;
+    if (catalogueSort === 'title') return (catalogueEn ? a.title.en : a.title.hi).localeCompare(catalogueEn ? b.title.en : b.title.hi, catalogueEn ? 'en' : 'hi');
+    return String(a.classLevel).localeCompare(String(b.classLevel), undefined, { numeric: true });
   });
-  const testClassOptions = [...new Set(databaseTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
-  const testSubjectOptions = [...new Set(databaseTests.map((test) => test.subject))].sort();
+  const testClassOptions = [...new Set(databaseTests.map(test => String(test.classLevel)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const testSubjectOptions = [...new Set(classTests.map(test => test.subject))].sort();
+  const testChapterOptions = [...new Set(subjectTests.map(test => test.chapter).filter(Boolean))].sort();
+  const cataloguePageCount = Math.max(1, Math.ceil(filteredTests.length / cataloguePageSize));
+  const effectiveCataloguePage = Math.min(cataloguePage, cataloguePageCount);
+  const pageTests = filteredTests.slice((effectiveCataloguePage - 1) * cataloguePageSize, effectiveCataloguePage * cataloguePageSize);
+  const resetCatalogueFilters = () => {
+    setTestSearch(''); setTestClassFilter('all'); setTestSubjectFilter('all');
+    setTestChapterFilter('all'); setCatalogueSort('class'); setCataloguePage(1);
+  };
+  useEffect(() => {
+    setTestClassFilter(initialClassFilter || 'all');
+    setTestSubjectFilter('all'); setTestChapterFilter('all'); setCataloguePage(1);
+    if (initialClassFilter) setCatalogueScope('all');
+  }, [initialClassFilter]);
+  useEffect(() => {
+    setTestSubjectFilter('all'); setTestChapterFilter('all'); setCataloguePage(1);
+  }, [user?.id, profile?.class_level]);
+  useEffect(() => {
+    setCataloguePage(1);
+  }, [testSearch, effectiveClassFilter, testSubjectFilter, testChapterFilter, catalogueSort, catalogueScope]);
   // Browser storage is a recovery aid only; the authenticated profile and database attempt remain authoritative.
   const [restoredSession, setRestoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
   const restoredTest = databaseTests.find((test) => test.id === restoredSession?.testId) || EMPTY_TEST;
@@ -248,7 +283,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     };
     void loadPublishedTests();
     return () => { active = false; };
-  }, []);
+  }, [catalogueRetry]);
 
   // Keep the selected assessment inside the authenticated student's published class catalogue.
   useEffect(() => {
@@ -691,32 +726,39 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* AVAILABLE TESTS SELECTOR */}
         <div className={"mb-6 rounded-2xl sm:rounded-3xl border border-sky-200 bg-white p-3.5 sm:p-6 shadow-sm " + (isTestActive ? "hidden" : "")}>
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Online Assessment Library</p>
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">ऑनलाइन टेस्ट श्रृंखला</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">सभी प्रकाशित टेस्ट बिना लॉगिन देख सकते हैं। टेस्ट देने के लिए विद्यार्थी लॉगिन और कक्षा की पात्रता आवश्यक है।</p>
-              {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
-              {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
-              {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
+          <div className="mb-4 rounded-xl bg-sky-950 px-4 py-4 text-white sm:px-6">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-sky-200">KRISHAN SIR ONLINE LEARNING</p>
+            <h2 className="mt-1 text-xl font-extrabold sm:text-2xl">{catalogueEn ? 'Online Test Centre' : 'ऑनलाइन टेस्ट केंद्र'}</h2>
+            <p className="mt-1 text-xs text-sky-100 sm:text-sm">{catalogueEn ? 'Browse published tests. Sign in to attempt tests for your class.' : 'प्रकाशित टेस्ट देखें। अपनी कक्षा के टेस्ट देने के लिए लॉगिन करें।'}</p>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={catalogueEn ? 'Test library scope' : 'टेस्ट सूची'}>
+              {user && profile && <button type="button" aria-pressed={myClassScope} onClick={() => { resetCatalogueFilters(); setCatalogueScope('my'); }} className={`rounded-lg px-3 py-2 text-xs font-bold ${myClassScope ? 'bg-sky-900 text-white' : 'bg-slate-100 text-slate-700'}`}>{catalogueEn ? 'My Class' : 'मेरी कक्षा'} · {profile.class_level}</button>}
+              <button type="button" aria-pressed={!myClassScope} onClick={() => { resetCatalogueFilters(); setCatalogueScope('all'); }} className={`rounded-lg px-3 py-2 text-xs font-bold ${!myClassScope ? 'bg-sky-900 text-white' : 'bg-slate-100 text-slate-700'}`}>{catalogueEn ? 'All Tests' : 'सभी टेस्ट'}</button>
+              <button type="button" onClick={() => setCatalogueRetry(n => n + 1)} disabled={catalogueLoading} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-sky-900 disabled:opacity-50">{catalogueEn ? 'Refresh' : 'रिफ्रेश'}</button>
             </div>
-            <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
-              {filteredTests.length} Tests Available
-            </span>
+            <span aria-live="polite" className="text-xs font-semibold text-slate-600">{catalogueLoading ? (catalogueEn ? 'Loading…' : 'लोड हो रहा है…') : catalogueError ? (catalogueEn ? 'Refresh needed' : 'दोबारा लोड करें') : filteredTests.length + (catalogueEn ? ' tests' : ' टेस्ट')}</span>
           </div>
-          <div className="mb-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_150px_190px] gap-2.5">
-            <label className="relative block">
+          {catalogueLoading && <p role="status" className="mb-3 text-sm text-sky-800">{catalogueEn ? 'Loading published tests…' : 'प्रकाशित टेस्ट लोड हो रहे हैं…'}</p>}
+          {catalogueError && <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900"><span>{catalogueEn ? 'Could not refresh the test library. Please try again.' : 'टेस्ट सूची लोड नहीं हो सकी। पुनः प्रयास करें।'}</span><button type="button" onClick={() => setCatalogueRetry(n => n + 1)} disabled={catalogueLoading} className="rounded-md border border-amber-300 px-3 py-2 text-xs font-bold disabled:opacity-50">{catalogueEn ? 'Retry' : 'पुनः प्रयास'}</button></div>}
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <label className="relative col-span-2 block sm:col-span-3 lg:col-span-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={testSearch} onChange={(event) => setTestSearch(event.target.value)} placeholder="टेस्ट खोजें / Search tests..." aria-label="Search tests" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" />
+              <input value={testSearch} onChange={event => setTestSearch(event.target.value)} placeholder={catalogueEn ? 'Search tests, subjects, chapters…' : 'टेस्ट, विषय, अध्याय खोजें…'} aria-label={catalogueEn ? 'Search tests' : 'टेस्ट खोजें'} className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-sky-200" />
             </label>
-            <select value={testClassFilter} onChange={(event) => setTestClassFilter(event.target.value)} aria-label="Filter tests by class" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
-              <option value="all">सभी कक्षाएँ / All Classes</option>
-              {testClassOptions.map((classLevel) => <option key={classLevel} value={classLevel}>Class {classLevel}</option>)}
+            <select value={effectiveClassFilter} disabled={myClassScope} onChange={event => { setTestClassFilter(event.target.value); setTestSubjectFilter('all'); setTestChapterFilter('all'); }} aria-label={catalogueEn ? 'Filter by class' : 'कक्षा फ़िल्टर'} className="h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700 disabled:opacity-70">
+              <option value="all">{catalogueEn ? 'All Classes' : 'सभी कक्षाएँ'}</option>
+              {[...new Set([...testClassOptions, ...(effectiveClassFilter === 'all' ? [] : [effectiveClassFilter])])].map(classLevel => <option key={classLevel} value={classLevel}>{catalogueEn ? 'Class ' : 'कक्षा '}{classLevel}</option>)}
             </select>
-            <select value={testSubjectFilter} onChange={(event) => setTestSubjectFilter(event.target.value)} aria-label="Filter tests by subject" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700"><option value="all">सभी विषय / All Subjects</option>{testSubjectOptions.map(subject => <option key={subject} value={subject}>{subject}</option>)}</select>
+            <select value={testSubjectFilter} onChange={event => { setTestSubjectFilter(event.target.value); setTestChapterFilter('all'); }} aria-label={catalogueEn ? 'Filter by subject' : 'विषय फ़िल्टर'} className="h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700"><option value="all">{catalogueEn ? 'All Subjects' : 'सभी विषय'}</option>{testSubjectOptions.map(subject => <option key={subject} value={subject}>{subject}</option>)}</select>
+            <select value={testChapterFilter} onChange={event => setTestChapterFilter(event.target.value)} aria-label={catalogueEn ? 'Filter by chapter' : 'अध्याय फ़िल्टर'} className="h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700"><option value="all">{catalogueEn ? 'All Chapters' : 'सभी अध्याय'}</option>{testChapterOptions.map(chapter => <option key={chapter} value={chapter}>{chapter}</option>)}</select>
+            <select value={catalogueSort} onChange={event => setCatalogueSort(event.target.value)} aria-label={catalogueEn ? 'Sort tests' : 'टेस्ट क्रम'} className="h-11 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700">
+              <option value="class">{catalogueEn ? 'Sort: Class' : 'क्रम: कक्षा'}</option><option value="title">{catalogueEn ? 'Sort: Title' : 'क्रम: शीर्षक'}</option><option value="duration">{catalogueEn ? 'Shortest first' : 'कम समय पहले'}</option><option value="marks">{catalogueEn ? 'Highest marks' : 'अधिक अंक पहले'}</option>
+            </select>
+            <button type="button" onClick={resetCatalogueFilters} className="h-11 rounded-xl border border-slate-200 px-2 text-xs font-bold text-sky-900">{catalogueEn ? 'Clear filters' : 'फ़िल्टर हटाएँ'}</button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2.5">
-            {filteredTests.map((test) => {
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            {pageTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               const eligible = !user || (!!profile && String(profile.class_level) === String(test.classLevel));
               return (
@@ -740,14 +782,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                         Class {test.classLevel}
                       </span>
                       <span className="ml-2 text-xs font-semibold text-sky-800">{test.subject}</span>
-                      <h3 className="mt-1.5 text-sm leading-snug font-extrabold text-slate-900 break-words">{test.title.hi}</h3>
-                      <p className="mt-0.5 text-xs leading-snug text-slate-600 break-words">{test.title.en}</p>
+                      <h3 className="mt-1.5 text-sm leading-snug font-extrabold text-slate-900 break-words">{catalogueEn ? test.title.en : test.title.hi}</h3>
+                      <p className="mt-0.5 text-xs leading-snug text-slate-600 break-words">{catalogueEn ? test.title.hi : test.title.en}</p>
                       {test.chapter && <p className="mt-1 text-[11px] text-slate-500 break-words">{test.chapter}</p>}
+                      <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{Math.max(1, Number(test.attemptLimit || 1))}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
                       isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                     }`}>
-                      {isSelected ? 'चयनित / SELECTED' : 'चुनें / SELECT'}
+                      {isSelected ? (catalogueEn ? 'Selected' : 'चयनित') : (catalogueEn ? 'Select' : 'चुनें')}
                     </span>
                   </div>
                   <div className="mt-auto w-full pt-2"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-lg bg-slate-50 py-1.5 text-center text-xs"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">Questions</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">Marks</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">Minutes</div></div></div></div>
@@ -784,14 +827,18 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               );
             })}
           </div>
-          {!catalogueLoading && filteredTests.length === 0 && (
-            <div className="mt-4 rounded-2xl border border-dashed border-sky-300 bg-gradient-to-br from-white to-sky-50 px-5 py-8 sm:px-8 sm:py-10 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-100 text-sky-800"><Search className="h-7 w-7" /></div>
-              <h3 className="mt-4 text-lg sm:text-xl font-extrabold text-slate-900">अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है</h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">इस पोर्टल पर टेस्ट प्रकाशित होते ही वे यहाँ दिखाई देंगे। कृपया बाद में पुनः देखें।</p>
-              {catalogueError && <p className="mt-3 text-xs font-semibold text-amber-700">Catalogue status: {catalogueError}</p>}
+          {!catalogueLoading && !catalogueError && filteredTests.length === 0 && (
+            <div className="mt-4 rounded-2xl border border-dashed border-sky-200 bg-sky-50 px-5 py-7 text-center">
+              <h3 className="text-lg font-extrabold text-slate-900">{catalogueBase.length ? (catalogueEn ? 'No matching tests' : 'फ़िल्टर से कोई टेस्ट नहीं मिला') : (catalogueEn ? 'No published tests available' : 'अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है')}</h3>
+              <p className="mt-2 text-sm text-slate-600">{catalogueBase.length ? (catalogueEn ? 'Change your search or filters.' : 'खोज या फ़िल्टर बदलकर देखें।') : (catalogueEn ? 'New published tests will appear here.' : 'नए प्रकाशित टेस्ट यहाँ दिखाई देंगे।')}</p>
+              {catalogueBase.length > 0 && <button type="button" onClick={resetCatalogueFilters} className="mt-3 rounded-lg bg-sky-900 px-4 py-2 text-sm font-bold text-white">{catalogueEn ? 'Clear filters' : 'फ़िल्टर हटाएँ'}</button>}
             </div>
           )}
+          {cataloguePageCount > 1 && <nav aria-label={catalogueEn ? 'Test library pages' : 'टेस्ट सूची के पृष्ठ'} className="mt-4 flex items-center justify-between gap-2">
+            <button type="button" disabled={effectiveCataloguePage === 1} onClick={() => setCataloguePage(effectiveCataloguePage - 1)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-sky-900 disabled:opacity-40">{catalogueEn ? 'Previous' : 'पिछला'}</button>
+            <span className="text-xs text-slate-600">{effectiveCataloguePage} / {cataloguePageCount}</span>
+            <button type="button" disabled={effectiveCataloguePage === cataloguePageCount} onClick={() => setCataloguePage(effectiveCataloguePage + 1)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-sky-900 disabled:opacity-40">{catalogueEn ? 'Next' : 'अगला'}</button>
+          </nav>}
         </div>
 
         {/* SELECTED TEST OVERVIEW — shown only for a real published test */}
