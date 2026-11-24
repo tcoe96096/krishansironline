@@ -32,6 +32,7 @@ export const AdminTestManagement: React.FC = () => {
   const [bankSearch, setBankSearch] = useState('');
   const [bankSaving, setBankSaving] = useState(false);
   const [documentImportBusy, setDocumentImportBusy] = useState(false);
+  const [documentImportStatus, setDocumentImportStatus] = useState('');
   const [documentImportWarnings, setDocumentImportWarnings] = useState<string[]>([]);
   const [documentImportFileName, setDocumentImportFileName] = useState('');
   const [aiAssistBusy, setAiAssistBusy] = useState(false);
@@ -101,12 +102,12 @@ export const AdminTestManagement: React.FC = () => {
 
   const importQuestionDocument = async (file?: File) => {
     if (!file || documentImportBusy) return;
-    setDocumentImportBusy(true); setError(''); setNotice('');
+    setDocumentImportBusy(true); setDocumentImportStatus('Opening document…'); setError(''); setNotice('');
     setDocumentImportWarnings([]); setDocumentImportFileName('');
     setAiAnswerSuggestions({}); setAiReviewStatus('');
     try {
       if (editingTestId) throw new Error('पहले वर्तमान Draft की editing पूरी या Cancel करें; Import मौजूदा प्रश्नों को बदल देगा।');
-      const rawText = await extractTestDocumentText(file);
+      const rawText = await extractTestDocumentText(file, setDocumentImportStatus);
       const parsed = parseExtractedMcqs(rawText);
       if (parsed.questions.length === 0) {
         throw new Error('चार विकल्पों वाले प्रश्न नहीं मिले। प्रश्न नंबर, A–D विकल्प और text-based PDF/DOCX format जाँचें।');
@@ -141,7 +142,7 @@ export const AdminTestManagement: React.FC = () => {
       setNotice(parsed.questions.length + ' प्रश्न Draft Form में आ गए। अनुवाद व उत्तर सुझावों के लिए नीचे AI Assist चलाएँ; उत्तरों को प्रकाशित करने से पहले जाँचें।');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'PDF/Word document import असफल।');
-    } finally { setDocumentImportBusy(false); }
+    } finally { setDocumentImportBusy(false); setDocumentImportStatus(''); }
   };
 
 
@@ -331,14 +332,14 @@ export const AdminTestManagement: React.FC = () => {
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
     <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
       <h3 className="font-extrabold text-slate-900">PDF / Word Smart Import · Review Preview</h3>
-      <p className="mt-1 text-sm text-slate-600">PDF या .docx चुनें। टेक्स्ट और चार विकल्प Admin Draft Form में भरेंगे; फ़ाइल आपके ब्राउज़र में पढ़ी जाती है, सर्वर पर भेजी नहीं जाती।</p>
+      <p className="mt-1 text-sm text-slate-600">PDF या .docx चुनें। Text या scanned PDF (अधिकतम 12 OCR pages) से प्रश्न Draft Form में आएँगे। OCR ब्राउज़र में चलता है; पहली बार भाषा मॉडल इंटरनेट से डाउनलोड हो सकता है। PDF/Word फ़ाइल सर्वर पर नहीं भेजी जाती।</p>
       <label className="mt-3 block text-sm font-semibold text-slate-700">
         Question paper (PDF / DOCX, up to 8 MB)
         <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={documentImportBusy || !!editingTestId}
           onChange={e => { const selected = e.currentTarget.files?.[0]; e.currentTarget.value = ''; void importQuestionDocument(selected); }}
           className="mt-2 block w-full rounded-xl border border-amber-300 bg-white p-2 text-sm disabled:opacity-50" />
       </label>
-      {documentImportBusy && <p role="status" className="mt-2 text-xs text-slate-700">फाइल से प्रश्न निकाले जा रहे हैं…</p>}
+      {documentImportBusy && <p role="status" className="mt-2 text-xs text-slate-700">{documentImportStatus || 'फाइल से प्रश्न निकाले जा रहे हैं…'}</p>}
       <button type="button" disabled={aiAssistBusy || documentImportBusy || !!editingTestId || questions.length === 0}
         onClick={() => void suggestBilingualWithAi()}
         className="mt-3 rounded-xl border border-indigo-300 bg-white px-4 py-2.5 text-sm font-bold text-indigo-800 disabled:opacity-50">
@@ -348,7 +349,7 @@ export const AdminTestManagement: React.FC = () => {
       <p className="mt-2 text-xs text-slate-600">AI Assist में प्रश्न/विकल्प सुरक्षित Admin-only backend को भेजे जाते हैं और वहाँ से configured AI provider को। यह सुविधा Preview में activate होने पर ही चलेगी। अनुमानित उत्तर अपने आप सही उत्तर नहीं बनते।</p>
       {documentImportFileName && <p role="status" className="mt-2 text-xs text-emerald-800">Loaded for review: {documentImportFileName} · {questions.length} questions</p>}
       {documentImportWarnings.length > 0 && <details className="mt-3 rounded-lg border border-amber-300 bg-white p-3 text-xs"><summary className="cursor-pointer font-bold">Import warnings ({documentImportWarnings.length})</summary><ul className="mt-2 list-disc pl-5">{documentImportWarnings.slice(0, 20).map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
-      <p className="mt-2 text-xs text-amber-900">अभी केवल text-based PDF/DOCX समर्थित हैं; scanned PDF के लिए OCR अलग से चाहिए। AI translation/answer suggestions server configuration के बाद Preview में उपलब्ध होंगे। जब तक दोनों भाषाओं में प्रश्न और सही उत्तर पूरे नहीं होंगे, Save Draft उन्हें स्वीकार नहीं करेगा।</p>
+      <p className="mt-2 text-xs text-amber-900">Text-based PDF और DOCX के साथ scanned PDF के लिए सीमित Hindi/English OCR fallback जोड़ा गया है। OCR परिणाम में गलत अक्षर या विकल्प हो सकते हैं; review आवश्यक है। AI translation/answer suggestions server configuration के बाद Preview में उपलब्ध होंगे। जब तक दोनों भाषाओं में प्रश्न और सही उत्तर पूरे नहीं होंगे, Save Draft उन्हें स्वीकार नहीं करेगा।</p>
     </section>
 
     <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
