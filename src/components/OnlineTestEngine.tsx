@@ -693,7 +693,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600">Supabase में प्रकाशित और आपकी कक्षा के लिए उपलब्ध ऑनलाइन टेस्ट चुनें।</p>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">सभी प्रकाशित टेस्ट बिना लॉगिन देख सकते हैं। टेस्ट देने के लिए विद्यार्थी लॉगिन और कक्षा की पात्रता आवश्यक है।</p>
               {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
               {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
               {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
@@ -760,7 +760,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     onClick={() => {
                       if (authLoading || profileLoading || submissionStatus.loading) return;
                       if (!user) {
+                        setSelectedTest(test);
                         onRequestLogin();
+                        return;
+                      }
+                      if (!isSelected) {
+                        setSelectedTest(test);
+                        setLoginError('');
                         return;
                       }
                       if (!studentDetails) {
@@ -772,7 +778,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     disabled={authLoading || profileLoading || submissionStatus.loading}
                     className={`mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-900 hover:bg-sky-800'}`}
                   >
-                    <span>{submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? 'Continue / Start Test' : 'Login to Start Test'}</span>
+                    <span>{submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? (isSelected ? 'Continue / Start Test' : 'Select Test / टेस्ट चुनें') : 'Login to Start Test'}</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   {isSelected && loginError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
