@@ -231,6 +231,23 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
   const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
+  // Never display or submit an attempt under a different catalogue selection.
+  const matchingActiveAttempt = !!user && activeAttempt?.student_id === user.id &&
+    activeAttempt.test_id === selectedTest.id && activeAttempt.status === 'in_progress';
+  const matchingServerResult = !!user && serverResult?.student_id === user.id &&
+    serverResult.test_id === selectedTest.id && serverResult.status !== 'in_progress';
+  useEffect(() => {
+    if (activeAttempt && (activeAttempt.test_id !== selectedTest.id || activeAttempt.student_id !== user?.id)) {
+      setActiveAttempt(null);
+      setIsTestActive(false);
+      setAutoSubmitPending(false);
+      setShowAttemptSummaryModal(false);
+    }
+    if (serverResult && (serverResult.test_id !== selectedTest.id || serverResult.student_id !== user?.id)) {
+      setServerResult(null);
+      setIsSubmitted(false);
+    }
+  }, [selectedTest.id, user?.id, activeAttempt, serverResult]);
   const [catalogueStartIntent, setCatalogueStartIntent] = useState<{ testId: string; owner: string } | null>(null);
   const [catalogueActionMessage, setCatalogueActionMessage] = useState('');
   const catalogueStartGuard = useRef(false);
@@ -569,7 +586,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
 
   const openCatalogueStart = (test: OnlineTest) => {
-    if (authLoading || profileLoading || submissionStatus.loading || isTestActive) return;
+    if (authLoading || profileLoading || submissionStatus.loading || isTestActive || catalogueStartGuard.current) return;
     setCatalogueActionMessage('');
     if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
       setCatalogueActionMessage(catalogueEn ? 'A saved test is selected. Resume it before choosing a different test.' : 'एक पुरानी परीक्षा सुरक्षित है। दूसरी परीक्षा चुनने से पहले उसे जारी रखें।');
@@ -654,7 +671,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
     if (submissionInFlight.current) return;
-    if (!studentDetails || !activeAttempt) {
+    if (!studentDetails || !activeAttempt || !matchingActiveAttempt || !isTestActive) {
       alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
@@ -1009,7 +1026,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         )}
 
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
-        {studentDetails && activeAttempt && !isSubmitted && (
+        {studentDetails && activeAttempt && matchingActiveAttempt && isTestActive && !isSubmitted && (
           <div className="space-y-4 pb-24 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
             <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
@@ -1438,7 +1455,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         )}
 
         {/* ATTEMPT DETAILS MODAL (Opened via Upper Right Attempt Details Button) */}
-        {showAttemptSummaryModal && studentDetails && !isSubmitted && (
+        {showAttemptSummaryModal && studentDetails && matchingActiveAttempt && isTestActive && !isSubmitted && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
             <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -1580,7 +1597,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         )}
 
         {/* VIEW 3: COMPREHENSIVE SCORECARD & RESULTS REVIEW (SHOWN UPON SUBMISSION) */}
-        {studentDetails && isSubmitted && (
+        {studentDetails && isSubmitted && matchingServerResult && (
           <div className="space-y-6">
 
             {/* Scorecard Banner */}
