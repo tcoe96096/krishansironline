@@ -955,9 +955,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
         {/* Candidate identity and layout controls belong only to a confirmed exam. */}
         {studentDetails && matchingActiveAttempt && isTestActive && !isSubmitted && (
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="mb-2 flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-900 text-sm font-extrabold text-white">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-900 text-sm font-extrabold text-white">
                 {studentDetails.studentName.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -993,45 +993,49 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         {/* VIEW 3: ACTIVE TEST WORKSPACE — visible only after the database confirms an attempt */}
         {studentDetails && activeAttempt && matchingActiveAttempt && isTestActive && !isSubmitted && (
           <div className="space-y-4 pb-24 sm:pb-0">
-            {/* RESPONSIVE EXAM STATUS: compact on phones, full dashboard on larger screens */}
-            <div className="sticky top-[130px] z-30 rounded-xl sm:rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-md p-2 sm:p-4" aria-label="Live examination status">
-              <div className="mb-2 flex items-center justify-end gap-2">
-                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">भाषा / Language</span>
-                <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1 text-[11px] font-bold shadow-sm" role="group" aria-label="Select test language">
-                  <button type="button" onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'hi' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>हिंदी</button>
-                  <button type="button" onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`rounded-md px-3 py-1.5 transition-colors ${questionLang === 'en' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>English</button>
+            {/* RESPONSIVE EXAM STATUS: one compact sticky bar with a right-aligned timer */}
+            <div className="sticky top-[130px] z-30 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-md backdrop-blur-xl sm:px-3" aria-label="Live examination status">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                    <div className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold" role="group" aria-label="Select test language">
+                      <button type="button" onClick={() => setQuestionLang('hi')} aria-pressed={questionLang === 'hi'} className={`min-h-8 rounded px-2 transition-colors ${questionLang === 'hi' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>हिंदी</button>
+                      <button type="button" onClick={() => setQuestionLang('en')} aria-pressed={questionLang === 'en'} className={`min-h-8 rounded px-2 transition-colors ${questionLang === 'en' ? 'bg-sky-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>English</button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold tabular-nums text-slate-600 sm:text-xs">
+                      <span>{questionLang === 'en' ? 'Q' : 'प्रश्न'} {currentQuestionIndex + 1}/{totalQuestions}</span>
+                      <span>{selectedTest.totalMarks} {questionLang === 'en' ? 'marks' : 'अंक'}</span>
+                      <button type="button" onClick={() => setShowAttemptSummaryModal(true)} aria-label={questionLang === 'en' ? 'View exam progress' : 'परीक्षा की प्रगति देखें'} className="min-h-8 rounded px-1 text-sky-800 hover:bg-sky-50">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button type="button" onClick={() => setShowAttemptSummaryModal(true)} aria-label={`Answered ${attemptedCount} of ${totalQuestions}`} className="min-h-11 min-w-0 rounded-md border border-emerald-200 bg-emerald-50 px-1 py-1 text-center text-emerald-900 sm:px-2">
+                      <span className="block break-words text-[11px] font-semibold leading-tight">{questionLang === 'en' ? 'Answered' : 'उत्तरित'}</span>
+                      <span className="block text-sm font-bold tabular-nums leading-tight">{attemptedCount}/{totalQuestions}</span>
+                    </button>
+                    <button type="button" onClick={() => setShowAttemptSummaryModal(true)} aria-label={`Unanswered ${unattemptedCount}`} className="min-h-11 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-center text-slate-800 sm:px-2">
+                      <span className="block break-words text-[11px] font-semibold leading-tight">{questionLang === 'en' ? 'Left' : 'शेष'}</span>
+                      <span className="block text-sm font-bold tabular-nums leading-tight">{unattemptedCount}</span>
+                    </button>
+                    <button type="button" onClick={() => setShowAttemptSummaryModal(true)} aria-label={`Marked for review ${reviewCount}`} className="min-h-11 min-w-0 rounded-md border border-purple-200 bg-purple-50 px-1 py-1 text-center text-purple-900 sm:px-2">
+                      <span className="block break-words text-[11px] font-semibold leading-tight">{questionLang === 'en' ? 'Review' : 'समीक्षा'}</span>
+                      <span className="block text-sm font-bold tabular-nums leading-tight">{reviewCount}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 sm:hidden">
                 <div className={"exam-floating-watch exam-neon-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
                   role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
-                  style={{ background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #dce9f0 0)` }}>
+                  style={{ width: '3.75rem', height: '3.75rem', padding: '3px', justifySelf: 'end', background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #dce9f0 0)` }}>
                   <div className="exam-floating-watch-face">
-                    <span className="exam-watch-live"><i /> LIVE EXAM</span>
-                    <strong>{formatTimer(timeLeftSeconds)}</strong>
+                    <span className="exam-watch-live"><i /> LIVE</span>
+                    <strong style={{fontSize: '0.875rem'}}>{formatTimer(timeLeftSeconds)}</strong>
                     <span>MIN : SEC</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-emerald-800">ANSWERED</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-emerald-900">{attemptedCount}<span className="text-[10px] font-semibold">/{totalQuestions}</span></div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-left"><div className="text-[9px] font-bold text-slate-600">LEFT</div><div className="mt-0.5 font-mono text-lg font-extrabold leading-tight text-slate-800">{unattemptedCount}</div></button>
               </div>
-              <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
-                <div className={"exam-floating-watch exam-neon-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
-                  role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
-                  style={{ background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #dce9f0 0)` }}>
-                  <div className="exam-floating-watch-face">
-                    <span className="exam-watch-live"><i /> LIVE EXAM</span>
-                    <strong>{formatTimer(timeLeftSeconds)}</strong>
-                    <span>MIN : SEC</span>
-                  </div>
-                </div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-emerald-800">ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{attemptedCount}/{totalQuestions}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-slate-600">NOT ATTEMPTED</div><div className="font-mono text-xl font-extrabold">{unattemptedCount}</div></button>
-                <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5"><div className="text-[10px] font-bold text-sky-800">TOTAL MARKS</div><div className="font-mono text-xl font-extrabold">{selectedTest.totalMarks}</div></div>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-purple-800">REVIEW</div><div className="font-mono text-xl font-extrabold">{reviewCount}</div></button>
-                <button type="button" onClick={() => setShowAttemptSummaryModal(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left"><div className="text-[10px] font-bold text-sky-800">PROGRESS</div><div className="font-mono text-xl font-extrabold">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</div></button>
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={questionLang === 'en' ? 'Answered questions' : 'उत्तरित प्रश्न'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}>
+                <div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} />
               </div>
-              <div className="mt-2 sm:mt-3"><div className="mb-1 flex items-center justify-between text-[10px] sm:text-xs font-semibold text-slate-600"><span>प्रश्न {currentQuestionIndex + 1}/{totalQuestions} · {reviewCount} समीक्षा हेतु · {selectedTest.totalMarks} अंक</span><span className="font-mono">{Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}%</span></div><div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} /></div></div>
               {!isOnline && (
                 <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-900">
                   इंटरनेट कनेक्शन उपलब्ध नहीं है। आपका टेस्ट और टाइमर जारी है; उत्तर इस ब्राउज़र में सुरक्षित हो रहे हैं। नेटवर्क लौटने पर सबमिशन फिर प्रयास होगा।
@@ -1326,7 +1330,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
             {/* RIGHT SIDEBAR: QUESTION PALETTE & SUBMISSION - 4 COLS */}
-            <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[270px]">
+            <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[150px]">
 
               {/* 3. QUESTION PALETTE BOXES */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
