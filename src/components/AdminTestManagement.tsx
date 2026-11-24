@@ -93,16 +93,16 @@ export const AdminTestManagement: React.FC = () => {
     setError(''); setNotice('');
     try {
       const payload = JSON.parse(bulkJson);
-      if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length !== 40) throw new Error('Bilingual title, chapter और ठीक 40 questions आवश्यक हैं।');
-      const factual = payload.questions.filter((q: any) => q.category === 'factual').length;
-      const conceptual = payload.questions.filter((q: any) => q.category === 'conceptual').length;
-      if (factual !== 28 || conceptual !== 12) throw new Error('वितरण 28 factual + 12 conceptual होना चाहिए।');
+      if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length === 0) throw new Error('Bilingual title, chapter और कम-से-कम एक प्रश्न आवश्यक हैं।');
+      if (payload.questions.some((q: any) => !q || !['factual', 'conceptual'].includes(q.category))) throw new Error('हर प्रश्न की category factual या conceptual होनी चाहिए।');
       const mapped = payload.questions.map((q: any, i: number) => {
         if (!q.question?.en?.trim() || !q.question?.hi?.trim() || !Array.isArray(q.options?.en) || !Array.isArray(q.options?.hi) || q.options.en.length !== 4 || q.options.hi.length !== 4 || q.options.en.some((x: string) => !x?.trim()) || q.options.hi.some((x: string) => !x?.trim()) || !q.explanation?.en?.trim() || !q.explanation?.hi?.trim() || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) throw new Error('प्रश्न ' + (i + 1) + ': bilingual प्रश्न, चार विकल्प, दोनों भाषाओं में विवरण और सही उत्तर आवश्यक हैं।');
-        return { question: q.question, options: q.options, explanation: q.explanation, marks: Number(q.marks || 1), category: q.category as 'factual' | 'conceptual' };
+        const marks = Number(q.marks ?? 1);
+        if (!Number.isFinite(marks) || marks <= 0) throw new Error('प्रश्न ' + (i + 1) + ': अंक शून्य से अधिक होने चाहिए।');
+        return { question: q.question, options: q.options, explanation: q.explanation, marks, category: q.category as 'factual' | 'conceptual' };
       });
       setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index));
-      setNotice('40 प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
+      setNotice(mapped.length + ' प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
     } catch (e) { setError(e instanceof Error ? e.message : 'Bulk JSON import असफल।'); }
   };
 
@@ -131,11 +131,11 @@ export const AdminTestManagement: React.FC = () => {
       const test = {
         id, title, class_level: classLevel, subject: subject.trim(), chapter: chapter.trim(),
         duration_minutes: duration, total_marks: totalMarks, attempt_limit: attemptLimit,
-        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, explanation: q.explanation, marks: q.marks, category: q.category, type: 'mcq' }))
+        questions: questions.map((q, i) => ({ id: 'q' + (i + 1), chapter: chapter.trim(), question: q.question, options: q.options, ...(q.explanation.en.trim() && q.explanation.hi.trim() ? { explanation: q.explanation } : {}), marks: q.marks, category: q.category, type: 'mcq' }))
       };
       const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-import', { body: { test, answer_key: answers } });
       if (invokeError) throw invokeError;
-      if (!data?.ok) throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई।');
+      if (data?.ok !== true || data?.test_id !== id || data?.status !== 'draft_saved') throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई। सूची Refresh करके जाँचें।');
       setNotice('Test Draft सुरक्षित रूप से सेव हो गया। Publish करने से पहले सूची में जाँचें।');
       setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null);
       await loadTests();
@@ -177,8 +177,10 @@ export const AdminTestManagement: React.FC = () => {
   const togglePublish = async (test: TestRow) => {
     setSaving(true); setError(''); setNotice('');
     try {
-      const { error: rpcError } = await requireSupabase().rpc('admin_set_test_published', { p_test_id: test.id, p_publish: !test.is_published });
+      const desiredStatus = !test.is_published;
+      const { data: published, error: rpcError } = await requireSupabase().rpc('admin_set_test_published', { p_test_id: test.id, p_publish: desiredStatus });
       if (rpcError) throw rpcError;
+      if (published !== desiredStatus) throw new Error('Publish status की पुष्टि नहीं हुई। सूची Refresh करके जाँचें।');
       setNotice(!test.is_published ? 'Test प्रकाशित कर दिया गया।' : 'Test Unpublish कर दिया गया।');
       await loadTests();
     } catch (e) { setError(e instanceof Error ? e.message : 'Publish status बदल नहीं पाया।'); }
@@ -190,10 +192,10 @@ export const AdminTestManagement: React.FC = () => {
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
     <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
-      <h3 className="font-extrabold text-slate-900">Bulk Import · 40 MCQ JSON</h3>
-      <p className="mt-1 text-sm text-slate-600">40 bilingual प्रश्न एक साथ लोड करें। 28 factual + 12 conceptual अनिवार्य हैं।</p>
+      <h3 className="font-extrabold text-slate-900">Bulk Import · MCQ JSON</h3>
+      <p className="mt-1 text-sm text-slate-600">किसी भी गैर-खाली सेट के bilingual प्रश्न एक साथ लोड करें। Factual और conceptual का निश्चित अनुपात आवश्यक नहीं है।</p>
       <textarea value={bulkJson} onChange={e=>setBulkJson(e.target.value)} placeholder='{"title":{"en":"Minerals and Energy Resources","hi":"खनिज तथा ऊर्जा संसाधन"},"chapter":"खनिज तथा ऊर्जा संसाधन","questions":[...]}' className="mt-3 min-h-36 w-full rounded-xl border border-sky-200 bg-white p-3 font-mono text-xs"/>
-      <button type="button" onClick={importBulkJson} className="mt-3 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white">Load 40 Questions</button>
+      <button type="button" onClick={importBulkJson} className="mt-3 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white">Load Questions</button>
     </section>
 
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 sm:p-6">
