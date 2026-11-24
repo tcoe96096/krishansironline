@@ -23,13 +23,14 @@ export async function extractTestDocumentText(file: File): Promise<string> {
     const pdfjs = await import('pdfjs-dist');
     const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-    const loadingTask = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
+    const loadingTask = pdfjs.getDocument({ data: bytes });
     const document = await loadingTask.promise;
     try {
       if (document.numPages > MAX_PDF_PAGES) {
         throw new Error('PDF में 100 से अधिक पेज हैं; छोटी फाइल अपलोड करें।');
       }
       const pages: string[] = [];
+      let totalCharacters = 0;
       for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
         const page = await document.getPage(pageNumber);
         const extracted = await page.getTextContent();
@@ -45,14 +46,15 @@ export async function extractTestDocumentText(file: File): Promise<string> {
           if (y !== null) lastY = y;
           if (pageText.length > MAX_EXTRACTED_CHARACTERS) throw new Error('PDF का टेक्स्ट import सीमा से बड़ा है।');
         }
-        pages.push(pageText);
-        if (pages.reduce((n, p) => n + p.length, 0) > MAX_EXTRACTED_CHARACTERS) {
+        totalCharacters += pageText.length;
+        if (totalCharacters > MAX_EXTRACTED_CHARACTERS) {
           throw new Error('PDF का टेक्स्ट import सीमा से बड़ा है।');
         }
+        pages.push(pageText);
       }
       result = pages.join('\n');
     } finally {
-      await document.destroy();
+      await loadingTask.destroy();
     }
   } else {
     if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
