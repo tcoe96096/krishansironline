@@ -3,6 +3,7 @@ import { requireSupabase } from '../lib/supabase';
 import { extractTestDocumentText } from '../lib/extractTestDocumentText';
 import { parseExtractedMcqs } from '../lib/parseExtractedMcqs';
 import { parseTestDocumentMetadata } from '../lib/parseTestDocumentMetadata';
+import { createFreeBilingualJsonPrompt } from '../lib/createFreeBilingualJsonPrompt';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList, Search } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
@@ -153,6 +154,18 @@ export const AdminTestManagement: React.FC = () => {
   };
 
 
+  const copyFreeBilingualPrompt = async () => {
+    setError(''); setNotice('');
+    try {
+      const prompt = createFreeBilingualJsonPrompt({ title, chapter, questions, answers });
+      if (!navigator.clipboard?.writeText) throw new Error('इस ब्राउज़र में Copy उपलब्ध नहीं है। HTTPS पर वेबसाइट खोलें।');
+      await navigator.clipboard.writeText(prompt);
+      setNotice('₹0 ChatGPT Prompt कॉपी हुआ। ChatGPT में Paste करें, तैयार JSON को नीचे Bulk Import में Paste करें और Load Questions दबाएँ।');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'ChatGPT Prompt कॉपी नहीं हो सका।');
+    }
+  };
+
   const suggestBilingualWithAi = async () => {
     if (aiAssistBusy || documentImportBusy) return;
     const startingRevision = draftRevision.current;
@@ -261,7 +274,9 @@ export const AdminTestManagement: React.FC = () => {
   const importBulkJson = () => {
     setError(''); setNotice('');
     try {
-      const payload = JSON.parse(bulkJson);
+      const trimmed = bulkJson.trim();
+      const fencedJson = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const payload = JSON.parse(fencedJson ? fencedJson[1].trim() : trimmed);
       if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length === 0) throw new Error('Bilingual title, chapter और कम-से-कम एक प्रश्न आवश्यक हैं।');
       if (payload.questions.some((q: any) => !q || !['factual', 'conceptual'].includes(q.category))) throw new Error('हर प्रश्न की category factual या conceptual होनी चाहिए।');
       const mapped = payload.questions.map((q: any, i: number) => {
@@ -392,6 +407,11 @@ export const AdminTestManagement: React.FC = () => {
         className="mt-3 rounded-xl border border-indigo-300 bg-white px-4 py-2.5 text-sm font-bold text-indigo-800 disabled:opacity-50">
         {aiAssistBusy ? 'AI processing…' : 'AI Assist: हिंदी + English + Answer Suggestions'}
       </button>
+      <button type="button" onClick={() => void copyFreeBilingualPrompt()} disabled={documentImportBusy || aiAssistBusy || !!editingTestId}
+        className="ml-2 mt-3 rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 disabled:opacity-50">
+        ₹0 Free ChatGPT JSON Prompt कॉपी करें
+      </button>
+      <p className="mt-2 text-xs text-slate-700">Free तरीका: PDF/Word चुनें → यह Prompt Copy करें → ChatGPT में Paste करें → मिली JSON को नीचे Bulk Import में Paste करके Load Questions दबाएँ। कोई Paid API या वेबसाइट से AI request नहीं होगी। ChatGPT उपयोग की अपनी limits हो सकती हैं; संवेदनशील सामग्री Paste न करें। अधिकतम 30 प्रश्न प्रति Prompt।</p>
       {aiReviewStatus && <p role="status" className="mt-2 text-xs font-semibold text-indigo-800">{aiReviewStatus}</p>}
       {Object.values(aiAnswerSuggestions).some(value => value !== null) && (
         <button type="button" onClick={acceptUnselectedAiAnswers}
