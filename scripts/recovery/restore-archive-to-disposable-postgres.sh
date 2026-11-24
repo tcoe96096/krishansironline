@@ -136,6 +136,21 @@ fi
 # Raw SQL, object names and sensitive stderr must never enter Actions logs.
 restore_errors="$(mktemp)"
 chmod 600 "$restore_errors"
+# PostgreSQL normally omits SQLSTATE from client-side pg_restore stderr.
+# Enable it only in the disposable server's internal logs. Never publish those
+# logs: they can contain private SQL, identifiers, and archive content.
+# Disabling statement logging also reduces sensitive data in temporary logs.
+sqlstate_logging=0
+if docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -v ON_ERROR_STOP=1 \
+    -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" >/dev/null 2>&1 &&
+   docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -v ON_ERROR_STOP=1 \
+    -c "ALTER SYSTEM SET log_error_verbosity = 'verbose'" >/dev/null 2>&1 &&
+   [[ "$(docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc 'SELECT pg_reload_conf()' 2>/dev/null)" == t ]] &&
+   [[ "$(docker exec "$name" psql -X -U "$restore_user" -d "$restore_db" -Atqc 'SHOW log_error_verbosity' 2>/dev/null)" == verbose ]]; then
+  sqlstate_logging=1
+fi
+# Isolate restore-time messages from harmless container bootstrap errors.
+restore_started_at="$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
 # Stop at the FIRST SQL error: later errors are often cascading symptoms.
 # Never print the captured stderr; it may contain private SQL or object names.
 restore_flags=(--verbose --exit-on-error --no-owner --no-acl)
@@ -148,6 +163,22 @@ fi
 if ! docker exec -i "$name" pg_restore "${restore_flags[@]}" \
   --username "$restore_user" --dbname "$restore_db" >/dev/null 2>"$restore_errors"; then
   category='OTHER_RESTORE_ERROR'
+  # Never emit Docker/PostgreSQL logs or raw SQL. Extract ONLY the first
+  # five-character SQLSTATE from server ERROR/FATAL/PANIC lines emitted since
+  # the restore began. This works even when pg_restore's stderr says only
+  # "could not execute query". Client-only failures retain the old classifier.
+  if [[ "$sqlstate_logging" == 1 ]]; then
+    sqlstate="$(docker logs --since "$restore_started_at" "$name" 2>&1 |
+      sed -nE 's/.*(ERROR|FATAL|PANIC):[[:space:]]+([A-Z0-9]{5}):.*/\2/p' |
+      head -n 1 || true)"
+    if [[ "$sqlstate" =~ ^[A-Z0-9]{5}$ ]]; then
+      echo "RESTORE_FAILED_SQLSTATE: $sqlstate" >&2
+    else
+      echo 'RESTORE_FAILED_SQLSTATE: NOT_AVAILABLE' >&2
+    fi
+  else
+    echo 'RESTORE_FAILED_SQLSTATE: LOGGING_UNAVAILABLE' >&2
+  fi
   if grep -Eiq 'role .* does not exist|role .* already exists' "$restore_errors"; then
     category='SUPABASE_ROLE_MISMATCH'
   elif grep -Eiq 'extension .* is not available|could not open extension control file' "$restore_errors"; then
