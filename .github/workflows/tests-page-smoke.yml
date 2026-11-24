@@ -148,16 +148,19 @@ jobs:
               console.log('PASS public catalogue at viewport '+width);
             }
             // Student sessions and server responses below are synthetic; no live API is used.
-            for (const flow of ['already-signed-in','guest-login']) {
+            for (const flow of ['already-signed-in','guest-login','completed-limit','expired-limit','retry-available','server-error']) {
               const context = await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'block'});
               const owner = '00000000-0000-4000-8000-000000000010';
               const profile = {user_id:owner,student_name:'Fixture Student',class_level:'10',roll_no:'10',school_name:'Fixture School',country:'India',state:'Fixture',district:'Fixture',area_type:'city',locality_name:'Fixture',pin_code:'000000',approval_status:'approved',account_status:'active',deleted_at:null};
               const jwt = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',Buffer.from(JSON.stringify({sub:owner,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})).toString('base64url'),'fixture-signature'].join('.');
               const session = {access_token:jwt,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:owner,aud:'authenticated',role:'authenticated',email:'fixture@example.invalid',app_metadata:{},user_metadata:{account_type:'student'},created_at:new Date().toISOString()}};
               const starts = [];
+              const makeAttempt = (n,status,score=null,testId='fixture-13',studentId=owner) => ({id:'attempt-'+n+'-'+testId+'-'+studentId,student_id:studentId,test_id:testId,attempt_number:n,status,started_at:new Date(Date.now()-7200000).toISOString(),expires_at:new Date(Date.now()-3600000).toISOString(),submitted_at:status==='submitted'?new Date(Date.now()-3500000).toISOString():null,score,total_marks:score===null?null:1,percentage:score===null?null:score*100,correct_count:score,attempted_count:score});
+              const history = flow==='completed-limit'?[makeAttempt(2,'in_progress'),makeAttempt(1,'submitted',1)]:flow==='expired-limit'?[makeAttempt(2,'in_progress'),makeAttempt(1,'expired')]:flow==='retry-available'?[makeAttempt(1,'expired')]:[];
+              if(flow==='completed-limit') history.push(makeAttempt(3,'submitted',1,'fixture-12'),makeAttempt(4,'submitted',1,'fixture-13','other-student'));
               await context.addInitScript(({flow,owner,session}) => {
                 localStorage.setItem('krishan_portal_lang','en');
-                if (flow === 'already-signed-in') {
+                if (flow !== 'guest-login') {
                   localStorage.setItem('sb-catalogue-fixture-auth-token',JSON.stringify(session));
                   sessionStorage.setItem('krishansir.student-tab-session.v1',owner);
                 }
@@ -174,19 +177,38 @@ jobs:
                 if (url.pathname === '/rest/v1/student_profiles') return send(profile);
                 if (url.pathname === '/rest/v1/user_roles') return send(null);
                 if (url.pathname === '/rest/v1/tests') return send(fixtures);
-                if (url.pathname === '/rest/v1/test_attempts') return send([]);
+                if (url.pathname === '/rest/v1/test_attempts') return send(history);
                 if (url.pathname.endsWith('/rpc/start_test_attempt')) {
                   const body = route.request().postDataJSON();
                   starts.push(body.p_test_id);
+                  if(flow==='server-error') return route.fulfill({status:400,headers,body:JSON.stringify({code:'P0001',message:'Attempt limit reached'})});
                   return send({id:'fixture-attempt',student_id:owner,test_id:body.p_test_id,attempt_number:1,status:'in_progress',started_at:new Date().toISOString(),expires_at:new Date(Date.now()+1800000).toISOString(),submitted_at:null,score:null,total_marks:null,percentage:null,correct_count:null,attempted_count:null});
                 }
                 return send([]);
               });
               const page = await context.newPage();
               await page.goto(base+'/online-tests/?class=10');
-              const card = page.getByRole('button',{name:'Fixture test 13 — Start test',exact:true});
+              if (flow==='completed-limit' || flow==='expired-limit') {
+                const card = page.getByRole('button',{name:'Fixture test 13 — Attempt limit reached',exact:true});
+                await card.waitFor();
+                assert.equal(await card.isDisabled(),true);
+                assert.equal(await card.getByText('New attempts left: 0',{exact:true}).count(),1);
+                const article = page.locator('#tests article').filter({has:card});
+                assert.equal(await article.getByText('[object Object]',{exact:true}).count(),0);
+                await article.getByRole('link',{name:flow==='completed-limit'?'View result':'Attempt history',exact:true}).click();
+                await page.getByRole('heading',{name:'Test Result & Attempt History',exact:true}).waitFor();
+                const result = page.locator('#results');
+                await result.getByRole('heading',{name:'Fixture test 13',exact:true}).first().waitFor();
+                assert.equal(await result.getByRole('heading',{name:'Fixture test 13',exact:true}).count(),2);
+                assert.equal(await result.getByRole('heading',{name:'Fixture test 12',exact:true}).count(),0);
+                assert.equal(await result.getByText('Expired',{exact:true}).count(),flow==='completed-limit'?1:2);
+                assert.deepEqual(starts,[]);
+                await context.close();
+                continue;
+              }
+              const card = page.getByRole('button',{name:flow==='retry-available'?'Fixture test 13 — Retry test':'Fixture test 13 — Start test',exact:true});
               await card.waitFor();
-              if (flow === 'already-signed-in') {
+              if (flow !== 'guest-login') {
                 await page.getByRole('button',{name:/My Class/}).waitFor();
               }
               await card.click();
@@ -197,6 +219,13 @@ jobs:
                 await login.getByPlaceholder('Enter your password').fill('Fixture123');
                 await login.locator('form').evaluate(form=>form.requestSubmit());
                 await login.waitFor({state:'hidden'});
+              }
+              if(flow==='server-error') {
+                await page.locator('#tests').getByRole('alert').filter({hasText:'You have used all allowed attempts'}).waitFor();
+                assert.equal(await page.locator('#tests').getByText('[object Object]',{exact:true}).count(),0);
+                assert.deepEqual(starts,['fixture-13']);
+                await context.close();
+                continue;
               }
               await page.locator('#cbt-test-workspace').waitFor({state:'visible',timeout:20000});
               await page.getByRole('group',{name:'Select test language'}).waitFor();

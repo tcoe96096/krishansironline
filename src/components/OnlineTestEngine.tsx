@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
+import { summarizeTestAttempts, classifyAttemptError, isResumableAttempt } from '../services/testAttemptStatus';
+import { publicHref } from '../data/publicInfo';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
@@ -221,10 +223,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
   const allowedAttempts = Math.max(1, Number(selectedTest.attemptLimit || 1));
-  const attemptLimitMessageHi = `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।`;
-  const attemptLimitMessageEn = `You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.`;
+  const attemptLimitMessageHi = `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं।`;
+  const attemptLimitMessageEn = `You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted.`;
   const isAttemptLimitMessage = (message: string) => message.includes('निर्धारित प्रयास पूरा') || message.includes('allowed attempt');
-  const displayLoginError = isAttemptLimitMessage(loginError) ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn) : loginError;
+  const displayLoginError = isAttemptLimitMessage(loginError) ? (catalogueEn ? attemptLimitMessageEn : attemptLimitMessageHi) : loginError;
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
@@ -531,10 +533,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const previousAttempts = await getMyTestAttempts();
       if (startAccount.current !== user.id) { setSubmissionStatus({loading:false}); return; }
       const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id && item.student_id === user.id);
-      const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
+      const hasInProgressAttempt = thisTestAttempts.some(item => isResumableAttempt(item));
+      const summary = summarizeTestAttempts(thisTestAttempts, allowedAttempts);
+      setCatalogueHistory({owner:user.id,status:'ready',attempts:previousAttempts.filter(row=>row.student_id===user.id)});
       if (thisTestAttempts.length >= Math.max(1, Number(selectedTest.attemptLimit || 1)) && !hasInProgressAttempt) {
         setSubmissionStatus({ loading: false, success: false, message: '' });
-        setLoginError((questionLang === 'hi' ? `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।` : `You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.`));
+        setLoginError(catalogueEn ? attemptLimitMessageEn : attemptLimitMessageHi);
         return;
       }
       const attempt = await startTestAttempt(selectedTest.id);
@@ -556,6 +560,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const canRestoreAnswers = !!saved &&
         saved.testId === selectedTest.id &&
         sameStudent &&
+        summary.active?.id === attempt.id &&
         attempt.status === 'in_progress' &&
         remaining > 0;
       if (canRestoreAnswers && saved) {
@@ -568,7 +573,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         setSelectedAnswers({});
         setMarkedForReview({});
         setCurrentQuestionIndex(0);
-        if (saved && !sameStudent) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        if (saved) { localStorage.removeItem(ACTIVE_TEST_SESSION_KEY); setRestoredSession(null); }
       }
       const active = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
@@ -578,21 +583,24 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
-      const errorMessage = error instanceof Error ? error.message : String(error ?? '');
-      const errorDetails = (() => {
-        try { return JSON.stringify(error); } catch { return errorMessage; }
-      })();
-      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
-      setLoginError(isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
-        : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
+      if (startAccount.current !== user.id) return;
+      const kind = classifyAttemptError(error);
+      setLoginError(kind === 'limit'
+        ? (catalogueEn ? attemptLimitMessageEn : attemptLimitMessageHi)
+        : kind === 'expired'
+          ? (catalogueEn ? 'The attempt has expired. Refresh your attempt history.' : 'प्रयास का समय समाप्त हो गया है। प्रयासों की जानकारी रिफ्रेश करें।')
+          : kind === 'network'
+            ? (catalogueEn ? 'Connection problem. Check your internet and refresh.' : 'कनेक्शन में समस्या है। इंटरनेट जाँचकर रिफ्रेश करें।')
+            : (catalogueEn ? 'We could not start this test. Refresh and try again, or contact support.' : 'टेस्ट शुरू नहीं हो सका। रिफ्रेश करके पुनः प्रयास करें या सहायता लें।'));
+      setCatalogueRetry(n=>n+1);
     }
   };
 
   const openCatalogueStart = (test: OnlineTest) => {
     if (authLoading || profileLoading || submissionStatus.loading || isTestActive || catalogueStartGuard.current || catalogueStartIntent || catalogueLoading || catalogueError) return;
     setCatalogueActionMessage('');
-    if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
+    const savedAttemptStillActive = restoredSession && (ownCatalogueHistory?.status !== 'ready' || ownCatalogueHistory.attempts.some(row=>row.test_id===restoredSession.testId && isResumableAttempt(row)));
+    if (!isSubmitted && savedAttemptStillActive && restoredSession.testId !== test.id) {
       setCatalogueActionMessage(catalogueEn ? 'Resume the saved test before choosing another test.' : 'दूसरी परीक्षा से पहले सुरक्षित परीक्षा जारी रखें।');
       return;
     }
@@ -605,7 +613,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setCatalogueActionMessage(catalogueEn ? 'A complete, eligible student profile is required.' : 'पूर्ण और पात्र विद्यार्थी प्रोफाइल आवश्यक है।');
       return;
     }
-    if (isSubmitted && restoredSession) setRestoredSession(null);
+    if (restoredSession && (isSubmitted || !savedAttemptStillActive)) setRestoredSession(null);
+    if (ownCatalogueHistory?.status === 'ready' && summarizeTestAttempts(ownCatalogueHistory.attempts.filter(row=>row.test_id===test.id),Math.max(1,Number(test.attemptLimit||1))).exhausted) {
+      setCatalogueActionMessage(catalogueEn ? 'All allowed attempts have been used. View your result or attempt history.' : 'सभी निर्धारित प्रयास पूरे हो गए हैं। परिणाम या प्रयास इतिहास देखें।');
+      return;
+    }
     appliedDeepLink.current = (user.id || 'visitor') + ':' + (initialTestId || '');
     setLoginError('');
     setSelectedTest(test);
@@ -818,7 +830,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       })();
       const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted.')
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
@@ -871,18 +883,22 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               const historyReady = eligible && !!user && ownCatalogueHistory?.status === 'ready';
               const attempts = historyReady ? (ownCatalogueHistory?.attempts || []).filter(row => row.test_id === test.id) : [];
               const limit = Math.max(1, Number(test.attemptLimit || 1));
-              const remainingAttempts = Math.max(0, limit - attempts.length);
-              const resumable = attempts.some(row => row.status === 'in_progress' && Date.parse(row.expires_at) > Date.now());
-              const completed = attempts.some(row => row.status === 'submitted');
-              const expired = attempts.some(row => row.status === 'expired' || (row.status === 'in_progress' && Date.parse(row.expires_at) <= Date.now()));
-              const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
+              const {remaining:remainingAttempts,used,active,latestResult,bestResult,expired,exhausted,attempts:sortedAttempts} = summarizeTestAttempts(attempts,limit);
+              const resumable = !!active;
+              const completed = !!latestResult;
+              const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Time expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
+              const actionLabel = !eligible ? (catalogueEn?'Class restricted':'कक्षा प्रतिबंधित') : user && !historyReady ? (catalogueEn?'Checking attempts…':'प्रयासों की जाँच…') : exhausted ? (catalogueEn?'Attempt limit reached':'प्रयास सीमा पूरी') : resumable ? (catalogueEn?'Resume test':'टेस्ट जारी रखें') : completed ? (catalogueEn?'Retake test':'दोबारा टेस्ट दें') : expired ? (catalogueEn?'Retry test':'पुनः प्रयास करें') : (catalogueEn?'Start test':'टेस्ट शुरू करें');
+              const canStart = eligible && (!user || (historyReady && !exhausted));
+              const resultHref = publicHref('results')+'?testId='+encodeURIComponent(test.id);
+              const date = sortedAttempts[0]?.submitted_at || sortedAttempts[0]?.started_at;
+              const score = (row:TestAttempt) => row.score===null || row.total_marks===null ? '—' : row.score+'/'+row.total_marks;
               return (
                 <article key={test.id} className="relative flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-sky-400 hover:shadow-md">
                   <button type="button"
-                    aria-label={(catalogueEn ? test.title.en : test.title.hi) + ' — ' + (catalogueEn ? (resumable ? 'Resume test' : 'Start test') : (resumable ? 'जारी रखें' : 'शुरू करें'))}
+                    aria-label={(catalogueEn ? test.title.en : test.title.hi) + ' — ' + actionLabel}
                     onClick={() => openCatalogueStart(test)}
-                    disabled={authLoading || profileLoading || submissionStatus.loading || catalogueLoading || !!catalogueError || !!catalogueStartIntent || !eligible}
-                    className="group flex flex-1 w-full min-w-0 flex-col rounded-xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
+                    disabled={authLoading || profileLoading || submissionStatus.loading || catalogueLoading || !!catalogueError || !!catalogueStartIntent || !canStart}
+                    className="group flex flex-1 w-full min-w-0 flex-col rounded-xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed">
                   <div className="flex min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
                       <span className="inline-flex rounded-lg bg-sky-900 px-2.5 py-1 text-[11px] font-bold text-white">
@@ -892,22 +908,33 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <h3 className="mt-1.5 text-sm leading-snug font-extrabold text-slate-900 break-words">{catalogueEn ? test.title.en : test.title.hi}</h3>
                       <p className="mt-0.5 text-xs leading-snug text-slate-600 break-words">{catalogueEn ? test.title.hi : test.title.en}</p>
                       <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{limit}</p>
-                      {historyReady && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable ? 'bg-amber-100 text-amber-900' : completed ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{historyLabel}</span><span className="font-semibold text-slate-600">{catalogueEn ? 'New attempts left: ' : 'नए प्रयास शेष: '}{remainingAttempts}</span></div>}
-                      {!!user && eligible && !historyReady && <p className="mt-1 text-[11px] text-slate-500">{ownCatalogueHistory?.status === 'error' ? (catalogueEn ? 'Attempt history unavailable' : 'प्रयासों की जानकारी उपलब्ध नहीं') : (catalogueEn ? 'Checking attempts…' : 'प्रयासों की जाँच…')}</p>}
+                      {historyReady && <div className="mt-2 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable?'bg-amber-100 text-amber-900':completed?'bg-emerald-100 text-emerald-800':expired?'bg-amber-50 text-amber-900':'bg-slate-100 text-slate-700'}`}>{historyLabel}</span><span className="font-semibold text-slate-600">{catalogueEn?'Attempts used: ':'प्रयोग किए गए प्रयास: '}{used}/{limit}</span><span className="font-semibold text-slate-600">{catalogueEn?'New attempts left: ':'नए प्रयास शेष: '}{remainingAttempts}</span></div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-sky-700" style={{width:Math.min(100,used/limit*100)+'%'}}/></div>
+                        {date && Number.isFinite(Date.parse(date)) && <p className="text-[11px] text-slate-600">{catalogueEn?'Last attempt: ':'अंतिम प्रयास: '}{new Date(date).toLocaleDateString(catalogueEn?'en-IN':'hi-IN')}</p>}
+                        {latestResult && <p className="text-xs font-semibold text-emerald-800">{catalogueEn?'Latest score: ':'अंतिम अंक: '}{score(latestResult)}{bestResult?' · '+(catalogueEn?'Best: ':'सर्वश्रेष्ठ: ')+score(bestResult):''}</p>}
+                      </div>}
+                      {!!user && eligible && !historyReady && <p className="mt-1 text-[11px] text-slate-500">{ownCatalogueHistory?.status === 'error' ? (catalogueEn ? 'Attempt history unavailable. Use Refresh above.' : 'प्रयासों की जानकारी उपलब्ध नहीं। ऊपर रिफ्रेश करें।') : (catalogueEn ? 'Checking attempts…' : 'प्रयासों की जाँच…')}</p>}
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-2"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-lg bg-slate-50 py-1.5 text-center text-xs"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Questions" : "प्रश्न"}</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Marks" : "अंक"}</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Minutes" : "मिनट"}</div></div></div></div>
                     <span className="mt-3 flex min-h-10 w-full items-center justify-between border-t border-slate-200 pt-2 text-sm font-extrabold text-sky-800 group-hover:text-sky-950">
-                      <span>{starting ? (catalogueEn ? 'Opening…' : 'खुल रहा है…') : !eligible ? (catalogueEn ? 'Class restricted' : 'कक्षा प्रतिबंधित') : resumable ? (catalogueEn ? 'Resume test' : 'टेस्ट जारी रखें') : (catalogueEn ? 'Start test' : 'टेस्ट शुरू करें')}</span>
-                      <ChevronRight className="h-4 w-4" aria-hidden="true"/>
+                      <span>{starting ? (catalogueEn ? 'Opening…' : 'खुल रहा है…') : actionLabel}</span>
+                      {canStart ? <ChevronRight className="h-4 w-4" aria-hidden="true"/> : <Lock className="h-4 w-4" aria-hidden="true"/>}
                     </span>
                   </button>
+                  {historyReady && used>0 && <div className="mx-3 mb-3 space-y-2">
+                    {exhausted && <p className="rounded-lg bg-amber-50 p-2 text-xs leading-relaxed text-amber-900">{completed?(catalogueEn?'All attempts used. Your submitted result is available below.':'सभी प्रयास पूरे हो गए हैं। जमा किया गया परिणाम नीचे देखें।'):(catalogueEn?'No attempts remain and no submitted result is available. Review attempt history or contact support.':'कोई प्रयास शेष नहीं और जमा परिणाम उपलब्ध नहीं है। प्रयास इतिहास देखें या सहायता लें।')}</p>}
+                    {!exhausted && expired && !completed && !resumable && <p className="text-xs text-amber-800">{catalogueEn?'The previous attempt expired. You can retry.':'पिछले प्रयास का समय समाप्त हुआ। आप पुनः प्रयास कर सकते हैं।'}</p>}
+                    <a href={resultHref} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800"><BarChart3 className="h-4 w-4" aria-hidden="true"/>{completed?(catalogueEn?'View result':'परिणाम देखें'):(catalogueEn?'Attempt history':'प्रयास इतिहास')}</a>
+                    {exhausted && !completed && <a href={publicHref('help-centre')} className="block text-center text-xs font-semibold text-sky-900 underline">{catalogueEn?'Get help':'सहायता लें'}</a>}
+                  </div>}
                   <details className="mx-3 mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                     <summary className="cursor-pointer font-semibold text-sky-900">{catalogueEn ? 'Test instructions' : 'परीक्षा निर्देश'}</summary>
                     {test.chapter && <p className="mt-2 break-words text-slate-600">{catalogueEn ? 'Chapter: ' : 'अध्याय: '}{test.chapter}</p>}
                     <ul className="mt-2 list-disc space-y-1 pl-4">{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
                   </details>
-                  {isSelected && loginError && <p role="alert" className="mx-3 mb-3 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
+                  {isSelected && loginError && !exhausted && <p role="alert" className="mx-3 mb-3 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
                 </article>
               );
             })}
