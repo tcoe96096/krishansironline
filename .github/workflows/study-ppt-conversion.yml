@@ -75,6 +75,24 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+      - name: Verify Preview database connection
+        env:
+          STUDY_PPT_PROJECT_REF: zgpkmfqioqvincmgyfpi
+          STUDY_PPT_SUPABASE_URL: https://zgpkmfqioqvincmgyfpi.supabase.co
+          STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json
+          spec = importlib.util.spec_from_file_location('converter', 'scripts/convert-study-presentations.py')
+          worker = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(worker)
+          rows = json.loads(worker.request(worker.TABLE + '?select=id&limit=1'))
+          assert isinstance(rows, list)
+          for bucket in ('ksol-ppt-originals', 'ksol-ppt-slides'):
+              metadata = json.loads(worker.request('/storage/v1/bucket/' + bucket))
+              assert metadata['public'] is False, 'PPT storage must remain private'
+          print('Preview database connection verified; both PPT buckets are private.')
+          PY
       - name: Convert Preview queue only
         env:
           STUDY_PPT_PROJECT_REF: zgpkmfqioqvincmgyfpi
