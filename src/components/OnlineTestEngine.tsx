@@ -1023,13 +1023,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     </button>
                   </div>
                 </div>
-                <div className={"exam-floating-watch exam-neon-watch " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
-                  role="timer" aria-label={`समय शेष ${formatTimer(timeLeftSeconds)}`} aria-live="off"
-                  style={{ width: '3.75rem', height: '3.75rem', padding: '3px', justifySelf: 'end', background: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #dce9f0 0)` }}>
-                  <div className="exam-floating-watch-face">
-                    <span className="exam-watch-live"><i /> LIVE</span>
-                    <strong style={{fontSize: '0.875rem'}}>{formatTimer(timeLeftSeconds)}</strong>
-                    <span>MIN : SEC</span>
+                <div className={"exam-floating-watch exam-neon-watch shrink-0 " + (timeLeftSeconds < 300 ? "is-critical" : timeLeftSeconds < 900 ? "is-warning" : "")}
+                  role="timer" aria-label={`${questionLang === 'en' ? 'Time remaining' : 'समय शेष'} ${formatTimer(Math.max(0, timeLeftSeconds))}`} aria-live="off"
+                  style={{ width: 'clamp(4.5rem, 9vw, 5.5rem)', height: 'clamp(4.5rem, 9vw, 5.5rem)', minWidth: '4.5rem', padding: '4px', justifySelf: 'end', backgroundColor: '#25445a', backgroundImage: `conic-gradient(var(--watch-progress-color) ${Math.max(0, Math.min(100, (timeLeftSeconds / Math.max(1, TOTAL_TEST_MINUTES * 60)) * 100))}%, #dce9f0 0)` }}>
+                  <div className="exam-floating-watch-face" style={{ gap: '3px', backgroundColor: '#0b2032' }}>
+                    <span className="exam-watch-live" style={{ fontSize: '8px', letterSpacing: '0.04em', color: '#a5e7df' }}>{questionLang === 'en' ? 'TIME LEFT' : 'समय शेष'}</span>
+                    <strong style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)', letterSpacing: '-0.035em', whiteSpace: 'nowrap', color: '#ffffff' }}>{formatTimer(Math.max(0, timeLeftSeconds))}</strong>
+                    <span style={{ fontSize: '8px', letterSpacing: '0.03em', color: '#a5e7df' }}>MIN : SEC</span>
                   </div>
                 </div>
               </div>
