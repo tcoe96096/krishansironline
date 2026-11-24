@@ -12,7 +12,7 @@ Scope: Draft PR #173 only. **No main merge, live deploy, or production secret ch
 7. Saving calls the existing `admin-test-import` RPC and publishing remains a separate Admin action. This PR does **not** weaken existing test-answer-key security.
 
 ## Preview-only server configuration (never commit secrets)
-- Deploy `supabase/functions/admin-test-ai-assist/index.ts` to the **Preview** Supabase project. Maintain JWT verification at the gateway.
+- **Deployed (Preview only, 24 Nov 2026):** `admin-test-ai-assist` Edge Function version 1 to `krishan-sir-lms-preview` (`zgpkmfqioqvincmgyfpi`), JWT verification enabled. Production project `krishan-sir-lms` does **not** have this function. This deployment does not activate AI billing, which remains behind `AI_TEST_ASSIST_ENABLED=true` and provider secret configuration.
 - Supply environment variables via the Supabase **Preview** functions secrets interface:
   - `SUPABASE_URL` (Preview project)
   - `SUPABASE_ANON_KEY` (Preview project's publishable/anon credential, backend only)
@@ -39,4 +39,4 @@ Scope: Draft PR #173 only. **No main merge, live deploy, or production secret ch
 
 CI gates in this branch: `npm install --legacy-peer-deps`, `npm run lint`, `npx --no-install tsx tests/parseExtractedMcqs.test.ts`, `npm run build`.
 
-**Known limit:** Automatic setting detection currently recognizes labelled Class/Subject/Chapter/Duration/Title fields. Test-title translation and OCR are not yet automated; setup is not fully zero-click. Correct-answer suggestions are AI-generated and must be verified by the Admin.
+**Known limit:** Automatic setting detection currently recognizes labelled Class/Subject/Chapter/Duration/Title fields. Title falls back to the uploaded filename and the AI endpoint now suggests its missing Hindi/English translation; OCR is not yet implemented; setup is not fully zero-click. Correct-answer suggestions are AI-generated and must be verified by the Admin.
