@@ -231,6 +231,24 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
   const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
+  // Catalogue badges are advisory; the existing server start/submit checks remain authoritative.
+  const [catalogueHistory, setCatalogueHistory] = useState<{ owner: string; status: 'loading' | 'ready' | 'error'; attempts: TestAttempt[] } | null>(null);
+  const catalogueUserId = user?.id;
+  useEffect(() => {
+    if (!catalogueUserId || authLoading || isTestActive) return;
+    let current = true;
+    setCatalogueHistory({ owner: catalogueUserId, status: 'loading', attempts: [] });
+    void getMyTestAttempts().then(rows => {
+      if (current) setCatalogueHistory({
+        owner: catalogueUserId, status: 'ready',
+        attempts: rows.filter(row => row.student_id === catalogueUserId),
+      });
+    }).catch(() => {
+      if (current) setCatalogueHistory({ owner: catalogueUserId, status: 'error', attempts: [] });
+    });
+    return () => { current = false; };
+  }, [catalogueUserId, authLoading, isTestActive, isSubmitted, catalogueRetry]);
+  const ownCatalogueHistory = catalogueUserId && !authLoading && catalogueHistory?.owner === catalogueUserId ? catalogueHistory : null;
   // Prevent timer and manual-submit events from sending duplicate RPC requests.
   const submissionInFlight = useRef(false);
 
@@ -761,6 +779,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             {pageTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               const eligible = !user || (!!profile && String(profile.class_level) === String(test.classLevel));
+              const historyReady = eligible && !!user && ownCatalogueHistory?.status === 'ready';
+              const attempts = historyReady ? (ownCatalogueHistory?.attempts || []).filter(row => row.test_id === test.id) : [];
+              const limit = Math.max(1, Number(test.attemptLimit || 1));
+              const remainingAttempts = Math.max(0, limit - attempts.length);
+              const resumable = attempts.some(row => row.status === 'in_progress' && Date.parse(row.expires_at) > Date.now());
+              const completed = attempts.some(row => row.status === 'submitted');
+              const expired = attempts.some(row => row.status === 'expired' || (row.status === 'in_progress' && Date.parse(row.expires_at) <= Date.now()));
+              const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
               return (
                 <div
                   key={test.id}
@@ -785,7 +811,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <h3 className="mt-1.5 text-sm leading-snug font-extrabold text-slate-900 break-words">{catalogueEn ? test.title.en : test.title.hi}</h3>
                       <p className="mt-0.5 text-xs leading-snug text-slate-600 break-words">{catalogueEn ? test.title.hi : test.title.en}</p>
                       {test.chapter && <p className="mt-1 text-[11px] text-slate-500 break-words">{test.chapter}</p>}
-                      <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{Math.max(1, Number(test.attemptLimit || 1))}</p>
+                      <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{limit}</p>
+                      {historyReady && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable ? 'bg-amber-100 text-amber-900' : completed ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{historyLabel}</span><span className="font-semibold text-slate-600">{catalogueEn ? 'New attempts left: ' : 'नए प्रयास शेष: '}{remainingAttempts}</span></div>}
+                      {!!user && eligible && !historyReady && <p className="mt-1 text-[11px] text-slate-500">{ownCatalogueHistory?.status === 'error' ? (catalogueEn ? 'Attempt history unavailable' : 'प्रयासों की जानकारी उपलब्ध नहीं') : (catalogueEn ? 'Checking attempts…' : 'प्रयासों की जाँच…')}</p>}
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
                       isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
@@ -795,6 +823,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
                   <div className="mt-auto w-full pt-2"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-lg bg-slate-50 py-1.5 text-center text-xs"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">Questions</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">Marks</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">Minutes</div></div></div></div>
                   </button>
+                  <details className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                    <summary className="cursor-pointer font-semibold text-sky-900">{catalogueEn ? 'Test instructions' : 'परीक्षा निर्देश'}</summary>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction, index) => <li key={index}>{instruction}</li>)}
+                      <li>{catalogueEn ? 'Duration: ' : 'समय: '}{test.durationMinutes}{catalogueEn ? ' minutes.' : ' मिनट।'}</li>
+                      <li>{catalogueEn ? 'Maximum attempts: ' : 'अधिकतम प्रयास: '}{limit}.</li>
+                      <li>{catalogueEn ? 'Sign in with an eligible student account. The server checks attempt eligibility.' : 'पात्र विद्यार्थी खाते से लॉगिन करें। प्रयास की पात्रता सर्वर जाँचता है।'}</li>
+                    </ul>
+                  </details>
                   <button
                     type="button"
                     onClick={() => {
@@ -819,7 +856,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     disabled={authLoading || profileLoading || submissionStatus.loading || !eligible}
                     className={`mt-2 inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-900 hover:bg-sky-800'}`}
                   >
-                    <span>{!eligible ? 'Class eligibility required / कक्षा की पात्रता आवश्यक' : submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? (isSelected ? 'Start Test / टेस्ट शुरू करें' : 'Select Test / टेस्ट चुनें') : 'Login to Start Test / लॉगिन करें'}</span>
+                    <span>{!eligible ? (catalogueEn ? 'Class eligibility required' : 'कक्षा की पात्रता आवश्यक') : submissionStatus.loading && isSelected ? (catalogueEn ? 'Checking…' : 'जाँच हो रही है…') : !user ? (catalogueEn ? 'Login to start' : 'लॉगिन करें') : !isSelected ? (catalogueEn ? 'Select test' : 'टेस्ट चुनें') : resumable ? (catalogueEn ? 'Resume test' : 'टेस्ट जारी रखें') : historyReady && remainingAttempts === 0 ? (catalogueEn ? 'Check attempt eligibility' : 'प्रयास की पात्रता जाँचें') : (catalogueEn ? 'Start test' : 'टेस्ट शुरू करें')}</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   {isSelected && loginError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
