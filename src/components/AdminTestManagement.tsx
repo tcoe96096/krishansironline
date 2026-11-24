@@ -264,11 +264,28 @@ export const AdminTestManagement: React.FC = () => {
   };
 
 
-  const updateQuestion = (index: number, updater: (q: DraftQuestion) => DraftQuestion) =>
+  const updateQuestion = (index: number, updater: (q: DraftQuestion) => DraftQuestion) => {
+    // A suggestion is tied to the exact question/options it was generated for.
+    // Manual edits invalidate the previous suggested answer for this question.
+    setAiAnswerSuggestions(current => {
+      if (!(index in current)) return current;
+      const next = { ...current };
+      delete next[index];
+      return next;
+    });
     setQuestions(current => current.map((q, i) => i === index ? updater(q) : q));
+  };
 
-  const addQuestion = () => { setQuestions(v => [...v, blankQuestion()]); setAnswers(v => [...v, -1]); };
+  const addQuestion = () => {
+    setAiAnswerSuggestions({});
+    setAiReviewStatus('');
+    setQuestions(v => [...v, blankQuestion()]);
+    setAnswers(v => [...v, -1]);
+  };
   const removeQuestion = (index: number) => {
+    // Indices shift after removal, so every prior suggestion becomes stale.
+    setAiAnswerSuggestions({});
+    setAiReviewStatus('');
     setQuestions(v => v.filter((_, i) => i !== index));
     setAnswers(v => v.filter((_, i) => i !== index));
   };
