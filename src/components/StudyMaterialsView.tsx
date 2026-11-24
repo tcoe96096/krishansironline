@@ -326,7 +326,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             </div>
 
             {/* Modal Body */}
-            <div ref={readerRef} onScroll={saveReaderPosition} className="min-h-0 flex-1 w-full max-w-5xl mx-auto px-4 py-5 sm:px-8 sm:py-7 overflow-y-auto space-y-6 text-slate-800">
+            <div ref={readerRef} onScroll={saveReaderPosition} className="min-h-0 flex-1 w-full mx-auto px-2 py-5 sm:px-4 sm:py-7 overflow-y-auto space-y-6 text-slate-800">
               
               {/* Summary */}
               <div>
@@ -348,7 +348,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
                     <h4 className="text-sm font-extrabold text-slate-900">{language === 'hi' ? 'PDF अध्ययन सामग्री' : 'PDF Study Material'}</h4>
                     <a href={activeChapter.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-50">{language === 'hi' ? 'नई विंडो में खोलें' : 'Open in new tab'}</a>
                   </div>
-                  <iframe title={language === 'hi' ? activeChapter.title.hi : activeChapter.title.en} src={activeChapter.pdfUrl} className="h-[70vh] min-h-[420px] w-full border-0 bg-slate-100" />
+                  <iframe title={language === 'hi' ? activeChapter.title.hi : activeChapter.title.en} src={activeChapter.pdfUrl.split("#")[0]+"#view=FitH&zoom=page-width"} className="h-[85vh] min-h-[420px] w-full border-0 bg-white" />
                 </section>
               )}
 
