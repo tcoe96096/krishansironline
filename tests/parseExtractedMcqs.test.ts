@@ -44,4 +44,46 @@ assert.equal(incomplete.questions.length, 0);
 assert.ok(incomplete.warnings.some(x => /expected four options/.test(x)));
 assert.throws(() => parseExtractedMcqs('x'.repeat(2_000_001)), /limit/);
 assert.equal(parseExtractedMcqs('Random text without MCQs').questions.length, 0);
+
+
+// End-of-document answer key can contain multiple entries per line.
+const separateKey = parseExtractedMcqs([
+  '1. The largest planet?',
+  'A. Earth B. Jupiter C. Mars D. Venus',
+  '(2) Which is a metal?',
+  '(A) Wood (B) Iron (C) Rubber (D) Paper',
+  'उत्तर कुंजी: 1-B, 2-B',
+].join('\n'));
+assert.equal(separateKey.questions.length, 2);
+assert.deepEqual(separateKey.questions.map(x => x.answerIndex), [1, 1]);
+assert.equal(separateKey.questions[0].options[1], 'Jupiter');
+assert.ok(!separateKey.questions[1].options[3].includes('उत्तर कुंजी'));
+
+const conflict = parseExtractedMcqs([
+  '1. Choose the correctly spelled word',
+  'A. Beter B. Better C. Btter D. Beteer',
+  'Answer: B',
+  'Answer Key: 1-C',
+].join('\n'));
+assert.equal(conflict.questions[0].answerIndex, null);
+assert.ok(conflict.warnings.some(x => /conflicts with inline/.test(x)));
+
+const ambiguousKey = parseExtractedMcqs([
+  '1. Choose one.',
+  'A. One B. Two C. Three D. Four',
+  'Answer key: 1-A, 1-D',
+].join('\n'));
+assert.equal(ambiguousKey.questions[0].answerIndex, null);
+assert.ok(ambiguousKey.warnings.some(x => /ambiguous answer key/.test(x)));
+
+const missingEntry = parseExtractedMcqs([
+  '1. Choose one.',
+  'A. One B. Two C. Three D. Four',
+  'Answer Key:',
+  '1-A',
+  '2-C',
+].join('\n'));
+assert.equal(missingEntry.questions[0].answerIndex, 0);
+assert.ok(missingEntry.warnings.some(x => /entry 2: question missing/.test(x)));
+
 console.log('MCQ parser review-first tests passed');
