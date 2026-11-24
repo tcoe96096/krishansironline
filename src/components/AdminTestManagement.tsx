@@ -33,6 +33,9 @@ export const AdminTestManagement: React.FC = () => {
   const [documentImportBusy, setDocumentImportBusy] = useState(false);
   const [documentImportWarnings, setDocumentImportWarnings] = useState<string[]>([]);
   const [documentImportFileName, setDocumentImportFileName] = useState('');
+  const [aiAssistBusy, setAiAssistBusy] = useState(false);
+  const [aiAnswerSuggestions, setAiAnswerSuggestions] = useState<Record<number, number | null>>({});
+  const [aiReviewStatus, setAiReviewStatus] = useState('');
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -84,6 +87,7 @@ export const AdminTestManagement: React.FC = () => {
       setError('इस Question Set में किसी प्रश्न का सही उत्तर या चार विकल्प अमान्य हैं।'); return;
     }
     setClassLevel(set.class_level); setSubject(set.subject); setChapter(set.chapter);
+    setAiAnswerSuggestions({}); setAiReviewStatus('');
     setQuestions(current => [...current, ...set.questions.map(q => ({
       ...q, explanation: q.explanation || { en: '', hi: '' },
       marks: Number(q.marks || 1), category: (q.category === 'conceptual' ? 'conceptual' : 'factual') as 'conceptual' | 'factual'
@@ -98,6 +102,7 @@ export const AdminTestManagement: React.FC = () => {
     if (!file || documentImportBusy) return;
     setDocumentImportBusy(true); setError(''); setNotice('');
     setDocumentImportWarnings([]); setDocumentImportFileName('');
+    setAiAnswerSuggestions({}); setAiReviewStatus('');
     try {
       if (editingTestId) throw new Error('पहले वर्तमान Draft की editing पूरी या Cancel करें; Import मौजूदा प्रश्नों को बदल देगा।');
       const rawText = await extractTestDocumentText(file);
@@ -132,10 +137,79 @@ export const AdminTestManagement: React.FC = () => {
       if (minutes && Number(minutes[1]) >= 1 && Number(minutes[1]) <= 600) setDuration(Number(minutes[1]));
       const fileTitle = named('test title|title|शीर्षक');
       if (fileTitle) setTitle(v => /[\u0900-\u097f]/.test(fileTitle) ? {...v, hi: fileTitle} : {...v, en: fileTitle});
-      setNotice(parsed.questions.length + ' प्रश्न PDF/Word से Draft Form में आ गए। खाली भाषा और अनिर्धारित उत्तर जाँचें; AI translation अभी उपलब्ध नहीं है।');
+      setNotice(parsed.questions.length + ' प्रश्न Draft Form में आ गए। अनुवाद व उत्तर सुझावों के लिए नीचे AI Assist चलाएँ; उत्तरों को प्रकाशित करने से पहले जाँचें।');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'PDF/Word document import असफल।');
     } finally { setDocumentImportBusy(false); }
+  };
+
+
+  const suggestBilingualWithAi = async () => {
+    if (aiAssistBusy || documentImportBusy) return;
+    setAiAssistBusy(true); setError(''); setNotice(''); setAiReviewStatus('');
+    try {
+      const batchInputs = questions.map((q, id) => {
+        const question = q.question.en.trim() || q.question.hi.trim();
+        const enReady = q.options.en.length === 4 && q.options.en.every(x => x.trim());
+        const hiReady = q.options.hi.length === 4 && q.options.hi.every(x => x.trim());
+        const options = enReady ? q.options.en : hiReady ? q.options.hi : [];
+        if (!question || options.length !== 4) {
+          throw new Error('प्रश्न ' + (id + 1) + ' में चारों विकल्प होने चाहिए।');
+        }
+        return { id, question, options };
+      });
+      if (!batchInputs.length) throw new Error('पहले PDF/Word से प्रश्न Import करें।');
+      type Suggestion = {
+        id: number;
+        question: Bilingual;
+        options: { en: string[]; hi: string[] };
+        explanation: Bilingual;
+        suggestedCorrectIndex: number | null;
+      };
+      const responses: Suggestion[] = [];
+      for (let index = 0; index < batchInputs.length; index += 10) {
+        setAiReviewStatus('AI processing ' + (index + 1) + '–' + Math.min(index + 10, batchInputs.length) + ' of ' + batchInputs.length + ' questions…');
+        const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-ai-assist', {
+          body: { questions: batchInputs.slice(index, index + 10) },
+        });
+        if (invokeError || data?.ok !== true || !Array.isArray(data?.suggestions) || data.suggestions.length !== Math.min(10, batchInputs.length - index)) {
+          throw new Error(data?.error === 'ai_assist_disabled' || data?.error === 'ai_provider_not_configured'
+            ? 'AI Assist अभी सक्रिय नहीं है। Preview में Admin-only function और server-side AI key configure करें।'
+            : 'AI Assist का उत्तर अधूरा या असफल है। किसी प्रश्न में बदलाव नहीं किया गया।');
+        }
+        responses.push(...data.suggestions);
+      }
+      // Apply only after every batch succeeds. AI never directly selects an answer.
+      const byId = new Map<number, Suggestion>();
+      responses.forEach(result => {
+        if (!Number.isInteger(result.id) || byId.has(result.id) ||
+          !result.question?.en || !result.question?.hi ||
+          result.options?.en?.length !== 4 || result.options?.hi?.length !== 4 ||
+          !result.options.en.every((v: string) => typeof v === 'string' && !!v.trim()) ||
+          !result.options.hi.every((v: string) => typeof v === 'string' && !!v.trim()) ||
+          (result.suggestedCorrectIndex !== null &&
+           (!Number.isInteger(result.suggestedCorrectIndex) || result.suggestedCorrectIndex < 0 || result.suggestedCorrectIndex > 3))) {
+          throw new Error('AI response validation failed; changes not applied.');
+        }
+        byId.set(result.id, result);
+      });
+      if (byId.size !== questions.length || questions.some((_, i) => !byId.has(i))) throw new Error('AI response has missing questions.');
+      setQuestions(current => current.map((q, i) => {
+        const suggestion = byId.get(i);
+        if (!suggestion) return q;
+        return {
+          ...q, question: suggestion.question,
+          options: { en: [...suggestion.options.en], hi: [...suggestion.options.hi] },
+          explanation: suggestion.explanation,
+        };
+      }));
+      setAiAnswerSuggestions(Object.fromEntries(responses.map(x => [x.id, x.suggestedCorrectIndex])));
+      setNotice('AI ने दोनों भाषाओं में प्रश्न, विकल्प और व्याख्या तैयार की है। सुझाए गए सही उत्तर नीचे हैं; Admin पुष्टि के बाद ही उन्हें चुनें।');
+      setAiReviewStatus('AI suggestions ready for review · ' + responses.length + ' questions');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'AI Assist असफल रहा।');
+      setAiReviewStatus('');
+    } finally { setAiAssistBusy(false); }
   };
 
   const importBulkJson = () => {
@@ -150,7 +224,7 @@ export const AdminTestManagement: React.FC = () => {
         if (!Number.isFinite(marks) || marks <= 0) throw new Error('प्रश्न ' + (i + 1) + ': अंक शून्य से अधिक होने चाहिए।');
         return { question: q.question, options: q.options, explanation: q.explanation, marks, category: q.category as 'factual' | 'conceptual' };
       });
-      setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index));
+      setTitle(payload.title); setChapter(payload.chapter); setQuestions(mapped); setAnswers(payload.questions.map((q: any) => q.correct_index)); setAiAnswerSuggestions({}); setAiReviewStatus('');
       setNotice(mapped.length + ' प्रश्न लोड हो गए। अब Save Draft दबाएँ।');
     } catch (e) { setError(e instanceof Error ? e.message : 'Bulk JSON import असफल।'); }
   };
@@ -186,7 +260,7 @@ export const AdminTestManagement: React.FC = () => {
       if (invokeError) throw invokeError;
       if (data?.ok !== true || data?.test_id !== id || data?.status !== 'draft_saved') throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई। सूची Refresh करके जाँचें।');
       setNotice('Test Draft सुरक्षित रूप से सेव हो गया। Publish करने से पहले सूची में जाँचें।');
-      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null);
+      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null); setAiAnswerSuggestions({}); setAiReviewStatus('');
       await loadTests();
     } catch (e) { setError(e instanceof Error ? e.message : 'Test save नहीं हुआ।'); }
     finally { setSaving(false); }
@@ -219,7 +293,7 @@ export const AdminTestManagement: React.FC = () => {
 
   const cancelEdit = () => {
     setEditingTestId(null); setTitle({en:'',hi:''}); setChapter('');
-    setQuestions([blankQuestion()]); setAnswers([-1]);
+    setQuestions([blankQuestion()]); setAnswers([-1]); setAiAnswerSuggestions({}); setAiReviewStatus('');
     setNotice('Editing रद्द कर दी गई।');
   };
 
@@ -250,9 +324,16 @@ export const AdminTestManagement: React.FC = () => {
           className="mt-2 block w-full rounded-xl border border-amber-300 bg-white p-2 text-sm disabled:opacity-50" />
       </label>
       {documentImportBusy && <p role="status" className="mt-2 text-xs text-slate-700">फाइल से प्रश्न निकाले जा रहे हैं…</p>}
+      <button type="button" disabled={aiAssistBusy || documentImportBusy || !!editingTestId || questions.length === 0}
+        onClick={() => void suggestBilingualWithAi()}
+        className="mt-3 rounded-xl border border-indigo-300 bg-white px-4 py-2.5 text-sm font-bold text-indigo-800 disabled:opacity-50">
+        {aiAssistBusy ? 'AI processing…' : 'AI Assist: हिंदी + English + Answer Suggestions'}
+      </button>
+      {aiReviewStatus && <p role="status" className="mt-2 text-xs font-semibold text-indigo-800">{aiReviewStatus}</p>}
+      <p className="mt-2 text-xs text-slate-600">AI Assist में प्रश्न/विकल्प सुरक्षित Admin-only backend को भेजे जाते हैं और वहाँ से configured AI provider को। यह सुविधा Preview में activate होने पर ही चलेगी। अनुमानित उत्तर अपने आप सही उत्तर नहीं बनते।</p>
       {documentImportFileName && <p role="status" className="mt-2 text-xs text-emerald-800">Loaded for review: {documentImportFileName} · {questions.length} questions</p>}
       {documentImportWarnings.length > 0 && <details className="mt-3 rounded-lg border border-amber-300 bg-white p-3 text-xs"><summary className="cursor-pointer font-bold">Import warnings ({documentImportWarnings.length})</summary><ul className="mt-2 list-disc pl-5">{documentImportWarnings.slice(0, 20).map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
-      <p className="mt-2 text-xs text-amber-900">अभी केवल text-based PDF/DOCX समर्थित हैं। स्कैन PDF के लिए OCR और दूसरी भाषा का AI अनुवाद/Answer Suggestions अगले चरण में जोड़ने हैं। जब तक दोनों भाषाओं में प्रश्न और सही उत्तर पूरे नहीं होंगे, Save Draft उन्हें स्वीकार नहीं करेगा।</p>
+      <p className="mt-2 text-xs text-amber-900">अभी केवल text-based PDF/DOCX समर्थित हैं; scanned PDF के लिए OCR अलग से चाहिए। AI translation/answer suggestions server configuration के बाद Preview में उपलब्ध होंगे। जब तक दोनों भाषाओं में प्रश्न और सही उत्तर पूरे नहीं होंगे, Save Draft उन्हें स्वीकार नहीं करेगा।</p>
     </section>
 
     <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
@@ -301,6 +382,19 @@ export const AdminTestManagement: React.FC = () => {
             <label className="text-xs font-semibold text-slate-600">Explanation (English) · optional<textarea value={q.explanation.en} onChange={e=>updateQuestion(i,v=>({...v,explanation:{...v.explanation,en:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"/></label>
             <label className="text-xs font-semibold text-slate-600">व्याख्या (हिंदी) · वैकल्पिक<textarea value={q.explanation.hi} onChange={e=>updateQuestion(i,v=>({...v,explanation:{...v.explanation,hi:e.target.value}}))} className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"/></label>
           </div>
+          {Object.prototype.hasOwnProperty.call(aiAnswerSuggestions, i) && (
+            <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900">
+              {aiAnswerSuggestions[i] === null
+                ? 'AI: उत्तर स्पष्ट नहीं है; सही उत्तर स्वयं जाँचकर चुनें।'
+                : <>AI suggested answer: <strong>{String.fromCharCode(65 + aiAnswerSuggestions[i])}</strong> · जाँचकर स्वीकार करें।
+                  <button type="button" className="ml-2 rounded-md border border-indigo-300 bg-white px-2 py-1 font-bold"
+                    onClick={() => {
+                      const answer = aiAnswerSuggestions[i];
+                      if (answer !== null && answer !== undefined) setAnswers(current => current.map((a, k) => k === i ? answer : a));
+                      setAiAnswerSuggestions(current => { const next = { ...current }; delete next[i]; return next; });
+                    }}>Accept answer</button></>}
+            </div>
+          )}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {q.options.en.map((opt,j)=><div key={j} className="rounded-lg border border-slate-200 bg-white p-3">
               <label className="text-[11px] font-bold text-slate-600">Option {j+1} (English)<input value={opt} onChange={e=>updateQuestion(i,v=>({...v,options:{...v.options,en:v.options.en.map((x,k)=>k===j?e.target.value:x)}}))} className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"/></label>
