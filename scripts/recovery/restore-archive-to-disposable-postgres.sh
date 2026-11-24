@@ -117,16 +117,36 @@ else
   # Only this disposable container's preinstalled postgres database is
   # re-created. No source credentials, host mounts, external network or
   # persistent volumes exist here. No cleanup of any source DB is possible.
-  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
-    -c 'DROP DATABASE postgres WITH (FORCE)' >/dev/null 2>/dev/null; then
+  # Database recreation can fail even before pg_restore starts. psql's
+  # VERBOSITY=sqlstate strips object names and SQL from the error message.
+  # Store its output only in a private temporary file, publish only a strict
+  # five-character PostgreSQL SQLSTATE, and still fail closed on any error.
+  db_reset_errors="$(mktemp)"
+  chmod 600 "$db_reset_errors"
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery \
+    -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+    -c 'DROP DATABASE postgres WITH (FORCE)' >/dev/null 2>"$db_reset_errors"; then
+    db_reset_state="$(sed -nE 's/.*(ERROR|FATAL):[[:space:]]+([A-Z0-9]{5})([^A-Z0-9]|$).*/\2/p' "$db_reset_errors" | head -n 1 || true)"
+    if [[ "$db_reset_state" =~ ^[A-Z0-9]{5}$ ]]; then
+      echo "RESTORE_DISPOSABLE_DROP_SQLSTATE: $db_reset_state" >&2
+    fi
+    rm -f "$db_reset_errors"
     echo 'RESTORE_NOT_RUN: DISPOSABLE_POSTGRES_RECREATE_FAILED' >&2
     exit 2
   fi
-  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
-    -c "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>/dev/null; then
+  : > "$db_reset_errors"
+  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery \
+    -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+    -c "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER $restore_user" >/dev/null 2>"$db_reset_errors"; then
+    db_reset_state="$(sed -nE 's/.*(ERROR|FATAL):[[:space:]]+([A-Z0-9]{5})([^A-Z0-9]|$).*/\2/p' "$db_reset_errors" | head -n 1 || true)"
+    if [[ "$db_reset_state" =~ ^[A-Z0-9]{5}$ ]]; then
+      echo "RESTORE_DISPOSABLE_CREATE_SQLSTATE: $db_reset_state" >&2
+    fi
+    rm -f "$db_reset_errors"
     echo 'RESTORE_NOT_RUN: DISPOSABLE_POSTGRES_RECREATE_FAILED' >&2
     exit 2
   fi
+  rm -f "$db_reset_errors"
   restore_db=postgres
 fi
 
