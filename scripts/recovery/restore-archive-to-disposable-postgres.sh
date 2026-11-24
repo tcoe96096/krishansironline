@@ -39,7 +39,11 @@ docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,
 restore_user=supabase_admin
 ready=0
 for i in $(seq 1 90); do
-  if docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
+  # The image uses a temporary socket-only postmaster during initialization,
+  # then shuts it down and starts the final server. Require TCP on loopback
+  # inside the networkless container, which the temporary server does not use.
+  # PGPASSWORD is scoped to this disposable container only.
+  if docker exec -e PGPASSWORD="$password" "$name" psql -X -h 127.0.0.1 -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
     ready=1
     break
   fi
@@ -97,22 +101,41 @@ else
     echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_DISABLE_FAILED' >&2
     exit 2
   fi
-  if ! docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
-    -Atqc 'SELECT pg_reload_conf()' 2>/dev/null | grep -qx t; then
-    echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_RELOAD_FAILED' >&2
-    exit 2
+  # pg_reload_conf() reports signal delivery, not an effective setting. The
+  # disposable image can deny that SQL operation or briefly restart during
+  # initialization. Use the container's own postgres OS role as a fallback.
+  # The safety gate is the *observed* configuration, never a reload exit code.
+  reload_state='UNCONFIRMED'
+  if [[ "$(docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+      -Atqc 'SELECT pg_reload_conf()' 2>/dev/null || true)" == t ]]; then
+    reload_state='SQL_SIGNAL_SENT'
+  elif docker exec --user postgres "$name" sh -ec 'pg_ctl -D "${PGDATA:?}" reload' >/dev/null 2>&1; then
+    reload_state='LOCAL_OS_SIGNAL_SENT'
   fi
   cron_safe=0
-  for i in $(seq 1 20); do
+  for i in $(seq 1 30); do
+    # Check in a fresh connection because reload is asynchronous. Do not
+    # restore any archive until both conditions are positively confirmed.
     safe="$(docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc \
       "SELECT (current_setting('cron.database_name', true) = 'postgres' AND current_setting('cron.launch_active_jobs', true) = 'off')::int;" 2>/dev/null)" || safe=''
     if [[ "$safe" == 1 ]]; then cron_safe=1; break; fi
+    if [[ "$i" == 10 ]]; then
+      # A transient bootstrap restart may invalidate the first signal.
+      # Retry only within this disposable container; no source credentials.
+      docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -v ON_ERROR_STOP=1 \
+        -c "ALTER SYSTEM SET cron.launch_active_jobs = 'off'" >/dev/null 2>&1 || true
+      if docker exec --user postgres "$name" sh -ec 'pg_ctl -D "${PGDATA:?}" reload' >/dev/null 2>&1; then
+        reload_state='LOCAL_OS_SIGNAL_SENT'
+      fi
+    fi
     sleep 1
   done
-  [[ "$cron_safe" == 1 ]] || {
+  if [[ "$cron_safe" != 1 ]]; then
+    echo "RESTORE_DISPOSABLE_CRON_RELOAD_STATUS: $reload_state" >&2
     echo 'RESTORE_NOT_RUN: DISPOSABLE_CRON_TARGET_OR_SAFETY_CHECK_FAILED' >&2
     exit 2
-  }
+  fi
+  echo 'RESTORE_DISPOSABLE_CRON_SAFETY_VERIFIED=YES'
 
   # Only this disposable container's preinstalled postgres database is
   # re-created. No source credentials, host mounts, external network or
