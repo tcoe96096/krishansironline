@@ -1,0 +1,117 @@
+name: Result Card Backend Review Contract
+on:
+  push:
+    branches:
+      - docs/result-card-backend-review-20261122
+    paths:
+      - 'tests/resultCardBackendContractReview.test.mjs'
+      - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
+      - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfStorageSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfDownloadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
+      - 'src/services/resultCardBackend.ts'
+      - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-fixture.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
+      - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'src/components/ResultsPortal.tsx'
+      - 'src/components/AdminResultCardPanel.tsx'
+      - 'src/components/AdminTestResults.tsx'
+      - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'supabase/functions/ksol-result-pdf-upload/index.ts'
+      - 'supabase/functions/ksol-result-pdf-download/index.ts'
+      - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
+      - 'tests/resultCardPdfUploadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
+      - '.github/workflows/result-card-backend-contract-review.yml'
+  pull_request:
+    paths:
+      - 'tests/resultCardBackendContractReview.test.mjs'
+      - 'tests/resultCardAtomicSqlStaticReview.test.mjs'
+      - 'tests/resultCardStudentAccessSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfStorageSqlStaticReview.test.mjs'
+      - 'tests/resultCardPdfDownloadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs'
+      - 'src/services/resultCardBackend.ts'
+      - 'tests/resultCardApprovePdfSqlStaticReview.test.mjs'
+      - 'docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-fixture.sql'
+      - 'tests/fixtures/ksol-result-db-smoke-assertions.sql'
+      - 'docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'src/components/ResultsPortal.tsx'
+      - 'src/components/AdminResultCardPanel.tsx'
+      - 'src/components/AdminTestResults.tsx'
+      - 'docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'supabase/functions/ksol-result-pdf-upload/index.ts'
+      - 'supabase/functions/ksol-result-pdf-download/index.ts'
+      - 'docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs'
+      - 'tests/resultCardPdfUploadCandidateStaticReview.test.mjs'
+      - 'docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/ksol-result-pdf-private-bucket-CANDIDATE-DO-NOT-APPLY.sql'
+      - '.github/workflows/result-card-backend-contract-review.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check upload and download Edge functions (no deployment)
+        run: |
+          deno check supabase/functions/ksol-result-pdf-upload/index.ts
+          deno check supabase/functions/ksol-result-pdf-download/index.ts
+      - name: Run synthetic fail-closed contract checks
+        run: |
+          node --check docs/results/ksol-result-private-pdf-download-CANDIDATE-DO-NOT-DEPLOY.mjs
+          node --check docs/results/ksol-result-private-pdf-upload-CANDIDATE-DO-NOT-DEPLOY.mjs
+          node --test tests/resultCardBackendContractReview.test.mjs tests/resultCardAtomicSqlStaticReview.test.mjs tests/resultCardStudentAccessSqlStaticReview.test.mjs tests/resultCardPdfStorageSqlStaticReview.test.mjs tests/resultCardPdfDownloadCandidateStaticReview.test.mjs tests/resultCardApprovePdfSqlStaticReview.test.mjs tests/resultCardPdfUploadCandidateStaticReview.test.mjs
+
+  postgres-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 8
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure disposable PostgreSQL client is available
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Compile real Result Card SQL and exercise synthetic release/revoke
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f docs/results/ksol-result-backend-atomic-bundle-CANDIDATE-DO-NOT-APPLY.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/ksol-result-db-smoke-assertions.sql

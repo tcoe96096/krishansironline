@@ -1,0 +1,47 @@
+name: Result Card review-only SQL contract checks
+
+on:
+  push:
+    branches:
+      - docs/result-card-backend-review-20261122
+    paths:
+      - 'docs/results/**'
+      - '.github/workflows/result-card-backend-review.yml'
+  pull_request:
+    paths:
+      - 'docs/results/**'
+      - '.github/workflows/result-card-backend-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify no executable SQL in proposal and read-only preflight
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          proposal=Path('docs/results/result-card-rpc-rls-REVIEW_ONLY.sql').read_text()
+          assert all(not ln.strip() or ln.lstrip().startswith('--') for ln in proposal.splitlines()), 'Review proposal contains executable SQL'
+          preflight=Path('docs/results/result-card-catalog-readonly-preflight.sql').read_text()
+          statements=[s.strip() for s in preflight.split(';') if s.strip()]
+          for statement in statements:
+              body='\n'.join(line for line in statement.splitlines() if not line.lstrip().startswith('--')).strip()
+              if body:
+                  assert body.lower().startswith('select '), 'Preflight includes non-SELECT SQL'
+          print('PASS: proposal is comments-only and preflight contains SELECT statements only')
+          PY
+      - name: Record scope and limits
+        if: always()
+        run: |
+          echo '### Static review-only SQL checks' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No database connection, SQL execution, migrations, JWTs, RPC/RLS verification or deployment.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
