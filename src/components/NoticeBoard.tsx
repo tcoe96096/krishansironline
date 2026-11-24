@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { requireSupabase } from '../lib/supabase';
-import { Bell, Calendar, ExternalLink, RefreshCw } from 'lucide-react';
+import { Bell, Calendar, ExternalLink, RefreshCw, Presentation as PresentationIcon, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchSlide, type Presentation } from '../services/presentationService';
+import { PresentationViewer } from './PresentationLibrary';
 
 interface NoticeBoardProps {
   onNavigate: (section: string) => void;
@@ -64,13 +66,94 @@ const LatestTestLaunches: React.FC = () => {
     {status === 'loading' && <p role="status" className="text-xs text-slate-500">{language === 'en' ? 'Loading tests…' : 'टेस्ट लोड हो रहे हैं…'}</p>}
     {status === 'error' && <p role="status" className="text-xs text-slate-600">{language === 'en' ? 'Test updates temporarily unavailable.' : 'टेस्ट अपडेट अभी उपलब्ध नहीं हैं।'}</p>}
     {status === 'ready' && !tests.length && <p className="text-xs text-slate-500">{language === 'en' ? 'No published tests yet.' : 'अभी कोई प्रकाशित टेस्ट नहीं है।'}</p>}
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
         <div className="min-w-0"><span className="ksol-launch-new mb-1 inline-block origin-left text-sm font-black leading-tight tracking-wide" style={{ color: '#dc2626' }}>NEW</span><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
         <span className="shrink-0 text-[11px] font-bold text-sky-800">{language === 'en' ? 'View test' : 'टेस्ट देखें'} ›</span>
       </a>)}
     </div>
   </div>;
+};
+
+
+const LatestPresentationCovers: React.FC<{ onNavigate: (section: string) => void }> = ({ onNavigate }) => {
+  const { language } = useLanguage();
+  const en = language === 'en';
+  const [items, setItems] = useState<Presentation[]>([]);
+  const [selected, setSelected] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [cover, setCover] = useState<{ id: string; url: string } | null>(null);
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => {
+    let alive = true, request = 0;
+    const refresh = async () => {
+      const current = ++request;
+      try {
+        const { data, error } = await requireSupabase().from('ksol_presentations')
+          .select('*').eq('published', true).eq('status', 'ready')
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(4);
+        if (error) throw error;
+        if (alive && current === request) setItems((data ?? []) as Presentation[]);
+      } catch {
+        if (alive && current === request) setItems([]);
+      } finally {
+        if (alive && current === request) setLoading(false);
+      }
+    };
+    const visibleRefresh = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    const timer = window.setInterval(visibleRefresh, 15000);
+    window.addEventListener('focus', visibleRefresh);
+    document.addEventListener('visibilitychange', visibleRefresh);
+    return () => { alive = false; window.clearInterval(timer); window.removeEventListener('focus', visibleRefresh); document.removeEventListener('visibilitychange', visibleRefresh); };
+  }, []);
+  const catalogueKey = items.map(item => item.id).join(',');
+  useEffect(() => { setSelected(0); }, [catalogueKey]);
+  const item = items[selected % Math.max(items.length, 1)];
+  const coverId = item?.id;
+  const active = items.find(p => p.id === activeId);
+  useEffect(() => {
+    if (!coverId) { setCover(null); return; }
+    let cancelled = false, url = '';
+    setCover(null); setCoverFailed(false);
+    void fetchSlide(coverId, 1).then(blob => {
+      if (cancelled) return;
+      url = URL.createObjectURL(blob);
+      setCover({ id: coverId, url });
+    }).catch(() => { if (!cancelled) setCoverFailed(true); });
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [coverId]);
+  useEffect(() => {
+    if (paused || activeId || items.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') setSelected(i => (i + 1) % items.length);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [paused, activeId, items.length, catalogueKey]);
+  useEffect(() => { if (activeId && !active) setActiveId(null); }, [activeId, active]);
+  const move = (direction: number) => setSelected(i => (i + direction + items.length) % items.length);
+  return <aside aria-label={en ? 'Latest presentations' : 'नवीनतम प्रस्तुतियाँ'} className="min-w-0 self-start rounded-2xl border border-sky-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><PresentationIcon className="h-5 w-5 text-sky-800" />{en ? 'Latest PPTs' : 'नवीनतम PPT'}</h2>
+      <button type="button" onClick={() => onNavigate('materials')} className="text-xs font-bold text-sky-800 hover:underline">{en ? 'All study materials' : 'सभी अध्ययन सामग्री'} ›</button>
+    </div>
+    {item ? <>
+      <button type="button" onClick={() => setActiveId(item.id)} className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white focus-visible:ring-2 focus-visible:ring-sky-600" aria-label={(en ? 'Open presentation: ' : 'प्रस्तुति खोलें: ') + item.title}>
+        {cover?.id === item.id ? <img src={cover.url} alt={item.title} className="h-full w-full object-contain" draggable={false}/> : <span className="px-4 text-center text-sm text-slate-600">{coverFailed ? item.title : (en ? 'Loading cover…' : 'कवर लोड हो रहा है…')}</span>}
+        <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-lg bg-slate-900/90 px-3 py-2 text-xs font-bold text-white"><Play size={15}/>{en ? 'View PPT' : 'PPT देखें'}</span>
+      </button>
+      <div className="mt-3 flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words text-base font-extrabold text-slate-900">{item.title}</h3><p className="mt-1 text-xs text-slate-600">{en ? 'Class' : 'कक्षा'} {item.class_level} · {item.subject} · {item.slide_count} {en ? 'slides' : 'स्लाइड'}</p></div><span className="shrink-0 text-xs font-bold text-slate-500">{selected % items.length + 1} / {items.length}</span></div>
+      {items.length > 1 && <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <button type="button" onClick={() => move(-1)} aria-label={en ? 'Previous cover' : 'पिछला कवर'} className="rounded-lg border bg-white p-2"><ChevronLeft size={18}/></button>
+        {items.map((p, i) => <button type="button" key={p.id} onClick={() => setSelected(i)} aria-label={p.title} aria-pressed={i === selected % items.length} className={'h-8 w-8 rounded-full text-xs font-bold ' + (i === selected % items.length ? 'bg-sky-900 text-white' : 'border bg-white text-slate-700')}>{i + 1}</button>)}
+        <button type="button" onClick={() => move(1)} aria-label={en ? 'Next cover' : 'अगला कवर'} className="rounded-lg border bg-white p-2"><ChevronRight size={18}/></button>
+        <button type="button" onClick={() => setPaused(p => !p)} className="rounded-lg border bg-white px-3 py-2 text-xs font-semibold">{paused ? (en ? 'Resume' : 'चलाएँ') : (en ? 'Pause' : 'रोकें')}</button>
+      </div>}
+    </> : <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">{loading ? (en ? 'Loading presentations…' : 'प्रस्तुतियाँ लोड हो रही हैं…') : (en ? 'New published presentations will appear here.' : 'नई प्रकाशित PPT यहाँ दिखाई देंगी।')}</div>}
+    {active && <PresentationViewer key={active.id} item={active} en={en} onClose={() => setActiveId(null)}/>}
+  </aside>;
 };
 
 export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
@@ -187,8 +270,9 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
 
   return (
     <section className="py-10 bg-white border-b border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-6">
+        <div className="min-w-0">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
               <Bell className="w-5 h-5 text-amber-600" />
@@ -216,7 +300,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
           <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'No announcements have been published yet.' : 'अभी कोई सूचना प्रकाशित नहीं हुई है।'}</p>
         )}
         {!loading && !error && visibleNotices.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {visibleNotices.map((notice) => {
               const title = localized(notice.title, language);
               const details = localized(notice.details, language);
@@ -240,6 +324,8 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
             })}
           </div>
         )}
+        </div>
+        <LatestPresentationCovers onNavigate={onNavigate} />
       </div>
     </section>
   );
