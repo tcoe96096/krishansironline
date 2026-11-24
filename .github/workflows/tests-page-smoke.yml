@@ -97,10 +97,78 @@ jobs:
               assert.equal(await classFilter.inputValue(),'10');
               await scope.getByText('Test instructions',{exact:true}).click();
               await scope.getByText('Read each question carefully.',{exact:true}).waitFor();
-              await scope.getByRole('button',{name:'Login to start',exact:true}).click();
+              const card = scope.getByRole('button',{name:'Fixture test 13 — Start test',exact:true});
+              assert.equal(await card.count(),1,'Exactly one start action per card');
+              assert.equal(await scope.getByRole('button',{name:'Login to start',exact:true}).count(),0);
+              await card.getByRole('heading',{name:'Fixture test 13',exact:true}).click();
+              const login = page.getByRole('dialog',{name:'Student account'});
+              await login.waitFor();
               assert.equal(starts,0,'Guest must not start a server attempt');
+              await login.getByRole('button',{name:'Close',exact:true}).click();
+              await login.waitFor({state:'hidden'});
+              assert.equal(starts,0,'Cancelling login must not start an attempt');
+              await card.click();
+              await login.waitFor();
+              assert.equal(starts,0,'Reopening login must not start an attempt');
               await context.close();
               console.log('PASS public catalogue at viewport '+width);
+            }
+            // Student sessions and server responses below are synthetic; no live API is used.
+            for (const flow of ['already-signed-in','guest-login']) {
+              const context = await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'block'});
+              const owner = '00000000-0000-4000-8000-000000000010';
+              const profile = {user_id:owner,student_name:'Fixture Student',class_level:'10',roll_no:'10',school_name:'Fixture School',country:'India',state:'Fixture',district:'Fixture',area_type:'city',locality_name:'Fixture',pin_code:'000000',approval_status:'approved',account_status:'active',deleted_at:null};
+              const jwt = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',Buffer.from(JSON.stringify({sub:owner,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})).toString('base64url'),'fixture-signature'].join('.');
+              const session = {access_token:jwt,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:owner,aud:'authenticated',role:'authenticated',email:'fixture@example.invalid',app_metadata:{},user_metadata:{account_type:'student'},created_at:new Date().toISOString()}};
+              const starts = [];
+              await context.addInitScript(({flow,owner,session}) => {
+                localStorage.setItem('krishan_portal_lang','en');
+                if (flow === 'already-signed-in') {
+                  localStorage.setItem('sb-catalogue-fixture-auth-token',JSON.stringify(session));
+                  sessionStorage.setItem('krishansir.student-tab-session.v1',owner);
+                }
+              },{flow,owner,session});
+              await context.route('**/*',async route => {
+                const url = new URL(route.request().url());
+                if (url.origin === base) return route.continue();
+                if (url.hostname !== 'catalogue-fixture.invalid') return route.abort();
+                const headers = {'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,OPTIONS','content-type':'application/json'};
+                const send = value => route.fulfill({status:200,headers,body:JSON.stringify(value)});
+                if (route.request().method() === 'OPTIONS') return route.fulfill({status:204,headers});
+                if (url.pathname === '/auth/v1/token') return send(session);
+                if (url.pathname === '/auth/v1/user') return send(session.user);
+                if (url.pathname === '/rest/v1/student_profiles') return send(profile);
+                if (url.pathname === '/rest/v1/user_roles') return send(null);
+                if (url.pathname === '/rest/v1/tests') return send(fixtures);
+                if (url.pathname === '/rest/v1/test_attempts') return send([]);
+                if (url.pathname.endsWith('/rpc/start_test_attempt')) {
+                  const body = route.request().postDataJSON();
+                  starts.push(body.p_test_id);
+                  return send({id:'fixture-attempt',student_id:owner,test_id:body.p_test_id,attempt_number:1,status:'in_progress',started_at:new Date().toISOString(),expires_at:new Date(Date.now()+1800000).toISOString(),submitted_at:null,score:null,total_marks:null,percentage:null,correct_count:null,attempted_count:null});
+                }
+                return send([]);
+              });
+              const page = await context.newPage();
+              await page.goto(base+'/online-tests/?class=10');
+              const card = page.getByRole('button',{name:'Fixture test 13 — Start test',exact:true});
+              await card.waitFor();
+              if (flow === 'already-signed-in') {
+                await page.getByRole('button',{name:/My Class/}).waitFor();
+              }
+              await card.click();
+              if (flow === 'guest-login') {
+                const login = page.getByRole('dialog',{name:'Student account'});
+                await login.waitFor();
+                await login.getByPlaceholder('Enter mobile number or email').fill('fixture@example.invalid');
+                await login.getByPlaceholder('Enter your password').fill('Fixture123');
+                await login.locator('form').evaluate(form=>form.requestSubmit());
+                await login.waitFor({state:'hidden'});
+              }
+              await page.locator('#cbt-test-workspace').waitFor({state:'visible',timeout:20000});
+              assert.deepEqual(starts,['fixture-13'],'The exact selected test starts once');
+              assert.equal(await page.getByRole('dialog',{name:'Student account'}).count(),0);
+              await context.close();
+              console.log('PASS direct start: '+flow);
             }
           } finally { await browser.close(); }
           JS

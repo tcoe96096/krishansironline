@@ -100,9 +100,10 @@ interface OnlineTestEngineProps {
   initialClassFilter?: string;
   initialTestId?: string;
   onRequestLogin: () => void;
+  loginOutcome: { sequence: number; outcome: 'success' | 'cancel' };
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin, loginOutcome }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
 
@@ -249,6 +250,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   }, [selectedTest.id, user?.id, activeAttempt, serverResult]);
   const [catalogueStartIntent, setCatalogueStartIntent] = useState<{ testId: string; owner: string } | null>(null);
+  const [pendingGuestTest, setPendingGuestTest] = useState<{ id: string; requestedAt: number } | null>(null);
+  const startAccount = useRef(user?.id);
+  startAccount.current = user?.id;
   const [catalogueActionMessage, setCatalogueActionMessage] = useState('');
   const catalogueStartGuard = useRef(false);
   const appliedDeepLink = useRef('');
@@ -340,7 +344,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Authenticated students are still restricted to their profile class via availableTests.
   useEffect(() => {
     if (!initialTestId) { appliedDeepLink.current = ''; return; }
-    if (catalogueLoading || authLoading || profileLoading || isTestActive || restoredSession) return;
+    if (catalogueLoading || authLoading || profileLoading || isTestActive || restoredSession || catalogueStartIntent || pendingGuestTest || catalogueStartGuard.current) return;
     const linkKey = (user?.id || 'visitor') + ':' + initialTestId;
     if (appliedDeepLink.current === linkKey) return;
     const match = availableTests.find((test) => test.id === initialTestId);
@@ -348,7 +352,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       appliedDeepLink.current = linkKey;
       if (selectedTest.id !== match.id) setSelectedTest(match);
     }
-  }, [initialTestId, catalogueLoading, availableTests, selectedTest.id, user?.id, authLoading, profileLoading, isTestActive, restoredSession]);
+  }, [initialTestId, catalogueLoading, availableTests, selectedTest.id, user?.id, authLoading, profileLoading, isTestActive, restoredSession, catalogueStartIntent, pendingGuestTest]);
 
   // Select the first published database test for visitors when no class filter is supplied.
   useEffect(() => {
@@ -376,14 +380,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setShowMobilePalette(false);
     const expectedClass = `${selectedTest.classLevel}th`;
     setLoginForm((prev) => ({ ...prev, studentClass: expectedClass }));
-    setStudentDetails((current) => {
-      if (current && current.studentClass !== expectedClass) {
-        localStorage.removeItem('krishan_sir_active_student');
-        localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-        return null;
-      }
-      return current;
-    });
+    // The authenticated profile, not catalogue selection, owns student identity.
   }, [selectedTest.id, selectedTest.durationMinutes, selectedTest.classLevel]);
 
   // Select the saved assessment once the published catalogue is available.
@@ -400,7 +397,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Do not override a saved in-progress test after a refresh.
   useEffect(() => {
-    if (restoredSession || initialTestId) return;
+    if (restoredSession || initialTestId || catalogueStartIntent || pendingGuestTest || catalogueStartGuard.current || isTestActive) return;
     if (initialClassFilter) {
       const match = availableTests.find((t) => t.classLevel === initialClassFilter);
       if (match) {
@@ -491,7 +488,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setIsTestActive(false);
       return;
     }
-    if (!profile) {
+    if (!profile || profile.user_id !== user.id) {
       setStudentDetails(null);
       setIsTestActive(false);
       setLoginError('आपका विद्यार्थी प्रोफाइल database में उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
@@ -519,7 +516,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   const handleStudentLogin = async () => {
     setLoginError('');
-    if (!user || !studentDetails) {
+    if (!user || !studentDetails || !profile || profile.user_id !== user.id) {
       onRequestLogin();
       return;
     }
@@ -532,7 +529,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       // Give students a clear message when all configured attempts are used.
       // An in-progress attempt remains resumable.
       const previousAttempts = await getMyTestAttempts();
-      const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id);
+      if (startAccount.current !== user.id) { setSubmissionStatus({loading:false}); return; }
+      const thisTestAttempts = previousAttempts.filter((item) => item.test_id === selectedTest.id && item.student_id === user.id);
       const hasInProgressAttempt = thisTestAttempts.some((item) => item.status === 'in_progress');
       if (thisTestAttempts.length >= Math.max(1, Number(selectedTest.attemptLimit || 1)) && !hasInProgressAttempt) {
         setSubmissionStatus({ loading: false, success: false, message: '' });
@@ -540,6 +538,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         return;
       }
       const attempt = await startTestAttempt(selectedTest.id);
+      if (startAccount.current !== user.id) { setSubmissionStatus({loading:false}); return; }
+      if (attempt.student_id !== user.id || attempt.test_id !== selectedTest.id || attempt.status !== 'in_progress' || Date.parse(attempt.expires_at) <= Date.now()) {
+        setSubmissionStatus({loading:false,success:false});
+        setLoginError(catalogueEn ? 'No active attempt was returned. Please try again.' : 'सक्रिय परीक्षा उपलब्ध नहीं हुई। पुनः प्रयास करें।');
+        return;
+      }
       setActiveAttempt(attempt);
       setServerResult(null);
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
@@ -586,37 +590,56 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
 
   const openCatalogueStart = (test: OnlineTest) => {
-    if (authLoading || profileLoading || submissionStatus.loading || isTestActive || catalogueStartGuard.current) return;
+    if (authLoading || profileLoading || submissionStatus.loading || isTestActive || catalogueStartGuard.current || catalogueStartIntent || catalogueLoading || catalogueError) return;
     setCatalogueActionMessage('');
     if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
-      setCatalogueActionMessage(catalogueEn ? 'A saved test is selected. Resume it before choosing a different test.' : 'एक पुरानी परीक्षा सुरक्षित है। दूसरी परीक्षा चुनने से पहले उसे जारी रखें।');
+      setCatalogueActionMessage(catalogueEn ? 'Resume the saved test before choosing another test.' : 'दूसरी परीक्षा से पहले सुरक्षित परीक्षा जारी रखें।');
       return;
     }
-    if (selectedTest.id !== test.id && (activeAttempt || isSubmitted) && !window.confirm(catalogueEn ? 'Close the current test/result view and select this test?' : 'वर्तमान टेस्ट/परिणाम बंद करके यह टेस्ट चुनें?')) return;
     if (!user) {
-      setCatalogueStartIntent(null);
-      setSelectedTest(test);
+      setPendingGuestTest({ id: test.id, requestedAt: loginOutcome.sequence });
       onRequestLogin();
       return;
     }
-    if (!profile || String(profile.class_level) !== String(test.classLevel) || !studentDetails) {
+    if (!profile || profile.user_id !== user.id || String(profile.class_level) !== String(test.classLevel) || !studentDetails) {
       setCatalogueActionMessage(catalogueEn ? 'A complete, eligible student profile is required.' : 'पूर्ण और पात्र विद्यार्थी प्रोफाइल आवश्यक है।');
       return;
     }
     if (isSubmitted && restoredSession) setRestoredSession(null);
+    appliedDeepLink.current = (user.id || 'visitor') + ':' + (initialTestId || '');
     setLoginError('');
     setSelectedTest(test);
     setCatalogueStartIntent({ testId: test.id, owner: user.id });
   };
-  const confirmCatalogueStart = async (test: OnlineTest) => {
-    if (catalogueStartGuard.current || authLoading || profileLoading || catalogueLoading || catalogueError || submissionStatus.loading || isTestActive ||
-        !user || !profile || profile.user_id !== user.id || !studentDetails || catalogueStartIntent?.owner !== user.id || catalogueStartIntent.testId !== test.id ||
-        selectedTest.id !== test.id || String(profile.class_level) !== String(test.classLevel) ||
-        !databaseTests.some(row => row.id === test.id)) return;
+  // Open the requested test once after successful sign-in, not on guest selection.
+  useEffect(() => {
+    if (!pendingGuestTest || loginOutcome.sequence <= pendingGuestTest.requestedAt) return;
+    if (loginOutcome.outcome === 'cancel') { setPendingGuestTest(null); return; }
+    if (!user || authLoading || profileLoading || catalogueLoading || !profile || profile.user_id !== user.id) return;
+    if (!studentDetails && profile.student_name?.trim() && profile.roll_no?.trim() && profile.school_name?.trim() && ['6','7','8','9','10','11','12'].includes(String(profile.class_level))) return;
+    const test = databaseTests.find(row => row.id === pendingGuestTest.id);
+    setPendingGuestTest(null);
+    if (test && !catalogueError) openCatalogueStart(test);
+    else setCatalogueActionMessage(catalogueEn ? 'This test is no longer available.' : 'यह परीक्षा अब उपलब्ध नहीं है।');
+  }, [pendingGuestTest, loginOutcome, user?.id, profile, studentDetails, authLoading, profileLoading, catalogueLoading, catalogueError, databaseTests]);
+  // Start only after the selected test has committed to React state.
+  useEffect(() => {
+    if (!catalogueStartIntent || catalogueStartGuard.current || authLoading || profileLoading || catalogueLoading || submissionStatus.loading || isTestActive) return;
+    if (!user || catalogueStartIntent.owner !== user.id || !profile || profile.user_id !== user.id || !studentDetails || String(profile.class_level) !== String(selectedTest.classLevel) || catalogueError ||
+        !databaseTests.some(row => row.id === catalogueStartIntent.testId)) {
+      setCatalogueStartIntent(null);
+      return;
+    }
+    if (selectedTest.id !== catalogueStartIntent.testId) {
+      const requested = databaseTests.find(row => row.id === catalogueStartIntent.testId);
+      if (requested && String(requested.classLevel) === String(profile.class_level)) setSelectedTest(requested);
+      else setCatalogueStartIntent(null);
+      return;
+    }
     catalogueStartGuard.current = true;
     setCatalogueStartIntent(null);
-    try { await handleStudentLogin(); } finally { catalogueStartGuard.current = false; }
-  };
+    void handleStudentLogin().finally(() => { catalogueStartGuard.current = false; });
+  }, [catalogueStartIntent, selectedTest.id, user?.id, profile, studentDetails, authLoading, profileLoading, catalogueLoading, catalogueError, submissionStatus.loading, isTestActive, databaseTests]);
 
   const handleLogoutStudent = async () => {
     if (confirm('क्या आप लॉगआउट करना चाहते हैं? (Sign out?)')) {
@@ -844,7 +867,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             {pageTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
               const eligible = !user || (!!profile && String(profile.class_level) === String(test.classLevel));
-              const confirming = !!user && catalogueStartIntent?.owner === user.id && catalogueStartIntent.testId === test.id;
+              const starting = !!user && ((catalogueStartIntent?.owner === user.id && catalogueStartIntent.testId === test.id) || (submissionStatus.loading && isSelected));
               const historyReady = eligible && !!user && ownCatalogueHistory?.status === 'ready';
               const attempts = historyReady ? (ownCatalogueHistory?.attempts || []).filter(row => row.test_id === test.id) : [];
               const limit = Math.max(1, Number(test.attemptLimit || 1));
@@ -854,29 +877,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               const expired = attempts.some(row => row.status === 'expired' || (row.status === 'in_progress' && Date.parse(row.expires_at) <= Date.now()));
               const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
               return (
-                <div
-                  key={test.id}
-                  className={`flex h-full w-full min-w-0 flex-col rounded-xl border p-3 shadow-sm transition-shadow hover:shadow-md ${isSelected ? 'border-sky-600 bg-sky-50/40 ring-1 ring-sky-600' : 'border-slate-200 bg-white'}`}
-                >
-                  <button
-                    type="button"
-                    aria-pressed={isSelected}
-                  onClick={() => {
-                    if (isSelected || !eligible || submissionStatus.loading || catalogueStartGuard.current) return;
-                    if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
-                      setCatalogueActionMessage(catalogueEn ? 'Resume the saved test before switching.' : 'पहले सुरक्षित परीक्षा जारी रखें।');
-                      return;
-                    }
-                    if ((activeAttempt || isSubmitted) && !window.confirm('दूसरा टेस्ट चुनने पर वर्तमान टेस्ट/परिणाम स्क्रीन बंद होगी। क्या आगे बढ़ें?')) return;
-                    if (isSubmitted && restoredSession) setRestoredSession(null);
-                    setCatalogueStartIntent(null);
-                    setCatalogueActionMessage('');
-                    setSelectedTest(test);
-                  }}
-                  className="flex flex-1 w-full min-w-0 flex-col text-left focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                <article key={test.id} className="relative flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-sky-400 hover:shadow-md">
+                  <button type="button"
+                    aria-label={(catalogueEn ? test.title.en : test.title.hi) + ' — ' + (catalogueEn ? (resumable ? 'Resume test' : 'Start test') : (resumable ? 'जारी रखें' : 'शुरू करें'))}
+                    onClick={() => openCatalogueStart(test)}
+                    disabled={authLoading || profileLoading || submissionStatus.loading || catalogueLoading || !!catalogueError || !!catalogueStartIntent || !eligible}
+                    className="group flex flex-1 w-full min-w-0 flex-col rounded-xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <span className="inline-flex rounded-lg bg-sky-900 px-2.5 py-1 text-[11px] font-bold text-white">
                         Class {test.classLevel}
                       </span>
@@ -888,45 +896,19 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       {historyReady && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable ? 'bg-amber-100 text-amber-900' : completed ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{historyLabel}</span><span className="font-semibold text-slate-600">{catalogueEn ? 'New attempts left: ' : 'नए प्रयास शेष: '}{remainingAttempts}</span></div>}
                       {!!user && eligible && !historyReady && <p className="mt-1 text-[11px] text-slate-500">{ownCatalogueHistory?.status === 'error' ? (catalogueEn ? 'Attempt history unavailable' : 'प्रयासों की जानकारी उपलब्ध नहीं') : (catalogueEn ? 'Checking attempts…' : 'प्रयासों की जाँच…')}</p>}
                     </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                      isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {isSelected ? (catalogueEn ? 'Selected' : 'चयनित') : (catalogueEn ? 'Select' : 'चुनें')}
-                    </span>
                   </div>
-                  <div className="mt-auto w-full pt-2"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-lg bg-slate-50 py-1.5 text-center text-xs"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">Questions</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">Marks</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">Minutes</div></div></div></div>
+                  <div className="mt-auto w-full pt-2"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-lg bg-slate-50 py-1.5 text-center text-xs"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Questions" : "प्रश्न"}</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Marks" : "अंक"}</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">{catalogueEn ? "Minutes" : "मिनट"}</div></div></div></div>
+                    <span className="mt-3 flex min-h-10 w-full items-center justify-between border-t border-slate-200 pt-2 text-sm font-extrabold text-sky-800 group-hover:text-sky-950">
+                      <span>{starting ? (catalogueEn ? 'Opening…' : 'खुल रहा है…') : !eligible ? (catalogueEn ? 'Class restricted' : 'कक्षा प्रतिबंधित') : resumable ? (catalogueEn ? 'Resume test' : 'टेस्ट जारी रखें') : (catalogueEn ? 'Start test' : 'टेस्ट शुरू करें')}</span>
+                      <ChevronRight className="h-4 w-4" aria-hidden="true"/>
+                    </span>
                   </button>
-                  <details className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  <details className="mx-3 mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                     <summary className="cursor-pointer font-semibold text-sky-900">{catalogueEn ? 'Test instructions' : 'परीक्षा निर्देश'}</summary>
-                    <ul className="mt-2 list-disc space-y-1 pl-4">
-                      {(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction, index) => <li key={index}>{instruction}</li>)}
-                      <li>{catalogueEn ? 'Duration: ' : 'समय: '}{test.durationMinutes}{catalogueEn ? ' minutes.' : ' मिनट।'}</li>
-                      <li>{catalogueEn ? 'Maximum attempts: ' : 'अधिकतम प्रयास: '}{limit}.</li>
-                      <li>{catalogueEn ? 'Sign in with an eligible student account. The server checks attempt eligibility.' : 'पात्र विद्यार्थी खाते से लॉगिन करें। प्रयास की पात्रता सर्वर जाँचता है।'}</li>
-                    </ul>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
                   </details>
-                  <button
-                    type="button"
-                    onClick={() => openCatalogueStart(test)}
-                    disabled={authLoading || profileLoading || submissionStatus.loading || catalogueLoading || !!catalogueError || !eligible || confirming}
-                    className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-900 hover:bg-sky-800'}`}
-                  >
-                    <span>{!eligible ? (catalogueEn ? 'Class eligibility required' : 'कक्षा की पात्रता आवश्यक') : submissionStatus.loading && isSelected ? (catalogueEn ? 'Checking…' : 'जाँच हो रही है…') : !user ? (catalogueEn ? 'Login to start' : 'लॉगिन करें') : confirming ? (catalogueEn ? 'Review instructions below' : 'नीचे निर्देश देखें') : resumable ? (catalogueEn ? 'Resume test' : 'टेस्ट जारी रखें') : historyReady && remainingAttempts === 0 ? (catalogueEn ? 'Check attempt eligibility' : 'प्रयास की पात्रता जाँचें') : (catalogueEn ? 'Start test' : 'टेस्ट शुरू करें')}</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  {confirming && <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm">
-                    <p className="font-extrabold text-sky-950">{resumable ? (catalogueEn ? 'Resume this test?' : 'यह परीक्षा जारी रखें?') : (catalogueEn ? 'Ready to start?' : 'परीक्षा शुरू करें?')}</p>
-                    <p className="mt-1 text-xs text-slate-700">{test.questions.length} {catalogueEn ? 'questions' : 'प्रश्न'} · {test.totalMarks} {catalogueEn ? 'marks' : 'अंक'} · {test.durationMinutes} {catalogueEn ? 'minutes' : 'मिनट'}</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction, index) => <li key={index}>{instruction}</li>)}</ul>
-                    <p className="mt-2 text-xs text-slate-700">{catalogueEn ? 'The server checks remaining attempts and time before opening the exam.' : 'परीक्षा खोलने से पहले सर्वर शेष प्रयास और समय की जाँच करेगा।'}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" onClick={() => setCatalogueStartIntent(null)} className="min-h-11 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700">{catalogueEn ? 'Cancel' : 'रद्द करें'}</button>
-                      <button type="button" disabled={!isSelected || !eligible || authLoading || profileLoading || catalogueLoading || !!catalogueError || submissionStatus.loading} onClick={() => void confirmCatalogueStart(test)} className="min-h-11 flex-1 rounded-lg bg-sky-900 px-3 text-xs font-bold text-white disabled:opacity-50">{resumable ? (catalogueEn ? 'Resume' : 'जारी रखें') : (catalogueEn ? 'Confirm & start' : 'पुष्टि कर शुरू करें')}</button>
-                    </div>
-                    {!isSelected && <p role="status" className="mt-2 text-xs text-amber-800">{catalogueEn ? 'The selected test has changed. Cancel and choose again.' : 'चयनित टेस्ट बदल गया है। रद्द करके दोबारा चुनें।'}</p>}
-                  </div>}
-                  {isSelected && loginError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
-                </div>
+                  {isSelected && loginError && <p role="alert" className="mx-3 mb-3 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
+                </article>
               );
             })}
           </div>

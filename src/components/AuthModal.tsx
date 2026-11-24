@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { X, UserRound, LogOut, ShieldCheck, GraduationCap, School, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle2, MapPin, LockKeyhole, BookOpen } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
 
-type AuthModalProps = { isOpen: boolean; onClose: () => void };
+type AuthModalProps = { isOpen: boolean; onClose: (outcome?: 'success' | 'cancel') => void };
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { language } = useLanguage();
@@ -89,7 +89,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       if (mode === 'login') {
         await signInWithMobile(identifier, password);
-        onClose();
+        onClose('success');
       } else {
         await registerStudent({
           identifier, password, studentName, studentClass, rollNo,
@@ -105,7 +105,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setConfirmPassword('');
         await new Promise(resolve => window.setTimeout(resolve, 1800));
         setMessage('');
-        onClose();
+        onClose('cancel');
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (en ? 'Something went wrong.' : 'कुछ त्रुटि हुई।'));
@@ -121,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label={en ? 'Student account' : 'विद्यार्थी खाता'}>
       <div className="relative flex max-h-[100dvh] min-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:min-h-0 sm:max-h-[92vh] sm:flex-row sm:rounded-[1.5rem]">
-        <button onClick={onClose} className="absolute right-3 top-3 z-30 rounded-full bg-white/15 p-2.5 text-white ring-1 ring-white/30 transition hover:bg-white/25" aria-label="Close"><X className="h-5 w-5" /></button>
+        <button onClick={() => onClose('cancel')} className="absolute right-3 top-3 z-30 rounded-full bg-white/15 p-2.5 text-white ring-1 ring-white/30 transition hover:bg-white/25" aria-label="Close"><X className="h-5 w-5" /></button>
 
         {!user && <aside className="relative hidden w-[30%] shrink-0 flex-col justify-between overflow-hidden bg-gradient-to-br from-[#102b50] via-[#123f68] to-[#087f89] p-6 text-white lg:flex">
           <div className="absolute -right-20 -top-16 h-64 w-64 rounded-full border-[36px] border-white/5" />
