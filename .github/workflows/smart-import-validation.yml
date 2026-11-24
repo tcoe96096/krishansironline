@@ -1,0 +1,34 @@
+name: Smart document import preview checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/lib/parseExtractedMcqs.ts"
+      - "src/lib/extractTestDocumentText.ts"
+      - "src/components/AdminTestManagement.tsx"
+      - "tests/parseExtractedMcqs.test.ts"
+      - "package.json"
+      - ".github/workflows/smart-import-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-smart-document-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install preview dependencies
+        run: npm install --legacy-peer-deps
+      - name: Type-check
+        run: npm run lint
+      - name: Parser regression tests
+        run: npx --no-install tsx tests/parseExtractedMcqs.test.ts
+      - name: Build preview only
+        run: npm run build
