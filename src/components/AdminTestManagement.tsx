@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { requireSupabase } from '../lib/supabase';
+import { extractTestDocumentText } from '../lib/extractTestDocumentText';
+import { parseExtractedMcqs } from '../lib/parseExtractedMcqs';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList, Search } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
@@ -28,6 +30,9 @@ export const AdminTestManagement: React.FC = () => {
   const [bankSets, setBankSets] = useState<BankSet[]>([]);
   const [bankSearch, setBankSearch] = useState('');
   const [bankSaving, setBankSaving] = useState(false);
+  const [documentImportBusy, setDocumentImportBusy] = useState(false);
+  const [documentImportWarnings, setDocumentImportWarnings] = useState<string[]>([]);
+  const [documentImportFileName, setDocumentImportFileName] = useState('');
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -88,6 +93,50 @@ export const AdminTestManagement: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+
+  const importQuestionDocument = async (file?: File) => {
+    if (!file || documentImportBusy) return;
+    setDocumentImportBusy(true); setError(''); setNotice('');
+    setDocumentImportWarnings([]); setDocumentImportFileName('');
+    try {
+      if (editingTestId) throw new Error('पहले वर्तमान Draft की editing पूरी या Cancel करें; Import मौजूदा प्रश्नों को बदल देगा।');
+      const rawText = await extractTestDocumentText(file);
+      const parsed = parseExtractedMcqs(rawText);
+      if (parsed.questions.length === 0) {
+        throw new Error('चार विकल्पों वाले प्रश्न नहीं मिले। प्रश्न नंबर, A–D विकल्प और text-based PDF/DOCX format जाँचें।');
+      }
+      // Review-first: never invent a translation, explanation, or answer.
+      const imported: DraftQuestion[] = parsed.questions.map(q => {
+        const hindi = /[\u0900-\u097f]/.test(q.question);
+        const missing = ['', '', '', ''];
+        return {
+          question: { en: hindi ? '' : q.question, hi: hindi ? q.question : '' },
+          options: { en: hindi ? [...missing] : [...q.options], hi: hindi ? [...q.options] : [...missing] },
+          explanation: { en: '', hi: '' }, marks: 1, category: 'factual'
+        };
+      });
+      setQuestions(imported);
+      setAnswers(parsed.questions.map(q => q.answerIndex ?? -1));
+      setDocumentImportWarnings(parsed.warnings);
+      setDocumentImportFileName(file.name);
+      // Only set metadata explicitly labelled in the document: no silent guesses.
+      const head = rawText.slice(0, 2500);
+      const named = (name: string) => head.match(new RegExp('(?:^|\\n)\\s*(?:' + name + ')\\s*[:：\\-]\\s*([^\\n]+)', 'im'))?.[1]?.trim();
+      const classMatch = named('class|कक्षा')?.match(/\b(6|7|8|9|10|11|12)\b/);
+      if (classMatch) setClassLevel(classMatch[1]);
+      const subjectValue = named('subject|विषय');
+      if (subjectValue) setSubject(subjectValue);
+      const chapterValue = named('chapter|अध्याय');
+      if (chapterValue) setChapter(chapterValue);
+      const minutes = named('duration|time|समय')?.match(/\b(\d{1,3})\b/);
+      if (minutes && Number(minutes[1]) >= 1 && Number(minutes[1]) <= 600) setDuration(Number(minutes[1]));
+      const fileTitle = named('test title|title|शीर्षक');
+      if (fileTitle) setTitle(v => /[\u0900-\u097f]/.test(fileTitle) ? {...v, hi: fileTitle} : {...v, en: fileTitle});
+      setNotice(parsed.questions.length + ' प्रश्न PDF/Word से Draft Form में आ गए। खाली भाषा और अनिर्धारित उत्तर जाँचें; AI translation अभी उपलब्ध नहीं है।');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'PDF/Word document import असफल।');
+    } finally { setDocumentImportBusy(false); }
+  };
 
   const importBulkJson = () => {
     setError(''); setNotice('');
@@ -191,6 +240,21 @@ export const AdminTestManagement: React.FC = () => {
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Online Test Builder</h2><p className="mt-1 text-sm text-slate-500">Bilingual MCQ बनाएं, Draft सेव करें और जाँच के बाद Publish करें।</p></div><button onClick={() => void loadTests()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"><RefreshCw className="h-4 w-4"/>Refresh</button></div>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+      <h3 className="font-extrabold text-slate-900">PDF / Word Smart Import · Review Preview</h3>
+      <p className="mt-1 text-sm text-slate-600">PDF या .docx चुनें। टेक्स्ट और चार विकल्प Admin Draft Form में भरेंगे; फ़ाइल आपके ब्राउज़र में पढ़ी जाती है, सर्वर पर भेजी नहीं जाती।</p>
+      <label className="mt-3 block text-sm font-semibold text-slate-700">
+        Question paper (PDF / DOCX, up to 8 MB)
+        <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={documentImportBusy || !!editingTestId}
+          onChange={e => { const selected = e.currentTarget.files?.[0]; e.currentTarget.value = ''; void importQuestionDocument(selected); }}
+          className="mt-2 block w-full rounded-xl border border-amber-300 bg-white p-2 text-sm disabled:opacity-50" />
+      </label>
+      {documentImportBusy && <p role="status" className="mt-2 text-xs text-slate-700">फाइल से प्रश्न निकाले जा रहे हैं…</p>}
+      {documentImportFileName && <p role="status" className="mt-2 text-xs text-emerald-800">Loaded for review: {documentImportFileName} · {questions.length} questions</p>}
+      {documentImportWarnings.length > 0 && <details className="mt-3 rounded-lg border border-amber-300 bg-white p-3 text-xs"><summary className="cursor-pointer font-bold">Import warnings ({documentImportWarnings.length})</summary><ul className="mt-2 list-disc pl-5">{documentImportWarnings.slice(0, 20).map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
+      <p className="mt-2 text-xs text-amber-900">अभी केवल text-based PDF/DOCX समर्थित हैं। स्कैन PDF के लिए OCR और दूसरी भाषा का AI अनुवाद/Answer Suggestions अगले चरण में जोड़ने हैं। जब तक दोनों भाषाओं में प्रश्न और सही उत्तर पूरे नहीं होंगे, Save Draft उन्हें स्वीकार नहीं करेगा।</p>
+    </section>
+
     <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
       <h3 className="font-extrabold text-slate-900">Bulk Import · MCQ JSON</h3>
       <p className="mt-1 text-sm text-slate-600">किसी भी गैर-खाली सेट के bilingual प्रश्न एक साथ लोड करें। Factual और conceptual का निश्चित अनुपात आवश्यक नहीं है।</p>
@@ -252,6 +316,6 @@ export const AdminTestManagement: React.FC = () => {
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="mb-4 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-sky-800"/><h3 className="font-extrabold text-slate-900">Saved Tests</h3></div>
       {loading?<p className="text-sm text-slate-500">Loading tests…</p>:tests.length===0?<p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">अभी कोई Test उपलब्ध नहीं है। ऊपर से पहला Draft बनाएँ।</p>:<div className="space-y-3">{tests.map(test=><div key={test.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4"><div className="min-w-0"><p className="font-bold text-slate-900">{test.title?.hi || test.title?.en || test.id}</p><p className="mt-1 text-xs text-slate-500">Class {test.class_level} · {test.subject} · {test.chapter} · {test.questions?.length||0} questions</p><span className={'mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold '+(test.is_published?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700')}>{test.is_published?'Published':'Draft'}</span></div>{!test.is_published && <button disabled={saving} onClick={()=>void editDraft(test)} className="inline-flex items-center gap-2 rounded-lg border border-sky-300 px-3 py-2 text-xs font-bold text-sky-800 disabled:opacity-50">Edit Draft</button>}<button disabled={saving} onClick={()=>void togglePublish(test)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{test.is_published?<><EyeOff className="h-4 w-4"/>Unpublish</>:<><Send className="h-4 w-4"/>Publish</>}</button></div>)}</div>}
     </section>
-    <p className="text-xs leading-5 text-slate-500">सुरक्षा: सही उत्तर अलग private answer-key table में सेव होता है; Student catalogue में सही उत्तर नहीं भेजा जाता। Publish केवल Admin action है। PDF/Google Drive OCR import अभी उपलब्ध नहीं है।</p>
+    <p className="text-xs leading-5 text-slate-500">सुरक्षा: सही उत्तर अलग private answer-key table में सेव होता है; Student catalogue में सही उत्तर नहीं भेजा जाता। Publish केवल Admin action है। Scan/OCR PDF import अभी उपलब्ध नहीं है।</p>
   </div>;
 };
