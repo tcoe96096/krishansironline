@@ -56,6 +56,7 @@ const LatestTestLaunches: React.FC = () => {
   }, []);
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   return <div className="mb-5 rounded-xl border border-sky-100 bg-sky-50/50 p-3 sm:p-4" aria-labelledby="new-test-launch-heading">
+    <style>{`@keyframes ksolLaunchNewPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.75; } } @media (prefers-reduced-motion: no-preference) { .ksol-launch-new { animation: ksolLaunchNewPulse 1.4s ease-in-out infinite; } }`}</style>
     <div className="mb-2 flex items-center justify-between gap-2">
       <h3 id="new-test-launch-heading" className="text-sm font-extrabold text-sky-900">{language === 'en' ? 'New Launch · Latest Tests' : 'नए लॉन्च · नवीनतम टेस्ट'}</h3>
       <a href={base + '/online-tests/'} className="shrink-0 text-xs font-semibold text-sky-800 hover:underline">{language === 'en' ? 'All tests' : 'सभी टेस्ट'}</a>
@@ -65,7 +66,7 @@ const LatestTestLaunches: React.FC = () => {
     {status === 'ready' && !tests.length && <p className="text-xs text-slate-500">{language === 'en' ? 'No published tests yet.' : 'अभी कोई प्रकाशित टेस्ट नहीं है।'}</p>}
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
-        <div className="min-w-0"><span className="mb-1 inline-flex w-fit items-center rounded px-2 py-0.5 text-xs font-black leading-none tracking-wide motion-safe:animate-pulse" style={{ backgroundColor: '#dc2626', color: '#ffffff', minHeight: 18 }}>NEW</span><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
+        <div className="min-w-0"><span className="ksol-launch-new mb-1 inline-block origin-left text-sm font-black leading-tight tracking-wide" style={{ color: '#dc2626' }}>NEW</span><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
         <span className="shrink-0 text-[11px] font-bold text-sky-800">{language === 'en' ? 'View test' : 'टेस्ट देखें'} ›</span>
       </a>)}
     </div>
