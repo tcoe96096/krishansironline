@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { summarizeTestAttempts, classifyAttemptError, isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
-import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
+import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, examServerAutosaveEnabled, readTestAttemptDraft, saveTestAttemptDraft, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -54,6 +54,7 @@ interface PersistedTestSession {
   version: 1;
   ownerId?: string;
   attemptId?: string;
+  serverDraftRevision?: number;
   testId: string;
   student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
@@ -233,6 +234,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
   const [localAnswersSaved, setLocalAnswersSaved] = useState(false);
+  const [serverDraftRevision, setServerDraftRevision] = useState<number | undefined>();
+  const [serverDraftStatus, setServerDraftStatus] = useState<'pending' | 'saved' | 'conflict'>('pending');
+  const draftSync = useRef<{ attemptId: string; revision: number | undefined; acknowledged: string | null; busy: boolean; blocked: boolean } | null>(null);
+  const latestDraftAnswers = useRef(selectedAnswers);
+  latestDraftAnswers.current = selectedAnswers;
   const [largeExamText, setLargeExamText] = useState(false);
   const fullscreenOwned = useRef(false);
   const deadlineClock = useRef<{ expiresAt: number; wallStart: number; monotonicStart: number } | null>(null);
@@ -450,6 +456,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       version: 1,
       ownerId: user.id,
       attemptId: activeAttempt.id,
+      serverDraftRevision,
       testId: selectedTest.id,
       student: studentDetails,
       selectedAnswers,
@@ -482,7 +489,62 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     activeAttempt?.id,
     matchingActiveAttempt,
     user?.id,
+    serverDraftRevision,
   ]);
+
+  // The preview-only draft channel is serialized per attempt. A stale writer never
+  // overwrites another device's revision; local recovery remains available on network loss.
+  useEffect(() => {
+    if (!examServerAutosaveEnabled || !examFocusActive || !activeAttempt || !isOnline) return;
+    const context = draftSync.current;
+    if (!context || context.attemptId !== activeAttempt.id) return;
+    let cancelled = false;
+    const flush = async () => {
+      if (cancelled || context.busy || context.blocked || submissionInFlight.current || timeLeftSeconds <= 0 || !navigator.onLine) return;
+      const payload = {...latestDraftAnswers.current};
+      const snapshot = JSON.stringify(payload);
+      if (context.acknowledged === snapshot) return;
+      context.busy = true;
+      try {
+        if (context.revision === undefined) {
+          const remote = await readTestAttemptDraft(context.attemptId);
+          if (cancelled || draftSync.current !== context) return;
+          // An unknown revision may only be adopted if no remote draft exists or
+          // its exact answers match. Never overwrite a different device blindly.
+          if (remote.revision > 0 && JSON.stringify(remote.answers) !== snapshot) {
+            context.blocked = true; setServerDraftStatus('conflict'); return;
+          }
+          context.revision = remote.revision;
+          if (remote.revision > 0) {
+            context.acknowledged = snapshot; setServerDraftRevision(remote.revision);
+            setServerDraftStatus(JSON.stringify(latestDraftAnswers.current) === snapshot ? 'saved' : 'pending'); return;
+          }
+        }
+        const ack = await saveTestAttemptDraft(context.attemptId, payload, context.revision);
+        if (cancelled || draftSync.current !== context) return;
+        if (ack.conflict) {
+          const remote = await readTestAttemptDraft(context.attemptId);
+          if (cancelled || draftSync.current !== context) return;
+          if (JSON.stringify(remote.answers) !== snapshot) { context.blocked = true; setServerDraftStatus('conflict'); return; }
+          context.revision = remote.revision;
+        } else context.revision = ack.revision;
+        context.acknowledged = snapshot;
+        setServerDraftRevision(context.revision);
+        setServerDraftStatus(JSON.stringify(latestDraftAnswers.current) === snapshot ? 'saved' : 'pending');
+      } catch { if (!cancelled && draftSync.current === context) setServerDraftStatus('pending'); }
+      finally { context.busy = false; }
+    };
+    const first = window.setTimeout(() => void flush(), 120);
+    const interval = window.setInterval(() => void flush(), 1500);
+    const onFocus = () => void flush();
+    window.addEventListener('focus', onFocus);
+    return () => { cancelled = true; window.clearTimeout(first); window.clearInterval(interval); window.removeEventListener('focus', onFocus); };
+  }, [examFocusActive, activeAttempt?.id, isOnline, timeLeftSeconds <= 0]);
+
+  useEffect(() => {
+    if (!examServerAutosaveEnabled || !examFocusActive || draftSync.current?.blocked) return;
+    if (draftSync.current?.acknowledged !== JSON.stringify(selectedAnswers)) setServerDraftStatus('pending');
+  }, [examFocusActive, selectedAnswers]);
 
   // Reconcile with the database-issued deadline, including after a backgrounded tab.
   const remainingUntilDeadline = () => {
@@ -623,8 +685,28 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         setCurrentQuestionIndex(0);
         if (saved) { localStorage.removeItem(ACTIVE_TEST_SESSION_KEY); setRestoredSession(null); }
       }
-      const active = attempt.status === 'in_progress' && remaining > 0;
-      setTimeLeftSeconds(remaining);
+      let resolvedRemaining = remaining;
+      if (examServerAutosaveEnabled) {
+        const context = {attemptId: attempt.id, revision: undefined as number | undefined, acknowledged: null as string | null, busy: false, blocked: false};
+        draftSync.current = context;
+        setServerDraftRevision(undefined); setServerDraftStatus('pending');
+        try {
+          const remote = await readTestAttemptDraft(attempt.id);
+          if (startAccount.current !== user.id || draftSync.current !== context) return;
+          context.revision = remote.revision;
+          setServerDraftRevision(remote.revision);
+          const localMatchesRevision = canRestoreAnswers && saved && saved.ownerId === user.id && saved.attemptId === attempt.id && (saved.serverDraftRevision ?? 0) === remote.revision;
+          if (remote.revision > 0) {
+            context.acknowledged = JSON.stringify(remote.answers);
+            if (!localMatchesRevision) setSelectedAnswers(remote.answers);
+            if (!localMatchesRevision || JSON.stringify(saved?.selectedAnswers) === context.acknowledged) setServerDraftStatus('saved');
+          }
+          const serverRemaining = Math.ceil((Date.parse(remote.expires_at) - Date.parse(remote.server_now)) / 1000);
+          if (Number.isFinite(serverRemaining)) resolvedRemaining = Math.max(0, serverRemaining);
+        } catch { /* Local answers remain recoverable; retry the draft read before saving. */ }
+      }
+      const active = attempt.status === 'in_progress' && resolvedRemaining > 0;
+      setTimeLeftSeconds(resolvedRemaining);
       setIsSubmitted(false);
       setIsTestActive(active);
       setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
@@ -865,6 +947,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     if (!matchingServerResult || !serverResult || serverResult.attempt_number >= allowedAttempts) return;
     try {
       const attempt = await startTestAttempt(selectedTest.id);
+      if (!user || attempt.student_id !== user.id || attempt.test_id !== selectedTest.id || attempt.status !== 'in_progress') return;
+      if (examServerAutosaveEnabled) {
+        draftSync.current = {attemptId: attempt.id, revision: undefined, acknowledged: null, busy: false, blocked: false};
+        setServerDraftRevision(undefined); setServerDraftStatus('pending');
+      }
       setActiveAttempt(attempt);
       setServerResult(null);
       setSelectedAnswers({});
@@ -1103,7 +1190,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={questionLang === 'en' ? 'Answered questions' : 'उत्तरित प्रश्न'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}>
                 <div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} />
               </div>
-              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] font-medium text-slate-600"><span className={isOnline ? 'text-emerald-700' : 'text-amber-800'}>{isOnline ? (questionLang === 'hi' ? 'ऑनलाइन' : 'Online') : (questionLang === 'hi' ? 'ऑफलाइन' : 'Offline')}</span><span role="status">{localAnswersSaved ? (questionLang === 'hi' ? 'उत्तर इस ब्राउज़र में सुरक्षित' : 'Answers saved on this device') : (questionLang === 'hi' ? 'उत्तर सुरक्षित होने की पुष्टि नहीं' : 'Local save not confirmed')}</span></div>
+              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] font-medium text-slate-600"><span className={isOnline ? 'text-emerald-700' : 'text-amber-800'}>{isOnline ? (questionLang === 'hi' ? 'ऑनलाइन' : 'Online') : (questionLang === 'hi' ? 'ऑफलाइन' : 'Offline')}</span><span role="status">{examServerAutosaveEnabled ? (serverDraftStatus === 'conflict' ? (questionLang === 'hi' ? 'सर्वर पर अलग उत्तर हैं; पुनः खोलें' : 'Different server answers; reopen test') : serverDraftStatus === 'saved' && isOnline ? (questionLang === 'hi' ? 'उत्तर सर्वर पर सुरक्षित' : 'Answers saved on server') : localAnswersSaved ? (questionLang === 'hi' ? 'इस डिवाइस पर सुरक्षित; सर्वर पुष्टि बाकी' : 'Saved locally; server sync pending') : (questionLang === 'hi' ? 'सेव पुष्टि बाकी' : 'Save not confirmed')) : localAnswersSaved ? (questionLang === 'hi' ? 'उत्तर इस ब्राउज़र में सुरक्षित' : 'Answers saved on this device') : (questionLang === 'hi' ? 'उत्तर सुरक्षित होने की पुष्टि नहीं' : 'Local save not confirmed')}</span></div>
               {!isOnline && (
                 <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-900">
                   इंटरनेट कनेक्शन उपलब्ध नहीं है। आपका टेस्ट और टाइमर जारी है; उत्तर इस ब्राउज़र में सुरक्षित हो रहे हैं। नेटवर्क लौटने पर सबमिशन फिर प्रयास होगा।
