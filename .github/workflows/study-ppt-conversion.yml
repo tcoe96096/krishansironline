@@ -1,6 +1,10 @@
 name: Study PPT conversion
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/study-ppt-conversion.yml'
+      - 'scripts/convert-study-presentations.py'
   schedule:
     - cron: '*/10 * * * *'
 permissions:
@@ -9,7 +13,51 @@ concurrency:
   group: study-ppt-conversion
   cancel-in-progress: false
 jobs:
+  conversion-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install slide rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+          python3 -m pip install python-pptx==1.0.2
+      - name: Run real isolated conversion without database credentials
+        run: |
+          python3 - <<'PY'
+          import importlib.util, os, pathlib, tempfile
+          from pptx import Presentation
+          os.environ.update(STUDY_PPT_PROJECT_REF='a'*20, STUDY_PPT_SUPABASE_URL='https://'+'a'*20+'.supabase.co', STUDY_PPT_SERVICE_ROLE_KEY='smoke-test-not-a-secret')
+          spec = importlib.util.spec_from_file_location('converter', 'scripts/convert-study-presentations.py')
+          worker = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(worker)
+          with tempfile.TemporaryDirectory() as tmp:
+              deck = Presentation()
+              for title in ('Preview slide one', 'Preview slide two'):
+                  slide = deck.slides.add_slide(deck.slide_layouts[0])
+                  slide.shapes.title.text = title
+              source = pathlib.Path(tmp) / 'sample.pptx'
+              deck.save(str(source))
+              uploads = []
+              def mock_request(path, method='GET', payload=None, mime=None, extra=None, limit=worker.MAX_FILE):
+                  if method == 'GET' and path.endswith('/source.pptx'):
+                      return source.read_bytes()
+                  if method == 'POST' and path.startswith('/storage/v1/object/ksol-ppt-slides/'):
+                      assert mime == 'image/png' and payload.startswith(b'\x89PNG\r\n\x1a\n')
+                      uploads.append(path.rsplit('/', 1)[-1])
+                      return b'{}'
+                  raise AssertionError('Unexpected request')
+              worker.request = mock_request
+              assert worker.convert('00000000-0000-4000-8000-000000000001') == 2
+              assert uploads == ['slide-1.png', 'slide-2.png']
+              print('Two actual slides converted using isolated worker; no network storage accessed.')
+          PY
   convert:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: study-ppt-worker
