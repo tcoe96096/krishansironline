@@ -100,9 +100,10 @@ interface OnlineTestEngineProps {
   initialClassFilter?: string;
   initialTestId?: string;
   onRequestLogin: () => void;
+  loginOutcome: { sequence: number; outcome: 'success' | 'cancel' };
 }
 
-export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin }) => {
+export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClassFilter, initialTestId, onRequestLogin, loginOutcome }) => {
   const { language } = useLanguage();
   const { user, profile, loading: authLoading, profileLoading, signOut } = useAuth();
 
@@ -249,7 +250,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
   }, [selectedTest.id, user?.id, activeAttempt, serverResult]);
   const [catalogueStartIntent, setCatalogueStartIntent] = useState<{ testId: string; owner: string } | null>(null);
-  const [pendingGuestTest, setPendingGuestTest] = useState<string | null>(null);
+  const [pendingGuestTest, setPendingGuestTest] = useState<{ id: string; requestedAt: number } | null>(null);
   const startAccount = useRef(user?.id);
   startAccount.current = user?.id;
   const [catalogueActionMessage, setCatalogueActionMessage] = useState('');
@@ -379,14 +380,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     setShowMobilePalette(false);
     const expectedClass = `${selectedTest.classLevel}th`;
     setLoginForm((prev) => ({ ...prev, studentClass: expectedClass }));
-    setStudentDetails((current) => {
-      if (current && current.studentClass !== expectedClass) {
-        localStorage.removeItem('krishan_sir_active_student');
-        localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
-        return null;
-      }
-      return current;
-    });
+    // The authenticated profile, not catalogue selection, owns student identity.
   }, [selectedTest.id, selectedTest.durationMinutes, selectedTest.classLevel]);
 
   // Select the saved assessment once the published catalogue is available.
@@ -494,7 +488,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setIsTestActive(false);
       return;
     }
-    if (!profile) {
+    if (!profile || profile.user_id !== user.id) {
       setStudentDetails(null);
       setIsTestActive(false);
       setLoginError('आपका विद्यार्थी प्रोफाइल database में उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
@@ -603,7 +597,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       return;
     }
     if (!user) {
-      setPendingGuestTest(test.id);
+      setPendingGuestTest({ id: test.id, requestedAt: loginOutcome.sequence });
       onRequestLogin();
       return;
     }
@@ -619,14 +613,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
   // Open the requested test once after successful sign-in, not on guest selection.
   useEffect(() => {
-    if (!pendingGuestTest || !user || authLoading || profileLoading || catalogueLoading) return;
-    if (profile && profile.user_id !== user.id) return;
-    if (profile && !studentDetails && profile.student_name?.trim() && profile.roll_no?.trim() && profile.school_name?.trim() && ['6','7','8','9','10','11','12'].includes(String(profile.class_level))) return;
-    const test = databaseTests.find(row => row.id === pendingGuestTest);
+    if (!pendingGuestTest || loginOutcome.sequence <= pendingGuestTest.requestedAt) return;
+    if (loginOutcome.outcome === 'cancel') { setPendingGuestTest(null); return; }
+    if (!user || authLoading || profileLoading || catalogueLoading || !profile || profile.user_id !== user.id) return;
+    if (!studentDetails && profile.student_name?.trim() && profile.roll_no?.trim() && profile.school_name?.trim() && ['6','7','8','9','10','11','12'].includes(String(profile.class_level))) return;
+    const test = databaseTests.find(row => row.id === pendingGuestTest.id);
     setPendingGuestTest(null);
     if (test && !catalogueError) openCatalogueStart(test);
     else setCatalogueActionMessage(catalogueEn ? 'This test is no longer available.' : 'यह परीक्षा अब उपलब्ध नहीं है।');
-  }, [pendingGuestTest, user?.id, profile, studentDetails, authLoading, profileLoading, catalogueLoading, catalogueError, databaseTests]);
+  }, [pendingGuestTest, loginOutcome, user?.id, profile, studentDetails, authLoading, profileLoading, catalogueLoading, catalogueError, databaseTests]);
   // Start only after the selected test has committed to React state.
   useEffect(() => {
     if (!catalogueStartIntent || catalogueStartGuard.current || authLoading || profileLoading || catalogueLoading || submissionStatus.loading || isTestActive) return;
