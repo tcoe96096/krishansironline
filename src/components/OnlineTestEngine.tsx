@@ -52,6 +52,8 @@ const EMPTY_TEST: OnlineTest = {
 
 interface PersistedTestSession {
   version: 1;
+  ownerId?: string;
+  attemptId?: string;
   testId: string;
   student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
@@ -230,6 +232,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [viewLayout, setViewLayout] = useState<'cbt' | 'all'>(() => restoredSession?.viewLayout || 'cbt');
   const [showAttemptSummaryModal, setShowAttemptSummaryModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
+  const [localAnswersSaved, setLocalAnswersSaved] = useState(false);
+  const [largeExamText, setLargeExamText] = useState(false);
+  const fullscreenOwned = useRef(false);
+  const deadlineClock = useRef<{ expiresAt: number; wallStart: number; monotonicStart: number } | null>(null);
   const selectedTestEffectInitialized = useRef(false);
 
   const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
@@ -237,6 +243,25 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Never display or submit an attempt under a different catalogue selection.
   const matchingActiveAttempt = !!user && activeAttempt?.student_id === user.id &&
     activeAttempt.test_id === selectedTest.id && activeAttempt.status === 'in_progress';
+  const examFocusActive = !!studentDetails && matchingActiveAttempt && isTestActive && !isSubmitted;
+  useEffect(() => {
+    if (!examFocusActive) return;
+    document.body.classList.add('exam-mode-active');
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warnBeforeLeave);
+    return () => {
+      document.body.classList.remove('exam-mode-active');
+      window.removeEventListener('beforeunload', warnBeforeLeave);
+      if (fullscreenOwned.current && document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      fullscreenOwned.current = false;
+    };
+  }, [examFocusActive]);
+  const toggleExamFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) { await document.exitFullscreen(); fullscreenOwned.current = false; }
+      else if (document.fullscreenEnabled) { await document.documentElement.requestFullscreen(); fullscreenOwned.current = true; }
+    } catch { /* Unsupported or denied: compact layout remains usable. */ }
+  };
   const matchingServerResult = !!user && serverResult?.student_id === user.id &&
     serverResult.test_id === selectedTest.id && serverResult.status !== 'in_progress';
   useEffect(() => {
@@ -413,7 +438,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // savedAt is refreshed with the countdown so time away can be deducted on resume.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isTestActive || isSubmitted || !studentDetails) {
+    if (!isTestActive || isSubmitted || !studentDetails || !matchingActiveAttempt || !activeAttempt || !user) {
       if (isSubmitted) {
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
         localStorage.removeItem('krishan_sir_active_student');
@@ -423,6 +448,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
     const session: PersistedTestSession = {
       version: 1,
+      ownerId: user.id,
+      attemptId: activeAttempt.id,
       testId: selectedTest.id,
       student: studentDetails,
       selectedAnswers,
@@ -436,7 +463,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
     try {
       localStorage.setItem(ACTIVE_TEST_SESSION_KEY, JSON.stringify(session));
+      setLocalAnswersSaved(true);
     } catch (error) {
+      setLocalAnswersSaved(false);
       console.warn('Could not auto-save this test attempt in this browser.', error);
     }
   }, [
@@ -450,23 +479,40 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     viewLayout,
     isTestActive,
     isSubmitted,
+    activeAttempt?.id,
+    matchingActiveAttempt,
+    user?.id,
   ]);
 
-  // Countdown timer for the selected assessment
+  // Reconcile with the database-issued deadline, including after a backgrounded tab.
+  const remainingUntilDeadline = () => {
+    const clock = deadlineClock.current;
+    if (!clock) return timeLeftSeconds;
+    const estimatedNow = Math.max(Date.now(), clock.wallStart + Math.max(0, performance.now() - clock.monotonicStart));
+    return Math.max(0, Math.ceil((clock.expiresAt - estimatedNow) / 1000));
+  };
   useEffect(() => {
-    if (!isTestActive || isSubmitted) return;
-
-    if (timeLeftSeconds <= 0) {
-      handleSubmitQuiz(true);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setTimeLeftSeconds((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTestActive, isSubmitted, timeLeftSeconds]);
+    if (!examFocusActive || !activeAttempt) { deadlineClock.current = null; return; }
+    const expiresAt = Date.parse(activeAttempt.expires_at);
+    if (!Number.isFinite(expiresAt)) { setTimeLeftSeconds(0); return; }
+    deadlineClock.current = { expiresAt, wallStart: Date.now(), monotonicStart: performance.now() };
+    const tick = () => setTimeLeftSeconds(prev => Math.min(prev, remainingUntilDeadline()));
+    tick();
+    const timer = window.setInterval(tick, 250);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+    window.addEventListener('pageshow', tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
+      window.removeEventListener('pageshow', tick);
+      deadlineClock.current = null;
+    };
+  }, [examFocusActive, activeAttempt?.id, activeAttempt?.expires_at]);
+  useEffect(() => {
+    if (examFocusActive && timeLeftSeconds <= 0 && !autoSubmitPending) void handleSubmitQuiz(true);
+  }, [examFocusActive, timeLeftSeconds, autoSubmitPending]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -551,7 +597,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setActiveAttempt(attempt);
       setServerResult(null);
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
-      const saved = restoredSession;
+      const saved = readPersistedTestSession();
       const sameStudent = !!saved &&
         saved.student.studentName === studentDetails.studentName &&
         saved.student.rollNo === studentDetails.rollNo &&
@@ -560,6 +606,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const canRestoreAnswers = !!saved &&
         saved.testId === selectedTest.id &&
         sameStudent &&
+        (!saved.ownerId || saved.ownerId === user.id) &&
+        (!saved.attemptId || saved.attemptId === attempt.id) &&
         summary.active?.id === attempt.id &&
         attempt.status === 'in_progress' &&
         remaining > 0;
@@ -654,7 +702,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   }, [catalogueStartIntent, selectedTest.id, user?.id, profile, studentDetails, authLoading, profileLoading, catalogueLoading, catalogueError, submissionStatus.loading, isTestActive, databaseTests]);
 
   const handleLogoutStudent = async () => {
-    if (confirm('क्या आप लॉगआउट करना चाहते हैं? (Sign out?)')) {
+    if (confirm(questionLang === 'hi' ? 'लॉगआउट करने पर इस ब्राउज़र के सुरक्षित उत्तर हटेंगे। परीक्षा का समय नहीं रुकेगा। क्या आप जारी रखना चाहते हैं?' : 'Signing out clears answers saved in this browser. The exam timer will continue. Sign out?')) {
       setIsTestActive(false);
       setIsSubmitted(false);
       setSelectedAnswers({});
@@ -670,7 +718,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Select question option
   const handleSelectOption = (qIndex: number, optIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !examFocusActive || timeLeftSeconds <= 0 || remainingUntilDeadline() <= 0 || submissionInFlight.current) return;
     setSelectedAnswers((prev) => ({
       ...prev,
       [qIndex]: optIndex,
@@ -679,7 +727,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Toggle mark for review
   const handleToggleReview = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !examFocusActive || timeLeftSeconds <= 0 || remainingUntilDeadline() <= 0 || submissionInFlight.current) return;
     setMarkedForReview((prev) => ({
       ...prev,
       [qIndex]: !prev[qIndex],
@@ -688,7 +736,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Clear answer for current question
   const handleClearAnswer = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !examFocusActive || timeLeftSeconds <= 0 || remainingUntilDeadline() <= 0 || submissionInFlight.current) return;
     setSelectedAnswers((prev) => {
       const next = { ...prev };
       delete next[qIndex];
@@ -710,11 +758,13 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
-    if (!timeExpired && attemptedCount < totalQuestions) {
+    timeExpired = timeExpired || timeLeftSeconds <= 0 || remainingUntilDeadline() <= 0;
+    if (!timeExpired) {
       const confirmIncomplete = confirm(
         `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\n\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
       );
       if (!confirmIncomplete) return;
+      timeExpired = remainingUntilDeadline() <= 0;
     }
 
     submissionInFlight.current = true;
@@ -812,6 +862,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Re-attempt test
   const handleReattempt = async () => {
+    if (!matchingServerResult || !serverResult || serverResult.attempt_number >= allowedAttempts) return;
     try {
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
@@ -836,6 +887,20 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
 
   const currentQ = questionsList[currentQuestionIndex] || questionsList[0];
+  // Optional keyboard navigation; never capture input, radio or dialog controls.
+  useEffect(() => {
+    if (!examFocusActive || viewLayout !== 'cbt' || showAttemptSummaryModal || timeLeftSeconds <= 0) return;
+    const handleQuestionKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable], [role="dialog"]')) return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      setCurrentQuestionIndex(index => Math.max(0, Math.min(totalQuestions - 1, index + (event.key === 'ArrowRight' ? 1 : -1))));
+    };
+    window.addEventListener('keydown', handleQuestionKey);
+    return () => window.removeEventListener('keydown', handleQuestionKey);
+  }, [examFocusActive, viewLayout, showAttemptSummaryModal, timeLeftSeconds <= 0, totalQuestions]);
+
 
   return (
     <section id="tests" className="py-2 sm:py-4 bg-slate-50 border-b border-slate-200">
@@ -887,7 +952,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               const resumable = !!active;
               const completed = !!latestResult;
               const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Time expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
-              const actionLabel = !eligible ? (catalogueEn?'Class restricted':'कक्षा प्रतिबंधित') : user && !historyReady ? (catalogueEn?'Checking attempts…':'प्रयासों की जाँच…') : exhausted ? (catalogueEn?'Attempt limit reached':'प्रयास सीमा पूरी') : resumable ? (catalogueEn?'Resume test':'टेस्ट जारी रखें') : completed ? (catalogueEn?'Retake test':'दोबारा टेस्ट दें') : expired ? (catalogueEn?'Retry test':'पुनः प्रयास करें') : (catalogueEn?'Start test':'टेस्ट शुरू करें');
+              const actionLabel = !eligible ? (catalogueEn?'Class restricted':'कक्षा प्रतिबंधित') : user && !historyReady ? (catalogueEn?'Checking attempts…':'प्रयासों की जाँच…') : exhausted ? (completed ? (catalogueEn?'Completed':'परीक्षा पूर्ण') : (catalogueEn?'Time expired / No attempts left':'समय समाप्त / प्रयास शेष नहीं')) : resumable ? (catalogueEn?'Resume test':'टेस्ट जारी रखें') : completed ? (catalogueEn?'Retake test':'दोबारा टेस्ट दें') : expired ? (catalogueEn?'Retry test':'पुनः प्रयास करें') : (catalogueEn?'Start test':'टेस्ट शुरू करें');
               const canStart = eligible && (!user || (historyReady && !exhausted));
               const resultHref = publicHref('results')+'?testId='+encodeURIComponent(test.id);
               const date = sortedAttempts[0]?.submitted_at || sortedAttempts[0]?.started_at;
@@ -907,10 +972,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <span className="ml-2 text-xs font-semibold text-sky-800">{test.subject}</span>
                       <h3 className="mt-1.5 text-sm leading-snug font-extrabold text-slate-900 break-words">{catalogueEn ? test.title.en : test.title.hi}</h3>
                       <p className="mt-0.5 text-xs leading-snug text-slate-600 break-words">{catalogueEn ? test.title.hi : test.title.en}</p>
-                      <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{limit}</p>
+                      {limit > 1 && <p className="mt-1 text-[11px] font-medium text-slate-600">{catalogueEn ? 'Attempt limit: ' : 'अधिकतम प्रयास: '}{limit}</p>}
                       {historyReady && <div className="mt-2 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable?'bg-amber-100 text-amber-900':completed?'bg-emerald-100 text-emerald-800':expired?'bg-amber-50 text-amber-900':'bg-slate-100 text-slate-700'}`}>{historyLabel}</span><span className="font-semibold text-slate-600">{catalogueEn?'Attempts used: ':'प्रयोग किए गए प्रयास: '}{used}/{limit}</span><span className="font-semibold text-slate-600">{catalogueEn?'New attempts left: ':'नए प्रयास शेष: '}{remainingAttempts}</span></div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-sky-700" style={{width:Math.min(100,used/limit*100)+'%'}}/></div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]"><span className={`rounded-md px-2 py-1 font-bold ${resumable?'bg-amber-100 text-amber-900':completed?'bg-emerald-100 text-emerald-800':expired?'bg-amber-50 text-amber-900':'bg-slate-100 text-slate-700'}`}>{historyLabel}</span>{limit > 1 && <><span className="font-semibold text-slate-600">{catalogueEn?'Attempts used: ':'प्रयोग किए गए प्रयास: '}{used}/{limit}</span><span className="font-semibold text-slate-600">{catalogueEn?'New attempts left: ':'नए प्रयास शेष: '}{remainingAttempts}</span></>}</div>
+                        {limit > 1 && <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-sky-700" style={{width:Math.min(100,used/limit*100)+'%'}}/></div>}
                         {date && Number.isFinite(Date.parse(date)) && <p className="text-[11px] text-slate-600">{catalogueEn?'Last attempt: ':'अंतिम प्रयास: '}{new Date(date).toLocaleDateString(catalogueEn?'en-IN':'hi-IN')}</p>}
                         {latestResult && <p className="text-xs font-semibold text-emerald-800">{catalogueEn?'Latest score: ':'अंतिम अंक: '}{score(latestResult)}{bestResult?' · '+(catalogueEn?'Best: ':'सर्वश्रेष्ठ: ')+score(bestResult):''}</p>}
                       </div>}
@@ -924,15 +989,15 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     </span>
                   </button>
                   {historyReady && used>0 && <div className="mx-3 mb-3 space-y-2">
-                    {exhausted && <p className="rounded-lg bg-amber-50 p-2 text-xs leading-relaxed text-amber-900">{completed?(catalogueEn?'All attempts used. Your submitted result is available below.':'सभी प्रयास पूरे हो गए हैं। जमा किया गया परिणाम नीचे देखें।'):(catalogueEn?'No attempts remain and no submitted result is available. Review attempt history or contact support.':'कोई प्रयास शेष नहीं और जमा परिणाम उपलब्ध नहीं है। प्रयास इतिहास देखें या सहायता लें।')}</p>}
+                    {exhausted && <p className="rounded-lg bg-amber-50 p-2 text-xs leading-relaxed text-amber-900">{completed?(catalogueEn?'Test completed. View your result below.':'आपकी परीक्षा पूर्ण हो गई है। परिणाम नीचे देखें।'):(catalogueEn?'Time expired or no attempts remain. Contact support if needed.':'समय समाप्त हो गया है या कोई प्रयास शेष नहीं है। जरूरत होने पर सहायता लें।')}</p>}
                     {!exhausted && expired && !completed && !resumable && <p className="text-xs text-amber-800">{catalogueEn?'The previous attempt expired. You can retry.':'पिछले प्रयास का समय समाप्त हुआ। आप पुनः प्रयास कर सकते हैं।'}</p>}
-                    <a href={resultHref} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800"><BarChart3 className="h-4 w-4" aria-hidden="true"/>{completed?(catalogueEn?'View result':'परिणाम देखें'):(catalogueEn?'Attempt history':'प्रयास इतिहास')}</a>
+                    {(completed || (limit > 1 && !resumable)) && <a href={resultHref} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800"><BarChart3 className="h-4 w-4" aria-hidden="true"/>{completed?(catalogueEn?'View result':'परिणाम देखें'):(catalogueEn?'Attempt history':'प्रयास इतिहास')}</a>}
                     {exhausted && !completed && <a href={publicHref('help-centre')} className="block text-center text-xs font-semibold text-sky-900 underline">{catalogueEn?'Get help':'सहायता लें'}</a>}
                   </div>}
                   <details className="mx-3 mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                     <summary className="cursor-pointer font-semibold text-sky-900">{catalogueEn ? 'Test instructions' : 'परीक्षा निर्देश'}</summary>
                     {test.chapter && <p className="mt-2 break-words text-slate-600">{catalogueEn ? 'Chapter: ' : 'अध्याय: '}{test.chapter}</p>}
-                    <ul className="mt-2 list-disc space-y-1 pl-4">{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
+                    <ul className="mt-2 list-disc space-y-1 pl-4"><li>{catalogueEn ? `Allowed attempts: ${limit}. The countdown continues even if you leave or close the test. Resume before the deadline.` : `अनुमत प्रयास: ${limit}। टेस्ट बंद करने या बाहर जाने पर भी समय चलता रहेगा। समय रहते वापस आकर टेस्ट जारी रखें।`}</li>{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
                   </details>
                   {isSelected && loginError && !exhausted && <p role="alert" className="mx-3 mb-3 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
                 </article>
@@ -971,6 +1036,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              {typeof document !== 'undefined' && document.fullscreenEnabled && <button type="button" onClick={() => void toggleExamFullscreen()} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-sky-900">{questionLang === 'hi' ? 'पूर्ण स्क्रीन' : 'Full screen'}</button>}
+              <button type="button" onClick={() => setLargeExamText(v => !v)} aria-pressed={largeExamText} aria-label={questionLang === 'hi' ? 'प्रश्नों का बड़ा अक्षर आकार' : 'Larger question text'} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-sky-900">{largeExamText ? 'A−' : 'A+'}</button>
               <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 text-[11px] font-semibold">
                 <button type="button" onClick={() => setViewLayout('cbt')} aria-pressed={viewLayout === 'cbt'} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${viewLayout === 'cbt' ? 'bg-white text-sky-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
                   <Layers className="h-3.5 w-3.5" /><span>CBT Mode</span>
@@ -994,7 +1061,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         {studentDetails && activeAttempt && matchingActiveAttempt && isTestActive && !isSubmitted && (
           <div className="space-y-4 pb-24 sm:pb-0">
             {/* RESPONSIVE EXAM STATUS: one compact sticky bar with a right-aligned timer */}
-            <div className="sticky top-[130px] z-30 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-md backdrop-blur-xl sm:px-3" aria-label="Live examination status">
+            <div className="sticky top-0 z-30 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-md backdrop-blur-xl sm:px-3" aria-label="Live examination status">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
@@ -1036,6 +1103,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={questionLang === 'en' ? 'Answered questions' : 'उत्तरित प्रश्न'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((attemptedCount / Math.max(1, totalQuestions)) * 100)}>
                 <div className="h-full rounded-full bg-gradient-to-r from-sky-700 to-emerald-500 transition-all" style={{width: `${(attemptedCount / Math.max(1,totalQuestions)) * 100}%`}} />
               </div>
+              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] font-medium text-slate-600"><span className={isOnline ? 'text-emerald-700' : 'text-amber-800'}>{isOnline ? (questionLang === 'hi' ? 'ऑनलाइन' : 'Online') : (questionLang === 'hi' ? 'ऑफलाइन' : 'Offline')}</span><span role="status">{localAnswersSaved ? (questionLang === 'hi' ? 'उत्तर इस ब्राउज़र में सुरक्षित' : 'Answers saved on this device') : (questionLang === 'hi' ? 'उत्तर सुरक्षित होने की पुष्टि नहीं' : 'Local save not confirmed')}</span></div>
               {!isOnline && (
                 <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-900">
                   इंटरनेट कनेक्शन उपलब्ध नहीं है। आपका टेस्ट और टाइमर जारी है; उत्तर इस ब्राउज़र में सुरक्षित हो रहे हैं। नेटवर्क लौटने पर सबमिशन फिर प्रयास होगा।
@@ -1124,7 +1192,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               )}
             </div>
 
-            <div id="cbt-test-workspace" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div id="cbt-test-workspace" className={`grid grid-cols-1 lg:grid-cols-12 gap-6 items-start scroll-mt-[180px] ${largeExamText ? 'exam-large-text' : ''}`}>
 
             {/* LEFT AREA: CURRENT QUESTION (OR ALL QUESTIONS LIST) - 8 COLS */}
             <div className="lg:col-span-8 space-y-4">
@@ -1153,7 +1221,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
                   {/* Question Text */}
                   <div className="mb-6">
-                    <h3 className="break-words text-lg sm:text-xl font-bold text-slate-900 leading-relaxed tracking-normal">
+                    <h3 className="exam-question-text break-words text-lg sm:text-xl font-bold text-slate-900 leading-relaxed tracking-normal">
                       {currentQuestionIndex + 1}. {questionLang === 'hi' ? currentQ.question.hi : currentQ.question.en}
                     </h3>
                     {questionLang === 'hi' && currentQ.question.en && (
@@ -1187,7 +1255,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                             className="mt-1 h-4 w-4 text-sky-600 border-slate-300 focus:ring-sky-500 cursor-pointer"
                           />
                           <div className="flex-1">
-                            <span className="text-base sm:text-lg leading-relaxed">
+                            <span className="exam-option-text text-base sm:text-lg leading-relaxed">
                               <b className="text-sky-900 mr-2 font-mono">{String.fromCharCode(65 + optIdx)}.</b>
                               {opt}
                             </span>
@@ -1269,7 +1337,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       <div
                         key={q.id || i}
                         id={`q-${i}`}
-                        className={`bg-white rounded-2xl border p-5 transition-all shadow-xs ${
+                        className={`scroll-mt-[180px] bg-white rounded-2xl border p-5 transition-all shadow-xs ${
                           currentQuestionIndex === i
                             ? 'border-sky-500 ring-2 ring-sky-500/20'
                             : 'border-slate-200 hover:border-sky-200'
@@ -1279,7 +1347,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                           <span>{q.chapter}</span>
                           <span className="font-mono text-slate-500">Q.{i + 1} of {totalQuestions}</span>
                         </div>
-                        <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-3 leading-relaxed">
+                        <h4 className="exam-question-text text-base sm:text-lg font-bold text-slate-900 mb-3 leading-relaxed">
                           {i + 1}. {questionLang === 'hi' ? q.question.hi : q.question.en}
                         </h4>
 
@@ -1291,7 +1359,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                               <label
                                 key={optIdx}
                                 onClick={() => handleSelectOption(i, optIdx)}
-                                className={`flex items-start gap-3 p-3.5 rounded-xl border text-sm sm:text-base cursor-pointer transition-all ${
+                                className={`exam-option-text flex items-start gap-3 p-3.5 rounded-xl border text-sm sm:text-base cursor-pointer transition-all ${
                                   isChosen
                                     ? 'bg-sky-50 border-sky-600 text-sky-950 font-semibold'
                                     : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
@@ -1330,7 +1398,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               </div>
             </div>
             {/* RIGHT SIDEBAR: QUESTION PALETTE & SUBMISSION - 4 COLS */}
-            <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[150px]">
+            <div className="hidden lg:block lg:col-span-4 space-y-4 lg:sticky lg:top-[170px]">
 
               {/* 3. QUESTION PALETTE BOXES */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
@@ -1434,7 +1502,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   </div>
                   <div>
                     <h3 className="font-extrabold text-base text-slate-900 font-display">
-                      Attempt Details / परीक्षा स्थिति विवरण
+                      Exam Progress / परीक्षा प्रगति
                     </h3>
                     <p className="text-xs text-slate-500">
                       कुल {totalQuestions} प्रश्नों की वर्तमान स्थिति व प्रगति
@@ -1649,14 +1717,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
               {/* Scorecard Action Buttons */}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-100">
-                <button
+                {matchingServerResult && serverResult && serverResult.attempt_number < allowedAttempts && <button
                   type="button"
                   onClick={handleReattempt}
                   className="px-6 py-2.5 rounded-xl bg-sky-900 hover:bg-sky-800 text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4 text-amber-400" />
                   <span>Re-attempt {totalQuestions} MCQ Test / पुनः टेस्ट दें</span>
-                </button>
+                </button>}
 
                 <button
                   type="button"

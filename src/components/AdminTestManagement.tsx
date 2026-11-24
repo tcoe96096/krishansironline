@@ -338,7 +338,7 @@ export const AdminTestManagement: React.FC = () => {
       if (invokeError) throw invokeError;
       if (data?.ok !== true || data?.test_id !== id || data?.status !== 'draft_saved') throw new Error(data?.error || 'Draft save की पुष्टि नहीं हुई। सूची Refresh करके जाँचें।');
       setNotice('Test Draft सुरक्षित रूप से सेव हो गया। Publish करने से पहले सूची में जाँचें।');
-      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null); setAiAnswerSuggestions({}); setAiReviewStatus('');
+      setTitle({ en: '', hi: '' }); setChapter(''); setQuestions([blankQuestion()]); setAnswers([-1]); setEditingTestId(null); setAttemptLimit(1); setAiAnswerSuggestions({}); setAiReviewStatus('');
       await loadTests();
     } catch (e) { setError(e instanceof Error ? e.message : 'Test save नहीं हुआ।'); }
     finally { setSaving(false); }
@@ -370,7 +370,7 @@ export const AdminTestManagement: React.FC = () => {
   };
 
   const cancelEdit = () => {
-    setEditingTestId(null); setTitle({en:'',hi:''}); setChapter('');
+    setEditingTestId(null); setTitle({en:'',hi:''}); setChapter(''); setAttemptLimit(1);
     setQuestions([blankQuestion()]); setAnswers([-1]); setAiAnswerSuggestions({}); setAiReviewStatus('');
     setNotice('Editing रद्द कर दी गई।');
   };
@@ -458,7 +458,7 @@ export const AdminTestManagement: React.FC = () => {
         <label className="text-xs font-semibold text-slate-600">Subject<input value={subject} onChange={e=>setSubject(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
         <label className="text-xs font-semibold text-slate-600">Chapter / अध्याय<input value={chapter} onChange={e=>setChapter(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
         <label className="text-xs font-semibold text-slate-600">Duration (minutes)<input type="number" min="1" max="600" value={duration} onChange={e=>setDuration(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
-        <label className="text-xs font-semibold text-slate-600">Attempt limit<input type="number" min="1" max="20" value={attemptLimit} onChange={e=>setAttemptLimit(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
+        <label className="text-xs font-semibold text-slate-600">Attempt limit (default: 1)<input type="number" min="1" max="20" value={attemptLimit} onChange={e=>setAttemptLimit(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm" /></label>
       </div>
       <div className="mt-6 space-y-4">
         {questions.map((q,i)=><div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4">

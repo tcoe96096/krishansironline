@@ -178,6 +178,9 @@ const MainApp: React.FC = () => {
   }, []);
 
   const navigateTo = (pageId: string, filterClass?: string) => {
+    if (activePage === 'tests' && pageId !== 'tests' && document.body.classList.contains('exam-mode-active')) {
+      if (!window.confirm(language === 'en' ? 'Leave this exam? The countdown will continue. Return before the deadline to resume.' : 'परीक्षा छोड़ें? समय चलता रहेगा। निर्धारित समय के भीतर वापस आकर परीक्षा जारी रख सकते हैं।')) return;
+    }
     if (filterClass && ['6', '7', '8', '9', '10', '11', '12'].includes(filterClass)) {
       setSelectedClassForMaterials(filterClass as ClassLevel);
     }

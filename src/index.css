@@ -140,3 +140,9 @@ body.exam-mode-active header.sticky {
 @media(min-width:640px){.exam-floating-watch.exam-neon-watch{justify-self:start;}}
 @media(max-width:420px){.exam-floating-watch.exam-neon-watch{width:4.5rem;height:4.5rem;padding:3px;}}
 @media(prefers-reduced-motion:reduce){.exam-floating-watch.exam-neon-watch{transition:none;}}
+
+/* Active exam: hide the site masthead without retaining its height. */
+body.exam-mode-active header.sticky { display: none !important; }
+body.exam-mode-active .sticky[aria-label="Live examination status"] { top: 0 !important; z-index: 36 !important; }
+.exam-large-text .exam-question-text { font-size: 1.4rem; line-height: 1.6; }
+.exam-large-text .exam-option-text { font-size: 1.15rem; line-height: 1.55; }

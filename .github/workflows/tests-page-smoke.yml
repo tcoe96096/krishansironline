@@ -189,7 +189,7 @@ jobs:
               const page = await context.newPage();
               await page.goto(base+'/online-tests/?class=10');
               if (flow==='completed-limit' || flow==='expired-limit') {
-                const card = page.getByRole('button',{name:'Fixture test 13 — Attempt limit reached',exact:true});
+                const card = page.getByRole('button',{name:flow==='completed-limit'?'Fixture test 13 — Completed':'Fixture test 13 — Time expired / No attempts left',exact:true});
                 await card.waitFor();
                 assert.equal(await card.isDisabled(),true);
                 assert.equal(await card.getByText('New attempts left: 0',{exact:true}).count(),1);
