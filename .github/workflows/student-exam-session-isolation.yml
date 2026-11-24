@@ -1,0 +1,30 @@
+name: Student exam session isolation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/OnlineTestEngine.tsx'
+      - 'src/utils/examSessionGuard.ts'
+      - 'src/utils/examDeadline.ts'
+      - 'tests/studentExamSessionIsolation.test.ts'
+      - 'tests/studentExamDeadline.test.ts'
+      - '.github/workflows/student-exam-session-isolation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-session-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Test authenticated student and attempt isolation
+        run: npx --no-install tsx --test tests/studentExamSessionIsolation.test.ts tests/studentExamDeadline.test.ts

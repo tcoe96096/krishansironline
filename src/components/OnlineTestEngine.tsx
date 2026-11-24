@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { canRestoreExamAnswers, isSafeExamAnswerDraft } from '../utils/examSessionGuard';
+import { secondsUntilExamExpiry } from '../utils/examDeadline';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
@@ -48,10 +50,8 @@ const EMPTY_TEST: OnlineTest = {
   instructions: { en: [], hi: [] },
 };
 
-interface PersistedTestSession {
-  version: 1;
+type PersistedTestSession = {
   testId: string;
-  student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
   markedForReview: Record<number, boolean>;
   currentQuestionIndex: number;
@@ -59,22 +59,29 @@ interface PersistedTestSession {
   savedAt: number;
   questionLang: 'en' | 'hi';
   viewLayout: 'cbt' | 'all';
-}
+} & (
+  | { version: 1; student: StudentLoginDetails }
+  | { version: 2; userId: string; attemptId: string }
+);
 
 const readPersistedTestSession = (): PersistedTestSession | null => {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(ACTIVE_TEST_SESSION_KEY);
     if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<PersistedTestSession>;
-    const student = value.student as StudentLoginDetails | undefined;
+    const value = JSON.parse(raw) as Partial<PersistedTestSession> & {
+      version?: number; student?: StudentLoginDetails; userId?: string; attemptId?: string;
+    };
+    // Legacy v1 browser drafts contain student PII and cannot prove ownership.
+    // Purge them on read instead of keeping them until an attempt is loaded.
+    // Version 2 must be bound to opaque account and server attempt IDs only.
+    const validBoundSession = value.version === 2 &&
+      !Object.prototype.hasOwnProperty.call(value, 'student') &&
+      typeof value.userId === 'string' && value.userId.length > 0 &&
+      typeof value.attemptId === 'string' && value.attemptId.length > 0;
     if (
-      value.version !== 1 ||
+      !validBoundSession ||
       typeof value.testId !== 'string' ||
-      !student ||
-      typeof student.studentName !== 'string' ||
-      typeof student.rollNo !== 'string' ||
-      typeof student.studentClass !== 'string' ||
       typeof value.timeLeftSeconds !== 'number' ||
       !Number.isFinite(value.timeLeftSeconds) ||
       typeof value.savedAt !== 'number' ||
@@ -83,8 +90,7 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
       !Number.isFinite(value.currentQuestionIndex) ||
       (value.questionLang !== 'hi' && value.questionLang !== 'en') ||
       (value.viewLayout !== 'cbt' && value.viewLayout !== 'all') ||
-      !value.selectedAnswers ||
-      !value.markedForReview
+      !isSafeExamAnswerDraft(value.selectedAnswers, value.markedForReview, value.currentQuestionIndex)
     ) {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
@@ -173,12 +179,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       ? Math.min(Math.max(0, restoredSession.currentQuestionIndex), Math.max(0, restoredTest.questions.length - 1))
       : 0
   );
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>(
-    () => restoredSession?.selectedAnswers || {}
-  );
-  const [markedForReview, setMarkedForReview] = useState<Record<number, boolean>>(
-    () => restoredSession?.markedForReview || {}
-  );
+  // Never display browser-cached answers before the signed-in server attempt is verified.
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [markedForReview, setMarkedForReview] = useState<Record<number, boolean>>({});
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
   const [questionLang, setQuestionLang] = useState<'en' | 'hi'>(() => restoredSession?.questionLang || 'hi');
@@ -196,6 +199,31 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [serverResult, setServerResult] = useState<TestAttempt | null>(null);
   // Prevent timer and manual-submit events from sending duplicate RPC requests.
   const submissionInFlight = useRef(false);
+
+  const previousAuthenticatedUserId = useRef<string | null | undefined>(undefined);
+
+  // A mounted exam view can survive sign-out/account switch. Never expose
+  // the previous account's answers or server attempt in React state.
+  useEffect(() => {
+    if (authLoading) return;
+    const nextUserId = user?.id ?? null;
+    const previousUserId = previousAuthenticatedUserId.current;
+    previousAuthenticatedUserId.current = nextUserId;
+    if (previousUserId === undefined || previousUserId === nextUserId) return;
+    setIsTestActive(false);
+    setIsSubmitted(false);
+    setActiveAttempt(null);
+    setServerResult(null);
+    setSelectedAnswers({});
+    setMarkedForReview({});
+    setRestoredSession(null);
+    setCurrentQuestionIndex(0);
+    setAutoSubmitPending(false);
+    // A previous account's submit feedback must not remain visible after switch.
+    setSubmissionStatus({ loading: false });
+    localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+    localStorage.removeItem('krishan_sir_active_student');
+  }, [authLoading, user?.id]);
 
   const [submissionStatus, setSubmissionStatus] = useState<{
     loading: boolean;
@@ -328,7 +356,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // savedAt is refreshed with the countdown so time away can be deducted on resume.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isTestActive || isSubmitted || !studentDetails) {
+    if (!isTestActive || isSubmitted || !studentDetails || !activeAttempt || !user) {
       if (isSubmitted) {
         localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
         localStorage.removeItem('krishan_sir_active_student');
@@ -337,9 +365,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     const session: PersistedTestSession = {
-      version: 1,
+      version: 2,
       testId: selectedTest.id,
-      student: studentDetails,
+      userId: user.id,
+      attemptId: activeAttempt.id,
       selectedAnswers,
       markedForReview,
       currentQuestionIndex,
@@ -365,23 +394,35 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     viewLayout,
     isTestActive,
     isSubmitted,
+    activeAttempt?.id,
+    user?.id,
   ]);
 
-  // Countdown timer for the selected assessment
+  // Background tabs throttle intervals. Always recalculate from the server attempt's
+  // absolute deadline, including when the tab becomes visible or the page regains focus.
+  // Never extend the deadline from a browser draft's cached timeLeftSeconds.
   useEffect(() => {
-    if (!isTestActive || isSubmitted) return;
+    if (!isTestActive || isSubmitted || !activeAttempt) return;
+    const updateRemaining = () => {
+      const remaining = secondsUntilExamExpiry(activeAttempt.expires_at);
+      setTimeLeftSeconds((previous) => previous === remaining ? previous : remaining);
+    };
+    updateRemaining();
+    const interval = window.setInterval(updateRemaining, 1000);
+    document.addEventListener('visibilitychange', updateRemaining);
+    window.addEventListener('focus', updateRemaining);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', updateRemaining);
+      window.removeEventListener('focus', updateRemaining);
+    };
+  }, [isTestActive, isSubmitted, activeAttempt?.id, activeAttempt?.expires_at]);
 
-    if (timeLeftSeconds <= 0) {
-      handleSubmitQuiz(true);
-      return;
+  useEffect(() => {
+    if (isTestActive && !isSubmitted && activeAttempt && timeLeftSeconds <= 0) {
+      void handleSubmitQuiz(true);
     }
-
-    const interval = setInterval(() => {
-      setTimeLeftSeconds((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTestActive, isSubmitted, timeLeftSeconds]);
+  }, [isTestActive, isSubmitted, activeAttempt?.id, timeLeftSeconds]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -456,19 +497,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       const attempt = await startTestAttempt(selectedTest.id);
       setActiveAttempt(attempt);
       setServerResult(null);
-      const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+      const remaining = secondsUntilExamExpiry(attempt.expires_at);
       const saved = restoredSession;
-      const sameStudent = !!saved &&
-        saved.student.studentName === studentDetails.studentName &&
-        saved.student.rollNo === studentDetails.rollNo &&
-        saved.student.studentClass === studentDetails.studentClass &&
-        saved.student.school === studentDetails.school;
-      const canRestoreAnswers = !!saved &&
-        saved.testId === selectedTest.id &&
-        sameStudent &&
-        attempt.status === 'in_progress' &&
-        remaining > 0;
-      if (canRestoreAnswers && saved) {
+      const canRestoreAnswers = canRestoreExamAnswers(
+        saved, selectedTest.id, user.id, studentDetails, attempt, remaining,
+      );
+      if (canRestoreAnswers && saved && isSafeExamAnswerDraft(saved.selectedAnswers, saved.markedForReview, saved.currentQuestionIndex, selectedTest.questions.length, selectedTest.questions.map((question) => Math.min(question.options.en.length, question.options.hi.length)))) {
         setSelectedAnswers(saved.selectedAnswers);
         setMarkedForReview(saved.markedForReview);
         setCurrentQuestionIndex(Math.min(Math.max(0, saved.currentQuestionIndex), Math.max(0, selectedTest.questions.length - 1)));
@@ -478,23 +512,23 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         setSelectedAnswers({});
         setMarkedForReview({});
         setCurrentQuestionIndex(0);
-        if (saved && !sameStudent) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+        if (saved) localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       }
       const active = attempt.status === 'in_progress' && remaining > 0;
       setTimeLeftSeconds(remaining);
       setIsSubmitted(false);
       setIsTestActive(active);
-      setSubmissionStatus({ loading: false, success: true, message: 'आपकी परीक्षा शुरू हो गई है।' });
-      setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
+      setSubmissionStatus({ loading: false, success: active, message: active ? 'आपकी परीक्षा शुरू हो गई है।' : 'इस प्रयास की समय-सीमा समाप्त हो चुकी है। नया प्रयास उपलब्ध है या नहीं, इसकी जाँच करें।' });
+      if (active) setTimeout(() => document.getElementById('cbt-test-workspace')?.scrollIntoView({ behavior: 'smooth' }), 60);
     } catch (error) {
       setSubmissionStatus({ loading: false, success: false, message: '' });
       const errorMessage = error instanceof Error ? error.message : String(error ?? '');
       const errorDetails = (() => {
         try { return JSON.stringify(error); } catch { return errorMessage; }
       })();
-      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      const isAttemptLimitReached = /attempt[\s_-]*limit[\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setLoginError(isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? `आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।` : `You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.`)
         : (errorMessage || 'परीक्षा शुरू नहीं हो सकी। कृपया पुनः प्रयास करें।'));
     }
   };
@@ -516,7 +550,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Select question option
   const handleSelectOption = (qIndex: number, optIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setSelectedAnswers((prev) => ({
       ...prev,
       [qIndex]: optIndex,
@@ -525,7 +559,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Toggle mark for review
   const handleToggleReview = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setMarkedForReview((prev) => ({
       ...prev,
       [qIndex]: !prev[qIndex],
@@ -534,7 +568,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Clear answer for current question
   const handleClearAnswer = (qIndex: number) => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isTestActive || submissionInFlight.current || timeLeftSeconds <= 0) return;
     setSelectedAnswers((prev) => {
       const next = { ...prev };
       delete next[qIndex];
@@ -552,8 +586,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   // Submit answers to the trusted PostgreSQL RPC; never calculate or store final marks in the browser.
   const handleSubmitQuiz = async (timeExpired = false) => {
     if (submissionInFlight.current) return;
-    if (!studentDetails || !activeAttempt) {
-      alert('आपकी सक्रिय परीक्षा का database रिकॉर्ड नहीं मिला। कृपया स्कूल प्रशासन से संपर्क करें।');
+    if (!studentDetails || !activeAttempt || !isTestActive || isSubmitted) {
+      if (!timeExpired) alert('कोई सक्रिय परीक्षा उपलब्ध नहीं है। कृपया स्कूल प्रशासन से संपर्क करें।');
       return;
     }
     if (!timeExpired && attemptedCount < totalQuestions) {
@@ -665,18 +699,22 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setSelectedAnswers({});
       setMarkedForReview({});
       setCurrentQuestionIndex(0);
-      setTimeLeftSeconds(Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000)));
+      const remaining = secondsUntilExamExpiry(attempt.expires_at);
+      const canStart = attempt.status === 'in_progress' && remaining > 0;
+      setTimeLeftSeconds(remaining);
+      setAutoSubmitPending(false);
+      setSubmissionStatus({ loading: false, success: canStart, message: canStart ? 'नया प्रयास शुरू हो गया है।' : 'यह प्रयास समाप्त हो चुका है। कृपया उपलब्ध प्रयासों की जाँच करें।' });
       setIsSubmitted(false);
-      setIsTestActive(attempt.status === 'in_progress');
+      setIsTestActive(canStart);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error ?? '');
       const errorDetails = (() => {
         try { return JSON.stringify(error); } catch { return errorMessage; }
       })();
-      const isAttemptLimitReached = /attempt[\\s_-]*limit[\\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
+      const isAttemptLimitReached = /attempt[\s_-]*limit[\s_-]*reached|limit.*attempt.*reach/i.test(`${errorMessage} ${errorDetails}`);
       setSubmissionStatus({ loading: false, success: false, message: isAttemptLimitReached
-        ? (questionLang === 'hi' ? 'आप इस परीक्षा के सभी निर्धारित प्रयास पूरे कर चुके हैं। इस टेस्ट के लिए अधिकतम ${allowedAttempts} प्रयास अनुमत हैं। आपका पिछला परिणाम सुरक्षित है।' : 'You have used all allowed attempts for this test. A maximum of ${allowedAttempts} attempts are permitted. Your previous result has been saved.')
+        ? (questionLang === 'hi' ? attemptLimitMessageHi : attemptLimitMessageEn)
         : (errorMessage || 'दोबारा टेस्ट शुरू नहीं हो सका।') });
     }
   };
@@ -696,7 +734,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <p className="mt-1 text-xs sm:text-sm text-slate-600">Supabase में प्रकाशित और आपकी कक्षा के लिए उपलब्ध ऑनलाइन टेस्ट चुनें।</p>
               {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
               {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
-              {!catalogueLoading && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
+              {!catalogueLoading && !catalogueError && user && profile && availableTests.length === 0 && <p role="status" className="mt-2 text-xs text-amber-700">आपकी कक्षा के लिए अभी कोई प्रकाशित टेस्ट उपलब्ध नहीं है।</p>}
             </div>
             <span className="inline-flex self-start sm:self-auto items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 border border-sky-100">
               {filteredTests.length} Tests Available
