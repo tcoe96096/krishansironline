@@ -51,9 +51,9 @@ export function parseExtractedMcqs(text: string): ParseResult {
     // The answer key is treated as untrusted source data and not proof of correctness.
     for (const entry of source.matchAll(answerEntry)) {
       const questionNumber = Number(entry[1] || entry[2]);
-      const optionIndex = optionIndex(entry[3]);
+      const answerOptionIndex = optionIndex(entry[3]);
       if (!keyedAnswers.has(questionNumber)) keyedAnswers.set(questionNumber, new Set());
-      keyedAnswers.get(questionNumber)!.add(optionIndex);
+      keyedAnswers.get(questionNumber)!.add(answerOptionIndex);
     }
   }
 
