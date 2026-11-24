@@ -1,0 +1,107 @@
+name: Tests Page focused mock browser check
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/OnlineTestEngine.tsx'
+      - 'src/App.tsx'
+      - '.github/workflows/tests-page-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VITE_SUPABASE_URL: https://catalogue-fixture.invalid
+      VITE_SUPABASE_PUBLISHABLE_KEY: synthetic-fixture-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --legacy-peer-deps
+      - run: npm install --no-save --legacy-peer-deps playwright
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start isolated preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/catalogue-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/online-tests/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/catalogue-preview.log
+          exit 1
+      - name: Check desktop and mobile catalogue (synthetic API only)
+        run: |
+          cat > .catalogue-smoke.mjs <<'JS'
+          import assert from 'node:assert/strict';
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch();
+          const base = 'http://127.0.0.1:4173';
+          const fixtures = Array.from({length: 14}, (_, i) => ({
+            id: 'fixture-' + i,
+            title: {en: 'Fixture test ' + i, hi: 'परीक्षण ' + i},
+            class_level: i === 13 ? '10' : '9',
+            subject: i === 13 ? 'Geography' : 'History',
+            chapter: i === 13 ? 'Resources' : 'Chapter ' + i,
+            duration_minutes: 30, total_marks: 1, attempt_limit: 2,
+            questions: [{id:'q1', question:{en:'Fixture question',hi:'प्रश्न'}, options:{en:['A','B','C','D'],hi:['क','ख','ग','घ']}, chapter:'Fixture',marks:1,type:'mcq'}]
+          }));
+          try {
+            for (const width of [1440,390]) {
+              const context = await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+              let failCatalogue = false;
+              let starts = 0;
+              await context.addInitScript(() => localStorage.setItem('krishan_portal_lang','en'));
+              await context.route('**/*', async route => {
+                const url = new URL(route.request().url());
+                if (url.origin === base) return route.continue();
+                if (url.hostname !== 'catalogue-fixture.invalid') return route.abort();
+                const headers = {'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,OPTIONS','content-type':'application/json'};
+                if (route.request().method() === 'OPTIONS') return route.fulfill({status:204,headers});
+                if (url.pathname.endsWith('/rpc/start_test_attempt')) { starts++; return route.fulfill({status:403,headers,body:'{}'}); }
+                const catalogue = url.pathname === '/rest/v1/tests';
+                return route.fulfill({status:catalogue && failCatalogue ? 503 : 200,headers,body:JSON.stringify(catalogue ? (failCatalogue ? {message:'Fixture unavailable'} : fixtures) : [])});
+              });
+              const page = await context.newPage();
+              await page.goto(base + '/online-tests/');
+              const scope = page.locator('#tests');
+              await scope.getByRole('heading',{name:'Online Test Centre',exact:true}).waitFor();
+              await scope.getByText('14 tests',{exact:true}).waitFor();
+              const search = scope.getByRole('textbox',{name:'Search tests',exact:true});
+              const classFilter = scope.getByRole('combobox',{name:'Filter by class',exact:true});
+              assert.equal(await classFilter.inputValue(),'all');
+              assert.equal(await scope.getByRole('heading',{name:/^Fixture test /}).count(),12);
+              await scope.getByRole('button',{name:'Next',exact:true}).click();
+              await scope.getByRole('heading',{name:'Fixture test 13',exact:true}).waitFor();
+              await classFilter.selectOption('10');
+              await scope.getByText('1 tests',{exact:true}).waitFor();
+              await scope.getByRole('combobox',{name:'Filter by subject'}).selectOption('Geography');
+              await scope.getByRole('combobox',{name:'Filter by chapter'}).selectOption('Resources');
+              await scope.getByRole('heading',{name:'Fixture test 13',exact:true}).waitFor();
+              await search.fill('NO_MATCH_FIXTURE');
+              await scope.getByRole('heading',{name:'No matching tests'}).waitFor();
+              await scope.getByRole('button',{name:'Clear filters',exact:true}).first().click();
+              await scope.getByText('14 tests',{exact:true}).waitFor();
+              failCatalogue = true;
+              await scope.getByRole('button',{name:'Refresh',exact:true}).click();
+              await scope.getByRole('button',{name:'Retry',exact:true}).waitFor();
+              failCatalogue = false;
+              await scope.getByRole('button',{name:'Retry',exact:true}).click();
+              await scope.getByText('14 tests',{exact:true}).waitFor();
+              await page.goto(base + '/online-tests/?class=10');
+              await scope.getByText('1 tests',{exact:true}).waitFor();
+              assert.equal(await classFilter.inputValue(),'10');
+              await scope.getByText('Test instructions',{exact:true}).click();
+              await scope.getByText('Read each question carefully.',{exact:true}).waitFor();
+              await scope.getByRole('button',{name:'Login to start',exact:true}).click();
+              assert.equal(starts,0,'Guest must not start a server attempt');
+              await context.close();
+              console.log('PASS public catalogue at viewport '+width);
+            }
+          } finally { await browser.close(); }
+          JS
+          node .catalogue-smoke.mjs
