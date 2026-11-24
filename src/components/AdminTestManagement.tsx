@@ -135,8 +135,9 @@ export const AdminTestManagement: React.FC = () => {
       if (chapterValue) setChapter(chapterValue);
       const minutes = named('duration|time|समय')?.match(/\b(\d{1,3})\b/);
       if (minutes && Number(minutes[1]) >= 1 && Number(minutes[1]) <= 600) setDuration(Number(minutes[1]));
-      const fileTitle = named('test title|title|शीर्षक');
-      if (fileTitle) setTitle(v => /[\u0900-\u097f]/.test(fileTitle) ? {...v, hi: fileTitle} : {...v, en: fileTitle});
+      const fileTitle = named('test title|title|शीर्षक') ||
+        file.name.replace(/\.(pdf|docx)$/i, '').replace(/[-_]+/g, ' ').trim() || 'Untitled Test';
+      setTitle(/[\u0900-\u097f]/.test(fileTitle) ? { en: '', hi: fileTitle } : { en: fileTitle, hi: '' });
       setNotice(parsed.questions.length + ' प्रश्न Draft Form में आ गए। अनुवाद व उत्तर सुझावों के लिए नीचे AI Assist चलाएँ; उत्तरों को प्रकाशित करने से पहले जाँचें।');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'PDF/Word document import असफल।');
@@ -167,15 +168,28 @@ export const AdminTestManagement: React.FC = () => {
         suggestedCorrectIndex: number | null;
       };
       const responses: Suggestion[] = [];
+      let translatedTitle: Bilingual | null = null;
+      const sourceTitle = title.en.trim() || title.hi.trim();
+      const needTitleTranslation = !!sourceTitle && (!title.en.trim() || !title.hi.trim());
       for (let index = 0; index < batchInputs.length; index += 10) {
         setAiReviewStatus('AI processing ' + (index + 1) + '–' + Math.min(index + 10, batchInputs.length) + ' of ' + batchInputs.length + ' questions…');
         const { data, error: invokeError } = await requireSupabase().functions.invoke('admin-test-ai-assist', {
-          body: { questions: batchInputs.slice(index, index + 10) },
+          body: {
+            questions: batchInputs.slice(index, index + 10),
+            ...(index === 0 && needTitleTranslation ? { metadata: { title: sourceTitle } } : {}),
+          },
         });
         if (invokeError || data?.ok !== true || !Array.isArray(data?.suggestions) || data.suggestions.length !== Math.min(10, batchInputs.length - index)) {
           throw new Error(data?.error === 'ai_assist_disabled' || data?.error === 'ai_provider_not_configured'
             ? 'AI Assist अभी सक्रिय नहीं है। Preview में Admin-only function और server-side AI key configure करें।'
             : 'AI Assist का उत्तर अधूरा या असफल है। किसी प्रश्न में बदलाव नहीं किया गया।');
+        }
+        if (index === 0 && needTitleTranslation) {
+          if (typeof data.translatedTitle?.en !== 'string' || !data.translatedTitle.en.trim() ||
+            typeof data.translatedTitle?.hi !== 'string' || !data.translatedTitle.hi.trim()) {
+            throw new Error('AI title translation invalid; no changes applied.');
+          }
+          translatedTitle = data.translatedTitle;
         }
         responses.push(...data.suggestions);
       }
@@ -203,6 +217,7 @@ export const AdminTestManagement: React.FC = () => {
           explanation: suggestion.explanation,
         };
       }));
+      if (translatedTitle) setTitle(translatedTitle);
       setAiAnswerSuggestions(Object.fromEntries(responses.map(x => [x.id, x.suggestedCorrectIndex])));
       setNotice('AI ने दोनों भाषाओं में प्रश्न, विकल्प और व्याख्या तैयार की है। सुझाए गए सही उत्तर नीचे हैं; Admin पुष्टि के बाद ही उन्हें चुनें।');
       setAiReviewStatus('AI suggestions ready for review · ' + responses.length + ' questions');
