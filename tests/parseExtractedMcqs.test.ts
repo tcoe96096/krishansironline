@@ -86,4 +86,17 @@ const missingEntry = parseExtractedMcqs([
 assert.equal(missingEntry.questions[0].answerIndex, 0);
 assert.ok(missingEntry.warnings.some(x => /entry 2: question missing/.test(x)));
 
+
+const hindiChoices = parseExtractedMcqs([
+  '1. भारत की राजधानी क्या है?',
+  'क. दिल्ली ख. भोपाल ग. जयपुर घ. पटना',
+  'सही उत्तर: क',
+  '2. इनमें से नदी कौन सी है?',
+  '(क) हिमालय (ख) सतलुज (ग) थार (घ) अरावली',
+  'उत्तर कुंजी: 2-ख',
+].join('\\n'));
+assert.equal(hindiChoices.questions.length, 2);
+assert.deepEqual(hindiChoices.questions[0].options, ['दिल्ली', 'भोपाल', 'जयपुर', 'पटना']);
+assert.deepEqual(hindiChoices.questions.map(q => q.answerIndex), [0, 1]);
+
 console.log('MCQ parser review-first tests passed');
