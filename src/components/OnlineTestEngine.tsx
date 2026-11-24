@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { summarizeTestAttempts, classifyAttemptError, isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
-import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, examServerAutosaveEnabled, readTestAttemptDraft, saveTestAttemptDraft, type PublishedTest, type TestAttempt } from '../services/testService';
+import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, examServerAutosaveEnabled, readTestAttemptDraft, saveTestAttemptDraft, finishTestAttemptDraft, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
   Clock,
@@ -241,7 +241,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   latestDraftAnswers.current = selectedAnswers;
   const [largeExamText, setLargeExamText] = useState(false);
   const fullscreenOwned = useRef(false);
-  const deadlineClock = useRef<{ expiresAt: number; wallStart: number; monotonicStart: number } | null>(null);
+  const deadlineClock = useRef<{ expiresAt: number; wallStart: number; serverStart: number; monotonicStart: number } | null>(null);
+  const serverTimeSample = useRef<{ attemptId: string; serverNow: number; wallNow: number; monoNow: number } | null>(null);
   const selectedTestEffectInitialized = useRef(false);
 
   const [activeAttempt, setActiveAttempt] = useState<TestAttempt | null>(null);
@@ -550,14 +551,17 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const remainingUntilDeadline = () => {
     const clock = deadlineClock.current;
     if (!clock) return timeLeftSeconds;
-    const estimatedNow = Math.max(Date.now(), clock.wallStart + Math.max(0, performance.now() - clock.monotonicStart));
+    const estimatedNow = clock.serverStart + Math.max(0, Date.now() - clock.wallStart, performance.now() - clock.monotonicStart);
     return Math.max(0, Math.ceil((clock.expiresAt - estimatedNow) / 1000));
   };
   useEffect(() => {
     if (!examFocusActive || !activeAttempt) { deadlineClock.current = null; return; }
     const expiresAt = Date.parse(activeAttempt.expires_at);
     if (!Number.isFinite(expiresAt)) { setTimeLeftSeconds(0); return; }
-    deadlineClock.current = { expiresAt, wallStart: Date.now(), monotonicStart: performance.now() };
+    const sample = serverTimeSample.current;
+    const wallStart = Date.now(), monotonicStart = performance.now();
+    const serverStart = sample?.attemptId === activeAttempt.id ? sample.serverNow + Math.max(0, wallStart - sample.wallNow, monotonicStart - sample.monoNow) : wallStart;
+    deadlineClock.current = { expiresAt, wallStart, monotonicStart, serverStart };
     const tick = () => setTimeLeftSeconds(prev => Math.min(prev, remainingUntilDeadline()));
     tick();
     const timer = window.setInterval(tick, 250);
@@ -701,7 +705,9 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
             if (!localMatchesRevision) setSelectedAnswers(remote.answers);
             if (!localMatchesRevision || JSON.stringify(saved?.selectedAnswers) === context.acknowledged) setServerDraftStatus('saved');
           }
-          const serverRemaining = Math.ceil((Date.parse(remote.expires_at) - Date.parse(remote.server_now)) / 1000);
+          const serverNow = Date.parse(remote.server_now);
+          if (Number.isFinite(serverNow)) serverTimeSample.current = {attemptId: attempt.id, serverNow, wallNow: Date.now(), monoNow: performance.now()};
+          const serverRemaining = Math.ceil((Date.parse(remote.expires_at) - serverNow) / 1000);
           if (Number.isFinite(serverRemaining)) resolvedRemaining = Math.max(0, serverRemaining);
         } catch { /* Local answers remain recoverable; retry the draft read before saving. */ }
       }
@@ -861,7 +867,37 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       for (let index = 0; index < totalQuestions; index += 1) {
         answers[index] = Number.isInteger(selectedAnswers[index]) ? selectedAnswers[index] : null;
       }
-      const result = await submitTestAttempt(activeAttempt.id, answers);
+      let result: TestAttempt;
+      if (examServerAutosaveEnabled) {
+        if (timeExpired) {
+          // Expiry requests never send unsynchronized answers or submit before the server deadline.
+          result = await finishTestAttemptDraft(activeAttempt.id, null);
+        } else {
+          const context = draftSync.current;
+          if (!context || context.attemptId !== activeAttempt.id || context.blocked) throw new Error(questionLang === 'hi' ? 'सर्वर उत्तरों की पुष्टि के लिए टेस्ट दोबारा खोलें।' : 'Reopen this test to resolve server answer differences.');
+          if (context.busy) throw new Error(questionLang === 'hi' ? 'उत्तर सेव हो रहे हैं। फिर सबमिट करें।' : 'Answers are syncing. Please submit again.');
+          context.busy = true;
+          try {
+            const payload = {...latestDraftAnswers.current};
+            const snapshot = JSON.stringify(payload);
+            if (context.revision === undefined) {
+              const remote = await readTestAttemptDraft(activeAttempt.id);
+              if (remote.revision > 0 && JSON.stringify(remote.answers) !== snapshot) { context.blocked = true; setServerDraftStatus('conflict'); throw new Error('Server answers differ. Reopen this test.'); }
+              context.revision = remote.revision;
+              if (remote.revision > 0) context.acknowledged = snapshot;
+            }
+            if (context.acknowledged !== snapshot || !context.revision) {
+              const ack = await saveTestAttemptDraft(activeAttempt.id, payload, context.revision);
+              if (ack.conflict) { context.blocked = true; setServerDraftStatus('conflict'); throw new Error('Server answers differ. Reopen this test.'); }
+              context.revision = ack.revision;
+              context.acknowledged = snapshot;
+              setServerDraftRevision(ack.revision);
+              setServerDraftStatus('saved');
+            }
+            result = await finishTestAttemptDraft(activeAttempt.id, context.revision);
+          } finally { context.busy = false; }
+        }
+      } else result = await submitTestAttempt(activeAttempt.id, answers);
       setAutoSubmitPending(false);
       setServerResult(result);
       setActiveAttempt(result);
