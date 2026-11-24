@@ -28,7 +28,6 @@ import { PublishedStudioRuntime } from './visual-editor/PublishedStudioRuntime';
 import { parseStudioPages } from './visual-editor/studioBuilder';
 import {
   BookOpen,
-  LayoutDashboard,
   BookMarked,
   ClipboardCheck,
   UserRound,
@@ -67,102 +66,6 @@ const VALID_PAGES: PageId[] = [
   'admin',
   'adminPreview',
 ];
-
-interface HomeStudentSession {
-  studentName: string;
-  studentClass: string;
-  testId?: string;
-  timeLeftSeconds?: number;
-}
-
-const readHomeStudentSession = (): HomeStudentSession | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('krishan_sir_active_test_session');
-    if (raw) {
-      const session = JSON.parse(raw);
-      const student = session?.student;
-      if (student && typeof student.studentName === 'string' && typeof student.studentClass === 'string') {
-        return {
-          studentName: student.studentName,
-          studentClass: student.studentClass,
-          testId: typeof session.testId === 'string' ? session.testId : undefined,
-          timeLeftSeconds: typeof session.timeLeftSeconds === 'number' ? session.timeLeftSeconds : undefined,
-        };
-      }
-    }
-    const rawStudent = localStorage.getItem('krishan_sir_active_student');
-    if (rawStudent) {
-      const student = JSON.parse(rawStudent);
-      if (typeof student?.studentName === 'string' && typeof student?.studentClass === 'string') {
-        return { studentName: student.studentName, studentClass: student.studentClass };
-      }
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
-
-const StudentDashboardHome: React.FC<{ onNavigate: (page: string) => void; language: string }> = ({ onNavigate, language }) => {
-  const en = language === 'en';
-  const [session] = useState<HomeStudentSession | null>(() => readHomeStudentSession());
-
-  return (
-    <section className="py-8 sm:py-10 bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-5 sm:p-7 shadow-sm">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-sky-900 text-white flex items-center justify-center shrink-0">
-                <LayoutDashboard className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                  {en ? 'Student Dashboard' : 'विद्यार्थी डैशबोर्ड'}
-                </div>
-                <h2 className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900">
-                  {session
-                    ? (en ? `Welcome back, ${session.studentName}` : `वापसी पर स्वागत है, ${session.studentName}`)
-                    : (en ? 'Your Learning Space' : 'आपका अध्ययन केंद्र')}
-                </h2>
-                <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-                  {session
-                    ? (en ? `Class ${session.studentClass} · Your saved test session is available on this device.` : `कक्षा ${session.studentClass} · आपकी सेव की गई टेस्ट प्रगति इस डिवाइस पर उपलब्ध है।`)
-                    : (en ? 'Quick access to your classes, study notes, practice tests and results.' : 'कक्षाओं, अध्ययन नोट्स, अभ्यास टेस्ट और परिणामों तक त्वरित पहुँच।')}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => onNavigate('tests')} className="inline-flex items-center gap-2 rounded-xl bg-sky-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800 transition-colors">
-                <ClipboardCheck className="w-4 h-4" />
-                {session ? (en ? 'Continue Tests' : 'टेस्ट जारी रखें') : (en ? 'Start Learning' : 'पढ़ाई शुरू करें')}
-              </button>
-              <button onClick={() => onNavigate('results')} className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-bold text-sky-900 hover:bg-sky-50 transition-colors">
-                {en ? 'My Results' : 'मेरे परिणाम'}
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button onClick={() => onNavigate('classes')} className="flex items-center gap-2 rounded-xl bg-white/90 border border-slate-200 p-3 text-left text-sm font-semibold text-slate-700 hover:border-sky-300">
-              <BookOpen className="w-4 h-4 text-sky-800" />{en ? 'My Classes' : 'मेरी कक्षाएँ'}
-            </button>
-            <button onClick={() => onNavigate('materials')} className="flex items-center gap-2 rounded-xl bg-white/90 border border-slate-200 p-3 text-left text-sm font-semibold text-slate-700 hover:border-sky-300">
-              <BookMarked className="w-4 h-4 text-sky-800" />{en ? 'Study Materials' : 'अध्ययन सामग्री'}
-            </button>
-            <button onClick={() => onNavigate('tests')} className="flex items-center gap-2 rounded-xl bg-white/90 border border-slate-200 p-3 text-left text-sm font-semibold text-slate-700 hover:border-sky-300">
-              <ClipboardCheck className="w-4 h-4 text-sky-800" />{en ? 'Practice & Mock Tests' : 'अभ्यास एवं मॉक टेस्ट'}
-            </button>
-          </div>
-          <p className="mt-3 text-[11px] text-slate-500">
-            {en ? 'Dashboard shortcuts use the existing learning portal and locally saved test progress; they do not create a separate student account.' : 'डैशबोर्ड मौजूदा पोर्टल और इस डिवाइस पर सेव टेस्ट प्रगति का उपयोग करता है; यह अलग विद्यार्थी अकाउंट नहीं बनाता।'}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 const MainApp: React.FC = () => {
   const { language, t } = useLanguage();
@@ -324,12 +227,7 @@ const MainApp: React.FC = () => {
 
             )}
 
-                        {/* Student Dashboard: personalized shortcuts and saved test-session entry */}
-{homeSections.studentDashboard !== false && (
-            <StudentDashboardHome onNavigate={navigateTo} language={language} />
 
-
-            )}
 
                         {/* 8 Quick Access Cards to Dedicated Pages */}
 {homeSections.quickAccess !== false && (
