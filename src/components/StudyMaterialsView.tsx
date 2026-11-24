@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Class10PresentationPlayer } from './Class10PresentationPlayer';
+import { PresentationLibrary } from './PresentationLibrary';
 import { StudyVideoPlayer } from './StudyVideoPlayer';
 import { STUDY_CHAPTERS, CLASSES_METADATA } from '../data/portalData';
 import { ClassLevel, StudyChapter, Subject } from '../types';
@@ -178,7 +178,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
 
         {/* Coming Soon Notice if selected class is pending */}
         {isClassComingSoon ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center max-w-xl mx-auto my-8">
+          <><PresentationLibrary classLevel={selectedClass} subject="all" search={searchQuery} language={language} /><div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center max-w-xl mx-auto my-8">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center mb-4">
               <Clock className="w-6 h-6" />
             </div>
@@ -196,7 +196,7 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
             >
               Explore Class 10 Board Resources
             </button>
-          </div>
+          </div></>
         ) : (
           <div className="space-y-6">
             
@@ -222,16 +222,14 @@ export const StudyMaterialsView: React.FC<StudyMaterialsViewProps> = ({ initialC
               ))}
             </div>
 
-            {selectedClass === '10' && (selectedSubject === 'all' || selectedSubject === 'History') && (
-              <Class10PresentationPlayer language={language} />
-            )}
+            <PresentationLibrary classLevel={selectedClass} subject={selectedSubject} search={searchQuery} language={language} />
 
             {/* Chapters Grid */}
             {chaptersForClass.length === 0 ? (
               <div className="py-12 text-center text-slate-500 text-xs">
                 {language === 'en'
-                  ? 'No chapters found matching this filter. Switch to another subject or class.'
-                  : 'इस विषय हेतु अभी कोई सामग्री सूचीबद्ध नहीं है। अन्य विषय का चयन करें।'}
+                  ? 'No text notes found matching this filter. Presentations may be available above.'
+                  : 'इस विषय के लिखित नोट्स अभी उपलब्ध नहीं हैं। प्रस्तुतियाँ ऊपर देख सकते हैं।'}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

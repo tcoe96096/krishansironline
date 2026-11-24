@@ -1,0 +1,120 @@
+name: Study PPT conversion
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/study-ppt-admin-viewer-20261124'
+  pull_request:
+    paths:
+      - '.github/workflows/study-ppt-conversion.yml'
+      - 'scripts/convert-study-presentations.py'
+  schedule:
+    - cron: '*/10 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: study-ppt-conversion
+  cancel-in-progress: false
+jobs:
+  conversion-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install slide rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+          python3 -m pip install python-pptx==1.0.2
+      - name: Run real isolated conversion without database credentials
+        run: |
+          python3 - <<'PY'
+          import importlib.util, os, pathlib, tempfile
+          from pptx import Presentation
+          os.environ.update(STUDY_PPT_PROJECT_REF='a'*20, STUDY_PPT_SUPABASE_URL='https://'+'a'*20+'.supabase.co', STUDY_PPT_SERVICE_ROLE_KEY='smoke-test-not-a-secret')
+          spec = importlib.util.spec_from_file_location('converter', 'scripts/convert-study-presentations.py')
+          worker = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(worker)
+          with tempfile.TemporaryDirectory() as tmp:
+              deck = Presentation()
+              for title in ('Preview slide one', 'Preview slide two'):
+                  slide = deck.slides.add_slide(deck.slide_layouts[0])
+                  slide.shapes.title.text = title
+              source = pathlib.Path(tmp) / 'sample.pptx'
+              deck.save(str(source))
+              uploads = []
+              def mock_request(path, method='GET', payload=None, mime=None, extra=None, limit=worker.MAX_FILE):
+                  if method == 'GET' and path.endswith('/source.pptx'):
+                      return source.read_bytes()
+                  if method == 'POST' and path.startswith('/storage/v1/object/ksol-ppt-slides/'):
+                      assert mime == 'image/png' and payload.startswith(b'\x89PNG\r\n\x1a\n')
+                      uploads.append(path.rsplit('/', 1)[-1])
+                      return b'{}'
+                  raise AssertionError('Unexpected request')
+              worker.request = mock_request
+              assert worker.convert('00000000-0000-4000-8000-000000000001') == 2
+              assert uploads == ['slide-1.png', 'slide-2.png']
+              print('Two actual slides converted using isolated worker; no network storage accessed.')
+          PY
+  # Only the isolated Preview project can be used from the feature branch.
+  # Set repository variable STUDY_PPT_PREVIEW_ENABLED=true after configuring
+  # study-ppt-worker-preview with its own secret and branch protection.
+  preview-convert:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/study-ppt-admin-viewer-20261124' && vars.STUDY_PPT_PREVIEW_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: study-ppt-worker-preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install slide rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+      - name: Verify Preview database connection
+        env:
+          STUDY_PPT_PROJECT_REF: zgpkmfqioqvincmgyfpi
+          STUDY_PPT_SUPABASE_URL: https://zgpkmfqioqvincmgyfpi.supabase.co
+          STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json
+          spec = importlib.util.spec_from_file_location('converter', 'scripts/convert-study-presentations.py')
+          worker = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(worker)
+          rows = json.loads(worker.request(worker.TABLE + '?select=id&limit=1'))
+          assert isinstance(rows, list)
+          for bucket in ('ksol-ppt-originals', 'ksol-ppt-slides'):
+              metadata = json.loads(worker.request('/storage/v1/bucket/' + bucket))
+              assert metadata['public'] is False, 'PPT storage must remain private'
+          print('Preview database connection verified; both PPT buckets are private.')
+          PY
+      - name: Convert Preview queue only
+        env:
+          STUDY_PPT_PROJECT_REF: zgpkmfqioqvincmgyfpi
+          STUDY_PPT_SUPABASE_URL: https://zgpkmfqioqvincmgyfpi.supabase.co
+          STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
+        run: python3 scripts/convert-study-presentations.py
+  convert:
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.STUDY_PPT_PRODUCTION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: study-ppt-worker-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install slide rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+      - name: Convert private queued presentations
+        env:
+          STUDY_PPT_PROJECT_REF: vsqwlkqqsxcehvdsdbna
+          STUDY_PPT_SUPABASE_URL: https://vsqwlkqqsxcehvdsdbna.supabase.co
+          STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
+        run: python3 scripts/convert-study-presentations.py
