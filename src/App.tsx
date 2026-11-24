@@ -21,6 +21,8 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { TeacherSiteWorkspace } from './components/TeacherSiteWorkspace';
 import { SearchModal } from './components/SearchModal';
 import { PageHeaderBanner } from './components/PageHeaderBanner';
+import { PublicInfoPage } from './components/PublicInfoPage';
+import { publicInfoPages, type InfoPageId } from './data/publicInfo';
 import { ClassLevel } from './types';
 import { TEACHER_INFO } from './data/portalData';
 import { getPublishedWebsiteConfig, subscribeToWebsiteConfigChanges, type WebsiteConfig } from './services/siteConfigService';
@@ -47,7 +49,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'teacher' | 'teacherRegistration' | 'teacherLogin' | 'teacherDashboard' | 'admin' | 'adminPreview';
+type PageId = 'home' | 'classes' | 'exams' | 'tests' | 'materials' | 'polity' | 'affairs' | 'results' | 'about' | 'contact' | 'studentDashboard' | 'teacher' | 'teacherRegistration' | 'teacherLogin' | 'teacherDashboard' | 'admin' | 'adminPreview' | InfoPageId;
 
 const VALID_PAGES: PageId[] = [
   'home',
@@ -67,6 +69,7 @@ const VALID_PAGES: PageId[] = [
   'teacherDashboard',
   'admin',
   'adminPreview',
+  ...publicInfoPages.map(p=>p.id),
 ];
 
 const MainApp: React.FC = () => {
@@ -119,6 +122,7 @@ const MainApp: React.FC = () => {
     '/teacher-dashboard': 'teacherDashboard',
     '/admin': 'admin',
     '/admin-preview': 'adminPreview',
+    ...Object.fromEntries(publicInfoPages.map(p=>['/'+p.slug,p.id])),
   };
   const pageToPath: Record<PageId, string> = {
     home: '/', classes: '/classes/', exams: '/all-exams/', tests: '/online-tests/',
@@ -127,6 +131,7 @@ const MainApp: React.FC = () => {
     results: '/results/', about: '/about/', contact: '/contact/', studentDashboard: '/student-dashboard/',
     teacher: '/teacher/', teacherRegistration: '/teacher-registration/', teacherLogin: '/teacher-login/', teacherDashboard: '/teacher-dashboard/',
     admin: '/admin/', adminPreview: '/admin-preview/',
+    ...Object.fromEntries(publicInfoPages.map(p=>[p.id,'/'+p.slug+'/'])) as Record<InfoPageId,string>,
   };
   const readPageFromLocation = (): PageId => {
     const pathname = window.location.pathname;
@@ -209,12 +214,13 @@ const MainApp: React.FC = () => {
         onOpenAuth={() => setIsAuthOpen(true)}
       />}
 
-      {activePage !== 'admin' && activePage !== 'adminPreview' && activePage !== 'tests' && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} showTeacherPreview={false} />}
+      {activePage !== 'admin' && activePage !== 'adminPreview' && activePage !== 'tests' && !publicInfoPages.some(p=>p.id===activePage) && <FloatingStudentLogin onClick={() => setIsAuthOpen(true)} showTeacherPreview={false} />}
 
       {/* Main Dedicated Page Routing */}
       <main className="flex-1">
         {activePage === 'studentDashboard' && (user && profile ? <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"><StudentDashboard /></div> : <div className="mx-auto max-w-3xl px-4 py-16 text-center"><h2 className="text-xl font-extrabold text-slate-900">विद्यार्थी लॉगिन आवश्यक है</h2><p className="mt-2 text-sm text-slate-600">अपना Student Account खोलने के लिए लॉगिन करें।</p><button onClick={() => setIsAuthOpen(true)} className="mt-5 rounded-xl bg-sky-900 px-5 py-3 text-sm font-bold text-white">Student Login</button></div>)}
         {(['teacher', 'teacherRegistration', 'teacherLogin', 'teacherDashboard'] as PageId[]).includes(activePage) && <TeacherSiteWorkspace section={activePage as 'teacher'|'teacherRegistration'|'teacherLogin'|'teacherDashboard'} onNavigate={navigateTo} />}
+        {publicInfoPages.some(p=>p.id===activePage) && <PublicInfoPage key={activePage} pageId={activePage as InfoPageId} />}
         {activePage === 'admin' && <AdminDashboard onBackToWebsite={() => navigateTo('home')} />}
         {activePage === 'adminPreview' && <AdminDashboard demoMode onBackToWebsite={() => navigateTo('home')} />}
         {publishedCustomPage && <article data-studio-published-page={publishedCustomPage.slug} className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 sm:px-8">
