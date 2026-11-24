@@ -19,6 +19,14 @@ export async function listPresentations(admin = false): Promise<Presentation[]> 
   if(error) throw error;
   return (data || []) as Presentation[];
 }
+async function requestConversion(id:string) {
+  try {
+    const {error}=await requireSupabase().functions.invoke('study-ppt-dispatch',{body:{id}});
+    if(error) console.warn('PPT saved; automatic dispatch unavailable. Scheduled worker remains the fallback.');
+  } catch {
+    console.warn('PPT saved; automatic dispatch unavailable. Scheduled worker remains the fallback.');
+  }
+}
 export async function uploadPresentation(details: PresentationDetails, file: File) {
   if (!/\.pptx$/i.test(file.name) || !file.size || file.size > 50*1024*1024) throw new Error('Select a PPTX file up to 50 MB.');
   if (!details.title.trim() || !details.chapter.trim()) throw new Error('Title and chapter are required.');
@@ -28,10 +36,12 @@ export async function uploadPresentation(details: PresentationDetails, file: Fil
   const {error} = await client.from(table).insert({...details,title:details.title.trim(),chapter:details.chapter.trim(),id});
   // Do not delete the original on an ambiguous network failure: the row may have committed.
   if(error) throw new Error('Metadata save failed; refresh before retrying. '+error.message);
+  await requestConversion(id);
 }
 export async function updatePresentation(id: string, patch: Partial<Pick<Presentation,'title'|'chapter'|'subject'|'class_level'|'published'|'allow_download'|'status'>>) {
   const {data,error} = await requireSupabase().from(table).update({...patch,updated_at:new Date().toISOString()}).eq('id',id).select('id').single();
   if(error || !data) throw error || new Error('Update not authorized.');
+  if(patch.status==='queued') await requestConversion(id);
 }
 export async function archivePresentation(p: Presentation) {
   const client=requireSupabase();
