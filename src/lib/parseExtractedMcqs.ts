@@ -6,11 +6,11 @@ export type ImportedMcq = {
 };
 export type ParseResult = { questions: ImportedMcq[]; warnings: string[] };
 
-const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(?:\(([0-9०-९]{1,4})\)\s*|([0-9०-९]{1,4})\s*[.)\-:]\s*)(.+)$/i;
+const questionStart = /^(?:(?:Q(?:uestion)?|प्रश्न|प्र\.)\s*[:：.]?\s*)?(?:\(([0-9०-९]{1,4})\)\s*|([0-9०-९]{1,4})\s*[.)\-:]\s*)(.+)$/i;
 const answerSuffix = /(?:^|\s)(?:correct\s+answer|answer|सही\s+उत्तर|उत्तर)\s*[:：\-]\s*\(?([A-Da-dकखगघ])\)?\s*$/i;
 const optionMarker = /(^|\s)(?:\(([A-Da-dकखगघ])\)|([A-Da-dकखगघ])[.)\-:])\s*/g;
 const answerKeyHeading = /^(?:answer\s*(?:key|sheet|list)|answers|correct\s*answers|उत्तर\s*(?:कुंजी|माला|सूची)|उत्तरमाला)(?:\s*[:：\-]\s*|\s*$)/i;
-const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\(([0-9०-९]{1,4})\)|([0-9०-९]{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-dकखगघ])\)?(?=$|[\s,;|])/gi;
+const answerEntry = /(?:^|[\s,;|])(?:(?:Q(?:uestion)?|प्रश्न|प्र\.)\s*[:：.]?\s*)?(?:\(([0-9०-९]{1,4})\)|([0-9०-९]{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-dकखगघ])\)?(?=$|[\s,;|])/gi;
 
 const questionNumberFromSource = (raw: string): number => Number(raw.replace(/[०-९]/g, digit => String(digit.charCodeAt(0) - 0x0966)));
 
