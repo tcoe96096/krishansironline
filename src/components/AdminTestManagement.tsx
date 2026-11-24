@@ -274,7 +274,9 @@ export const AdminTestManagement: React.FC = () => {
   const importBulkJson = () => {
     setError(''); setNotice('');
     try {
-      const payload = JSON.parse(bulkJson);
+      const trimmed = bulkJson.trim();
+      const fencedJson = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const payload = JSON.parse(fencedJson ? fencedJson[1].trim() : trimmed);
       if (!payload.title?.en?.trim() || !payload.title?.hi?.trim() || !payload.chapter?.trim() || !Array.isArray(payload.questions) || payload.questions.length === 0) throw new Error('Bilingual title, chapter और कम-से-कम एक प्रश्न आवश्यक हैं।');
       if (payload.questions.some((q: any) => !q || !['factual', 'conceptual'].includes(q.category))) throw new Error('हर प्रश्न की category factual या conceptual होनी चाहिए।');
       const mapped = payload.questions.map((q: any, i: number) => {
