@@ -147,6 +147,7 @@ const MainApp: React.FC = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [testLoginOutcome, setTestLoginOutcome] = useState<{ sequence: number; outcome: 'success' | 'cancel' }>({ sequence: 0, outcome: 'cancel' });
   const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<ClassLevel>('9');
   const readTestClassFilter = (): ClassLevel | undefined => {
     const value = new URLSearchParams(window.location.search).get('class');
@@ -560,7 +561,7 @@ const MainApp: React.FC = () => {
               icon={Laptop}
               onBackHome={() => navigateTo('home')}
             />
-            <OnlineTestEngine initialClassFilter={selectedClassForTests} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} />
+            <OnlineTestEngine initialClassFilter={selectedClassForTests} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} loginOutcome={testLoginOutcome} />
           </div>
         )}
 
@@ -755,7 +756,7 @@ const MainApp: React.FC = () => {
         onClose={() => setIsSearchOpen(false)}
         onNavigate={navigateTo}
       />
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal isOpen={isAuthOpen} onClose={(outcome = 'cancel') => { setIsAuthOpen(false); setTestLoginOutcome(previous => ({ sequence: previous.sequence + 1, outcome })); }} />
     </div>
   );
 };
