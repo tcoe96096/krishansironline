@@ -140,3 +140,36 @@ export async function getAdminTestAttempts(): Promise<TestAttempt[]> {
   if (error) throw error;
   return (data ?? []) as TestAttempt[];
 }
+
+/** Disabled unless a preview build explicitly opts into the deployed draft RPCs. */
+export const examServerAutosaveEnabled = import.meta.env.VITE_EXAM_SERVER_AUTOSAVE_ENABLED === 'true';
+export interface TestAttemptDraft {
+  answers: Record<number, number>;
+  revision: number;
+  saved_at: string | null;
+  expires_at: string;
+  server_now: string;
+}
+export interface TestAttemptDraftAck {
+  conflict: boolean;
+  revision: number;
+  saved_at: string | null;
+  expires_at?: string;
+  server_now?: string;
+}
+export async function readTestAttemptDraft(attemptId: string): Promise<TestAttemptDraft> {
+  const {data,error} = await requireSupabase().rpc('read_test_attempt_draft',{p_attempt_id:attemptId});
+  if(error) throw error;
+  if(!data || !Number.isSafeInteger(data.revision) || data.revision<0 || !data.answers || typeof data.answers!=='object' || Array.isArray(data.answers)) throw new Error('Invalid server draft response');
+  const answers: Record<number,number> = {};
+  for(const [key,value] of Object.entries(data.answers)) {
+    if(/^\d+$/.test(key) && typeof value==='number' && Number.isInteger(value) && value>=0) answers[Number(key)]=value;
+  }
+  return {...data,answers} as TestAttemptDraft;
+}
+export async function saveTestAttemptDraft(attemptId: string, answers: Record<number,number>, revision: number): Promise<TestAttemptDraftAck> {
+  const {data,error}=await requireSupabase().rpc('save_test_attempt_draft',{p_attempt_id:attemptId,p_answers:answers,p_expected_revision:revision});
+  if(error) throw error;
+  if(!data || typeof data.conflict!=='boolean' || !Number.isSafeInteger(data.revision) || data.revision<0) throw new Error('Invalid server draft acknowledgement');
+  return data as TestAttemptDraftAck;
+}
