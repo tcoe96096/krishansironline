@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { requireSupabase } from '../lib/supabase';
 import { extractTestDocumentText } from '../lib/extractTestDocumentText';
 import { parseExtractedMcqs } from '../lib/parseExtractedMcqs';
+import { parseTestDocumentMetadata } from '../lib/parseTestDocumentMetadata';
 import { ArrowLeft, Plus, Save, Send, RefreshCw, Trash2, Eye, EyeOff, ClipboardList, Search } from 'lucide-react';
 
 type Bilingual = { en: string; hi: string };
@@ -122,22 +123,21 @@ export const AdminTestManagement: React.FC = () => {
       });
       setQuestions(imported);
       setAnswers(parsed.questions.map(q => q.answerIndex ?? -1));
-      setDocumentImportWarnings(parsed.warnings);
       setDocumentImportFileName(file.name);
-      // Only set metadata explicitly labelled in the document: no silent guesses.
-      const head = rawText.slice(0, 2500);
-      const named = (name: string) => head.match(new RegExp('(?:^|\\n)\\s*(?:' + name + ')\\s*[:：\\-]\\s*([^\\n]+)', 'im'))?.[1]?.trim();
-      const classMatch = named('class|कक्षा')?.match(/\b(6|7|8|9|10|11|12)\b/);
-      if (classMatch) setClassLevel(classMatch[1]);
-      const subjectValue = named('subject|विषय');
-      if (subjectValue) setSubject(subjectValue);
-      const chapterValue = named('chapter|अध्याय');
-      if (chapterValue) setChapter(chapterValue);
-      const minutes = named('duration|time|समय')?.match(/\b(\d{1,3})\b/);
-      if (minutes && Number(minutes[1]) >= 1 && Number(minutes[1]) <= 600) setDuration(Number(minutes[1]));
-      const fileTitle = named('test title|title|शीर्षक') ||
-        file.name.replace(/\.(pdf|docx)$/i, '').replace(/[-_]+/g, ' ').trim() || 'Untitled Test';
-      setTitle(/[\u0900-\u097f]/.test(fileTitle) ? { en: '', hi: fileTitle } : { en: fileTitle, hi: '' });
+      // Only explicit document labels are used to populate settings.
+      const metadata = parseTestDocumentMetadata(rawText, file.name, parsed.questions.length);
+      setDocumentImportWarnings([...parsed.warnings, ...metadata.warnings]);
+      if (metadata.classLevel) setClassLevel(metadata.classLevel);
+      if (metadata.subject) setSubject(metadata.subject);
+      if (metadata.chapter) setChapter(metadata.chapter);
+      if (metadata.durationMinutes !== undefined) setDuration(metadata.durationMinutes);
+      if (metadata.attemptLimit !== undefined) setAttemptLimit(metadata.attemptLimit);
+      if (metadata.title) setTitle(/[\u0900-\u097f]/.test(metadata.title)
+        ? { en: '', hi: metadata.title }
+        : { en: metadata.title, hi: '' });
+      if (metadata.marksPerQuestion !== undefined) {
+        setQuestions(current => current.map(q => ({ ...q, marks: metadata.marksPerQuestion! })));
+      }
       setNotice(parsed.questions.length + ' प्रश्न Draft Form में आ गए। अनुवाद व उत्तर सुझावों के लिए नीचे AI Assist चलाएँ; उत्तरों को प्रकाशित करने से पहले जाँचें।');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'PDF/Word document import असफल।');
