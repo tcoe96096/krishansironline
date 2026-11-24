@@ -118,7 +118,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  const dbCheck=spawnSync('psql',[...common,'--no-psqlrc','--tuples-only','--no-align','--command','SELECT 1'],{
   env:pgEnv,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
  if(dbCheck.error||dbCheck.status!==0||dbCheck.stdout.trim()!=='1')
-  throw new Error('Preview database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
+  throw new Error(source+' database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
  console.log('KSOL_BACKUP_PHASE: DATABASE_PREFLIGHT_OK');
  const cloudCheck=spawnSync('rclone',['lsf',remote+':'],{
   env,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
