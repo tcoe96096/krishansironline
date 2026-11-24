@@ -110,19 +110,19 @@ export const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate, onOpe
       </div>
 
       <nav className="bg-[#edf3f9] text-[#173b68] border-b-[3px] border-[#c8d9e9] shadow-sm" aria-label="Main navigation">
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 flex items-center justify-between gap-2 min-h-[44px]">
+        <div className={`max-w-7xl mx-auto px-3 sm:px-5 flex items-center justify-between min-h-[44px] ${activeSection === 'tests' ? 'gap-1 flex-wrap lg:flex-nowrap' : 'gap-2'}`}>
                     <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden inline-flex items-center gap-2 p-2 rounded-lg text-[#173b68] hover:bg-[#dce8f3]" aria-label="Toggle navigation" aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            <span className="text-xs font-bold">{language === 'en' ? 'Menu' : 'मेन्यू'}</span>
+            <span className={`text-xs font-bold ${activeSection === 'tests' ? 'hidden min-[480px]:inline' : ''}`}>{language === 'en' ? 'Menu' : 'मेन्यू'}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-<div className="lg:hidden flex items-center justify-end gap-2">
+<div className={`lg:hidden flex min-w-0 items-center justify-end ${activeSection === 'tests' ? 'gap-1 flex-wrap' : 'gap-2'}`}>
             <button type="button" onClick={onOpenSearch} aria-label="Search" title="Search" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-[#17477e]/20 bg-white text-[#092c60] shadow-sm transition hover:bg-[#f5f9ff]"><Search className="h-4 w-4" /></button>
             <div role="group" aria-label="Select language" className="inline-flex h-10 shrink-0 items-center rounded-xl border border-[#17477e]/20 bg-white p-1 shadow-sm">
               <button type="button" onClick={() => { if (language === 'en') toggleLanguage(); }} aria-pressed={language !== 'en'} aria-label="हिन्दी" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language !== 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>HI</button>
               <button type="button" onClick={() => { if (language !== 'en') toggleLanguage(); }} aria-pressed={language === 'en'} aria-label="English" className={`h-full rounded-full px-2 text-[11px] font-extrabold ${language === 'en' ? 'bg-[#123c70] text-white shadow-sm' : 'text-[#17477e]'}`}>EN</button>
             </div>
-            <button type="button" onClick={() => handleNavClick('teacher')} aria-label="Teacher Management" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#092f68] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#124887]"><GraduationCap className="h-4 w-4" />Teacher</button>
+            <button type="button" onClick={() => handleNavClick('teacher')} aria-label="Teacher Management" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#092f68] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#124887]"><GraduationCap className="h-4 w-4" //><span className={activeSection === 'tests' ? 'hidden min-[480px]:inline' : ''}>Teacher</span></button>
             <button type="button" onClick={() => onOpenAuth()} aria-label={user ? "Open student dashboard" : "Student Login"} title={user ? studentDisplayName : "Student Login"} className="h-10 min-w-10 max-w-[150px] shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#17477e]/20 bg-[#123c70] px-2 text-white shadow-sm transition hover:bg-[#124887]"><UserRound className="h-4 w-4 shrink-0" /><span className="max-w-[92px] truncate text-[11px] font-bold">{user ? studentDisplayName : (language === "en" ? "Login" : "लॉगिन")}</span></button>
           </div>
           <div className="hidden lg:flex flex-1 items-center justify-between gap-1">
