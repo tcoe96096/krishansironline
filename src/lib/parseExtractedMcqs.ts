@@ -7,10 +7,15 @@ export type ImportedMcq = {
 export type ParseResult = { questions: ImportedMcq[]; warnings: string[] };
 
 const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)\s*|(\d{1,4})\s*[.)\-:]\s*)(.+)$/i;
-const answerSuffix = /(?:^|\s)(?:correct\s+answer|answer|सही\s+उत्तर|उत्तर)\s*[:：\-]\s*\(?([A-Da-d])\)?\s*$/i;
-const optionMarker = /(^|\s)(?:\(([A-Da-d])\)|([A-Da-d])[.)\-:])\s*/g;
+const answerSuffix = /(?:^|\s)(?:correct\s+answer|answer|सही\s+उत्तर|उत्तर)\s*[:：\-]\s*\(?([A-Da-dकखगघ])\)?\s*$/i;
+const optionMarker = /(^|\s)(?:\(([A-Da-dकखगघ])\)|([A-Da-dकखगघ])[.)\-:])\s*/g;
 const answerKeyHeading = /^(?:answer\s*(?:key|sheet|list)|answers|correct\s*answers|उत्तर\s*(?:कुंजी|माला|सूची)|उत्तरमाला)(?:\s*[:：\-]\s*|\s*$)/i;
-const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)|(\d{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-d])\)?(?=$|[\s,;|])/gi;
+const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)|(\d{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-dकखगघ])\)?(?=$|[\s,;|])/gi;
+
+const optionIndex = (letter: string): number => {
+  const hindi = 'कखगघ'.indexOf(letter);
+  return hindi >= 0 ? hindi : letter.toUpperCase().charCodeAt(0) - 65;
+};
 
 export function parseExtractedMcqs(text: string): ParseResult {
   if (text.length > 2_000_000) throw new Error('Document text exceeds import limit');
@@ -46,7 +51,7 @@ export function parseExtractedMcqs(text: string): ParseResult {
     // The answer key is treated as untrusted source data and not proof of correctness.
     for (const entry of source.matchAll(answerEntry)) {
       const questionNumber = Number(entry[1] || entry[2]);
-      const optionIndex = entry[3].toUpperCase().charCodeAt(0) - 65;
+      const optionIndex = optionIndex(entry[3]);
       if (!keyedAnswers.has(questionNumber)) keyedAnswers.set(questionNumber, new Set());
       keyedAnswers.get(questionNumber)!.add(optionIndex);
     }
@@ -64,7 +69,7 @@ export function parseExtractedMcqs(text: string): ParseResult {
     let line = value.trim();
     const suffix = line.match(answerSuffix);
     if (suffix) {
-      answer = suffix[1].toUpperCase().charCodeAt(0) - 65;
+      answer = optionIndex(suffix[1]);
       line = line.slice(0, suffix.index).trim();
     }
     if (!line) return;
@@ -74,7 +79,7 @@ export function parseExtractedMcqs(text: string): ParseResult {
     for (let i = 0; i < markers.length; i++) {
       const marker = markers[i];
       const letter = (marker[2] || marker[3]).toUpperCase();
-      const foundIndex = letter.charCodeAt(0) - 65;
+      const foundIndex = optionIndex(letter);
       const end = i + 1 < markers.length ? markers[i + 1].index : line.length;
       const body = line.slice(marker.index! + marker[0].length, end).trim();
       if (foundIndex !== options.length || !body) {
