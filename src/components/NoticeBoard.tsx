@@ -67,8 +67,8 @@ const LatestTestLaunches: React.FC = () => {
     {status === 'error' && <p role="status" className="text-xs text-slate-600">{language === 'en' ? 'Test updates temporarily unavailable.' : 'टेस्ट अपडेट अभी उपलब्ध नहीं हैं।'}</p>}
     {status === 'ready' && !tests.length && <p className="text-xs text-slate-500">{language === 'en' ? 'No published tests yet.' : 'अभी कोई प्रकाशित टेस्ट नहीं है।'}</p>}
     <div className="grid grid-cols-1 gap-2">
-      {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
-        <div className="min-w-0"><span className="ksol-launch-new mb-1 inline-block origin-left text-sm font-black leading-tight tracking-wide" style={{ color: '#dc2626' }}>NEW</span><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
+      {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
+        <div className="min-w-0"><span className="ksol-launch-new mb-1 inline-block origin-left text-sm font-black leading-tight tracking-wide" style={{ color: '#dc2626' }}>NEW</span><div className="text-xs font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-base font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-xs text-slate-600">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
         <span className="shrink-0 text-[11px] font-bold text-sky-800">{language === 'en' ? 'View test' : 'टेस्ट देखें'} ›</span>
       </a>)}
     </div>
@@ -271,24 +271,20 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
   return (
     <section className="py-10 bg-white border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] items-stretch gap-6">
-        <div className="relative min-h-[340px] min-w-0 rounded-2xl border border-sky-200 bg-slate-50 p-4 shadow-sm sm:p-5 lg:min-h-0">
-        <div className="mb-3 border-b border-sky-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 shrink-0 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-              <Bell className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <h2 className="whitespace-nowrap text-[clamp(10px,1vw,13px)] font-bold leading-tight tracking-tight text-slate-900">
-                {language === 'en' ? 'Latest Announcements & Updates' : 'नवीनतम सूचनाएं एवं अपडेट्स'}
-              </h2>
-              <p className="mt-1 text-[10px] leading-tight text-slate-500">
-                {language === 'en' ? 'Official updates' : 'आधिकारिक सूचनाएँ'}
-              </p>
-            </div>
+        <div className="flex min-h-[340px] min-w-0 flex-col rounded-2xl border border-sky-200 bg-slate-50 p-3 shadow-sm sm:p-4 lg:min-h-0">
+        <div className="mb-3 rounded-xl border border-sky-900 bg-gradient-to-br from-slate-900 via-sky-900 to-slate-800 px-3 py-4 text-center shadow-md">
+          <div className="flex items-center justify-center gap-2">
+            <Bell className="h-6 w-6 shrink-0 text-amber-300" aria-hidden="true" />
+            <h2 className="text-xl font-extrabold leading-tight tracking-tight text-white sm:text-2xl">
+              {language === 'en' ? 'Latest Updates' : 'नवीनतम अपडेट्स'}
+            </h2>
           </div>
+          <p className="mt-1 text-sm font-medium leading-snug text-sky-100">
+            {language === 'en' ? 'Announcements & Notices' : 'सूचनाएँ एवं घोषणाएँ'}
+          </p>
         </div>
 
-        <div tabIndex={0} role="region" aria-label={language === 'en' ? 'Scrollable announcements and updates' : 'स्क्रॉल करने योग्य सूचनाएँ और अपडेट'} className="max-h-[520px] overflow-y-auto overscroll-y-contain pr-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600 lg:absolute lg:inset-x-4 lg:bottom-5 lg:top-[88px] lg:max-h-none">
+        <div tabIndex={0} role="region" aria-label={language === 'en' ? 'Scrollable announcements and updates' : 'स्क्रॉल करने योग्य सूचनाएँ और अपडेट'} className="relative min-h-0 max-h-[520px] flex-1 overflow-y-auto overscroll-y-contain pr-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600 lg:max-h-none lg:contain-size">
         <LatestTestLaunches />
 
         {loading && <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'Loading announcements…' : 'सूचनाएँ लोड हो रही हैं…'}</p>}
@@ -298,14 +294,14 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
               const title = localized(notice.title, language);
               const details = localized(notice.details, language);
               return (
-                <article key={notice.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition-shadow hover:shadow-sm">
+                <article key={notice.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
                   <div className="flex items-center gap-2 text-xs mb-2">
                     <span className={`px-2 py-0.5 rounded-sm font-semibold border text-[11px] ${categoryClass(notice.category)}`}>{notice.category}</span>
                     {notice.isPinned && <span className="rounded-sm border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">{language === 'en' ? 'FEATURED' : 'प्रमुख सूचना'}</span>}
                     {notice.date && <span className="text-slate-400 font-mono text-[11px] inline-flex items-center gap-1"><Calendar className="w-3 h-3" />{notice.date}</span>}
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{title || (language === 'en' ? 'Announcement' : 'सूचना')}</h3>
-                  {details && <p className="mt-1.5 text-xs text-slate-600 leading-relaxed whitespace-pre-line">{details}</p>}
+                  <h3 className="text-base font-bold text-slate-900 leading-snug">{title || (language === 'en' ? 'Announcement' : 'सूचना')}</h3>
+                  {details && <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-line">{details}</p>}
                   {notice.link && (
                     <button type="button" onClick={() => openNoticeLink(notice.link)}
                       className="mt-3 pt-2.5 border-t border-slate-100 w-full flex items-center justify-between text-xs font-semibold text-sky-700 hover:text-sky-900">
