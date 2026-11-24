@@ -38,6 +38,8 @@ import {
   GraduationCap,
   HelpCircle,
   ArrowRight,
+  ArrowLeft,
+  Home,
   Sparkles,
   ShieldCheck,
   ChevronRight,
@@ -551,16 +553,16 @@ const MainApp: React.FC = () => {
 
         {activePage === 'tests' && (
           <div>
-            <PageHeaderBanner
-              titleEn="Online Tests & Practice Portal"
-              titleHi="ऑनलाइन टेस्ट एवं अभ्यास पोर्टल"
-              subtitleEn="Attempt available online tests and practice questions with the dedicated test engine."
-              subtitleHi="समर्पित टेस्ट पोर्टल के माध्यम से उपलब्ध ऑनलाइन टेस्ट एवं अभ्यास प्रश्न हल करें।"
-              badgeEn="Tests & Practice"
-              badgeHi="टेस्ट एवं अभ्यास"
-              icon={Laptop}
-              onBackHome={() => navigateTo('home')}
-            />
+            <div className="border-b border-sky-100 bg-white">
+              <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6 lg:px-8">
+                <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
+                  <button type="button" onClick={() => navigateTo('home')} className="inline-flex min-h-10 items-center gap-1 font-semibold transition-colors hover:text-sky-800"><Home className="h-3.5 w-3.5" aria-hidden="true"/>{language === 'en' ? 'Home' : 'मुख्य पृष्ठ'}</button>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/>
+                  <span aria-current="page" className="font-semibold text-sky-800">{language === 'en' ? 'Online Tests' : 'ऑनलाइन टेस्ट'}</span>
+                </nav>
+                <button type="button" onClick={() => navigateTo('home')} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-sky-200 px-3 text-xs font-semibold text-sky-900 hover:bg-sky-50"><ArrowLeft className="h-3.5 w-3.5" aria-hidden="true"/>{language === 'en' ? 'Back to Home' : 'मुख्य पृष्ठ पर वापस जाएं'}</button>
+              </div>
+            </div>
             <OnlineTestEngine initialClassFilter={selectedClassForTests} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} loginOutcome={testLoginOutcome} />
           </div>
         )}
