@@ -70,6 +70,10 @@ jobs:
               await page.goto(base + '/online-tests/');
               const scope = page.locator('#tests');
               await scope.getByRole('heading',{name:'Online Test Centre',exact:true}).waitFor();
+              await page.getByRole('navigation',{name:'Breadcrumb'}).getByRole('button',{name:'Home',exact:true}).waitFor();
+              await page.getByRole('button',{name:'Back to Home',exact:true}).waitFor();
+              assert.equal(await page.getByRole('heading',{name:'Online Tests & Practice Portal',exact:true}).count(),0,'Duplicate banner heading removed');
+              assert.equal(await page.getByText('Attempt available online tests and practice questions with the dedicated test engine.',{exact:true}).count(),0,'Duplicate subtitle removed');
               assert.equal(await scope.getByText('ONLINE CBT EXAMINATION',{exact:true}).count(),0,'Redundant overview must be absent');
               assert.equal(await scope.getByRole('group',{name:'Select test language'}).count(),0,'Language control is exam-only');
               assert.equal(await scope.getByRole('button',{name:'CBT Mode',exact:true}).count(),0,'CBT controls are exam-only');
