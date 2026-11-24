@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { SUPPORT_EMAIL } from '../data/publicInfo';
 import { Mail, Phone, Send, CheckCircle2, MessageSquare, School, HelpCircle } from 'lucide-react';
 
 export const ContactSection: React.FC = () => {
   const { language } = useLanguage();
-  const [studentName, setStudentName] = useState('');
   const [classLevel, setClassLevel] = useState('10');
   const [subject, setSubject] = useState('Social Science');
   const [message, setMessage] = useState('');
@@ -12,12 +12,13 @@ export const ContactSection: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName.trim() || !message.trim()) return;
+    if (!message.trim()) return;
+    const body = ['Class: '+classLevel,'Subject: '+subject,'',message.trim()].join('\n');
+    window.location.href = 'mailto:'+SUPPORT_EMAIL+'?subject='+encodeURIComponent('Academic question')+'&body='+encodeURIComponent(body);
     setSubmitted(true);
   };
 
   const handleReset = () => {
-    setStudentName('');
     setMessage('');
     setSubmitted(false);
   };
@@ -103,10 +104,10 @@ export const ContactSection: React.FC = () => {
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 font-display">
-                  Query Submitted Successfully!
+                  {language==='en'?'Email draft requested':'ईमेल ड्राफ्ट खोलने का अनुरोध'}
                 </h3>
                 <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-                  Thank you, <strong>{studentName}</strong>. Your doubt for Class {classLevel} ({subject}) has been recorded for Krishan Sir. It will be reviewed and addressed in the next portal revision notes update or school discussion.
+                  {language==='en'?'Send the draft in your email application. The portal has not stored or confirmed delivery of your message.':'अपने ईमेल ऐप में ड्राफ्ट भेजें। पोर्टल ने संदेश संग्रहित नहीं किया है और वितरण की पुष्टि नहीं की है।'}
                 </p>
                 <button
                   onClick={handleReset}
@@ -124,19 +125,7 @@ export const ContactSection: React.FC = () => {
                   Fill in your question regarding any chapter, concept, or test
                 </p>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Student Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Pooja Sharma / राहुल कुमार"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-300 p-2.5 focus:ring-2 focus:ring-sky-500 focus:outline-hidden"
-                  />
-                </div>
+                <p className="rounded-lg bg-sky-50 p-3 text-xs text-sky-900">{language==='en'?'Do not include names, passwords, home addresses or private records. The button opens your email application; nothing is sent until you send the message yourself.':'नाम, पासवर्ड, घर का पता या निजी रिकॉर्ड न लिखें। बटन आपका ईमेल ऐप खोलेगा; संदेश आपके स्वयं भेजने तक नहीं भेजा जाएगा।'}</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -196,7 +185,7 @@ export const ContactSection: React.FC = () => {
                   className="w-full py-3 px-4 rounded-xl bg-sky-900 hover:bg-sky-800 text-white font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
-                  <span>Submit Academic Doubt</span>
+                  <span>{language==='en'?'Open email draft':'ईमेल ड्राफ्ट खोलें'}</span>
                 </button>
               </form>
             )}
