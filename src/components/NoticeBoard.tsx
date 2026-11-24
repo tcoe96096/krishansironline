@@ -134,7 +134,7 @@ const LatestPresentationCovers: React.FC<{ onNavigate: (section: string) => void
   }, [paused, activeId, items.length, catalogueKey]);
   useEffect(() => { if (activeId && !active) setActiveId(null); }, [activeId, active]);
   const move = (direction: number) => setSelected(i => (i + direction + items.length) % items.length);
-  return <aside aria-label={en ? 'Latest presentations' : 'नवीनतम प्रस्तुतियाँ'} className="min-w-0 self-start rounded-2xl border border-sky-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
+  return <aside aria-label={en ? 'Latest presentations' : 'नवीनतम प्रस्तुतियाँ'} className="min-w-0 rounded-2xl border border-sky-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><PresentationIcon className="h-5 w-5 text-sky-800" />{en ? 'Latest PPTs' : 'नवीनतम PPT'}</h2>
       <button type="button" onClick={() => onNavigate('materials')} className="text-xs font-bold text-sky-800 hover:underline">{en ? 'All study materials' : 'सभी अध्ययन सामग्री'} ›</button>
@@ -270,25 +270,25 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
 
   return (
     <section className="py-10 bg-white border-b border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] items-start gap-6">
-        <div className="min-w-0">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] items-stretch gap-6">
+        <div className="relative min-h-[340px] min-w-0 rounded-2xl border border-sky-200 bg-slate-50 p-4 shadow-sm sm:p-5 lg:min-h-0">
+        <div className="mb-3 border-b border-sky-100 pb-3">
+          <div className="flex items-center gap-2">
             <div className="h-7 w-7 shrink-0 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
               <Bell className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <h2 className="whitespace-nowrap text-[clamp(10px,1.05vw,14px)] font-bold leading-tight tracking-tight text-slate-900">
+              <h2 className="whitespace-nowrap text-[clamp(10px,1vw,13px)] font-bold leading-tight tracking-tight text-slate-900">
                 {language === 'en' ? 'Latest Announcements & Updates' : 'नवीनतम सूचनाएं एवं अपडेट्स'}
               </h2>
-              <p className="text-xs text-slate-500">
-                {language === 'en' ? 'Official updates published from the Admin Dashboard' : 'Admin Dashboard से प्रकाशित आधिकारिक सूचनाएँ'}
+              <p className="mt-1 text-[10px] leading-tight text-slate-500">
+                {language === 'en' ? 'Official updates' : 'आधिकारिक सूचनाएँ'}
               </p>
             </div>
           </div>
         </div>
 
-        <div tabIndex={0} role="region" aria-label={language === 'en' ? 'Scrollable announcements and updates' : 'स्क्रॉल करने योग्य सूचनाएँ और अपडेट'} className="max-h-[520px] overflow-y-auto overscroll-y-contain pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">
+        <div tabIndex={0} role="region" aria-label={language === 'en' ? 'Scrollable announcements and updates' : 'स्क्रॉल करने योग्य सूचनाएँ और अपडेट'} className="max-h-[520px] overflow-y-auto overscroll-y-contain pr-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600 lg:absolute lg:inset-x-4 lg:bottom-5 lg:top-[88px] lg:max-h-none">
         <LatestTestLaunches />
 
         {loading && <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'Loading announcements…' : 'सूचनाएँ लोड हो रही हैं…'}</p>}
