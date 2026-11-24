@@ -70,6 +70,9 @@ jobs:
               await page.goto(base + '/online-tests/');
               const scope = page.locator('#tests');
               await scope.getByRole('heading',{name:'Online Test Centre',exact:true}).waitFor();
+              assert.equal(await scope.getByText('ONLINE CBT EXAMINATION',{exact:true}).count(),0,'Redundant overview must be absent');
+              assert.equal(await scope.getByRole('group',{name:'Select test language'}).count(),0,'Language control is exam-only');
+              assert.equal(await scope.getByRole('button',{name:'CBT Mode',exact:true}).count(),0,'CBT controls are exam-only');
               await scope.getByText('14 tests',{exact:true}).waitFor();
               const search = scope.getByRole('textbox',{name:'Search tests',exact:true});
               const classFilter = scope.getByRole('combobox',{name:'Filter by class',exact:true});
@@ -165,6 +168,10 @@ jobs:
                 await login.waitFor({state:'hidden'});
               }
               await page.locator('#cbt-test-workspace').waitFor({state:'visible',timeout:20000});
+              await page.getByRole('group',{name:'Select test language'}).waitFor();
+              await page.getByRole('button',{name:'CBT Mode',exact:true}).waitFor();
+              await page.getByRole('button',{name:'All Questions',exact:true}).waitFor();
+              await page.getByText('Fixture Student',{exact:true}).first().waitFor();
               assert.deepEqual(starts,['fixture-13'],'The exact selected test starts once');
               assert.equal(await page.getByRole('dialog',{name:'Student account'}).count(),0);
               await context.close();
