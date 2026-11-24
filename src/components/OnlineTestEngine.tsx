@@ -571,7 +571,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const openCatalogueStart = (test: OnlineTest) => {
     if (authLoading || profileLoading || submissionStatus.loading || isTestActive) return;
     setCatalogueActionMessage('');
-    if (restoredSession && restoredSession.testId !== test.id) {
+    if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
       setCatalogueActionMessage(catalogueEn ? 'A saved test is selected. Resume it before choosing a different test.' : 'एक पुरानी परीक्षा सुरक्षित है। दूसरी परीक्षा चुनने से पहले उसे जारी रखें।');
       return;
     }
@@ -586,13 +586,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setCatalogueActionMessage(catalogueEn ? 'A complete, eligible student profile is required.' : 'पूर्ण और पात्र विद्यार्थी प्रोफाइल आवश्यक है।');
       return;
     }
+    if (isSubmitted && restoredSession) setRestoredSession(null);
     setLoginError('');
     setSelectedTest(test);
     setCatalogueStartIntent({ testId: test.id, owner: user.id });
   };
   const confirmCatalogueStart = async (test: OnlineTest) => {
     if (catalogueStartGuard.current || authLoading || profileLoading || catalogueLoading || catalogueError || submissionStatus.loading || isTestActive ||
-        !user || !profile || !studentDetails || catalogueStartIntent?.owner !== user.id || catalogueStartIntent.testId !== test.id ||
+        !user || !profile || profile.user_id !== user.id || !studentDetails || catalogueStartIntent?.owner !== user.id || catalogueStartIntent.testId !== test.id ||
         selectedTest.id !== test.id || String(profile.class_level) !== String(test.classLevel) ||
         !databaseTests.some(row => row.id === test.id)) return;
     catalogueStartGuard.current = true;
@@ -845,11 +846,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     aria-pressed={isSelected}
                   onClick={() => {
                     if (isSelected || !eligible || submissionStatus.loading || catalogueStartGuard.current) return;
-                    if (restoredSession && restoredSession.testId !== test.id) {
+                    if (!isSubmitted && restoredSession && restoredSession.testId !== test.id) {
                       setCatalogueActionMessage(catalogueEn ? 'Resume the saved test before switching.' : 'पहले सुरक्षित परीक्षा जारी रखें।');
                       return;
                     }
                     if ((activeAttempt || isSubmitted) && !window.confirm('दूसरा टेस्ट चुनने पर वर्तमान टेस्ट/परिणाम स्क्रीन बंद होगी। क्या आगे बढ़ें?')) return;
+                    if (isSubmitted && restoredSession) setRestoredSession(null);
                     setCatalogueStartIntent(null);
                     setCatalogueActionMessage('');
                     setSelectedTest(test);
