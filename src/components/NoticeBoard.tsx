@@ -25,6 +25,53 @@ function localized(value: PublicNotice['title'] | PublicNotice['details'], langu
   return language === 'hi' ? (value.hi || value.en || '') : (value.en || value.hi || '');
 }
 
+type LaunchTest = { id: string; title: PublicNotice['title']; class_level: string; subject: string; duration_minutes: number; total_marks: number };
+
+const LatestTestLaunches: React.FC = () => {
+  const { language } = useLanguage();
+  const [tests, setTests] = useState<LaunchTest[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  useEffect(() => {
+    let active = true;
+    let request = 0;
+    const refresh = async () => {
+      const current = ++request;
+      try {
+        const { data, error } = await requireSupabase().from('tests')
+          .select('id,title,class_level,subject,duration_minutes,total_marks')
+          .eq('is_published', true).order('updated_at', { ascending: false })
+          .order('id', { ascending: true }).limit(6);
+        if (error) throw error;
+        if (active && current === request) { setTests(data ?? []); setStatus('ready'); }
+      } catch {
+        if (active && current === request) { setTests([]); setStatus('error'); }
+      }
+    };
+    const refreshVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    const timer = window.setInterval(refreshVisible, 30000);
+    window.addEventListener('focus', refreshVisible);
+    document.addEventListener('visibilitychange', refreshVisible);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', refreshVisible); document.removeEventListener('visibilitychange', refreshVisible); };
+  }, []);
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  return <div className="mb-5 rounded-xl border border-sky-100 bg-sky-50/50 p-3 sm:p-4" aria-labelledby="new-test-launch-heading">
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <h3 id="new-test-launch-heading" className="text-sm font-extrabold text-sky-900">{language === 'en' ? 'New Launch · Latest Tests' : 'नए लॉन्च · नवीनतम टेस्ट'}</h3>
+      <a href={base + '/online-tests/'} className="shrink-0 text-xs font-semibold text-sky-800 hover:underline">{language === 'en' ? 'All tests' : 'सभी टेस्ट'}</a>
+    </div>
+    {status === 'loading' && <p role="status" className="text-xs text-slate-500">{language === 'en' ? 'Loading tests…' : 'टेस्ट लोड हो रहे हैं…'}</p>}
+    {status === 'error' && <p role="status" className="text-xs text-slate-600">{language === 'en' ? 'Test updates temporarily unavailable.' : 'टेस्ट अपडेट अभी उपलब्ध नहीं हैं।'}</p>}
+    {status === 'ready' && !tests.length && <p className="text-xs text-slate-500">{language === 'en' ? 'No published tests yet.' : 'अभी कोई प्रकाशित टेस्ट नहीं है।'}</p>}
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
+        <div className="min-w-0"><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
+        <span className="shrink-0 text-[11px] font-bold text-sky-800">{language === 'en' ? 'View test' : 'टेस्ट देखें'} ›</span>
+      </a>)}
+    </div>
+  </div>;
+};
+
 export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
   const [notices, setNotices] = useState<PublicNotice[]>([]);
@@ -160,6 +207,8 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
             {language === 'en' ? 'Refresh updates' : 'सूचनाएँ रिफ्रेश करें'}
           </button>
         </div>
+
+        <LatestTestLaunches />
 
         {loading && <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'Loading announcements…' : 'सूचनाएँ लोड हो रही हैं…'}</p>}
         {!loading && error && (
