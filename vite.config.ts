@@ -4,7 +4,11 @@ import path from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 
+import { publicInfoPages } from './src/data/publicInfo';
+
 const seoPages = [
+  ...publicInfoPages.map(p=>({slug:p.slug,title:p.title.en.replace(/&/g,'&amp;')+' | Krishan Sir',description:'Public information and learning support from Krishan Sir Online Learning.'})),
+  { slug: 'student-dashboard', title: 'Student Dashboard | Krishan Sir', description: 'Student account and dashboard access.' },
   { slug: 'classes', title: 'Classes 6–12 | Krishan Sir', description: 'Explore class-wise learning resources and study support for Classes 6 to 12, aligned with HBSE and CBSE learning needs.' },
   { slug: 'all-exams', title: 'All Competitive Exams & Preparation | Krishan Sir', description: 'Explore exam-wise preparation pathways and learning resources for UGC NET, HTET, CTET, UPSC, HPSC and teacher recruitment.' },
   { slug: 'online-tests', title: 'Online Tests & MCQ Practice | Krishan Sir', description: 'Attempt online tests and bilingual MCQ practice for school Social Science and related subjects.' },
@@ -27,6 +31,15 @@ const generateSeoPages = () => ({
     const indexPath = path.resolve(__dirname, 'dist/index.html');
     if (!existsSync(indexPath)) return;
     const template = readFileSync(indexPath, 'utf8');
+    // Keep the original OAuth consent-screen URLs working and aligned with the new policy text.
+    const escapeHtml = (value: string) => value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    for (const [id, filename] of [['privacy','privacy-policy.html'],['terms','terms-of-service.html']] as const) {
+      const info = publicInfoPages.find(p=>p.id===id);
+      if (!info) throw new Error('Missing legacy policy: '+id);
+      const body = (['en','hi'] as const).map(lang=>'<section lang="'+lang+'"><h1>'+escapeHtml(info.title[lang])+'</h1>'+info.sections.map(s=>'<h2>'+escapeHtml(s.title[lang])+'</h2><p>'+escapeHtml(s.text[lang])+'</p>').join('')+'</section>').join('<hr>');
+      const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeHtml(info.title.en)+' | Krishan Sir Online</title><link rel="canonical" href="https://krishansir.online/'+info.slug+'/"><style>body{font-family:system-ui,sans-serif;line-height:1.7;margin:0;background:#f8fafc;color:#172033}main{max-width:850px;margin:auto;padding:24px}a{color:#075985}h2{font-size:1.2rem}p{overflow-wrap:anywhere}</style></head><body><main><nav><a href="/">Home</a> · <a href="/'+info.slug+'/">Interactive bilingual policy</a> · <a href="/ksol-encrypted-backup.html">Encrypted Backup</a></nav><p>Version 1.0 · Updated 2026-11-24</p>'+body+'<p>Contact: <a href="mailto:krishansir.online@gmail.com">krishansir.online@gmail.com</a></p></main></body></html>';
+      writeFileSync(path.resolve(__dirname,'dist',filename),html);
+    }
     for (const page of seoPages) {
       const canonical = `https://krishansir.online/${page.slug}/`;
       let html = template
@@ -36,7 +49,7 @@ const generateSeoPages = () => ({
         .replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${canonical}" />`)
         .replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${page.title}" />`)
         .replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${page.description}" />`);
-      if (['admin', 'teacher-login', 'teacher-dashboard', 'teacher-registration'].includes(page.slug)) html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\n</head>');
+      if (['admin', 'teacher-login', 'teacher-dashboard', 'teacher-registration'].includes(page.slug) || page.slug === 'student-dashboard') html = html.replace('</head>', '  <meta name="robots" content="noindex, nofollow" />\n</head>');
       const directory = path.resolve(__dirname, 'dist', page.slug);
       mkdirSync(directory, { recursive: true });
       writeFileSync(path.join(directory, 'index.html'), html);

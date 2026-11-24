@@ -51,6 +51,22 @@ jobs:
             questions: [{id:'q1', question:{en:'Fixture question',hi:'प्रश्न'}, options:{en:['A','B','C','D'],hi:['क','ख','ग','घ']}, chapter:'Fixture',marks:1,type:'mcq'}]
           }));
           try {
+            const legalContext = await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'block'});
+            await legalContext.addInitScript(()=>localStorage.setItem('krishan_portal_lang','en'));
+            await legalContext.route('**/*',route=>new URL(route.request().url()).origin===base?route.continue():route.abort());
+            const legalPage=await legalContext.newPage();
+            const policyRoutes = ['privacy-policy','terms-and-conditions','child-safety','disclaimer','copyright-policy','cookie-policy','exam-result-policy','help-centre','grievance-redressal','account-data-deletion','accessibility','feedback','sitemap'];
+            for (const slug of policyRoutes) {
+              const response=await legalPage.goto(base+'/'+slug+'/');
+              assert.equal(response.status(),200,'Static policy route: '+slug);
+              await legalPage.locator('#public-info-title').waitFor();
+              assert.equal(await legalPage.locator('footer a[href="/'+slug+'/"]').count(),1,'Footer route: '+slug);
+            }
+            await legalPage.goto(base+'/privacy-policy/');
+            await legalPage.getByRole('heading',{name:'Privacy Policy',exact:true}).waitFor();
+            await legalPage.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'हिन्दी',exact:true}).click();
+            await legalPage.getByRole('heading',{name:'गोपनीयता नीति',exact:true}).waitFor();
+            await legalContext.close();
             for (const width of [1440,390]) {
               const context = await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
               let failCatalogue = false;

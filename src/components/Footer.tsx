@@ -1,68 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { TEACHER_INFO } from '../data/portalData';
-import { BookOpen, ShieldCheck, ArrowUp, Mail, Phone, MapPin, GraduationCap } from 'lucide-react';
+import { BookOpen, ArrowUp, Mail, ShieldCheck } from 'lucide-react';
 import { getPublishedWebsiteConfig } from '../services/siteConfigService';
+import { learningLinks, infoLinks, publicHref, SUPPORT_EMAIL } from '../data/publicInfo';
 
 interface FooterProps { onNavigate: (section: string) => void; }
-
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const { language } = useLanguage();
+const groups = [
+  {en:'Quick Links',hi:'त्वरित लिंक',ids:['home','classes','tests','materials','exams','affairs','polity']},
+  {en:'Student & Teacher Support',hi:'विद्यार्थी एवं शिक्षक सहायता',ids:['studentDashboard','teacher','results','help','examPolicy','feedback','grievance']},
+  {en:'Legal & Privacy',hi:'कानूनी एवं गोपनीयता',ids:['privacy','terms','childSafety','disclaimer','copyright','cookies','dataDeletion']},
+  {en:'About & Contact',hi:'परिचय एवं संपर्क',ids:['about','contact','accessibility','sitemap']},
+];
+export const Footer: React.FC<FooterProps> = () => {
+  const {language} = useLanguage();
   const en = language === 'en';
-  const [siteHeader, setSiteHeader] = useState<Record<string, string>>({});
-  useEffect(() => {
-    let active = true;
-    void getPublishedWebsiteConfig().then((config) => { if (active && config?.header) setSiteHeader(config.header); }).catch((error) => console.warn('Published footer configuration unavailable:', error));
-    return () => { active = false; };
-  }, []);
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  return (
-    <footer className="bg-[#071b38] text-slate-300 text-xs border-t-[3px] border-cyan-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-11 sm:py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center text-[#0b3979] shadow-md"><BookOpen className="w-6 h-6" /></div>
-              <div><div className="text-lg font-extrabold tracking-tight text-white">{siteHeader.brand || 'Krishan Sir'}</div><div className="text-amber-300 font-bold text-xs">{siteHeader.subBrand || 'Online Learning'}</div></div>
-            </div>
-            <p className="text-slate-400 text-xs leading-relaxed">{en ? 'A bilingual digital learning platform for school students, teachers and competitive exam aspirants.' : 'विद्यालयी विद्यार्थियों, शिक्षकों और प्रतियोगी परीक्षार्थियों के लिए द्विभाषी डिजिटल अध्ययन मंच।'}</p>
-            <div className="text-[11px] text-slate-400">{siteHeader.footer || (en ? TEACHER_INFO.tagline.en : TEACHER_INFO.tagline.hi)}</div>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Educator' : 'शिक्षक परिचय'}</h4>
-            <div className="font-bold text-slate-100">{TEACHER_INFO.name}</div>
-            <div className="text-amber-300 text-[11px]">{TEACHER_INFO.designation}</div>
-            <div className="text-slate-400 text-xs leading-relaxed">{TEACHER_INFO.school}</div>
-            <div className="inline-flex items-center gap-2 text-slate-400 text-[11px]"><MapPin className="w-3.5 h-3.5" />Fatehabad, Haryana, India</div>
-            <a href="tel:9812534934" className="flex items-center gap-2 text-cyan-200 hover:text-white text-[11px]"><Phone className="w-3.5 h-3.5" />9812534934</a>
-<a href="mailto:krishansir.online@gmail.com" className="flex items-center gap-2 text-amber-300 hover:text-amber-200 text-[11px]"><Mail className="w-3.5 h-3.5" />krishansir.online@gmail.com</a>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Quick Gateways' : 'त्वरित लिंक'}</h4>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li><button onClick={() => onNavigate('classes')} className="hover:text-amber-300 transition-colors">{en ? 'Classes 6–12' : 'कक्षा 6–12'}</button></li>
-              <li><button onClick={() => onNavigate('exams')} className="hover:text-amber-300 transition-colors">{en ? 'All Competitive Exams' : 'सभी प्रतियोगी परीक्षाएँ'}</button></li>
-<li><button onClick={() => onNavigate('tests')} className="hover:text-amber-300 transition-colors">{en ? 'Online Test Simulator' : 'ऑनलाइन टेस्ट'}</button></li>
-              <li><button onClick={() => onNavigate('materials')} className="hover:text-amber-300 transition-colors">{en ? 'Chapter-Wise Study Notes' : 'अध्यायवार अध्ययन सामग्री'}</button></li>
-              <li><button onClick={() => onNavigate('affairs')} className="hover:text-amber-300 transition-colors">{en ? 'Current Affairs' : 'करेंट अफेयर्स'}</button></li>
-              <li><button onClick={() => onNavigate('polity')} className="hover:text-amber-300 transition-colors">{en ? 'Indian Constitution' : 'भारतीय संविधान'}</button></li>
-              <li><button onClick={() => onNavigate('about')} className="hover:text-amber-300 transition-colors">{en ? 'About Krishan Sir' : 'कृष्ण सर के बारे में'}</button></li>
-            </ul>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-extrabold text-white uppercase tracking-[.14em]">{en ? 'Learning Promise' : 'हमारा उद्देश्य'}</h4>
-            <p className="text-slate-400 text-xs leading-relaxed">{en ? 'Free educational resources to encourage regular practice, independent learning and academic improvement.' : 'नियमित अभ्यास, स्वतंत्र अध्ययन और शैक्षणिक सुधार को प्रोत्साहित करने के लिए निःशुल्क शैक्षणिक संसाधन।'}</p>
-            <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-slate-300 flex items-start gap-2"><ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /><span>{en ? 'Educational resources designed for responsible learning.' : 'जिम्मेदार और गुणवत्तापूर्ण शिक्षा के लिए तैयार संसाधन।'}</span></div>
-            <div className="inline-flex items-center gap-2 text-[11px] text-cyan-200"><GraduationCap className="w-4 h-4" />{siteHeader.footer || (en ? 'Learn • Practice • Improve • Succeed' : 'सीखें • अभ्यास करें • सुधारें • सफल हों')}</div>
-          </div>
+  const [siteHeader,setSiteHeader] = useState<Record<string,string>>({});
+  useEffect(()=>{
+    let active=true;
+    void getPublishedWebsiteConfig().then(config=>{if(active&&config?.header)setSiteHeader(config.header)}).catch(error=>console.warn('Published footer configuration unavailable:',error));
+    return ()=>{active=false};
+  },[]);
+  const links=[...learningLinks,...infoLinks];
+  return <footer className="border-t-[3px] border-cyan-500 bg-[#071b38] text-slate-300">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#0b3979]"><BookOpen className="h-6 w-6" aria-hidden="true"/></div>
+          <div className="min-w-0"><div className="break-words text-lg font-extrabold text-white">{siteHeader.brand||'Krishan Sir'}</div><div className="text-xs font-bold text-amber-300">{siteHeader.subBrand||'Online Learning'}</div></div>
         </div>
+        <p className="max-w-xl text-xs leading-relaxed text-slate-300">{siteHeader.footer||(en?TEACHER_INFO.tagline.en:TEACHER_INFO.tagline.hi)}</p>
       </div>
-      <div className="border-t border-white/10 bg-[#041329] py-4 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] sm:text-[11px] text-slate-400">
-          <div>© {new Date().getFullYear()} Krishan Sir – Online Learning. {en ? 'All rights reserved.' : 'सर्वाधिकार सुरक्षित।'}</div>
-          <button onClick={scrollToTop} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors flex items-center gap-2" title="Scroll to Top"><span>{en ? 'Back to top' : 'ऊपर जाएँ'}</span><ArrowUp className="w-3.5 h-3.5" /></button>
-        </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-6 lg:grid-cols-4 lg:gap-8">
+        {groups.map(g=><nav key={g.en} aria-label={en?g.en:g.hi} className="min-w-0">
+          <h2 className="mb-3 text-xs font-extrabold uppercase tracking-wide text-amber-300">{en?g.en:g.hi}</h2>
+          <ul className="space-y-1">{g.ids.map(id=>{const link=links.find(l=>l.id===id);return link?<li key={id}><a href={publicHref(link.slug)} className="inline-block min-h-8 break-words py-1.5 text-xs leading-relaxed text-slate-300 hover:text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">{link.title[language]}</a></li>:null})}</ul>
+          {g.en==='About & Contact'&&<div className="mt-3 space-y-2 border-t border-white/10 pt-3"><p className="text-xs font-bold text-white">{TEACHER_INFO.name}</p><a href={'mailto:'+SUPPORT_EMAIL} className="flex min-w-0 items-start gap-1.5 text-xs text-cyan-200 hover:underline"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span className="break-all">{SUPPORT_EMAIL}</span></a></div>}
+        </nav>)}
       </div>
-    </footer>
-  );
+      <div className="mt-6 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs leading-relaxed"><ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true"/><span>{en?'For student privacy, use the support contact and never share passwords or private student records.':'विद्यार्थी गोपनीयता के लिए सहायता संपर्क का उपयोग करें और पासवर्ड या निजी विद्यार्थी रिकॉर्ड साझा न करें।'}</span></div>
+    </div>
+    <div className="border-t border-white/10 bg-[#041329] px-4 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+        <p>© {new Date().getFullYear()} Krishan Sir – Online Learning. {en?'All rights reserved.':'सर्वाधिकार सुरक्षित।'}</p>
+        <button type="button" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} className="flex min-h-9 items-center gap-2 rounded-lg bg-white/5 px-3 text-slate-200 hover:bg-white/10"><span>{en?'Back to top':'ऊपर जाएँ'}</span><ArrowUp className="h-3.5 w-3.5" aria-hidden="true"/></button>
+      </div>
+    </div>
+  </footer>;
 };
