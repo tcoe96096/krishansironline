@@ -120,6 +120,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [testSearch, setTestSearch] = useState('');
   const [testClassFilter, setTestClassFilter] = useState('all');
+  const [testSubjectFilter, setTestSubjectFilter] = useState('all');
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState('');
   // Authenticated students see only tests published for their canonical profile class.
@@ -128,13 +129,14 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const availableTests = user && profile
     ? databaseTests.filter((test) => test.classLevel === String(profile.class_level))
     : databaseTests;
-  const filteredTests = availableTests.filter((test) => {
+  const filteredTests = databaseTests.filter((test) => {
     const query = testSearch.trim().toLowerCase();
-    const matchesQuery = !query || (test.title.hi + ' ' + test.title.en + ' ' + test.subject + ' ' + test.classLevel).toLowerCase().includes(query);
+    const matchesQuery = !query || (test.title.hi + ' ' + test.title.en + ' ' + test.subject + ' ' + test.chapter + ' ' + test.classLevel).toLowerCase().includes(query);
     const matchesClass = testClassFilter === 'all' || String(test.classLevel) === testClassFilter;
-    return matchesQuery && matchesClass;
+    return matchesQuery && matchesClass && (testSubjectFilter === 'all' || test.subject === testSubjectFilter);
   });
-  const testClassOptions = [...new Set(availableTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
+  const testClassOptions = [...new Set(databaseTests.map((test) => String(test.classLevel)))].sort((a, b) => Number(a) - Number(b));
+  const testSubjectOptions = [...new Set(databaseTests.map((test) => test.subject))].sort();
   // Browser storage is a recovery aid only; the authenticated profile and database attempt remain authoritative.
   const [restoredSession, setRestoredSession] = useState<PersistedTestSession | null>(() => readPersistedTestSession());
   const restoredTest = databaseTests.find((test) => test.id === restoredSession?.testId) || EMPTY_TEST;
@@ -691,8 +693,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         <div className={"mb-6 rounded-2xl sm:rounded-3xl border border-sky-200 bg-white p-3.5 sm:p-6 shadow-sm " + (isTestActive ? "hidden" : "")}>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Choose an Assessment</p>
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">उपलब्ध ऑनलाइन टेस्ट चुनें</h2>
+              <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Online Assessment Library</p>
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">ऑनलाइन टेस्ट श्रृंखला</h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-600">सभी प्रकाशित टेस्ट बिना लॉगिन देख सकते हैं। टेस्ट देने के लिए विद्यार्थी लॉगिन और कक्षा की पात्रता आवश्यक है।</p>
               {catalogueLoading && <p role="status" className="mt-2 text-xs text-sky-700">Supabase से tests लोड हो रहे हैं...</p>}
               {catalogueError && <p role="alert" className="mt-2 text-xs text-amber-700">Online catalogue लोड नहीं हुआ: {catalogueError}</p>}
@@ -702,7 +704,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               {filteredTests.length} Tests Available
             </span>
           </div>
-          <div className="mb-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_190px] gap-2.5">
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_150px_190px] gap-2.5">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input value={testSearch} onChange={(event) => setTestSearch(event.target.value)} placeholder="टेस्ट खोजें / Search tests..." aria-label="Search tests" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" />
@@ -711,20 +713,22 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               <option value="all">सभी कक्षाएँ / All Classes</option>
               {testClassOptions.map((classLevel) => <option key={classLevel} value={classLevel}>Class {classLevel}</option>)}
             </select>
+            <select value={testSubjectFilter} onChange={(event) => setTestSubjectFilter(event.target.value)} aria-label="Filter tests by subject" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700"><option value="all">सभी विषय / All Subjects</option>{testSubjectOptions.map(subject => <option key={subject} value={subject}>{subject}</option>)}</select>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredTests.map((test) => {
               const isSelected = selectedTest.id === test.id;
+              const eligible = !user || (!!profile && String(profile.class_level) === String(test.classLevel));
               return (
                 <div
                   key={test.id}
-                  className={`w-full min-w-0 rounded-2xl border-2 p-3.5 sm:p-4 shadow-sm transition-all hover:shadow-md ${isSelected ? 'border-sky-700 bg-sky-50 shadow-sm' : 'border-slate-200 bg-white'}`}
+                  className={`flex h-full w-full min-w-0 flex-col rounded-2xl border p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md ${isSelected ? 'border-sky-600 bg-sky-50/40 ring-1 ring-sky-600' : 'border-slate-200 bg-white'}`}
                 >
                   <button
                     type="button"
                     aria-pressed={isSelected}
                   onClick={() => {
-                    if (isSelected) return;
+                    if (isSelected || !eligible) return;
                     if (studentDetails && !window.confirm('दूसरा टेस्ट चुनने पर वर्तमान टेस्ट/परिणाम स्क्रीन बंद होगी। क्या आगे बढ़ें?')) return;
                     if (studentDetails) {
                       setStudentDetails(null);
@@ -733,15 +737,17 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                     }
                     setSelectedTest(test);
                   }}
-                  className="w-full min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg"
+                  className="flex flex-1 w-full min-w-0 flex-col text-left focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span className="inline-flex rounded-lg bg-sky-900 px-2.5 py-1 text-[11px] font-bold text-white">
                         Class {test.classLevel}
                       </span>
+                      <span className="ml-2 text-xs font-semibold text-sky-800">{test.subject}</span>
                       <h3 className="mt-2 sm:mt-3 text-[15px] sm:text-base leading-snug font-extrabold text-slate-900 break-words">{test.title.hi}</h3>
                       <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-slate-600 break-words">{test.title.en}</p>
+                      {test.chapter && <p className="mt-2 text-xs text-slate-500 break-words">{test.chapter}</p>}
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
                       isSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
@@ -749,16 +755,12 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       {isSelected ? 'चयनित / SELECTED' : 'चुनें / SELECT'}
                     </span>
                   </div>
-                  <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2 text-xs font-semibold text-slate-600">
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 sm:py-1">{test.questions.length} MCQs</span>
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.totalMarks} Marks</span>
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1">{test.durationMinutes} Minutes</span>
-                  </div>
+                  <div className="mt-auto w-full pt-4"><div className="grid grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white py-3 text-center"><div><div className="font-bold text-slate-900">{test.questions.length}</div><div className="text-[10px] text-slate-500">Questions</div></div><div><div className="font-bold text-slate-900">{test.totalMarks}</div><div className="text-[10px] text-slate-500">Marks</div></div><div><div className="font-bold text-slate-900">{test.durationMinutes}</div><div className="text-[10px] text-slate-500">Minutes</div></div></div></div>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      if (authLoading || profileLoading || submissionStatus.loading) return;
+                      if (authLoading || profileLoading || submissionStatus.loading || !eligible) return;
                       if (!user) {
                         setSelectedTest(test);
                         onRequestLogin();
@@ -775,10 +777,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                       }
                       handleStudentLogin();
                     }}
-                    disabled={authLoading || profileLoading || submissionStatus.loading}
+                    disabled={authLoading || profileLoading || submissionStatus.loading || !eligible}
                     className={`mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-900 hover:bg-sky-800'}`}
                   >
-                    <span>{submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? (isSelected ? 'Continue / Start Test' : 'Select Test / टेस्ट चुनें') : 'Login to Start Test'}</span>
+                    <span>{!eligible ? 'Class eligibility required / कक्षा की पात्रता आवश्यक' : submissionStatus.loading && isSelected ? 'Starting… / शुरू हो रहा है…' : user ? (isSelected ? 'Start Test / टेस्ट शुरू करें' : 'Select Test / टेस्ट चुनें') : 'Login to Start Test / लॉगिन करें'}</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   {isSelected && loginError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
