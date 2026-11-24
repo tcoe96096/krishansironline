@@ -9,6 +9,8 @@ on:
       - "src/lib/extractTestDocumentText.ts"
       - "src/components/AdminTestManagement.tsx"
       - "tests/parseExtractedMcqs.test.ts"
+      - "tests/parseTestDocumentMetadata.test.ts"
+      - "src/lib/parseTestDocumentMetadata.ts"
       - "package.json"
       - ".github/workflows/smart-import-validation.yml"
   workflow_dispatch:
@@ -29,6 +31,8 @@ jobs:
       - name: Type-check
         run: npm run lint
       - name: Parser regression tests
-        run: npx --no-install tsx tests/parseExtractedMcqs.test.ts
+        run: |
+          npx --no-install tsx tests/parseExtractedMcqs.test.ts
+          npx --no-install tsx tests/parseTestDocumentMetadata.test.ts
       - name: Build preview only
         run: npm run build
