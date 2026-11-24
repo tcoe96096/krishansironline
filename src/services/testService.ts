@@ -173,3 +173,11 @@ export async function saveTestAttemptDraft(attemptId: string, answers: Record<nu
   if(!data || typeof data.conflict!=='boolean' || !Number.isSafeInteger(data.revision) || data.revision<0) throw new Error('Invalid server draft acknowledgement');
   return data as TestAttemptDraftAck;
 }
+
+/** Null revision is an expiry-only request; PostgreSQL checks its own clock. */
+export async function finishTestAttemptDraft(attemptId: string, revision: number | null): Promise<TestAttempt> {
+  const {data,error}=await requireSupabase().rpc('finish_test_attempt_draft',{p_attempt_id:attemptId,p_expected_revision:revision});
+  if(error) throw error;
+  if(!data || data.id!==attemptId || !['submitted','expired'].includes(data.status)) throw new Error('Final result not confirmed');
+  return data as TestAttempt;
+}
