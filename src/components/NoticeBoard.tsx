@@ -66,7 +66,7 @@ const LatestTestLaunches: React.FC = () => {
     {status === 'loading' && <p role="status" className="text-xs text-slate-500">{language === 'en' ? 'Loading tests…' : 'टेस्ट लोड हो रहे हैं…'}</p>}
     {status === 'error' && <p role="status" className="text-xs text-slate-600">{language === 'en' ? 'Test updates temporarily unavailable.' : 'टेस्ट अपडेट अभी उपलब्ध नहीं हैं।'}</p>}
     {status === 'ready' && !tests.length && <p className="text-xs text-slate-500">{language === 'en' ? 'No published tests yet.' : 'अभी कोई प्रकाशित टेस्ट नहीं है।'}</p>}
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2">
       {tests.map(test => <a key={test.id} href={base + '/online-tests/?testId=' + encodeURIComponent(test.id)} className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-600">
         <div className="min-w-0"><span className="ksol-launch-new mb-1 inline-block origin-left text-sm font-black leading-tight tracking-wide" style={{ color: '#dc2626' }}>NEW</span><div className="text-[10px] font-semibold text-sky-700">Class {test.class_level} · {test.subject}</div><div className="break-words text-xs font-bold text-slate-900">{localized(test.title, language)}</div><div className="text-[10px] text-slate-500">{test.total_marks} Marks · {test.duration_minutes} min</div></div>
         <span className="shrink-0 text-[11px] font-bold text-sky-800">{language === 'en' ? 'View test' : 'टेस्ट देखें'} ›</span>
@@ -247,7 +247,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
       const hasNotExpired = !notice.expiresAt || new Date(notice.expiresAt).getTime() > now;
       return hasStarted && hasNotExpired;
     })
-    .slice(0, 8);
+    .slice(0, 200);
 
   const openNoticeLink = (link?: string | null) => {
     if (!link) return;
@@ -293,6 +293,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
           </button>
         </div>
 
+        <div tabIndex={0} role="region" aria-label={language === 'en' ? 'Scrollable announcements and updates' : 'स्क्रॉल करने योग्य सूचनाएँ और अपडेट'} className="max-h-[520px] overflow-y-auto overscroll-y-contain pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">
         <LatestTestLaunches />
 
         {loading && <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'Loading announcements…' : 'सूचनाएँ लोड हो रही हैं…'}</p>}
@@ -324,6 +325,7 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
             })}
           </div>
         )}
+        </div>
         </div>
         <LatestPresentationCovers onNavigate={onNavigate} />
       </div>
