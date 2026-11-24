@@ -148,11 +148,19 @@ const MainApp: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<ClassLevel>('9');
+  const readTestClassFilter = (): ClassLevel | undefined => {
+    const value = new URLSearchParams(window.location.search).get('class');
+    return value && ['6', '7', '8', '9', '10', '11', '12'].includes(value) ? value as ClassLevel : undefined;
+  };
+  const [selectedClassForTests, setSelectedClassForTests] = useState<ClassLevel | undefined>(readTestClassFilter);
 
 
   // Handle browser back/forward navigation for clean page URLs.
   useEffect(() => {
-    const handleLocationChange = () => setActivePage(readPageFromLocation());
+    const handleLocationChange = () => {
+      setActivePage(readPageFromLocation());
+      setSelectedClassForTests(readTestClassFilter());
+    };
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
     return () => {
@@ -177,7 +185,10 @@ const MainApp: React.FC = () => {
     const targetPage = VALID_PAGES.includes(pageId as PageId) ? (pageId as PageId) : 'home';
     setActivePage(targetPage);
     const targetPath = `${basePath}${pageToPath[targetPage]}`;
-    if (window.location.pathname !== targetPath) window.history.pushState(null, '', targetPath);
+    const testClass = targetPage === 'tests' && filterClass && ['6', '7', '8', '9', '10', '11', '12'].includes(filterClass) ? filterClass as ClassLevel : undefined;
+    if (targetPage === 'tests') setSelectedClassForTests(testClass);
+    const destination = testClass ? targetPath + '?class=' + encodeURIComponent(testClass) : targetPath;
+    if (targetPage === 'tests' ? window.location.pathname + window.location.search !== destination : window.location.pathname !== targetPath) window.history.pushState(null, '', destination);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -549,7 +560,7 @@ const MainApp: React.FC = () => {
               icon={Laptop}
               onBackHome={() => navigateTo('home')}
             />
-            <OnlineTestEngine initialClassFilter={selectedClassForMaterials} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} />
+            <OnlineTestEngine initialClassFilter={selectedClassForTests} initialTestId={new URLSearchParams(window.location.search).get('testId') || undefined} onRequestLogin={() => setIsAuthOpen(true)} />
           </div>
         )}
 
