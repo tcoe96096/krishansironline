@@ -1,0 +1,23 @@
+name: Results CSV safety tests
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/AdminTestResults.tsx'
+      - 'src/lib/resultsCsvSafety.ts'
+      - 'tests/resultsCsvSafety.test.ts'
+      - '.github/workflows/results-csv-safety.yml'
+  workflow_dispatch:
+
+jobs:
+  csv-safety:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --legacy-peer-deps
+      - run: npx tsx --test tests/resultsCsvSafety.test.ts
