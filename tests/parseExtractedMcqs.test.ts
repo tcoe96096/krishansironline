@@ -99,4 +99,15 @@ assert.equal(hindiChoices.questions.length, 2);
 assert.deepEqual(hindiChoices.questions[0].options, ['दिल्ली', 'भोपाल', 'जयपुर', 'पटना']);
 assert.deepEqual(hindiChoices.questions.map(q => q.answerIndex), [0, 1]);
 
+
+const devanagariNumbers = parseExtractedMcqs([
+  '१. भारत का राष्ट्रीय पक्षी कौन सा है?',
+  'क. मोर ख. कबूतर ग. कौआ घ. तोता',
+  '२. इनमें से ग्रह कौन सा है?',
+  'क. चंद्रमा ख. सूर्य ग. मंगल घ. ध्रुवतारा',
+  'उत्तर कुंजी: १-क, २-ग',
+].join('\n'));
+assert.equal(devanagariNumbers.questions.length, 2);
+assert.deepEqual(devanagariNumbers.questions.map(q => q.answerIndex), [0, 2]);
+
 console.log('MCQ parser review-first tests passed');
