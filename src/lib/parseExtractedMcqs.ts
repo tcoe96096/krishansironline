@@ -1,6 +1,4 @@
-/** Deterministic, review-first parser for extracted PDF/DOCX MCQ text.
- * Never guesses answer keys, translations or explanations.
- */
+/** Review-first MCQ parser for extracted text; never invents answers or translations. */
 export type ImportedMcq = {
   question: string;
   options: [string, string, string, string];
@@ -8,26 +6,34 @@ export type ImportedMcq = {
 };
 export type ParseResult = { questions: ImportedMcq[]; warnings: string[] };
 
-const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(\d{1,4})\s*[.)\-:]\s*(.+)$/i;
+const questionStart = /^(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)\s*|(\d{1,4})\s*[.)\-:]\s*)(.+)$/i;
 const answerSuffix = /(?:^|\s)(?:correct\s+answer|answer|सही\s+उत्तर|उत्तर)\s*[:：\-]\s*\(?([A-Da-d])\)?\s*$/i;
-// Recognises A. / B) / (C) / D: even when all four appear on the same PDF line.
 const optionMarker = /(^|\s)(?:\(([A-Da-d])\)|([A-Da-d])[.)\-:])\s*/g;
+const answerKeyHeading = /^(?:answer\s*(?:key|sheet|list)|answers|correct\s*answers|उत्तर\s*(?:कुंजी|माला|सूची)|उत्तरमाला)(?:\s*[:：\-]\s*|\s*$)/i;
+const answerEntry = /(?:^|[\s,;|])(?:Q(?:uestion)?\s*\.?\s*)?(?:\((\d{1,4})\)|(\d{1,4})\s*[.)\-:]?)\s*(?:[:=\-]\s*)?\(?([A-Da-d])\)?(?=$|[\s,;|])/gi;
 
 export function parseExtractedMcqs(text: string): ParseResult {
   if (text.length > 2_000_000) throw new Error('Document text exceeds import limit');
   const lines = text.replace(/\r\n?/g, '\n').split('\n').map(x => x.trim()).filter(Boolean);
   const questions: ImportedMcq[] = [];
+  const questionNumbers: number[] = [];
   const warnings: string[] = [];
+  const keyedAnswers = new Map<number, Set<number>>();
   let stem = '';
   let options: string[] = [];
   let answer: number | null = null;
   let number = 0;
+  let inAnswerKey = false;
 
   function flush(): void {
     if (!stem) return;
     if (options.length === 4 && options.every(Boolean)) {
-      questions.push({ question: stem, options: options as [string, string, string, string], answerIndex: answer });
-      if (answer === null) warnings.push('Question ' + number + ': answer requires review');
+      questions.push({
+        question: stem,
+        options: options as [string, string, string, string],
+        answerIndex: answer,
+      });
+      questionNumbers.push(number);
     } else {
       warnings.push('Question ' + number + ': expected four options, found ' + options.length);
     }
@@ -36,11 +42,21 @@ export function parseExtractedMcqs(text: string): ParseResult {
     answer = null;
   }
 
-  function addText(content: string): void {
-    if (!content.trim() || !stem) return;
-    const part = content.trim();
-    if (options.length === 0) stem += ' ' + part;
-    else options[options.length - 1] += ' ' + part;
+  function collectAnswers(source: string): void {
+    // The answer key is treated as untrusted source data and not proof of correctness.
+    for (const entry of source.matchAll(answerEntry)) {
+      const questionNumber = Number(entry[1] || entry[2]);
+      const optionIndex = entry[3].toUpperCase().charCodeAt(0) - 65;
+      if (!keyedAnswers.has(questionNumber)) keyedAnswers.set(questionNumber, new Set());
+      keyedAnswers.get(questionNumber)!.add(optionIndex);
+    }
+  }
+
+  function appendText(value: string): void {
+    const trimmed = value.trim();
+    if (!trimmed || !stem) return;
+    if (options.length === 0) stem += ' ' + trimmed;
+    else options[options.length - 1] += ' ' + trimmed;
   }
 
   function consumeLine(value: string): void {
@@ -52,22 +68,16 @@ export function parseExtractedMcqs(text: string): ParseResult {
       line = line.slice(0, suffix.index).trim();
     }
     if (!line) return;
-
     const markers = [...line.matchAll(optionMarker)];
-    if (!markers.length) {
-      addText(line);
-      return;
-    }
-
-    addText(line.slice(0, markers[0].index));
-    for (let index = 0; index < markers.length; index++) {
-      const marker = markers[index];
+    if (!markers.length) { appendText(line); return; }
+    appendText(line.slice(0, markers[0].index));
+    for (let i = 0; i < markers.length; i++) {
+      const marker = markers[i];
       const letter = (marker[2] || marker[3]).toUpperCase();
-      const expected = options.length;
-      const optionIndex = letter.charCodeAt(0) - 65;
-      const end = index + 1 < markers.length ? markers[index + 1].index : line.length;
+      const foundIndex = letter.charCodeAt(0) - 65;
+      const end = i + 1 < markers.length ? markers[i + 1].index : line.length;
       const body = line.slice(marker.index! + marker[0].length, end).trim();
-      if (optionIndex !== expected || !body) {
+      if (foundIndex !== options.length || !body) {
         warnings.push('Question ' + number + ': option ' + letter + ' is out of order or empty');
         continue;
       }
@@ -76,15 +86,22 @@ export function parseExtractedMcqs(text: string): ParseResult {
   }
 
   for (const line of lines) {
+    if (inAnswerKey) {
+      collectAnswers(line);
+      continue;
+    }
+    const heading = line.match(answerKeyHeading);
+    if (heading) {
+      flush();
+      inAnswerKey = true;
+      collectAnswers(line.slice(heading[0].length));
+      continue;
+    }
     const question = line.match(questionStart);
     if (question) {
       flush();
-      number = Number(question[1]);
-      stem = '';
-      options = [];
-      answer = null;
-      // A numbered question may include inline options on the same line.
-      stem = question[2].trim();
+      number = Number(question[1] || question[2]);
+      stem = question[3].trim();
       const firstOption = [...stem.matchAll(optionMarker)][0];
       if (firstOption && firstOption.index !== undefined) {
         const tail = stem.slice(firstOption.index);
@@ -95,7 +112,34 @@ export function parseExtractedMcqs(text: string): ParseResult {
     }
     consumeLine(line);
   }
-
   flush();
+
+  const counts = new Map<number, number>();
+  for (const n of questionNumbers) counts.set(n, (counts.get(n) || 0) + 1);
+  const foundNumbers = new Set(questionNumbers);
+  questions.forEach((question, index) => {
+    const n = questionNumbers[index];
+    const possible = keyedAnswers.get(n);
+    if (possible) {
+      if (counts.get(n)! > 1 || possible.size !== 1) {
+        question.answerIndex = null;
+        warnings.push('Question ' + n + ': ambiguous answer key; manual review required');
+      } else {
+        const keyed = [...possible][0];
+        if (question.answerIndex !== null && question.answerIndex !== keyed) {
+          question.answerIndex = null;
+          warnings.push('Question ' + n + ': answer key conflicts with inline answer');
+        } else {
+          question.answerIndex = keyed;
+        }
+      }
+    }
+    if (question.answerIndex === null) {
+      warnings.push('Question ' + n + ': answer requires review');
+    }
+  });
+  for (const n of keyedAnswers.keys()) {
+    if (!foundNumbers.has(n)) warnings.push('Answer key entry ' + n + ': question missing or incomplete');
+  }
   return { questions, warnings };
 }
