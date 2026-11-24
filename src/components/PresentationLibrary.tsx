@@ -3,7 +3,7 @@ import {Presentation as PresentationIcon, Play, Download, X, ChevronLeft, Chevro
 import {downloadPresentation,fetchSlide,listPresentations,presentationError,type Presentation} from '../services/presentationService';
 
 export function PresentationViewer({item,onClose,en=true,admin=false}:{item:Presentation;onClose:()=>void;en?:boolean;admin?:boolean}) {
-  const [index,setIndex]=useState(1),[url,setUrl]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [index,setIndex]=useState(1),[url,setUrl]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[fitWidth,setFitWidth]=useState(true);
   useEffect(()=>{
     let cancelled=false, objectUrl='';
     setUrl('');setError('');
@@ -16,9 +16,9 @@ export function PresentationViewer({item,onClose,en=true,admin=false}:{item:Pres
   },[item.slide_count,onClose]);
   const download=async()=>{setBusy(true);try{await downloadPresentation(item);}catch(e){setError(presentationError(e));}finally{setBusy(false);}};
   return <div role="dialog" aria-modal="true" aria-label={item.title} className="fixed inset-0 z-[100] flex flex-col bg-slate-950 text-white">
-    <header className="flex items-center justify-between gap-3 bg-slate-900 p-3"><h3 className="min-w-0 truncate font-bold">{item.title}</h3><div className="flex items-center gap-2">{(admin||item.allow_download)&&<button type="button" disabled={busy} onClick={()=>void download()} aria-label={en?'Download PPT':'PPT डाउनलोड'} className="rounded-lg bg-slate-700 p-2"><Download size={20}/></button>}<button type="button" autoFocus onClick={onClose} aria-label={en?'Close player':'बंद करें'} className="rounded-lg bg-slate-700 p-2"><X size={20}/></button></div></header>
-    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-2">
-      {url?<img className="max-h-full max-w-full object-contain" src={url} alt={(en?'Slide ':'स्लाइड ')+index} draggable={false}/>:<p role="status" className="p-4 text-center">{error||(en?'Loading slide…':'स्लाइड खुल रही है…')}</p>}
+    <header className="flex items-center justify-between gap-3 bg-slate-900 p-3"><h3 className="min-w-0 truncate font-bold">{item.title}</h3><div className="flex items-center gap-2"><button type="button" onClick={()=>setFitWidth(v=>!v)} aria-pressed={fitWidth} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold">{fitWidth?(en?'Fit page':'पूरा पेज'):(en?'Fit width':'पूरी चौड़ाई')}</button>{(admin||item.allow_download)&&<button type="button" disabled={busy} onClick={()=>void download()} aria-label={en?'Download PPT':'PPT डाउनलोड'} className="rounded-lg bg-slate-700 p-2"><Download size={20}/></button>}<button type="button" autoFocus onClick={onClose} aria-label={en?'Close player':'बंद करें'} className="rounded-lg bg-slate-700 p-2"><X size={20}/></button></div></header>
+    <div className={fitWidth?"relative min-h-0 flex-1 overflow-auto bg-white":"relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"}>
+      {url?<img className={fitWidth?"block h-auto w-full":"block max-h-full max-w-full object-contain"} src={url} alt={(en?'Slide ':'स्लाइड ')+index} draggable={false}/>:<p role="status" className="p-4 text-center text-slate-900">{error||(en?'Loading slide…':'स्लाइड खुल रही है…')}</p>}
     </div>
     {error&&url&&<p role="alert" className="p-2 text-center text-red-200">{error}</p>}
     <footer className="flex items-center justify-center gap-6 bg-slate-900 p-3">
