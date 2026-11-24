@@ -19,13 +19,23 @@ export async function listPresentations(admin = false): Promise<Presentation[]> 
   if(error) throw error;
   return (data || []) as Presentation[];
 }
-async function requestConversion(id:string) {
-  try {
-    const {error}=await requireSupabase().functions.invoke('study-ppt-dispatch',{body:{id}});
-    if(error) console.warn('PPT saved; automatic dispatch unavailable. Scheduled worker remains the fallback.');
-  } catch {
-    console.warn('PPT saved; automatic dispatch unavailable. Scheduled worker remains the fallback.');
+export async function requestConversion(id:string): Promise<void> {
+  const client=requireSupabase();
+  const {data:session,error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session.session?.access_token) throw new Error('Admin session expired. Sign in again, then select Start conversion.');
+  const {data,error}=await client.functions.invoke('study-ppt-dispatch',{
+    body:{id},headers:{Authorization:'Bearer '+session.session.access_token}
+  });
+  if(error){
+    let message=presentationError(error);
+    const response=(error as {context?:Response}).context;
+    if(response && typeof response.json==='function'){
+      try { const body=await response.clone().json(); if(typeof body?.error==='string') message=body.error; } catch {}
+      message='HTTP '+response.status+': '+message;
+    }
+    throw new Error(message);
   }
+  if(data?.dispatched!==true && !['processing','ready'].includes(data?.status)) throw new Error('Conversion worker did not accept the request.');
 }
 export async function uploadPresentation(details: PresentationDetails, file: File) {
   if (!/\.pptx$/i.test(file.name) || !file.size || file.size > 50*1024*1024) throw new Error('Select a PPTX file up to 50 MB.');
@@ -36,7 +46,7 @@ export async function uploadPresentation(details: PresentationDetails, file: Fil
   const {error} = await client.from(table).insert({...details,title:details.title.trim(),chapter:details.chapter.trim(),id});
   // Do not delete the original on an ambiguous network failure: the row may have committed.
   if(error) throw new Error('Metadata save failed; refresh before retrying. '+error.message);
-  await requestConversion(id);
+  try { await requestConversion(id); return null; } catch(e) { return presentationError(e); }
 }
 export async function updatePresentation(id: string, patch: Partial<Pick<Presentation,'title'|'chapter'|'subject'|'class_level'|'published'|'allow_download'|'status'>>) {
   const {data,error} = await requireSupabase().from(table).update({...patch,updated_at:new Date().toISOString()}).eq('id',id).select('id').single();
