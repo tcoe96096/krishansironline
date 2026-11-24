@@ -1,6 +1,9 @@
 name: Study PPT conversion
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'feature/study-ppt-admin-viewer-20261124'
   pull_request:
     paths:
       - '.github/workflows/study-ppt-conversion.yml'
@@ -56,11 +59,33 @@ jobs:
               assert uploads == ['slide-1.png', 'slide-2.png']
               print('Two actual slides converted using isolated worker; no network storage accessed.')
           PY
-  convert:
-    if: github.event_name != 'pull_request'
+  # Only the isolated Preview project can be used from the feature branch.
+  # Set repository variable STUDY_PPT_PREVIEW_ENABLED=true after configuring
+  # study-ppt-worker-preview with its own secret and branch protection.
+  preview-convert:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/study-ppt-admin-viewer-20261124' && vars.STUDY_PPT_PREVIEW_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: study-ppt-worker
+    environment: study-ppt-worker-preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install slide rendering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
+      - name: Convert Preview queue only
+        env:
+          STUDY_PPT_PROJECT_REF: zgpkmfqioqvincmgyfpi
+          STUDY_PPT_SUPABASE_URL: https://zgpkmfqioqvincmgyfpi.supabase.co
+          STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
+        run: python3 scripts/convert-study-presentations.py
+  convert:
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.STUDY_PPT_PRODUCTION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: study-ppt-worker-production
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,7 +96,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-core
       - name: Convert private queued presentations
         env:
-          STUDY_PPT_PROJECT_REF: ${{ vars.STUDY_PPT_PROJECT_REF }}
-          STUDY_PPT_SUPABASE_URL: ${{ vars.STUDY_PPT_SUPABASE_URL }}
+          STUDY_PPT_PROJECT_REF: vsqwlkqqsxcehvdsdbna
+          STUDY_PPT_SUPABASE_URL: https://vsqwlkqqsxcehvdsdbna.supabase.co
           STUDY_PPT_SERVICE_ROLE_KEY: ${{ secrets.STUDY_PPT_SERVICE_ROLE_KEY }}
         run: python3 scripts/convert-study-presentations.py
