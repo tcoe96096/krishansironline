@@ -5,7 +5,7 @@ export const PPT_SUBJECTS = ['History','Political Science','Geography','Economic
 export const PPT_CLASSES = ['6','7','8','9','10','11','12'];
 export type Presentation = {
   id: string; class_level: string; subject: string; chapter: string; title: string;
-  status: 'queued'|'processing'|'ready'|'error'; slide_count: number; published: boolean;
+  status: 'queued'|'processing'|'ready'|'error'|'deleting'; slide_count: number; published: boolean;
   allow_download: boolean; created_at: string; updated_at: string;
 };
 export type PresentationDetails = Pick<Presentation,'class_level'|'subject'|'chapter'|'title'>;
@@ -34,9 +34,9 @@ export async function updatePresentation(id: string, patch: Partial<Pick<Present
   if(error || !data) throw error || new Error('Update not authorized.');
 }
 export async function archivePresentation(p: Presentation) {
-  await updatePresentation(p.id,{published:false,allow_download:false});
-  if(p.status==='processing') throw new Error('Conversion in progress. Unpublished; retry after conversion ends.');
   const client=requireSupabase();
+  const {data:claimed,error:claimError}=await client.from(table).update({status:'deleting',published:false,allow_download:false,updated_at:new Date().toISOString()}).eq('id',p.id).in('status',['ready','error','queued','deleting']).select('id').maybeSingle();
+  if(claimError||!claimed)throw claimError||new Error('Conversion in progress. Retry after conversion ends.');
   // Hide the record first. Keep the row until storage cleanup succeeds.
   const {data:files,error:listError}=await client.storage.from(slides).list(p.id,{limit:1000});
   if(listError) throw listError;

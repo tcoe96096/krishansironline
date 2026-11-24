@@ -1,9 +1,1 @@
-Class 10 PowerPoint presentations
-
-Place the three public PPTX files in this folder using these exact names:
-
-- lesson-4.pptx
-- lesson-4-part-2.pptx
-- lesson-5-history.pptx
-
-The Class 10 Study Materials page uses these public paths in the PowerPoint player.
+Legacy placeholder directory. New presentations must be uploaded through the Admin Study Materials module after database and conversion-worker activation. Do not place original PPTX files in public hosting.

@@ -30,6 +30,7 @@ export function AdminStudyPresentations({demoMode=false}:{demoMode?:boolean}){
     <div className="flex items-center justify-between"><h3 className="font-bold">Uploaded presentations ({items.length})</h3><button type="button" className={btn} disabled={busy} onClick={()=>void run(async()=>{},'Refreshed.')}>Refresh</button></div>
     {items.map(p=><article key={p.id} className="space-y-3 rounded-xl border p-4"><div className="flex flex-wrap justify-between gap-2"><div><h4 className="font-bold">{p.title}</h4><p className="text-xs text-slate-600">Class {p.class_level} · {p.subject} · {p.chapter}</p></div><span className="text-xs font-bold">{p.status} · {p.published?'Published':'Draft'}{p.slide_count>0?' · '+p.slide_count+' slides':''}</span></div>
       {p.status==='queued'&&<p className="text-xs text-slate-500">Waiting for the configured conversion worker. Refresh automatically every 15 seconds.</p>}
+      {p.status==='deleting'&&<p className="text-xs text-slate-500">Deletion pending. Use Delete to retry cleanup.</p>}
       {p.status==='error'&&<p className="text-xs text-red-700">Conversion failed. Retry or upload a corrected PPT.</p>}
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={p.allow_download} disabled={busy} onChange={e=>{const value=e.target.checked;void run(()=>updatePresentation(p.id,{allow_download:value}),value?'Public download enabled.':'Public download disabled.');}}/>Allow public/student download</label>
       <div className="flex flex-wrap gap-2">
@@ -38,7 +39,7 @@ export function AdminStudyPresentations({demoMode=false}:{demoMode?:boolean}){
         <button className={btn} disabled={busy} onClick={()=>void run(()=>downloadPresentation(p),'Download requested.')}>Admin download</button>
         <button className={btn} disabled={busy} onClick={()=>{setEditing(p.id);setDetails({class_level:p.class_level,subject:p.subject,chapter:p.chapter,title:p.title});}}>Edit</button>
         {p.status==='error'&&<button className={btn} disabled={busy} onClick={()=>void run(()=>updatePresentation(p.id,{status:'queued'}),'Queued again.')}>Retry conversion</button>}
-        <button className={btn+' text-red-700'} disabled={busy||p.status==='queued'||p.status==='processing'} onClick={()=>{if(window.confirm('Delete this presentation and its files?'))void run(()=>archivePresentation(p),'Deleted.');}}>Delete</button>
+        <button className={btn+' text-red-700'} disabled={busy||p.status==='processing'} onClick={()=>{if(window.confirm('Delete this presentation and its files?'))void run(()=>archivePresentation(p),'Deleted.');}}>Delete</button>
       </div></article>)}
     </>}
     {preview&&enabled&&<PresentationViewer item={preview} admin onClose={()=>setPreview(null)}/>}

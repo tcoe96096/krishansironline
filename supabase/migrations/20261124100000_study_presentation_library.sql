@@ -13,7 +13,7 @@ create table public.ksol_presentations (
   subject text not null check (subject in ('History','Political Science','Geography','Economics')),
   chapter text not null check (length(trim(chapter)) between 1 and 150),
   title text not null check (length(trim(title)) between 1 and 200),
-  status text not null default 'queued' check (status in ('queued','processing','ready','error')),
+  status text not null default 'queued' check (status in ('queued','processing','ready','error','deleting')),
   slide_count integer not null default 0 check (slide_count between 0 and 200),
   published boolean not null default false,
   allow_download boolean not null default false,
