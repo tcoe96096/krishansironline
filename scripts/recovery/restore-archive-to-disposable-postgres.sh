@@ -39,7 +39,11 @@ docker run -d --name "$name" --network none --tmpfs /var/lib/postgresql/data:rw,
 restore_user=supabase_admin
 ready=0
 for i in $(seq 1 90); do
-  if docker exec "$name" psql -X -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
+  # The image uses a temporary socket-only postmaster during initialization,
+  # then shuts it down and starts the final server. Require TCP on loopback
+  # inside the networkless container, which the temporary server does not use.
+  # PGPASSWORD is scoped to this disposable container only.
+  if docker exec -e PGPASSWORD="$password" "$name" psql -X -h 127.0.0.1 -U "$restore_user" -d ksol_recovery -Atqc 'SELECT 1' >/dev/null 2>&1; then
     ready=1
     break
   fi
