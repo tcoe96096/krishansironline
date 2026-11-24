@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { requireSupabase } from '../lib/supabase';
 import { extractTestDocumentText } from '../lib/extractTestDocumentText';
 import { parseExtractedMcqs } from '../lib/parseExtractedMcqs';
@@ -38,6 +38,8 @@ export const AdminTestManagement: React.FC = () => {
   const [aiAssistBusy, setAiAssistBusy] = useState(false);
   const [aiAnswerSuggestions, setAiAnswerSuggestions] = useState<Record<number, number | null>>({});
   const [aiReviewStatus, setAiReviewStatus] = useState('');
+  const draftRevision = useRef(0);
+  useEffect(() => { draftRevision.current += 1; }, [questions, title]);
 
   const loadTests = useCallback(async () => {
     setLoading(true); setError('');
@@ -148,6 +150,7 @@ export const AdminTestManagement: React.FC = () => {
 
   const suggestBilingualWithAi = async () => {
     if (aiAssistBusy || documentImportBusy) return;
+    const startingRevision = draftRevision.current;
     setAiAssistBusy(true); setError(''); setNotice(''); setAiReviewStatus('');
     try {
       const batchInputs = questions.map((q, id) => {
@@ -193,6 +196,10 @@ export const AdminTestManagement: React.FC = () => {
           translatedTitle = data.translatedTitle;
         }
         responses.push(...data.suggestions);
+      }
+      // Never overwrite edits/imports made while the asynchronous AI request was running.
+      if (draftRevision.current !== startingRevision) {
+        throw new Error('AI processing के दौरान Draft बदला है। पुराने AI परिणाम लागू नहीं किए गए। दोबारा AI Assist चलाएँ।');
       }
       // Apply only after every batch succeeds. AI never directly selects an answer.
       const byId = new Map<number, Suggestion>();
