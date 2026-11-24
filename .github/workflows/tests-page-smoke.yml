@@ -171,7 +171,7 @@ jobs:
               await page.getByRole('group',{name:'Select test language'}).waitFor();
               await page.getByRole('button',{name:'CBT Mode',exact:true}).waitFor();
               await page.getByRole('button',{name:'All Questions',exact:true}).waitFor();
-              await page.getByText('Fixture Student',{exact:true}).first().waitFor();
+              await page.locator('#tests').getByText('Fixture Student',{exact:true}).filter({visible:true}).waitFor();
               assert.deepEqual(starts,['fixture-13'],'The exact selected test starts once');
               assert.equal(await page.getByRole('dialog',{name:'Student account'}).count(),0);
               await context.close();
