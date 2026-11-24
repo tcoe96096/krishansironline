@@ -110,4 +110,15 @@ const devanagariNumbers = parseExtractedMcqs([
 assert.equal(devanagariNumbers.questions.length, 2);
 assert.deepEqual(devanagariNumbers.questions.map(q => q.answerIndex), [0, 2]);
 
+
+const hindiQuestionPrefix = parseExtractedMcqs([
+  'प्रश्न १. ताजमहल कहाँ है?',
+  '(क) आगरा (ख) दिल्ली (ग) जयपुर (घ) पटना',
+  'प्रश्न २: सौरमंडल में कौन सा ग्रह है?',
+  'क. शुक्र ख. चंद्रमा ग. सूर्य घ. आकाशगंगा',
+  'उत्तरमाला: प्रश्न १-क, प्रश्न २-क',
+].join('\n'));
+assert.equal(hindiQuestionPrefix.questions.length, 2);
+assert.deepEqual(hindiQuestionPrefix.questions.map(q => q.answerIndex), [0, 0]);
+
 console.log('MCQ parser review-first tests passed');
