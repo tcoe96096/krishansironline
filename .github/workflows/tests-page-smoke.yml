@@ -16,6 +16,7 @@ jobs:
     env:
       VITE_SUPABASE_URL: https://catalogue-fixture.invalid
       VITE_SUPABASE_PUBLISHABLE_KEY: synthetic-fixture-only
+      VITE_EXAM_SERVER_AUTOSAVE_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -155,6 +156,8 @@ jobs:
               const jwt = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',Buffer.from(JSON.stringify({sub:owner,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})).toString('base64url'),'fixture-signature'].join('.');
               const session = {access_token:jwt,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:owner,aud:'authenticated',role:'authenticated',email:'fixture@example.invalid',app_metadata:{},user_metadata:{account_type:'student'},created_at:new Date().toISOString()}};
               const starts = [];
+              let draftRevision=0, draftAnswers={}, finalized=0;
+              const expiry=new Date(Date.now()+1800000).toISOString();
               const makeAttempt = (n,status,score=null,testId='fixture-13',studentId=owner) => ({id:'attempt-'+n+'-'+testId+'-'+studentId,student_id:studentId,test_id:testId,attempt_number:n,status,started_at:new Date(Date.now()-7200000).toISOString(),expires_at:new Date(Date.now()-3600000).toISOString(),submitted_at:status==='submitted'?new Date(Date.now()-3500000).toISOString():null,score,total_marks:score===null?null:1,percentage:score===null?null:score*100,correct_count:score,attempted_count:score});
               const history = flow==='completed-limit'?[makeAttempt(2,'in_progress'),makeAttempt(1,'submitted',1)]:flow==='expired-limit'?[makeAttempt(2,'in_progress'),makeAttempt(1,'expired')]:flow==='retry-available'?[makeAttempt(1,'expired')]:[];
               if(flow==='completed-limit') history.push(makeAttempt(3,'submitted',1,'fixture-12'),makeAttempt(4,'submitted',1,'fixture-13','other-student'));
@@ -178,11 +181,24 @@ jobs:
                 if (url.pathname === '/rest/v1/user_roles') return send(null);
                 if (url.pathname === '/rest/v1/tests') return send(fixtures);
                 if (url.pathname === '/rest/v1/test_attempts') return send(history);
+                if (url.pathname.endsWith('/rpc/read_test_attempt_draft')) return send({answers:draftAnswers,revision:draftRevision,saved_at:null,expires_at:expiry,server_now:new Date().toISOString()});
+                if (url.pathname.endsWith('/rpc/save_test_attempt_draft')) {
+                  const body=route.request().postDataJSON();
+                  if(body.p_expected_revision!==draftRevision) return send({conflict:true,revision:draftRevision,saved_at:null});
+                  draftAnswers=body.p_answers; draftRevision++;
+                  return send({conflict:false,revision:draftRevision,saved_at:new Date().toISOString(),expires_at:expiry,server_now:new Date().toISOString()});
+                }
+                if (url.pathname.endsWith('/rpc/finish_test_attempt_draft')) {
+                  const body=route.request().postDataJSON();
+                  assert.equal(body.p_expected_revision,draftRevision);
+                  finalized++;
+                  return send({...makeAttempt(1,'submitted',1),id:'fixture-attempt',expires_at:expiry});
+                }
                 if (url.pathname.endsWith('/rpc/start_test_attempt')) {
                   const body = route.request().postDataJSON();
                   starts.push(body.p_test_id);
                   if(flow==='server-error') return route.fulfill({status:400,headers,body:JSON.stringify({code:'P0001',message:'Attempt limit reached'})});
-                  return send({id:'fixture-attempt',student_id:owner,test_id:body.p_test_id,attempt_number:1,status:'in_progress',started_at:new Date().toISOString(),expires_at:new Date(Date.now()+1800000).toISOString(),submitted_at:null,score:null,total_marks:null,percentage:null,correct_count:null,attempted_count:null});
+                  return send({id:'fixture-attempt',student_id:owner,test_id:body.p_test_id,attempt_number:1,status:'in_progress',started_at:new Date().toISOString(),expires_at:expiry,submitted_at:null,score:null,total_marks:null,percentage:null,correct_count:null,attempted_count:null});
                 }
                 return send([]);
               });
@@ -234,6 +250,21 @@ jobs:
               await page.locator('#tests').getByText('Fixture Student',{exact:true}).filter({visible:true}).waitFor();
               assert.deepEqual(starts,['fixture-13'],'The exact selected test starts once');
               assert.equal(await page.getByRole('dialog',{name:'Student account'}).count(),0);
+              if(flow==='already-signed-in') {
+                await page.getByRole('group',{name:'Select test language'}).getByRole('button',{name:'English',exact:true}).click();
+                await page.getByText('Answers saved on server',{exact:true}).waitFor();
+                await page.locator('#cbt-test-workspace input[type=radio]').first().check();
+                await page.waitForFunction(()=>document.body.textContent.includes('Answers saved on server'));
+                // Wait for the fixture acknowledgement of the selected option, not just the initial empty draft.
+                for(let i=0;i<40 && draftAnswers['0']!==0;i++) await new Promise(r=>setTimeout(r,100));
+                assert.equal(draftAnswers['0'],0,'selected option was persisted');
+                await page.getByText('Answers saved on server',{exact:true}).waitFor();
+                page.on('dialog',dialog=>dialog.accept());
+                await page.locator('#tests').getByRole('button',{name:'Submit',exact:true}).filter({visible:true}).last().click();
+                await page.locator('#test-result-card').waitFor({state:'visible'});
+                assert.equal(finalized,1,'finalize exact acknowledged revision');
+                console.log('PASS server draft save and finalize');
+              }
               await context.close();
               console.log('PASS direct start: '+flow);
             }
