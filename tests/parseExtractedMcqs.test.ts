@@ -94,7 +94,7 @@ const hindiChoices = parseExtractedMcqs([
   '2. इनमें से नदी कौन सी है?',
   '(क) हिमालय (ख) सतलुज (ग) थार (घ) अरावली',
   'उत्तर कुंजी: 2-ख',
-].join('\\n'));
+].join('\n'));
 assert.equal(hindiChoices.questions.length, 2);
 assert.deepEqual(hindiChoices.questions[0].options, ['दिल्ली', 'भोपाल', 'जयपुर', 'पटना']);
 assert.deepEqual(hindiChoices.questions.map(q => q.answerIndex), [0, 1]);
