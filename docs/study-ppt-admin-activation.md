@@ -9,21 +9,26 @@ the feature is activated. No other website module is intentionally changed.
 1. Verify the target project's current schema, storage policies, recovery and role
    access. Apply the new migration to isolated Preview first. Do not make either
    bucket public. Existing tables and teacher policies are not modified.
-2. Configure GitHub environment study-ppt-worker for Preview only, with
-   STUDY_PPT_PROJECT_REF and STUDY_PPT_SUPABASE_URL environment variables and
-   STUDY_PPT_SERVICE_ROLE_KEY environment secret. Never put the service role key
-   in VITE variables, browser code, commits or logs. Use a dedicated GitHub
-   environment; restrict authorized branches and reviewers as appropriate.
-3. Run conversion in Preview (manual workflow or scheduled after merge). GitHub
-   scheduling is best-effort; conversion may be delayed. The workflow needs
-   Linux sudo/unshare and the specified packages. Confirm one actual conversion.
+2. Configure GitHub environment `study-ppt-worker-preview` with a Preview-only
+   `STUDY_PPT_SERVICE_ROLE_KEY` environment secret. Restrict it to the exact
+   feature branch and use environment approval if available. Never put the key
+   in frontend code, repository variables, commits, or logs.
+3. Enable repository variable `STUDY_PPT_PREVIEW_ENABLED=true` only after the
+   Preview environment is configured. A push to the feature branch runs the
+   Preview queue worker without merging or deploying production. The workflow
+   pins the Preview URL and ref. The pull-request smoke job needs no secrets.
+   Upload a sample via Preview Admin before running the worker; verify its
+   output and keep the sample unpublished until role checks pass.
 4. Verify Admin and Super Admin upload, conversion, preview, publish, download,
    edit, unpublish, delete, retry. Anonymous and student accounts must see only
    published ready metadata and rendered slides; attempt original download
    with OFF (deny), ON (allow), OFF again (deny). Verify no draft slides can be
    read. Test mobile slide navigation, keyboard, and Class 6–12 filters.
-5. Only after Preview passes, approve production migration and reconfigure the
-   dedicated conversion environment for the verified Production project; never
+5. Only after Preview passes, approve the production migration and configure
+   the distinct `study-ppt-worker-production` environment with the Production
+   key and main-only branch restriction. Enable repository variable
+   `STUDY_PPT_PRODUCTION_ENABLED=true` only when production is ready. Main-only
+   scheduled or manual runs use the pinned Production ref and URL. Never
    share Preview credentials with Production. Verify production role behavior.
    No production migration or live deployment is performed by this PR itself.
 
