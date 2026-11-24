@@ -92,11 +92,16 @@ export const AdminTestManagement: React.FC = () => {
     }
     setClassLevel(set.class_level); setSubject(set.subject); setChapter(set.chapter);
     setAiAnswerSuggestions({}); setAiReviewStatus('');
-    setQuestions(current => [...current, ...set.questions.map(q => ({
+    const untouchedBlankDraft = questions.length === 1 && answers.length === 1 && answers[0] === -1 &&
+      !questions[0].question.en.trim() && !questions[0].question.hi.trim() &&
+      [...questions[0].options.en, ...questions[0].options.hi].every(x => !x.trim());
+    const importedQuestions = set.questions.map(q => ({
       ...q, explanation: q.explanation || { en: '', hi: '' },
       marks: Number(q.marks || 1), category: (q.category === 'conceptual' ? 'conceptual' : 'factual') as 'conceptual' | 'factual'
-    }))]);
-    setAnswers(current => [...current, ...set.answer_key]);
+    }));
+    // Starting from an empty form must not leave an invalid blank question at index 0.
+    setQuestions(current => untouchedBlankDraft ? importedQuestions : [...current, ...importedQuestions]);
+    setAnswers(current => untouchedBlankDraft ? [...set.answer_key] : [...current, ...set.answer_key]);
     setNotice(set.questions.length + ' प्रश्न वर्तमान Test Draft में जोड़ दिए गए हैं। Save Draft दबाएँ।');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
