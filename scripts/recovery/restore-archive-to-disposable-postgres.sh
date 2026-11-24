@@ -393,6 +393,39 @@ if [[ "$verify_scope" == application ]]; then
   echo 'RELEASE_GATE=NO_GO'
   exit 0
 fi
+# Explicit catalog evidence for the real exam archive. This checks restored
+# structures only: --no-acl/--no-owner means effective permissions and roles
+# cannot be certified here. Never query or print private user rows.
+if [[ "${KSOL_VERIFY_EXAM_CATALOG:-0}" == 1 ]]; then
+  catalog_ok="$(docker exec -i "$name" psql -X -U "$restore_user" -d "$restore_db" -v ON_ERROR_STOP=1 -Atq 2>/dev/null <<'SQL'
+WITH expected(rel) AS (
+  VALUES ('public.student_profiles'),('public.tests'),('public.test_answer_keys'),('public.test_attempts')
+), tables AS (
+  SELECT to_regclass(rel) AS oid FROM expected
+)
+SELECT (
+  (SELECT count(*) FROM tables t JOIN pg_class c ON c.oid=t.oid WHERE c.relrowsecurity)=4
+  AND NOT EXISTS (SELECT 1 FROM tables t WHERE NOT EXISTS (
+    SELECT 1 FROM pg_constraint c WHERE c.conrelid=t.oid AND c.contype='p' AND c.convalidated))
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.test_attempts') AND confrelid=to_regclass('public.tests') AND contype='f' AND convalidated)
+  AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.test_answer_keys') AND confrelid=to_regclass('public.tests') AND contype='f' AND convalidated)
+  AND NOT EXISTS (SELECT 1 FROM pg_index i JOIN tables t ON t.oid=i.indrelid WHERE NOT i.indisvalid OR NOT i.indisready)
+  AND EXISTS (SELECT 1 FROM pg_policy WHERE polrelid=to_regclass('public.student_profiles'))
+  AND EXISTS (SELECT 1 FROM pg_policy WHERE polrelid=to_regclass('public.test_attempts'))
+  AND to_regprocedure('public.start_test_attempt(text)') IS NOT NULL
+  AND to_regprocedure('public.submit_test_attempt(uuid,jsonb)') IS NOT NULL
+)::int;
+SQL
+)" || {
+    echo 'KSOL_EXAM_CATALOG_STRUCTURE=QUERY_FAILED' >&2; exit 2;
+  }
+  if [[ "$catalog_ok" != 1 ]]; then
+    echo 'KSOL_EXAM_CATALOG_STRUCTURE=NOT_VERIFIED' >&2
+    exit 2
+  fi
+  echo 'KSOL_EXAM_CATALOG_STRUCTURE=VERIFIED'
+  echo 'KSOL_EFFECTIVE_GRANTS_AUTH_STORAGE_BYTES=NOT_VERIFIED'
+fi
 echo 'KSOL_DISPOSABLE_POSTGRES_RESTORE_OK: nonempty table catalog verified'
 echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'
 echo 'RELEASE_GATE=NO_GO'

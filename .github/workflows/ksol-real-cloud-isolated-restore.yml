@@ -68,7 +68,7 @@ jobs:
           # Do not use source database credentials; no Supabase connections.
           # Docker destination has --network none, no ports, tmpfs only, auto-cleanup.
           if ! rclone cat "ksolcrypt:preview/$latest" 2>/dev/null |
-            KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 \
+            KSOL_DISPOSABLE_RESTORE_ACK=I_UNDERSTAND_ISOLATED_ONLY KSOL_EXPECT_SUPABASE_SCHEMA=1 KSOL_VERIFY_EXAM_CATALOG=1 \
               bash scripts/recovery/restore-archive-to-disposable-postgres.sh; then
             # A full pg_dump can contain Supabase-managed extension objects.
             # Diagnose separately whether core application tables and their
