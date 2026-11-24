@@ -42,7 +42,7 @@ const unsafe = parseTestDocumentMetadata([
   'Marks per question: -5',
   'Class: 15',
   'Total Marks: 20',
-], 'test__sample.pdf', 5);
+].join('\n'), 'test__sample.pdf', 5);
 assert.equal(unsafe.durationMinutes, undefined);
 assert.equal(unsafe.attemptLimit, undefined);
 assert.equal(unsafe.marksPerQuestion, undefined);
