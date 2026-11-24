@@ -3,9 +3,9 @@
 Scope: Draft PR #173 only. **No main merge, live deploy, or production secret changes.**
 
 ## Current implementation
-1. Admin opens **Online Test Builder → PDF / Word Smart Import** and selects a text-based PDF or DOCX (max 8 MB; PDF max 100 pages).
-2. The browser extracts the text locally and parses numbered MCQs with A–D options, including inline options and optional explicit answer keys.
-3. The question form is populated for review; metadata with explicit headings (Class, Subject, Chapter, Duration, Title) can be copied from the original document.
+1. Admin opens **Online Test Builder → PDF / Word Smart Import** and selects a PDF (text or scanned) or DOCX (max 8 MB; PDF max 100 pages, up to 12 textless/OCR pages).
+2. Browser-local text extraction uses PDF.js and Mammoth. Image-only PDF pages are rendered on the browser canvas and OCR'd using Tesseract.js Hindi + English (max 12 OCR pages, 5 million pixels per page). OCR engine and language assets can be fetched from external CDNs on first use; **document page images/text are not uploaded by the OCR reader**. OCR may be slow and inaccurate; verify all results.
+3. A deterministic parser finds numbered MCQs, line-wrapped/inline A–D choices and separate numbered Answer Key sections, and flags conflicting or ambiguous answer keys. It also populates labelled Class, Subject, Chapter, Duration, Attempt Limit and Marks per Question fields. Invalid/ambiguous settings are flagged for Admin review.
 4. The Admin may press **AI Assist: हिंदी + English + Answer Suggestions**. Batches of up to ten questions are sent to the authenticated, admin-only `admin-test-ai-assist` Supabase Edge Function.
 5. The Edge Function calls the configured AI provider to suggest Hindi + English question/option translations, explanations and candidate answer indexes; the browser fills bilingual drafts after **all** batches pass structural validation.
 6. **AI-suggested answers are not selected automatically.** Admin must press Accept answer for a candidate or select the correct option manually. An ambiguous answer is returned as null. The existing Save Draft still requires complete bilingual questions and valid answers.
@@ -34,9 +34,9 @@ Scope: Draft PR #173 only. **No main merge, live deploy, or production secret ch
 - [ ] Configure explicit API usage limits, server-side rate limits, abuse monitoring, and secrets rotation for production.
 - [ ] Confirm Preview database schema/RLS and Admin draft RPC are functional.
 - [ ] Confirm no backup, teacher, student or unrelated website workflow is modified.
-- [ ] Finish OCR design separately for scanned PDFs. This phase does not claim to support scans.
+- [ ] Manually test Tesseract.js OCR on real scanned Hindi and English PDFs, including first-load language-model downloads, browser performance, mixed text/image pages, missing OCR text and 12-page limit.
 - [ ] Owner explicitly approves the reviewed PR and production deployment.
 
-CI gates in this branch: `npm install --legacy-peer-deps`, `npm run lint`, `npx --no-install tsx tests/parseExtractedMcqs.test.ts`, `npm run build`.
+CI gates in this branch: `npm install --legacy-peer-deps`, `npm run lint`, parser tests for MCQs and metadata via `npx --no-install tsx`, and `npm run build`. OCR must also pass browser smoke testing.
 
-**Known limit:** Automatic setting detection currently recognizes labelled Class/Subject/Chapter/Duration/Title fields. Title falls back to the uploaded filename and the AI endpoint now suggests its missing Hindi/English translation; OCR is not yet implemented; setup is not fully zero-click. Correct-answer suggestions are AI-generated and must be verified by the Admin.
+**Known limits:** Automatic setting detection recognises only labelled Class/Subject/Chapter/Duration/Attempt Limit/Marks per Question/Title fields, rather than every conceivable free-form layout. Title falls back to the uploaded filename; AI can suggest the other language. OCR implementation is browser-only and **not yet manually validated**; scan quality, formatting, resource limits and model download connectivity affect accuracy. Setup is not fully zero-click. Correct-answer suggestions are AI-generated and must be verified by Admin.
