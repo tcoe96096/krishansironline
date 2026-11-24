@@ -164,7 +164,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   useEffect(() => {
     setTestClassFilter(initialClassFilter || 'all');
     setTestSubjectFilter('all'); setTestChapterFilter('all'); setCataloguePage(1);
-    if (initialClassFilter) setCatalogueScope('all');
+    setCatalogueScope(initialClassFilter ? 'all' : 'my');
   }, [initialClassFilter]);
   useEffect(() => {
     setTestSubjectFilter('all'); setTestChapterFilter('all'); setCataloguePage(1);
