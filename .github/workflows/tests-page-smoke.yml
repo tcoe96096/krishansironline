@@ -97,8 +97,19 @@ jobs:
               assert.equal(await classFilter.inputValue(),'10');
               await scope.getByText('Test instructions',{exact:true}).click();
               await scope.getByText('Read each question carefully.',{exact:true}).waitFor();
-              await scope.getByRole('button',{name:'Login to start',exact:true}).click();
+              const card = scope.getByRole('button',{name:'Fixture test 13 — Start test',exact:true});
+              assert.equal(await card.count(),1,'Exactly one start action per card');
+              assert.equal(await scope.getByRole('button',{name:'Login to start',exact:true}).count(),0);
+              await card.getByRole('heading',{name:'Fixture test 13',exact:true}).click();
+              const login = page.getByRole('dialog',{name:'Student account'});
+              await login.waitFor();
               assert.equal(starts,0,'Guest must not start a server attempt');
+              await login.getByRole('button',{name:'Close',exact:true}).click();
+              await login.waitFor({state:'hidden'});
+              assert.equal(starts,0,'Cancelling login must not start an attempt');
+              await card.click();
+              await login.waitFor();
+              assert.equal(starts,0,'Reopening login must not start an attempt');
               await context.close();
               console.log('PASS public catalogue at viewport '+width);
             }
