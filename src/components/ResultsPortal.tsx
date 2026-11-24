@@ -3,6 +3,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedTest } from '../services/testService';
 import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-react';
+import { isResumableAttempt } from '../services/testAttemptStatus';
+import { publicHref } from '../data/publicInfo';
 
 /**
  * Student results are private: this view reads only the signed-in user's
@@ -12,7 +14,9 @@ export const ResultsPortal: React.FC = () => {
   const { language } = useLanguage();
   const { user, profile } = useAuth();
   const isEnglish = language === 'en';
+  const testFilter = new URLSearchParams(window.location.search).get('testId');
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
+  const visibleAttempts = attempts.filter(row=>row.student_id===user?.id && (!testFilter || row.test_id===testFilter));
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -28,15 +32,17 @@ export const ResultsPortal: React.FC = () => {
     }
 
     setLoading(true);
+    setAttempts([]);
+    setTests([]);
     setError('');
     void Promise.all([getMyTestAttempts(), getPublishedTests()])
       .then(([history, catalogue]) => {
         if (!active) return;
-        setAttempts(history);
+        setAttempts(history.filter(row=>row.student_id===user.id));
         setTests(catalogue);
       })
       .catch((cause) => {
-        if (active) setError(cause instanceof Error ? cause.message : 'परिणाम लोड नहीं हो सके।');
+        if (active) setError(isEnglish?'Results could not be loaded. Please refresh.':'परिणाम लोड नहीं हो सके। कृपया रिफ्रेश करें।');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -63,7 +69,7 @@ export const ResultsPortal: React.FC = () => {
             <span>{isEnglish ? 'Student Results Portal' : 'विद्यार्थी परीक्षा परिणाम पोर्टल'}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">
-            {isEnglish ? 'My Test Results' : 'मेरे टेस्ट परिणाम'}
+            {testFilter ? (isEnglish?'Test Result & Attempt History':'टेस्ट परिणाम एवं प्रयास इतिहास') : (isEnglish ? 'My Test Results' : 'मेरे टेस्ट परिणाम')}
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
             {isEnglish
@@ -72,6 +78,7 @@ export const ResultsPortal: React.FC = () => {
           </p>
         </div>
 
+        {testFilter && <div className="mb-5 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-sky-900"><a href={publicHref('online-tests')} className="rounded-lg border border-sky-200 px-3 py-2">{isEnglish?'Back to tests':'टेस्ट पर वापस जाएँ'}</a><a href={publicHref('results')} className="underline">{isEnglish?'View all results':'सभी परिणाम देखें'}</a></div>}
         {!user ? (
           <div className="max-w-2xl mx-auto rounded-2xl border border-sky-200 bg-sky-50/70 p-6 sm:p-8 text-center">
             <ShieldCheck className="w-8 h-8 text-sky-800 mx-auto mb-3" />
@@ -100,7 +107,7 @@ export const ResultsPortal: React.FC = () => {
             {error && <p role="alert" className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
             {loading ? (
               <p role="status" className="py-8 text-center text-sm text-slate-500">{isEnglish ? 'Loading your results…' : 'आपके परिणाम लोड हो रहे हैं…'}</p>
-            ) : attempts.length === 0 ? (
+            ) : error ? null : visibleAttempts.length === 0 ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-6 text-center">
                 <Clock className="w-7 h-7 text-amber-700 mx-auto mb-2" />
                 <p className="font-semibold text-slate-900">{isEnglish ? 'No test attempts yet' : 'अभी कोई टेस्ट प्रयास उपलब्ध नहीं है'}</p>
@@ -108,9 +115,9 @@ export const ResultsPortal: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {attempts.map((attempt) => {
+                {visibleAttempts.map((attempt) => {
                   const submitted = attempt.status === 'submitted';
-                  const inProgress = attempt.status === 'in_progress';
+                  const inProgress = isResumableAttempt(attempt);
                   return (
                     <article key={attempt.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -126,9 +133,9 @@ export const ResultsPortal: React.FC = () => {
                       </div>
                       {submitted ? (
                         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
-                          <div><Award className="mx-auto mb-1 h-4 w-4 text-sky-800" /><strong className="block text-lg text-slate-900">{attempt.score ?? 0}/{attempt.total_marks ?? 0}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Score' : 'अंक'}</span></div>
-                          <div><strong className="block text-lg text-slate-900">{Number(attempt.percentage ?? 0).toFixed(1)}%</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Percentage' : 'प्रतिशत'}</span></div>
-                          <div><strong className="block text-lg text-slate-900">{attempt.correct_count ?? 0}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Correct' : 'सही उत्तर'}</span></div>
+                          <div><Award className="mx-auto mb-1 h-4 w-4 text-sky-800" /><strong className="block text-lg text-slate-900">{attempt.score ?? '—'}/{attempt.total_marks ?? '—'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Score' : 'अंक'}</span></div>
+                          <div><strong className="block text-lg text-slate-900">{attempt.percentage===null?'—':Number(attempt.percentage).toFixed(1)+'%'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Percentage' : 'प्रतिशत'}</span></div>
+                          <div><strong className="block text-lg text-slate-900">{attempt.correct_count ?? '—'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Correct' : 'सही उत्तर'}</span></div>
                         </div>
                       ) : (
                         <p className="mt-3 text-xs text-slate-600">
