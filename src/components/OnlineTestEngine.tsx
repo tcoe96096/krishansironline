@@ -764,6 +764,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
         `कुल ${totalQuestions} में से आपने ${attemptedCount} प्रश्नों के उत्तर दिए हैं।\n${unattemptedCount} प्रश्न अभी अनुत्तरित हैं।\n\nक्या आप टेस्ट सबमिट करना चाहते हैं?`
       );
       if (!confirmIncomplete) return;
+      timeExpired = remainingUntilDeadline() <= 0;
     }
 
     submissionInFlight.current = true;
@@ -886,6 +887,20 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   };
 
   const currentQ = questionsList[currentQuestionIndex] || questionsList[0];
+  // Optional keyboard navigation; never capture input, radio or dialog controls.
+  useEffect(() => {
+    if (!examFocusActive || viewLayout !== 'cbt' || showAttemptSummaryModal || timeLeftSeconds <= 0) return;
+    const handleQuestionKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable], [role="dialog"]')) return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      setCurrentQuestionIndex(index => Math.max(0, Math.min(totalQuestions - 1, index + (event.key === 'ArrowRight' ? 1 : -1))));
+    };
+    window.addEventListener('keydown', handleQuestionKey);
+    return () => window.removeEventListener('keydown', handleQuestionKey);
+  }, [examFocusActive, viewLayout, showAttemptSummaryModal, timeLeftSeconds <= 0, totalQuestions]);
+
 
   return (
     <section id="tests" className="py-2 sm:py-4 bg-slate-50 border-b border-slate-200">
@@ -937,7 +952,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
               const resumable = !!active;
               const completed = !!latestResult;
               const historyLabel = resumable ? (catalogueEn ? 'In progress' : 'जारी है') : completed ? (catalogueEn ? 'Completed' : 'पूर्ण') : expired ? (catalogueEn ? 'Time expired' : 'समय समाप्त') : (catalogueEn ? 'Not started' : 'शुरू नहीं हुआ');
-              const actionLabel = !eligible ? (catalogueEn?'Class restricted':'कक्षा प्रतिबंधित') : user && !historyReady ? (catalogueEn?'Checking attempts…':'प्रयासों की जाँच…') : exhausted ? (catalogueEn?'Attempt limit reached':'प्रयास सीमा पूरी') : resumable ? (catalogueEn?'Resume test':'टेस्ट जारी रखें') : completed ? (catalogueEn?'Retake test':'दोबारा टेस्ट दें') : expired ? (catalogueEn?'Retry test':'पुनः प्रयास करें') : (catalogueEn?'Start test':'टेस्ट शुरू करें');
+              const actionLabel = !eligible ? (catalogueEn?'Class restricted':'कक्षा प्रतिबंधित') : user && !historyReady ? (catalogueEn?'Checking attempts…':'प्रयासों की जाँच…') : exhausted ? (completed ? (catalogueEn?'Completed':'परीक्षा पूर्ण') : (catalogueEn?'Time expired / No attempts left':'समय समाप्त / प्रयास शेष नहीं')) : resumable ? (catalogueEn?'Resume test':'टेस्ट जारी रखें') : completed ? (catalogueEn?'Retake test':'दोबारा टेस्ट दें') : expired ? (catalogueEn?'Retry test':'पुनः प्रयास करें') : (catalogueEn?'Start test':'टेस्ट शुरू करें');
               const canStart = eligible && (!user || (historyReady && !exhausted));
               const resultHref = publicHref('results')+'?testId='+encodeURIComponent(test.id);
               const date = sortedAttempts[0]?.submitted_at || sortedAttempts[0]?.started_at;
@@ -982,7 +997,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
                   <details className="mx-3 mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                     <summary className="cursor-pointer font-semibold text-sky-900">{catalogueEn ? 'Test instructions' : 'परीक्षा निर्देश'}</summary>
                     {test.chapter && <p className="mt-2 break-words text-slate-600">{catalogueEn ? 'Chapter: ' : 'अध्याय: '}{test.chapter}</p>}
-                    <ul className="mt-2 list-disc space-y-1 pl-4">{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
+                    <ul className="mt-2 list-disc space-y-1 pl-4"><li>{catalogueEn ? `Allowed attempts: ${limit}. The countdown continues even if you leave or close the test. Resume before the deadline.` : `अनुमत प्रयास: ${limit}। टेस्ट बंद करने या बाहर जाने पर भी समय चलता रहेगा। समय रहते वापस आकर टेस्ट जारी रखें।`}</li>{(catalogueEn ? test.instructions.en : test.instructions.hi).map((instruction,index) => <li key={index}>{instruction}</li>)}</ul>
                   </details>
                   {isSelected && loginError && !exhausted && <p role="alert" className="mx-3 mb-3 text-xs font-semibold text-rose-700">{displayLoginError}</p>}
                 </article>
