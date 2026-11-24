@@ -228,6 +228,24 @@ export const AdminTestManagement: React.FC = () => {
     } finally { setAiAssistBusy(false); }
   };
 
+  const acceptUnselectedAiAnswers = () => {
+    const candidates = Object.entries(aiAnswerSuggestions)
+      .filter(([key, answer]) => answer !== null && answers[Number(key)] === -1);
+    if (!candidates.length) {
+      setNotice('कोई नया AI suggested answer शेष नहीं है।');
+      return;
+    }
+    if (!window.confirm(candidates.length + ' AI suggested answers का आपने सत्यापन कर लिया है? केवल खाली Answer slots भरेंगे; पहले से चुने उत्तर नहीं बदलेंगे।')) return;
+    setAnswers(current => current.map((answer, index) => {
+      const suggested = aiAnswerSuggestions[index];
+      return answer === -1 && suggested !== null && suggested !== undefined ? suggested : answer;
+    }));
+    setAiAnswerSuggestions(current => Object.fromEntries(
+      Object.entries(current).filter(([key, answer]) => answer === null || answers[Number(key)] !== -1)
+    ));
+    setNotice('चयनित AI answers लागू किए गए हैं। Save Draft से पहले फिर जाँचें।');
+  };
+
   const importBulkJson = () => {
     setError(''); setNotice('');
     try {
@@ -346,6 +364,12 @@ export const AdminTestManagement: React.FC = () => {
         {aiAssistBusy ? 'AI processing…' : 'AI Assist: हिंदी + English + Answer Suggestions'}
       </button>
       {aiReviewStatus && <p role="status" className="mt-2 text-xs font-semibold text-indigo-800">{aiReviewStatus}</p>}
+      {Object.values(aiAnswerSuggestions).some(value => value !== null) && (
+        <button type="button" onClick={acceptUnselectedAiAnswers}
+          className="ml-2 mt-3 rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800">
+          Accept reviewed AI answers (empty slots only)
+        </button>
+      )}
       <p className="mt-2 text-xs text-slate-600">AI Assist में प्रश्न/विकल्प सुरक्षित Admin-only backend को भेजे जाते हैं और वहाँ से configured AI provider को। यह सुविधा Preview में activate होने पर ही चलेगी। अनुमानित उत्तर अपने आप सही उत्तर नहीं बनते।</p>
       {documentImportFileName && <p role="status" className="mt-2 text-xs text-emerald-800">Loaded for review: {documentImportFileName} · {questions.length} questions</p>}
       {documentImportWarnings.length > 0 && <details className="mt-3 rounded-lg border border-amber-300 bg-white p-3 text-xs"><summary className="cursor-pointer font-bold">Import warnings ({documentImportWarnings.length})</summary><ul className="mt-2 list-disc pl-5">{documentImportWarnings.slice(0, 20).map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
