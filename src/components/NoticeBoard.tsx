@@ -212,11 +212,6 @@ export const NoticeBoard: React.FC<NoticeBoardProps> = ({ onNavigate }) => {
         <LatestTestLaunches />
 
         {loading && <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'Loading announcements…' : 'सूचनाएँ लोड हो रही हैं…'}</p>}
-        {!loading && error && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            {language === 'en' ? 'Announcements could not be loaded. Please try Refresh updates.' : 'सूचनाएँ लोड नहीं हो सकीं। कृपया रिफ्रेश करें।'}
-          </div>
-        )}
         {!loading && !error && visibleNotices.length === 0 && (
           <p className="py-5 text-sm text-slate-500">{language === 'en' ? 'No announcements have been published yet.' : 'अभी कोई सूचना प्रकाशित नहीं हुई है।'}</p>
         )}
