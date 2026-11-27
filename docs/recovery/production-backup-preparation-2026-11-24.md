@@ -43,3 +43,10 @@ See the official Supabase Storage S3 authentication, object download and backup 
 - https://supabase.com/docs/guides/platform/backups
 
 No actual Storage access or backup is performed by this code review. Production release gate remains NO_GO.
+
+
+## Optional weekly automatic Production database backup — 27 November 2026
+
+After the administrator independently confirms the successful manual Production backup and isolated restore, the same database backup workflow may be scheduled at 02:37 IST each Sunday (21:07 UTC Saturday). The existing manual acknowledgment remains unchanged. Scheduled runs additionally require `KSOL_PRODUCTION_AUTO_BACKUP_ENABLED=true`; until this variable is explicitly configured, the scheduled job skips. Set it only after checking free Supabase egress and Drive quotas, retention and access controls. A scheduled run performs a conservative Drive preflight: at least 1 GiB reported free and less than 1 GiB of existing decrypted archive data in the Production database namespace. These thresholds do not guarantee that the next backup will fit or that service quota will not be exceeded. Unsupported or missing quota reporting fails closed; manual backup is unaffected. No existing backups are deleted. Monitor failure and periodically review available space. Scheduled run timing is approximate and depends on GitHub Actions availability.
+
+No recurring Storage-byte backup, automatic restore or production database write is authorized by this change. Full Supabase recovery is still not established; Storage and Auth runtime evidence remain separate. A successful manual isolated restore reported by the administrator does not certify future backups.
