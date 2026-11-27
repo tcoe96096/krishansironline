@@ -221,3 +221,22 @@ test('backup subprocesses receive only their own service credentials',async()=>{
  assert.equal(cloudEnv.KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY,undefined);
  assert.deepEqual(tocEnv,{PATH:'/synthetic'});
 });
+
+test('local Storage payload restore is restricted to a fresh loopback target and verifies bytes',async()=>{
+ const {objectPath,exactBytes}=await import('../scripts/recovery/restore-storage-to-local-supabase.mjs');
+ const {createHash}=await import('node:crypto');
+ const bytes=Buffer.from('synthetic fixture');
+ const record={size:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};
+ assert.equal(exactBytes(bytes,record),true);
+ assert.equal(exactBytes(Buffer.from('synthetic fail!!!'),record),false);
+ assert.equal(objectPath('test-bucket','folder/a b#%.pdf'),'object/test-bucket/folder/a%20b%23%25.pdf');
+ for(const invalid of ['../bad','a//b','a/./b','a/../b'])assert.throws(()=>objectPath('test-bucket',invalid));
+ const code=readFileSync('scripts/recovery/restore-storage-to-local-supabase.mjs','utf8');
+ assert.ok(code.includes("http://127.0.0.1:54321/storage/v1/"));
+ assert.ok(code.includes("redirect:'error'"));
+ assert.ok(code.includes("existing.length"));
+ assert.ok(code.includes("public:false"));
+ assert.ok(code.includes("'x-upsert':'false'"));
+ assert.ok(code.includes("FULL_SUPABASE_RESTORE=NOT_VERIFIED"));
+ assert.doesNotMatch(code,/supabase\.co|secrets\.KSOL_PRODUCTION/);
+});
