@@ -5,6 +5,7 @@ import { getMyTestAttempts, getPublishedTests, type TestAttempt, type PublishedT
 import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-react';
 import { isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
+import { StudentResultPdfDownload } from './StudentResultPdfDownload';
 
 /**
  * Student results are private: this view reads only the signed-in user's
@@ -144,6 +145,7 @@ export const ResultsPortal: React.FC = () => {
                             : (isEnglish ? 'The allowed time for this attempt has ended.' : 'इस प्रयास का निर्धारित समय समाप्त हो गया है।')}
                         </p>
                       )}
+                      <StudentResultPdfDownload attemptId={attempt.id} studentId={attempt.student_id} submitted={submitted}/>
                     </article>
                   );
                 })}
