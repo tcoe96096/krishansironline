@@ -15,6 +15,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Validate restore script syntax before pulling containers
+        shell: bash
+        run: bash -n scripts/recovery/restore-archive-to-disposable-postgres.sh
       - name: Verify missing acknowledgement fails closed
         shell: bash
         run: |
