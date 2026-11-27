@@ -73,3 +73,35 @@ BEGIN
 END;
 $test$;
 SELECT 'RESULT_PRIVATE_PUBLICATION_SYNTHETIC_ASSERTIONS_PASSED' AS status;
+
+-- Separate generation contract: actual record joins, no real student data.
+ALTER TABLE public.test_attempts ADD COLUMN test_id text, ADD COLUMN score numeric, ADD COLUMN total_marks numeric, ADD COLUMN percentage numeric, ADD COLUMN correct_count integer, ADD COLUMN submitted_at timestamptz;
+CREATE TABLE public.student_profiles(user_id uuid,student_name text,roll_no text,class_level text,school_name text);
+CREATE TABLE public.tests(id text PRIMARY KEY,title jsonb,subject text,class_level text);
+UPDATE public.test_attempts SET test_id='synthetic-test',score=8,total_marks=10,percentage=80,correct_count=8,submitted_at='2026-01-01T00:00:00Z';
+INSERT INTO public.student_profiles VALUES('00000000-0000-0000-0000-000000000002','Synthetic Student','SYN-01','10','Synthetic School');
+INSERT INTO public.tests VALUES('synthetic-test','{"en":"Synthetic Test"}','Social Science','10');
+\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql
+SET ROLE service_role;
+DO $test$
+DECLARE s jsonb; actor uuid:='00000000-0000-0000-0000-000000000001'; a uuid:='00000000-0000-0000-0000-000000000010';
+BEGIN
+ s:=public.ksol_result_generation_snapshot(actor,a);
+ IF s->>'studentName' IS DISTINCT FROM 'Synthetic Student' OR s->>'score' IS DISTINCT FROM '8' OR s->>'studentId' IS DISTINCT FROM '00000000-0000-0000-0000-000000000002' THEN RAISE EXCEPTION 'Snapshot identity or score mismatch'; END IF;
+ BEGIN
+  PERFORM public.ksol_result_generation_snapshot('00000000-0000-0000-0000-000000000002',a);
+  RAISE EXCEPTION 'Non-admin actor accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.ksol_result_generation_snapshot(actor,'00000000-0000-0000-0000-000000000099');
+  RAISE EXCEPTION 'Missing attempt accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+END;
+$test$;
+RESET ROLE;
+DO $test$
+BEGIN
+ IF has_function_privilege('authenticated','public.ksol_result_generation_snapshot(uuid,uuid)','EXECUTE') OR has_function_privilege('anon','public.ksol_result_generation_snapshot(uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Snapshot grant leaked'; END IF;
+END;
+$test$;
+SELECT 'RESULT_GENERATION_SNAPSHOT_SYNTHETIC_ASSERTIONS_PASSED' AS status;
