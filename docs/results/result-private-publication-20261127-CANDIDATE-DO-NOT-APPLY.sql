@@ -21,7 +21,7 @@ BEGIN
     ) THEN
     RAISE EXCEPTION 'Result Card objects already exist: stop and reconcile existing deployment';
   END IF;
-END
+END;
 $ksol_result_preflight$;
 -- MODULE 1 docs/results/ksol-result-atomic-transition-executable-CANDIDATE-DO-NOT-APPLY.sql
 CREATE SCHEMA IF NOT EXISTS private;
@@ -158,7 +158,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Result card bucket already exists; manual review required';
   END IF;
-END
+END;
 $ksol_bucket_guard$;
 INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
 VALUES (
@@ -371,142 +371,3 @@ $$;
 REVOKE ALL ON FUNCTION public.ksol_result_admin_status(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.ksol_result_admin_status(uuid) TO authenticated;
 COMMIT;
--- No auto-release, private PDF link creation or user notifications.
- THEN (o.metadata->>'size')::bigint BETWEEN 8 AND 10485760 ELSE false END
-  ) INTO v_object_exists;
-  IF v_object_exists IS DISTINCT FROM TRUE THEN
-    RAISE EXCEPTION 'Private PDF artifact not found or invalid' USING ERRCODE='22023';
-  END IF;
-
-  SELECT * INTO v_row FROM private.ksol_result_release
-    WHERE attempt_id=p_attempt_id FOR UPDATE;
-  IF FOUND THEN
-    -- A revised result must advance exactly one version from revoked state.
-    IF v_row.state IS DISTINCT FROM 'revoked'
-      OR p_expected_version <> v_row.result_version+1 THEN
-      RAISE EXCEPTION 'Existing result must first be revoked' USING ERRCODE='22023';
-    END IF;
-    v_previous := 'revoked';
-    UPDATE private.ksol_result_release SET
-      result_version=p_expected_version,
-      artifact_sha256=p_artifact_sha256,
-      pdf_object_key=v_object_key,
-      state='approved',
-      released_at=NULL,revoked_at=NULL,updated_at=pg_catalog.now()
-      WHERE attempt_id=p_attempt_id;
-  ELSE
-    IF p_expected_version <> 1 THEN
-      RAISE EXCEPTION 'First result version must be 1' USING ERRCODE='22023';
-    END IF;
-    v_previous := 'not_created';
-    INSERT INTO private.ksol_result_release
-      (attempt_id,result_version,artifact_sha256,pdf_object_key,state)
-      VALUES(p_attempt_id,p_expected_version,p_artifact_sha256,v_object_key,'approved');
-  END IF;
-
-  INSERT INTO private.ksol_result_audit
-    (actor_id,attempt_id,result_version,operation,previous_state,next_state,request_key)
-    VALUES(v_actor,p_attempt_id,p_expected_version,'approve',v_previous,'approved',p_request_key);
-  INSERT INTO private.ksol_result_request
-    (actor_id,operation,request_key,attempt_id,expected_version,artifact_sha256,outcome)
-    VALUES(v_actor,'approve',p_request_key,p_attempt_id,p_expected_version,p_artifact_sha256,'approved');
-  RETURN 'approved';
-END;
-$$;
-REVOKE ALL ON FUNCTION public.ksol_result_approve_pdf(uuid,integer,text,uuid)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_result_approve_pdf(uuid,integer,text,uuid)
-  TO authenticated;
-
--- MODULE 4 docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
-CREATE FUNCTION public.ksol_can_view_released_result(
- p_attempt_id uuid,p_expected_version integer
-) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$
- SELECT auth.uid() IS NOT NULL
-   AND p_attempt_id IS NOT NULL
-   AND p_expected_version IS NOT NULL
-   AND EXISTS (
-     SELECT 1
-     FROM public.test_attempts a
-     JOIN private.ksol_result_release r ON r.attempt_id=a.id
-     WHERE a.id=p_attempt_id
-       AND a.student_id=auth.uid()
-       AND a.status='submitted'
-       AND public.student_account_is_eligible(auth.uid()) IS TRUE
-       AND r.result_version=p_expected_version
-       AND r.state='released'
-   );
-$$;
-REVOKE ALL ON FUNCTION public.ksol_can_view_released_result(uuid,integer)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_can_view_released_result(uuid,integer)
-  TO authenticated;
-
--- MODULE 5 docs/results/ksol-result-pdf-manifest-CANDIDATE-DO-NOT-APPLY.sql
-CREATE FUNCTION public.ksol_result_pdf_manifest(
-  p_attempt_id uuid, p_expected_version integer
-) RETURNS text
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$
-  SELECT r.pdf_object_key
-  FROM private.ksol_result_release r
-  WHERE auth.uid() IS NOT NULL
-    AND p_attempt_id IS NOT NULL
-    AND p_expected_version IS NOT NULL
-    AND p_expected_version > 0
-    AND r.attempt_id = p_attempt_id
-    AND r.result_version = p_expected_version
-    AND r.state = 'released'
-    AND public.ksol_can_view_released_result(p_attempt_id,p_expected_version) IS TRUE;
-$$;
-REVOKE ALL ON FUNCTION public.ksol_result_pdf_manifest(uuid,integer)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_result_pdf_manifest(uuid,integer)
-  TO authenticated;
-
--- MODULE 6 docs/results/ksol-student-released-result-version-CANDIDATE-DO-NOT-APPLY.sql
-CREATE FUNCTION public.ksol_my_released_result_version(
-  p_attempt_id uuid
-) RETURNS integer
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$
-  SELECT r.result_version
-  FROM public.test_attempts a
-  JOIN private.ksol_result_release r ON r.attempt_id=a.id
-  WHERE auth.uid() IS NOT NULL
-    AND p_attempt_id IS NOT NULL
-    AND a.id=p_attempt_id
-    AND a.student_id=auth.uid()
-    AND a.status='submitted'
-    AND public.student_account_is_eligible(auth.uid()) IS TRUE
-    AND r.state='released';
-$$;
-REVOKE ALL ON FUNCTION public.ksol_my_released_result_version(uuid)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_my_released_result_version(uuid)
-  TO authenticated;
-
--- MODULE 7 docs/results/ksol-result-admin-status-CANDIDATE-DO-NOT-APPLY.sql
-CREATE FUNCTION public.ksol_result_admin_status(p_attempt_id uuid)
-RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
-AS $$
-DECLARE v_info jsonb;
-BEGIN
-  IF auth.uid() IS NULL OR public.is_super_admin() IS DISTINCT FROM TRUE THEN
-    RAISE EXCEPTION 'Not authorized' USING ERRCODE='42501';
-  END IF;
-  IF p_attempt_id IS NULL THEN
-    RAISE EXCEPTION 'Invalid attempt' USING ERRCODE='22023';
-  END IF;
-  SELECT pg_catalog.jsonb_build_object('version',r.result_version,'state',r.state)
-    INTO v_info FROM private.ksol_result_release r
-    WHERE r.attempt_id=p_attempt_id;
-  RETURN v_info;
-END;
-$$;
-REVOKE ALL ON FUNCTION public.ksol_result_admin_status(uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_result_admin_status(uuid) TO authenticated;
-COMMIT;
--- No auto-release, private PDF link creation or user notifications.
