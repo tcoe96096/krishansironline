@@ -187,6 +187,21 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  }
  console.log('KSOL_BACKUP_PHASE: READBACK_INTEGRITY_OK');
  const coverage=assessDownloadedToc(checkedText);
+ // A Production archive is eligible for isolated restore only after full
+ // decrypted readback, matching digest, and expected table-data coverage.
+ // Leave failed/partial uploads unmarked; never delete or rotate objects here.
+ if(source==='production'&&coverage.tocCoverage){
+  const marker=JSON.stringify({version:1,source,ref:v.ref,archive:name,
+   bytes:checkedBytes,sha256:expectedDigest,scope:'READABLE_ARCHIVE_ONLY'})+'\n';
+  const mark=spawnSync('rclone',['rcat',target+'.verified.json','--size',String(Buffer.byteLength(marker))],
+   {env,input:marker,encoding:'utf8',timeout:60000,maxBuffer:131072,windowsHide:true});
+  if(mark.error||mark.status!==0)throw new Error('Production verification marker upload failed; archive not eligible for automated restore');
+  const check=spawnSync('rclone',['cat',target+'.verified.json'],{env,encoding:'utf8',
+   timeout:60000,maxBuffer:131072,windowsHide:true});
+  if(check.error||check.status!==0||check.stdout!==marker)
+   throw new Error('Production verification marker readback failed; archive not eligible for automated restore');
+  console.log('KSOL_BACKUP_PHASE: PRODUCTION_VERIFICATION_MARKER_OK');
+ }
  return {
    source,ref:v.ref,encryptedCloudUpload:'READBACK_VERIFIED',
    checkedBytes,sha256:expectedDigest,tocCoverage:coverage.tocCoverage,missingTables:coverage.missingTables,
