@@ -137,3 +137,20 @@ test('production backup is manual, opt-in, main-only and does not reuse preview 
  assert.match(workflow,/--source production/);
  assert.doesNotMatch(workflow,/pg_restore|--source preview/);
 });
+
+test('Production storage export is explicitly opt-in, fixed-source and encrypted',()=>{
+ const workflow=readFileSync('.github/workflows/ksol-production-storage-backup.yml','utf8');
+ const code=readFileSync('scripts/recovery/backup-production-storage.mjs','utf8');
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.doesNotMatch(workflow,/^\s+(schedule|pull_request|push):/m);
+ assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
+ assert.ok(workflow.includes("vars.KSOL_PRODUCTION_STORAGE_BACKUP_ENABLED == 'true'"));
+ assert.ok(workflow.includes('BACKUP_PRODUCTION_STORAGE_READ_ONLY'));
+ assert.match(code,/PROJECT_REFS\.production/);
+ assert.match(code,/isCryptRemote\(config,'ksolcrypt'\)/);
+ assert.match(code,/digest!==readback/);
+ assert.match(code,/digest!==reread/);
+ assert.match(code,/JSON\.stringify\(first\)!==JSON\.stringify\(inventory\(\)\)/);
+ assert.match(code,/FULL_SUPABASE_RESTORE=NOT_VERIFIED/);
+ assert.doesNotMatch(code,/writeFileSync|\['sync'|\['delete'|\['purge'|\['move'/);
+});
