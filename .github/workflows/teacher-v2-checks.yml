@@ -115,18 +115,24 @@ jobs:
           VITE_TEACHER_RESUME_ENABLED: 'false'
           VITE_TEACHER_PHOTO_ENABLED: 'false'
         run: npm run build
-      - name: Start activated Teacher website locally
-        run: |
-          npx vite preview --config vite.config.ts --port 4185 --host 127.0.0.1 > /tmp/ksol-active-teacher.log 2>&1 &
-          for i in $(seq 1 30); do
-            if curl --silent --fail http://127.0.0.1:4185/teacher-login/ > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          exit 1
       - name: Core activated existing-site Teacher guest browser smoke
         env:
           KSOL_ACTIVE_TEACHER_TEST_BASE_URL: http://127.0.0.1:4185
-        run: node scripts/teacher-active-site-smoke.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/teacher-login/index.html
+          python -m http.server 4185 --bind 127.0.0.1 --directory dist > /tmp/ksol-active-teacher.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for i in $(seq 1 30); do
+            if curl --noproxy '*' --silent --fail http://127.0.0.1:4185/teacher-login/ > /dev/null; then ready=true; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [[ "$ready" != true ]]; then cat /tmp/ksol-active-teacher.log; exit 1; fi
+          node scripts/teacher-active-site-smoke.mjs
       - name: Upload review-only Preview artifact (never publish)
         uses: actions/upload-artifact@v4
         with:
