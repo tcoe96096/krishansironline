@@ -47,8 +47,12 @@ jobs:
           test -n "$KSOL_LOCAL_ANON_KEY"
           export RCLONE_CONFIG="$RUNNER_TEMP/ksol-synthetic-rclone.conf"
           mkdir -m 700 "$RUNNER_TEMP/ksol-synthetic-encrypted"
-          rclone config create ksolcrypt crypt remote "$RUNNER_TEMP/ksol-synthetic-encrypted" password "$(openssl rand -hex 32)" password2 "$(openssl rand -hex 32)" > /dev/null
+          touch "$RCLONE_CONFIG"
+          chmod 600 "$RCLONE_CONFIG"
+          rclone config create ksolsyntheticlocal local > /dev/null
+          rclone config create ksolcrypt crypt remote "ksolsyntheticlocal:$RUNNER_TEMP/ksol-synthetic-encrypted" password "$(openssl rand -hex 32)" password2 "$(openssl rand -hex 32)" > /dev/null
           export KSOL_SYNTHETIC_REHEARSAL=true
+          echo "SYNTHETIC_ENCRYPTED_REMOTE_READY"
           cd "$GITHUB_WORKSPACE"
           node scripts/recovery/synthetic-cloud-service-rehearsal.mjs
       - name: Dispose of synthetic stack
