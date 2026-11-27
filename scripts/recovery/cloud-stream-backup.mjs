@@ -100,28 +100,36 @@ function exited(child){
   child.once('close',(code,signal)=>resolvePromise({code,signal}));
  });
 }
+// Separate source and destination credentials in subprocess environments.
+// Preserve OS/tool configuration, not the other service's credentials.
+export function splitBackupEnvironments(env){
+ const clean=Object.fromEntries(Object.entries(env).filter(([key])=>
+  !/^(PG|KSOL_DB_|KSOL_PRODUCTION_DB_|KSOL_PREVIEW_DB_|KSOL_PRODUCTION_S3_|RCLONE)/i.test(key)));
+ const pgEnv={...clean,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20',PGSSLMODE:'require'};
+ const cloudEnv={...clean,...Object.fromEntries(Object.entries(env).filter(([key])=>/^RCLONE(?:_|$)/i.test(key)))};
+ return {pgEnv,cloudEnv,tocEnv:clean};
+}
 export async function cloudEncryptedBackup({source,env=process.env,remote='ksolcrypt'}){
  const v=validateCloudSettings(source,env,remote);
  if(!v.ok)throw new Error(v.errors.join('; '));
- const show=spawnSync('rclone',['config','show',remote],{env,windowsHide:true,
+ const {pgEnv,cloudEnv,tocEnv}=splitBackupEnvironments(env);
+ const show=spawnSync('rclone',['config','show',remote],{env:cloudEnv,windowsHide:true,
   encoding:'utf8',timeout:30000,maxBuffer:1024*1024});
  if(show.error||show.status!==0||!isCryptRemote(show.stdout,remote))
    throw new Error('Private rclone remote MUST be a configured crypt overlay; upload aborted');
  const name='ksol-'+source+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+process.pid+'.dump';
  const target=remote+':'+source+'/'+name;
  console.log('KSOL_BACKUP_PHASE: CRYPT_CONFIG_VALIDATED');
- const pgEnv={...env,PGPASSWORD:env.KSOL_DB_PASSWORD,PGCONNECT_TIMEOUT:'20',PGSSLMODE:'require'};
- delete pgEnv.KSOL_DB_PASSWORD;
  // Preflight must finish before opening a cloud object. It never prints credential-bearing stderr.
  const common=['--no-password','--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
   '--username',env.KSOL_DB_USER,'--dbname',env.KSOL_DB_NAME];
  const dbCheck=spawnSync('psql',[...common,'--no-psqlrc','--tuples-only','--no-align','--command','SELECT 1'],{
   env:pgEnv,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
  if(dbCheck.error||dbCheck.status!==0||dbCheck.stdout.trim()!=='1')
-  throw new Error('Preview database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
+  throw new Error(source+' database preflight failed [DB_'+classifyBackupFailure(dbCheck.stderr)+']; no cloud upload attempted');
  console.log('KSOL_BACKUP_PHASE: DATABASE_PREFLIGHT_OK');
  const cloudCheck=spawnSync('rclone',['lsf',remote+':'],{
-  env,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
+  env:cloudEnv,encoding:'utf8',timeout:45000,maxBuffer:131072,windowsHide:true});
  if(cloudCheck.error||cloudCheck.status!==0)
   throw new Error('Encrypted Drive preflight failed [CLOUD_'+classifyBackupFailure(cloudCheck.stderr)+']; no database export attempted');
  console.log('KSOL_BACKUP_PHASE: DRIVE_PREFLIGHT_OK');
@@ -130,7 +138,7 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
   '--host',env.KSOL_DB_HOST,'--port',String(env.KSOL_DB_PORT),
   '--username',env.KSOL_DB_USER,'--dbname',env.KSOL_DB_NAME];
  const pg=spawn('pg_dump',args,{env:pgEnv,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:18*60*1000});
- const put=spawn('rclone',['rcat',target],{env,stdio:['pipe','ignore','pipe'],windowsHide:true,timeout:18*60*1000});
+ const put=spawn('rclone',['rcat',target],{env:cloudEnv,stdio:['pipe','ignore','pipe'],windowsHide:true,timeout:18*60*1000});
  let bytes=0;const digest=createHash('sha256');
  pg.stdout.on('data',chunk=>{bytes+=chunk.length;digest.update(chunk)});
  pg.stdout.pipe(put.stdin);
@@ -151,8 +159,8 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  console.log('KSOL_BACKUP_PHASE: READBACK_START');
  // Read BACK the decrypted cloud object only through memory to confirm its
  // integrity and archive TOC. Never cache raw records, data or backup bytes.
- const read=spawn('rclone',['cat',target],{env,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
- const toc=spawn('pg_restore',['--list'],{env:pgEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
+ const read=spawn('rclone',['cat',target],{env:cloudEnv,stdio:['ignore','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
+ const toc=spawn('pg_restore',['--list'],{env:tocEnv,stdio:['pipe','pipe','pipe'],windowsHide:true,timeout:8*60*1000});
  let checkedBytes=0,checkedText='',overflow=false;const checkedHash=createHash('sha256');
  read.stdout.on('data',chunk=>{checkedBytes+=chunk.length;checkedHash.update(chunk)});
  const tocInputError=drainAfterTocInputCloses(read.stdout,toc.stdin);
@@ -187,6 +195,21 @@ export async function cloudEncryptedBackup({source,env=process.env,remote='ksolc
  }
  console.log('KSOL_BACKUP_PHASE: READBACK_INTEGRITY_OK');
  const coverage=assessDownloadedToc(checkedText);
+ // A Production archive is eligible for isolated restore only after full
+ // decrypted readback, matching digest, and expected table-data coverage.
+ // Leave failed/partial uploads unmarked; never delete or rotate objects here.
+ if(source==='production'&&coverage.tocCoverage){
+  const marker=JSON.stringify({version:1,source,ref:v.ref,archive:name,
+   bytes:checkedBytes,sha256:expectedDigest,scope:'READABLE_ARCHIVE_ONLY'})+'\n';
+  const mark=spawnSync('rclone',['rcat',target+'.verified.json','--size',String(Buffer.byteLength(marker))],
+   {env:cloudEnv,input:marker,encoding:'utf8',timeout:60000,maxBuffer:131072,windowsHide:true});
+  if(mark.error||mark.status!==0)throw new Error('Production verification marker upload failed; archive not eligible for automated restore');
+  const check=spawnSync('rclone',['cat',target+'.verified.json'],{env:cloudEnv,encoding:'utf8',
+   timeout:60000,maxBuffer:131072,windowsHide:true});
+  if(check.error||check.status!==0||check.stdout!==marker)
+   throw new Error('Production verification marker readback failed; archive not eligible for automated restore');
+  console.log('KSOL_BACKUP_PHASE: PRODUCTION_VERIFICATION_MARKER_OK');
+ }
  return {
    source,ref:v.ref,encryptedCloudUpload:'READBACK_VERIFIED',
    checkedBytes,sha256:expectedDigest,tocCoverage:coverage.tocCoverage,missingTables:coverage.missingTables,

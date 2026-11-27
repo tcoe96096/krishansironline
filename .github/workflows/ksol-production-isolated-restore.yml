@@ -1,0 +1,58 @@
+name: KSOL Production isolated database restore (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledgment:
+        description: 'Type RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY'
+        required: true
+        type: string
+      reconcile_storage:
+        description: 'Also compare restored DB Storage metadata with latest encrypted Storage manifest'
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: ksol-private-production-cloud-backup
+  cancel-in-progress: false
+jobs:
+  production-isolated-restore:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'tcoe96096/krishansironline' &&
+      github.event.repository.private == false &&
+      vars.KSOL_PRODUCTION_BACKUP_ENABLED == 'true' &&
+      inputs.acknowledgment == 'RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+      - name: Stream verified archive into offline disposable PostgreSQL
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
+          RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
+          KSOL_PRODUCTION_ISOLATED_RESTORE_ACK: ${{ inputs.acknowledgment }}
+          KSOL_RECONCILE_STORAGE: ${{ inputs.reconcile_storage }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RCLONE_CONFIG_B64"
+          export RCLONE_CONFIG="$RUNNER_TEMP/ksol-private-rclone.conf"
+          trap 'rm -f "$RCLONE_CONFIG"' EXIT
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
+          unset RCLONE_CONFIG_B64
+          chmod 600 "$RCLONE_CONFIG"
+          node scripts/recovery/restore-verified-production.mjs
+          echo 'Production database isolated restore and digest verified. Auth runtime, Storage bytes and full recovery remain NOT VERIFIED.' >> "$GITHUB_STEP_SUMMARY"

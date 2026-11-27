@@ -426,6 +426,20 @@ SQL
   echo 'KSOL_EXAM_CATALOG_STRUCTURE=VERIFIED'
   echo 'KSOL_EFFECTIVE_GRANTS_AUTH_STORAGE_BYTES=NOT_VERIFIED'
 fi
+# Optional private reconciliation channel. Only the parent process reads fd 3;
+# never print object identifiers or metadata to the CI log.
+if [[ "${KSOL_STORAGE_RECONCILE_PRIVATE_FD:-0}" == 1 ]]; then
+  if ! docker exec -i "$name" psql -X -U "$restore_user" -d "$restore_db" -v ON_ERROR_STOP=1 -Atq 2>/dev/null >&3 <<'SQL'
+SELECT json_build_object(
+ 'buckets', COALESCE((SELECT json_agg(id) FROM (SELECT id FROM storage.buckets LIMIT 10001) b),'[]'::json),
+ 'objects', COALESCE((SELECT json_agg(json_build_object('bucket',bucket_id,'key',name,'size',metadata->>'size'))
+ FROM (SELECT bucket_id,name,metadata FROM storage.objects LIMIT 10001) o),'[]'::json)
+);
+SQL
+  then
+    echo 'STORAGE_METADATA_PRIVATE_READ_FAILED' >&2; exit 2
+  fi
+fi
 echo 'KSOL_DISPOSABLE_POSTGRES_RESTORE_OK: nonempty table catalog verified'
 echo 'FULL_SUPABASE_RESTORE=NOT_VERIFIED'
 echo 'RELEASE_GATE=NO_GO'
