@@ -1,0 +1,42 @@
+name: Result template isolated PostgreSQL contract
+on:
+  pull_request:
+    paths:
+      - 'docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/result-template-disposable-postgres.sql'
+      - '.github/workflows/result-template-disposable-postgres.yml'
+permissions:
+  contents: read
+jobs:
+  disposable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: synthetic_test_only
+          POSTGRES_DB: template_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d template_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Execute synthetic SQL on disposable PostgreSQL
+        env:
+          CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          fixture = Path('tests/fixtures/result-template-disposable-postgres.sql').read_text()
+          candidate = Path('docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql').read_text()
+          directive = r'\i docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+          assert fixture.count(directive) == 1
+          Path('/tmp/result-template-synthetic.sql').write_text(fixture.replace(directive, candidate))
+          PY
+          docker exec -i "$CONTAINER" psql -X -U postgres -d template_test -v ON_ERROR_STOP=1 < /tmp/result-template-synthetic.sql
