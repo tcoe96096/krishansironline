@@ -20,3 +20,12 @@ PostgreSQL archives contain Storage metadata, not file payloads. Before any live
 ## Release gate
 
 Production archive verification, isolated Production restore, Storage bytes reconciliation and runtime Auth/authorization evidence remain outstanding. No database migration, feature flag activation, production account creation, or live deployment is authorized by this preparation. Follow the existing exam release runbook. Record only sanitized evidence in the repository.
+
+
+## Follow-up: verified Production archive selection and isolated restore
+
+Production backup writes an encrypted .verified.json sidecar only after decrypted archive readback, SHA-256 match and required table-data coverage; the sidecar itself is read back. A partial dump without this marker is not eligible. Keep the sidecar and archive private and together; never share filenames or manifest contents in CI.
+
+After the manual Production backup has actually succeeded, the reviewed manual workflow `ksol-production-isolated-restore.yml` can be dispatched from main with `RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY`. It selects the latest correctly named Production marker, validates its source and archive identity, then streams the archive into the existing networkless disposable PostgreSQL harness. It checks the exact byte count and SHA-256 of the restored stream; the job uses no source database connection secrets. A missing/invalid marker, failed stream or failed restore is a failure, not a release authorization. Preview recovery remains unchanged.
+
+This is code preparation only. No Production backup or restore has been executed. Full role/grant reconciliation, Auth runtime, Storage file bytes, quota/retention verification and recurring backup remain outstanding; release gate remains NO_GO.
