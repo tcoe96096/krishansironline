@@ -6,6 +6,11 @@ on:
         description: 'Type RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY'
         required: true
         type: string
+      reconcile_storage:
+        description: 'Also compare restored DB Storage metadata with latest encrypted Storage manifest'
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -38,6 +43,7 @@ jobs:
           RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
           RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
           KSOL_PRODUCTION_ISOLATED_RESTORE_ACK: ${{ inputs.acknowledgment }}
+          KSOL_RECONCILE_STORAGE: ${{ inputs.reconcile_storage }}
         shell: bash
         run: |
           set -euo pipefail
