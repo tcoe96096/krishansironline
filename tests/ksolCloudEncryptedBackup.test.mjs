@@ -154,3 +154,20 @@ test('Production storage export is explicitly opt-in, fixed-source and encrypted
  assert.match(code,/FULL_SUPABASE_RESTORE=NOT_VERIFIED/);
  assert.doesNotMatch(code,/writeFileSync|\['sync'|\['delete'|\['purge'|\['move'/);
 });
+
+test('Storage manifest verification rejects invalid object identity, duplicates and byte totals',async()=>{
+ const {validateManifest}=await import('../scripts/recovery/verify-production-storage-archive.mjs');
+ const {createHash}=await import('node:crypto');
+ const {PROJECT_REFS}=await import('../scripts/recovery/cloud-stream-backup.mjs');
+ const obj={bucket:'synthetic',key:'sample.txt',size:3,sha256:createHash('sha256').update('abc').digest('hex')};
+ obj.id=createHash('sha256').update(JSON.stringify([obj.bucket,obj.key])).digest('hex');
+ const valid={version:1,project:PROJECT_REFS.production,scope:'STORAGE_OBJECT_BYTES_ONLY',
+  buckets:['synthetic'],objects:[obj],bytes:3};
+ assert.equal(validateManifest(valid).size,1);
+ assert.throws(()=>validateManifest({...valid,bytes:4}));
+ assert.throws(()=>validateManifest({...valid,objects:[obj,obj],bytes:6}));
+ assert.throws(()=>validateManifest({...valid,objects:[{...obj,key:'../escape'}]}));
+ assert.throws(()=>validateManifest({...valid,objects:[{...obj,sha256:'bad'}]}));
+ assert.throws(()=>validateManifest({...valid,project:PROJECT_REFS.preview}));
+ assert.throws(()=>validateManifest({...valid,objects:[{...obj,id:'other'}]}));
+});
