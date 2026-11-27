@@ -17,8 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - run: npm ci
+          node-version: '22.16.0'
       - name: Prepare free fonts and PDF inspection
         run: |
           sudo apt-get update -qq
@@ -27,7 +26,7 @@ jobs:
       - name: Render synthetic document
         run: |
           set -euo pipefail
-          ./node_modules/.bin/tsx scripts/results/render-synthetic-report-20261127.ts
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/render-synthetic-report-20261127.ts
           browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           "$browser" --headless --no-sandbox --disable-gpu --disable-background-networking --no-first-run --no-pdf-header-footer --print-to-pdf=/tmp/ksol-result-render/sample.pdf file:///tmp/ksol-result-render/sample.html
           test -s /tmp/ksol-result-render/sample.pdf
