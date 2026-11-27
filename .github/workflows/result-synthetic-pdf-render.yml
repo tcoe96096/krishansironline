@@ -4,6 +4,8 @@ on:
     paths:
       - 'docs/results/result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
       - 'scripts/results/render-synthetic-report-20261127.ts'
+      - 'scripts/results/verify-private-generation-adapter-20261127.ts'
+      - 'docs/results/result-generation-*-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
       - '.github/workflows/result-synthetic-pdf-render.yml'
 permissions:
   contents: read
@@ -18,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
+      - name: Verify synthetic private backend adapter
+        run: node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/verify-private-generation-adapter-20261127.ts
       - name: Prepare free fonts and PDF inspection
         run: |
           sudo apt-get update -qq
