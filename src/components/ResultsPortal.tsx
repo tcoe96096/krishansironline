@@ -6,6 +6,7 @@ import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-reac
 import { isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
 import { StudentResultPdfDownload } from './StudentResultPdfDownload';
+import { getPublishedResultTemplate, type ResultTemplate } from '../services/resultTemplateService';
 
 /**
  * Student results are private: this view reads only the signed-in user's
@@ -21,6 +22,15 @@ export const ResultsPortal: React.FC = () => {
   const [tests, setTests] = useState<PublishedTest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resultTemplate, setResultTemplate] = useState<ResultTemplate | null>(null);
+  useEffect(() => {
+    let active = true;
+    setResultTemplate(null);
+    if (user?.id) void getPublishedResultTemplate().then(value => { if (active) setResultTemplate(value); }).catch(() => { /* Optional styling: existing results remain available. */ });
+    return () => { active = false; };
+  }, [user?.id]);
+  const templateStyle = resultTemplate?.theme === 'modern' ? 'border-sky-300 bg-sky-50/30' : resultTemplate?.theme === 'classic' ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 bg-white';
+  const designText = (key: 'brandTitle' | 'tagline' | 'footerNote') => typeof resultTemplate?.options[key] === 'string' ? resultTemplate.options[key] : '';
 
   useEffect(() => {
     let active = true;
@@ -120,7 +130,8 @@ export const ResultsPortal: React.FC = () => {
                   const submitted = attempt.status === 'submitted';
                   const inProgress = isResumableAttempt(attempt);
                   return (
-                    <article key={attempt.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <article key={attempt.id} className={'rounded-xl border p-4 shadow-sm ' + (submitted ? templateStyle : 'border-slate-200 bg-white')}>
+                      {submitted && resultTemplate && <header className="mb-4 border-b border-slate-200 pb-3 text-center"><p className="text-sm font-bold tracking-wide text-slate-900">{designText('brandTitle') || 'KRISHAN SIR ONLINE LEARNING'}</p>{designText('tagline') && <p className="mt-1 text-xs text-slate-600">{designText('tagline')}</p>}<p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{isEnglish ? 'Personal examination scorecard' : 'व्यक्तिगत परीक्षा अंकपत्र'}</p></header>}
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="min-w-0">
                           <h3 className="font-bold text-slate-900">{testTitle(attempt.test_id)}</h3>
@@ -145,6 +156,7 @@ export const ResultsPortal: React.FC = () => {
                             : (isEnglish ? 'The allowed time for this attempt has ended.' : 'इस प्रयास का निर्धारित समय समाप्त हो गया है।')}
                         </p>
                       )}
+                      {submitted && resultTemplate && designText('footerNote') && <p className="mt-4 border-t border-slate-200 pt-3 text-center text-xs text-slate-600">{designText('footerNote')}</p>}
                       <StudentResultPdfDownload attemptId={attempt.id} studentId={attempt.student_id} submitted={submitted}/>
                     </article>
                   );
