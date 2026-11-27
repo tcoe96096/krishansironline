@@ -171,3 +171,19 @@ test('Storage manifest verification rejects invalid object identity, duplicates 
  assert.throws(()=>validateManifest({...valid,project:PROJECT_REFS.preview}));
  assert.throws(()=>validateManifest({...valid,objects:[{...obj,id:'other'}]}));
 });
+
+test('Storage reconciliation requires exact bucket, key and byte size matches',async()=>{
+ const {storageMetadataMatches}=await import('../scripts/recovery/reconcile-production-storage-metadata.mjs');
+ const {createHash}=await import('node:crypto');
+ const {PROJECT_REFS}=await import('../scripts/recovery/cloud-stream-backup.mjs');
+ const obj={bucket:'test-bucket',key:'file.txt',size:3,sha256:createHash('sha256').update('abc').digest('hex')};
+ obj.id=createHash('sha256').update(JSON.stringify([obj.bucket,obj.key])).digest('hex');
+ const manifest={version:1,project:PROJECT_REFS.production,scope:'STORAGE_OBJECT_BYTES_ONLY',buckets:[obj.bucket],objects:[obj],bytes:3};
+ const metadata={buckets:[obj.bucket],objects:[{bucket:obj.bucket,key:obj.key,size:'3'}]};
+ assert.equal(storageMetadataMatches(manifest,metadata),true);
+ assert.equal(storageMetadataMatches(manifest,{...metadata,objects:[{...metadata.objects[0],size:'4'}]}),false);
+ assert.equal(storageMetadataMatches(manifest,{...metadata,objects:[{...metadata.objects[0],size:null}]}),false);
+ assert.equal(storageMetadataMatches(manifest,{...metadata,objects:[]}),false);
+ assert.equal(storageMetadataMatches(manifest,{...metadata,buckets:['wrong']}),false);
+ assert.equal(storageMetadataMatches(manifest,{...metadata,objects:[{...metadata.objects[0],key:'wrong'}]}),false);
+});
