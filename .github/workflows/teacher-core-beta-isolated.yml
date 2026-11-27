@@ -189,3 +189,29 @@ jobs:
           done
           if [[ "$ready" != true ]]; then cat /tmp/teacher-resume-private-mock.log; exit 1; fi
           node scripts/teacher-private-resume-mock-smoke.mjs
+
+      - name: Build integrated website with synthetic active Teacher flags
+        env:
+          VITE_SUPABASE_URL: https://teacher-test.supabase.test
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
+          VITE_TEACHER_BETA_ENABLED: 'true'
+          VITE_TEACHER_PHOTO_ENABLED: 'false'
+          VITE_TEACHER_ADVANCED_ENABLED: 'false'
+          VITE_TEACHER_RESULT_ANALYTICS_ENABLED: 'false'
+          VITE_TEACHER_RESUME_ENABLED: 'false'
+        run: npm run build
+      - name: Integrated active Teacher browser contract (mock API only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m http.server 4181 --bind 127.0.0.1 --directory dist > /tmp/teacher-integrated-active.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for i in $(seq 1 30); do
+            if curl --noproxy '*' --silent --fail http://127.0.0.1:4181/teacher-login/ > /dev/null; then ready=true; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [[ "$ready" != true ]]; then cat /tmp/teacher-integrated-active.log; exit 1; fi
+          node scripts/teacher-active-integrated-site-smoke.mjs
