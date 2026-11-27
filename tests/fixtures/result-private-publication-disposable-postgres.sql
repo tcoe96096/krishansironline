@@ -1,9 +1,12 @@
 -- Synthetic PostgreSQL ONLY; never use a real connection.
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA storage;
 CREATE SCHEMA private;
+CREATE TABLE public.user_roles(user_id uuid,role text);
+INSERT INTO public.user_roles VALUES('00000000-0000-0000-0000-000000000001','super_admin');
 CREATE TABLE public.test_attempts(id uuid PRIMARY KEY,student_id uuid NOT NULL,status text NOT NULL);
 CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 CREATE TABLE storage.objects(bucket_id text,name text,is_delete_marker boolean,archived_at timestamptz,metadata jsonb);
@@ -15,18 +18,25 @@ GRANT EXECUTE ON FUNCTION auth.uid(),public.is_super_admin(),public.student_acco
 INSERT INTO public.test_attempts VALUES('00000000-0000-0000-0000-000000000010','00000000-0000-0000-0000-000000000002','submitted');
 \i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql
 INSERT INTO storage.objects VALUES('result-cards-private','00000000-0000-0000-0000-000000000010/v1/'||repeat('a',64)||'.pdf',false,NULL,'{"mimetype":"application/pdf","size":128}');
-SET ROLE authenticated;
+SET ROLE service_role;
 SELECT set_config('test.actor','00000000-0000-0000-0000-000000000001',false);
 DO $test$
 DECLARE a uuid:='00000000-0000-0000-0000-000000000010'; k uuid:='00000000-0000-0000-0000-000000000011'; r uuid:='00000000-0000-0000-0000-000000000012';
 BEGIN
- IF public.ksol_result_approve_pdf(a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Approval failed'; END IF;
- IF public.ksol_result_approve_pdf(a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Replay failed'; END IF;
+ IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Approval failed'; END IF;
+ IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Replay failed'; END IF;
  BEGIN
-  PERFORM public.ksol_result_approve_pdf(a,1,repeat('b',64),k);
+  PERFORM public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('b',64),k);
   RAISE EXCEPTION 'Conflicting replay accepted';
  EXCEPTION WHEN unique_violation THEN NULL; END;
- IF public.ksol_result_transition(a,1,'release',r) IS DISTINCT FROM 'released' THEN RAISE EXCEPTION 'Release failed'; END IF;
+END;
+$test$;
+RESET ROLE;
+SET ROLE authenticated;
+DO $test$
+BEGIN
+ IF has_function_privilege(current_user,'public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Browser approval RPC grant leaked'; END IF;
+ IF public.ksol_result_transition('00000000-0000-0000-0000-000000000010',1,'release','00000000-0000-0000-0000-000000000012') IS DISTINCT FROM 'released' THEN RAISE EXCEPTION 'Release failed'; END IF;
 END;
 $test$;
 SELECT set_config('test.actor','00000000-0000-0000-0000-000000000002',false);
