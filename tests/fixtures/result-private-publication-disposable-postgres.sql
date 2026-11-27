@@ -16,6 +16,14 @@ CREATE FUNCTION public.student_account_is_eligible(p_student_id uuid) RETURNS bo
 GRANT USAGE ON SCHEMA auth TO authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid(),public.is_super_admin(),public.student_account_is_eligible(uuid) TO authenticated;
 INSERT INTO public.test_attempts VALUES('00000000-0000-0000-0000-000000000010','00000000-0000-0000-0000-000000000002','submitted');
+-- Separate generation contract: actual record joins, no real student data.
+ALTER TABLE public.test_attempts ADD COLUMN test_id text, ADD COLUMN score numeric, ADD COLUMN total_marks numeric, ADD COLUMN percentage numeric, ADD COLUMN correct_count integer, ADD COLUMN submitted_at timestamptz;
+CREATE TABLE public.student_profiles(user_id uuid,student_name text,roll_no text,class_level text,school_name text);
+CREATE TABLE public.tests(id text PRIMARY KEY,title jsonb,subject text,class_level text);
+UPDATE public.test_attempts SET test_id='synthetic-test',score=8,total_marks=10,percentage=80,correct_count=8,submitted_at='2026-01-01T00:00:00Z';
+INSERT INTO public.student_profiles VALUES('00000000-0000-0000-0000-000000000002','Synthetic Student','SYN-01','10','Synthetic School');
+INSERT INTO public.tests VALUES('synthetic-test','{"en":"Synthetic Test"}','Social Science','10');
+\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql
 \i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql
 INSERT INTO storage.objects VALUES('result-cards-private','00000000-0000-0000-0000-000000000010/v1/'||repeat('a',64)||'.pdf',false,NULL,'{"mimetype":"application/pdf","size":128}');
 SET ROLE service_role;
@@ -23,10 +31,14 @@ SELECT set_config('test.actor','00000000-0000-0000-0000-000000000001',false);
 DO $test$
 DECLARE a uuid:='00000000-0000-0000-0000-000000000010'; k uuid:='00000000-0000-0000-0000-000000000011'; r uuid:='00000000-0000-0000-0000-000000000012';
 BEGIN
- IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Approval failed'; END IF;
- IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Replay failed'; END IF;
  BEGIN
-  PERFORM public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('b',64),k);
+  PERFORM public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k,'{"score":999}'::jsonb);
+  RAISE EXCEPTION 'Stale snapshot accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k,public.ksol_result_generation_snapshot('00000000-0000-0000-0000-000000000001',a)) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Approval failed'; END IF;
+ IF public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('a',64),k,public.ksol_result_generation_snapshot('00000000-0000-0000-0000-000000000001',a)) IS DISTINCT FROM 'approved' THEN RAISE EXCEPTION 'Replay failed'; END IF;
+ BEGIN
+  PERFORM public.ksol_result_approve_pdf('00000000-0000-0000-0000-000000000001',a,1,repeat('b',64),k,public.ksol_result_generation_snapshot('00000000-0000-0000-0000-000000000001',a));
   RAISE EXCEPTION 'Conflicting replay accepted';
  EXCEPTION WHEN unique_violation THEN NULL; END;
 END;
@@ -35,7 +47,7 @@ RESET ROLE;
 SET ROLE authenticated;
 DO $test$
 BEGIN
- IF has_function_privilege(current_user,'public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Browser approval RPC grant leaked'; END IF;
+ IF has_function_privilege(current_user,'public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'Browser approval RPC grant leaked'; END IF;
  IF public.ksol_result_transition('00000000-0000-0000-0000-000000000010',1,'release','00000000-0000-0000-0000-000000000012') IS DISTINCT FROM 'released' THEN RAISE EXCEPTION 'Release failed'; END IF;
 END;
 $test$;
@@ -88,14 +100,6 @@ END;
 $test$;
 SELECT 'RESULT_PRIVATE_PUBLICATION_SYNTHETIC_ASSERTIONS_PASSED' AS status;
 
--- Separate generation contract: actual record joins, no real student data.
-ALTER TABLE public.test_attempts ADD COLUMN test_id text, ADD COLUMN score numeric, ADD COLUMN total_marks numeric, ADD COLUMN percentage numeric, ADD COLUMN correct_count integer, ADD COLUMN submitted_at timestamptz;
-CREATE TABLE public.student_profiles(user_id uuid,student_name text,roll_no text,class_level text,school_name text);
-CREATE TABLE public.tests(id text PRIMARY KEY,title jsonb,subject text,class_level text);
-UPDATE public.test_attempts SET test_id='synthetic-test',score=8,total_marks=10,percentage=80,correct_count=8,submitted_at='2026-01-01T00:00:00Z';
-INSERT INTO public.student_profiles VALUES('00000000-0000-0000-0000-000000000002','Synthetic Student','SYN-01','10','Synthetic School');
-INSERT INTO public.tests VALUES('synthetic-test','{"en":"Synthetic Test"}','Social Science','10');
-\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql
 SET ROLE service_role;
 DO $test$
 DECLARE s jsonb; actor uuid:='00000000-0000-0000-0000-000000000001'; a uuid:='00000000-0000-0000-0000-000000000010';
