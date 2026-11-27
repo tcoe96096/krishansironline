@@ -187,3 +187,20 @@ test('Storage reconciliation requires exact bucket, key and byte size matches',a
  assert.equal(storageMetadataMatches(manifest,{...metadata,buckets:['wrong']}),false);
  assert.equal(storageMetadataMatches(manifest,{...metadata,objects:[{...metadata.objects[0],key:'wrong'}]}),false);
 });
+
+test('backup subprocesses receive only their own service credentials',async()=>{
+ const {splitBackupEnvironments}=await import('../scripts/recovery/cloud-stream-backup.mjs');
+ const {pgEnv,cloudEnv,tocEnv}=splitBackupEnvironments({
+  PATH:'/synthetic',KSOL_DB_PASSWORD:'synthetic-db',KSOL_PRODUCTION_DB_PASSWORD:'synthetic-db',
+  RCLONE_CONFIG:'/synthetic-config',RCLONE_CONFIG_PASS:'synthetic-cloud',
+  PGOPTIONS:'synthetic-override',KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY:'synthetic-s3'});
+ assert.equal(pgEnv.PGPASSWORD,'synthetic-db');
+ assert.equal(pgEnv.RCLONE_CONFIG_PASS,undefined);
+ assert.equal(pgEnv.PGOPTIONS,undefined);
+ assert.equal(cloudEnv.RCLONE_CONFIG_PASS,'synthetic-cloud');
+ assert.equal(cloudEnv.PGPASSWORD,undefined);
+ assert.equal(cloudEnv.KSOL_DB_PASSWORD,undefined);
+ assert.equal(cloudEnv.KSOL_PRODUCTION_DB_PASSWORD,undefined);
+ assert.equal(cloudEnv.KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY,undefined);
+ assert.deepEqual(tocEnv,{PATH:'/synthetic'});
+});
