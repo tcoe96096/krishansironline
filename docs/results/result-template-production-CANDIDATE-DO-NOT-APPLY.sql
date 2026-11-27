@@ -12,7 +12,7 @@ BEGIN
  OR pg_catalog.to_regnamespace('private') IS NULL THEN
  RAISE EXCEPTION 'Template catalog drift or dependency missing; stop';
  END IF;
-END
+END;
 $preflight$;
 CREATE TABLE public.result_card_templates (
  template_key text PRIMARY KEY DEFAULT 'default' CHECK(template_key='default'),
@@ -131,7 +131,7 @@ begin
   returning version into v_new_version;
   return v_new_version;
 end;
-$function$
+$function$;
 REVOKE ALL ON FUNCTION public.can_publish_result_card_template(),public.publish_result_card_template(text,jsonb,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.can_publish_result_card_template(),public.publish_result_card_template(text,jsonb,text) TO authenticated;
 COMMIT;
