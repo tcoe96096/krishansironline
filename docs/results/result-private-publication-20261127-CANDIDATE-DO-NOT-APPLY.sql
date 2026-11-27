@@ -234,7 +234,7 @@ BEGIN
       AND o.is_delete_marker IS FALSE
       AND o.archived_at IS NULL
       AND o.metadata->>'mimetype'='application/pdf'
-      AND CASE WHEN o.metadata->>'size' ~ '^[0-9]{1,8}
+      AND CASE WHEN o.metadata->>'size' ~ '^[0-9]{1,8}$' THEN (o.metadata->>'size')::bigint BETWEEN 8 AND 10485760 ELSE false END
   ) INTO v_object_exists;
   IF v_object_exists IS DISTINCT FROM TRUE THEN
     RAISE EXCEPTION 'Private PDF artifact not found or invalid' USING ERRCODE='22023';
