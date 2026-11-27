@@ -1,5 +1,8 @@
-name: KSOL Production encrypted database backup (manual only)
+name: KSOL Production encrypted database backup
 on:
+  schedule:
+    # Sunday 02:37 IST (Saturday 21:07 UTC); opt-in only.
+    - cron: '7 21 * * 6'
   workflow_dispatch:
     inputs:
       acknowledgment:
@@ -13,13 +16,16 @@ concurrency:
   cancel-in-progress: false
 jobs:
   production-encrypted-backup:
-    # Separate explicit production opt-in; no schedules or pull-request runs.
+    # Manual acknowledgment or separate scheduled-backup opt-in; never PR runs.
     if: >-
       github.ref == 'refs/heads/main' &&
       github.repository == 'tcoe96096/krishansironline' &&
       github.event.repository.private == false &&
       vars.KSOL_PRODUCTION_BACKUP_ENABLED == 'true' &&
-      inputs.acknowledgment == 'BACKUP_PRODUCTION_READ_ONLY'
+      ((github.event_name == 'workflow_dispatch' &&
+        inputs.acknowledgment == 'BACKUP_PRODUCTION_READ_ONLY') ||
+       (github.event_name == 'schedule' &&
+        vars.KSOL_PRODUCTION_AUTO_BACKUP_ENABLED == 'true'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -70,5 +76,12 @@ jobs:
           printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
           unset RCLONE_CONFIG_B64
           chmod 600 "$RCLONE_CONFIG"
+          # Scheduled runs fail closed unless Drive reports sufficient free space.
+          # No automatic deletion; keep existing verified recovery copies.
+          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
+            rclone about ksolcrypt: --json 2>/dev/null | node -e 'let s=""; process.stdin.on("data",c=>s+=c); process.stdin.on("end",()=>{try{const d=JSON.parse(s); if(!Number.isSafeInteger(d.free)||d.free<1073741824) process.exitCode=2;}catch{process.exitCode=2;}});'
+            rclone size ksolcrypt:production/ --json 2>/dev/null | node -e 'let s=""; process.stdin.on("data",c=>s+=c); process.stdin.on("end",()=>{try{const d=JSON.parse(s); if(!Number.isSafeInteger(d.bytes)||d.bytes<0||d.bytes>=1073741824) process.exitCode=2;}catch{process.exitCode=2;}});'
+            echo 'Scheduled backup free-space and namespace preflight passed.'
+          fi
           node scripts/recovery/cloud-stream-backup.mjs --source production
           echo 'Production encrypted database archive readback succeeded; Auth runtime, Storage file bytes and full recovery remain NOT VERIFIED.' >> "$GITHUB_STEP_SUMMARY"
