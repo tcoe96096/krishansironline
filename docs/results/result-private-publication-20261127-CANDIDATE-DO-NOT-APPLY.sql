@@ -28,6 +28,7 @@ $ksol_result_preflight$;
 CREATE SCHEMA IF NOT EXISTS private;
 CREATE TABLE IF NOT EXISTS private.ksol_result_release (
   attempt_id uuid PRIMARY KEY REFERENCES public.test_attempts(id) ON DELETE RESTRICT,
+  recipient_id uuid NOT NULL,
   result_version integer NOT NULL DEFAULT 1 CHECK(result_version>0),
   -- Immutable, version-bound private PDF identity; no unbound releases.
   artifact_sha256 text NOT NULL CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
@@ -122,6 +123,7 @@ BEGIN
   -- is disabled or attempt status later changes.
   IF p_operation='release' AND (
     v_status IS DISTINCT FROM 'submitted' OR v_student IS NULL
+    OR v_row.recipient_id IS DISTINCT FROM v_student
     OR public.student_account_is_eligible(v_student) IS DISTINCT FROM TRUE
   ) THEN
     RAISE EXCEPTION 'Result not eligible' USING ERRCODE='22023';
@@ -246,6 +248,7 @@ BEGIN
   IF FOUND THEN
     -- A revised result must advance exactly one version from revoked state.
     IF v_row.state IS DISTINCT FROM 'revoked'
+      OR v_row.recipient_id IS DISTINCT FROM v_student
       OR p_expected_version <> v_row.result_version+1 THEN
       RAISE EXCEPTION 'Existing result must first be revoked' USING ERRCODE='22023';
     END IF;
@@ -263,8 +266,8 @@ BEGIN
     END IF;
     v_previous := 'not_created';
     INSERT INTO private.ksol_result_release
-      (attempt_id,result_version,artifact_sha256,pdf_object_key,state)
-      VALUES(p_attempt_id,p_expected_version,p_artifact_sha256,v_object_key,'approved');
+      (attempt_id,recipient_id,result_version,artifact_sha256,pdf_object_key,state)
+      VALUES(p_attempt_id,v_student,p_expected_version,p_artifact_sha256,v_object_key,'approved');
   END IF;
 
   INSERT INTO private.ksol_result_audit
@@ -296,6 +299,7 @@ AS $$
      JOIN private.ksol_result_release r ON r.attempt_id=a.id
      WHERE a.id=p_attempt_id
        AND a.student_id=auth.uid()
+       AND r.recipient_id=auth.uid()
        AND a.status='submitted'
        AND public.student_account_is_eligible(auth.uid()) IS TRUE
        AND r.result_version=p_expected_version
@@ -342,6 +346,7 @@ AS $$
     AND p_attempt_id IS NOT NULL
     AND a.id=p_attempt_id
     AND a.student_id=auth.uid()
+       AND r.recipient_id=auth.uid()
     AND a.status='submitted'
     AND public.student_account_is_eligible(auth.uid()) IS TRUE
     AND r.state='released';
