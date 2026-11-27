@@ -55,8 +55,8 @@ async function boundedBody(body: ReadableStream<Uint8Array> | null, limit: numbe
 }
 
 Deno.serve(async (req: Request) => {
-  if (Deno.env.get("KSOL_RESULT_CARD_FUNCTIONS_ENABLED") !== "true") {
-    return response(423, { error: "Result Card backend is not activated" }, req.headers.get("origin"));
+  if (Deno.env.get("KSOL_RESULT_CARD_FUNCTIONS_ENABLED") !== "true" || Deno.env.get("KSOL_RESULT_MANUAL_UPLOAD_ENABLED") !== "true") {
+    return response(423, { error: "Manual PDF upload is not activated" }, req.headers.get("origin"));
   }
   const origin = req.headers.get("origin");
   if (origin && !ALLOWED_ORIGINS.has(origin)) {
