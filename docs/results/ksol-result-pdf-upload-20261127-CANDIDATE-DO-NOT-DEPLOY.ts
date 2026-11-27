@@ -154,6 +154,14 @@ Deno.serve(async (req: Request) => {
       pdf.type !== "application/pdf" || pdf.size < 8 || pdf.size > LIMIT_BYTES) {
     return response(400, { error: "Invalid PDF approval request" }, origin);
   }
+  const snapshot = await jsonFetch(`${base}/rest/v1/rpc/ksol_result_generation_snapshot`, {
+    method:"POST",
+    headers:{apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,"Content-Type":"application/json"},
+    body:JSON.stringify({p_actor_id:user.data.id,p_attempt_id:attemptId}),
+  }).catch(()=>({ok:false,data:null}));
+  if(!snapshot.ok || !snapshot.data || snapshot.data.attemptId!==attemptId){
+    return response(409,{error:"Eligible result snapshot unavailable"},origin);
+  }
   const bytes = new Uint8Array(await pdf.arrayBuffer());
   if (String.fromCharCode(...bytes.subarray(0,5)) !== "%PDF-") {
     return response(400, { error: "Invalid PDF format" }, origin);
@@ -212,6 +220,7 @@ Deno.serve(async (req: Request) => {
       p_expected_version: version,
       p_artifact_sha256: sha256,
       p_request_key: requestKey,
+      p_expected_snapshot: snapshot.data,
     }),
   }).catch(() => ({ ok: false, data: null }));
   if (!approval.ok || approval.data !== "approved") {
