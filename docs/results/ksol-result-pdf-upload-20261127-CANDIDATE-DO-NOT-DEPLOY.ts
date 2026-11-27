@@ -1,3 +1,6 @@
+export {};
+// Review-only Deno server runtime declarations; not browser runtime code.
+declare const Deno: { env: { get(name: string): string | undefined }; serve(handler: (req: Request) => Response | Promise<Response>): unknown };
 // STAGED ONLY / DO NOT DEPLOY OR ACTIVATE WITHOUT APPROVED RECOVERY.
 // Candidate Supabase Edge Function: trusted PDF upload + admin approval.
 // Prerequisites: approved migrations, private bucket, JWT+RLS tests,
