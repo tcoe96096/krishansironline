@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, RefreshCw, Search, ClipboardList, Users, Trophy, Clock3, FileDown, Printer } from 'lucide-react';
 import { requireSupabase } from '../lib/supabase';
 import type { TestAttempt } from '../services/testService';
+import { AdminResultTemplatePanel } from './AdminResultTemplatePanel';
 
 type TestInfo = { id: string; title: { en?: string; hi?: string } | string; class_level: string; subject: string };
 type StudentInfo = { user_id: string; student_name: string; roll_no: string; class_level: string; school_name: string };
@@ -85,6 +86,7 @@ export const AdminTestResults: React.FC<{ demoMode?: boolean }> = ({ demoMode = 
   if (demoMode) return <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Demo mode में live विद्यार्थी परिणाम नहीं दिखाए जाते।</section>;
 
   return <section className="space-y-5">
+    <AdminResultTemplatePanel />
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-sky-700">Assessment · Admin only</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">Results & Reports</h2><p className="mt-1 text-sm text-slate-500">विद्यार्थियों के टेस्ट प्रयास, स्कोर और परिणामों की सुरक्षित रिपोर्ट।</p></div><div className="flex gap-2"><button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"><RefreshCw className="h-4 w-4"/>{loading ? 'लोड…' : 'Refresh'}</button><button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl bg-[#082d65] px-3 py-2 text-xs font-bold text-white disabled:opacity-40"><Download className="h-4 w-4"/>Export CSV</button><button type="button" onClick={printReport} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"><Printer className="h-4 w-4"/>Print / Save PDF</button></div></div>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
