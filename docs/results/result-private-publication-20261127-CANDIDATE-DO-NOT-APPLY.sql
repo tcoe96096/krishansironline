@@ -11,6 +11,7 @@ BEGIN
     OR pg_catalog.to_regclass('private.ksol_result_audit') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_transition(uuid,integer,text,uuid)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,integer,text,uuid)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_can_view_released_result(uuid,integer)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_pdf_manifest(uuid,integer)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_my_released_result_version(uuid)') IS NOT NULL
@@ -178,13 +179,13 @@ VALUES (
 
 -- MODULE 3 docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql
 CREATE FUNCTION public.ksol_result_approve_pdf(
-  p_attempt_id uuid, p_expected_version integer,
+  p_actor_id uuid, p_attempt_id uuid, p_expected_version integer,
   p_artifact_sha256 text, p_request_key uuid
 ) RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $$
 DECLARE
-  v_actor uuid := auth.uid();
+  v_actor uuid := p_actor_id;
   v_prior private.ksol_result_request%ROWTYPE;
   v_row private.ksol_result_release%ROWTYPE;
   v_attempt_locked uuid;
@@ -194,7 +195,7 @@ DECLARE
   v_object_exists boolean;
   v_previous text;
 BEGIN
-  IF v_actor IS NULL OR public.is_super_admin() IS DISTINCT FROM TRUE THEN
+  IF v_actor IS NULL OR NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id=v_actor AND lower(ur.role)='super_admin') THEN
     RAISE EXCEPTION 'Not authorized' USING ERRCODE='42501';
   END IF;
   IF p_attempt_id IS NULL OR p_expected_version IS NULL OR p_expected_version < 1
@@ -275,10 +276,10 @@ BEGIN
   RETURN 'approved';
 END;
 $$;
-REVOKE ALL ON FUNCTION public.ksol_result_approve_pdf(uuid,integer,text,uuid)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.ksol_result_approve_pdf(uuid,integer,text,uuid)
-  TO authenticated;
+REVOKE ALL ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)
+  FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)
+  TO service_role;
 
 -- MODULE 4 docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
 CREATE FUNCTION public.ksol_can_view_released_result(
