@@ -123,10 +123,18 @@ test('production source accepts only its own exact project and session pooler id
  assert.equal(validateCloudSettings('production',{...pool,KSOL_DB_PORT:'6543'}).ok,false);
  assert.equal(validateCloudSettings('production',{...prod,KSOL_DB_PASSWORD:''}).ok,false);
 });
-test('production backup is manual, opt-in, main-only and does not reuse preview database credentials',()=>{
+test('production backup is manual or separately scheduled opt-in, main-only and does not reuse preview database credentials',()=>{
  const workflow=readFileSync('.github/workflows/ksol-production-cloud-encrypted-backup.yml','utf8');
  assert.match(workflow,/workflow_dispatch:/);
- assert.doesNotMatch(workflow,/^\s+(schedule|pull_request|push):/m);
+ assert.doesNotMatch(workflow,/^\s+(pull_request|push):/m);
+ assert.match(workflow,/schedule:/);
+ assert.ok(workflow.includes("github.event_name == 'schedule'"));
+ assert.ok(workflow.includes("github.event_name == 'workflow_dispatch'"));
+ assert.ok(workflow.includes("vars.KSOL_PRODUCTION_AUTO_BACKUP_ENABLED == 'true'"));
+ assert.ok(workflow.includes("7 21 * * 6"));
+ assert.match(workflow,/rclone about ksolcrypt:/);
+ assert.match(workflow,/rclone size ksolcrypt:production\//);
+ assert.doesNotMatch(workflow,/rclone (delete|purge|sync|move)/);
  assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
  assert.ok(workflow.includes("vars.KSOL_PRODUCTION_BACKUP_ENABLED == 'true'"));
  assert.ok(workflow.includes("inputs.acknowledgment == 'BACKUP_PRODUCTION_READ_ONLY'"));
