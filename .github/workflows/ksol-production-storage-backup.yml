@@ -1,0 +1,53 @@
+name: KSOL Production Storage encrypted backup (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledgment:
+        description: 'Type BACKUP_PRODUCTION_STORAGE_READ_ONLY'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: ksol-private-production-cloud-backup
+  cancel-in-progress: false
+jobs:
+  storage-backup:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'tcoe96096/krishansironline' &&
+      vars.KSOL_PRODUCTION_STORAGE_BACKUP_ENABLED == 'true' &&
+      inputs.acknowledgment == 'BACKUP_PRODUCTION_STORAGE_READ_ONLY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+      - name: Encrypted Storage object export and checksum readback
+        shell: bash
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.KSOL_RCLONE_CONFIG_B64 }}
+          RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
+          KSOL_PRODUCTION_S3_ACCESS_KEY_ID: ${{ secrets.KSOL_PRODUCTION_S3_ACCESS_KEY_ID }}
+          KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY: ${{ secrets.KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY }}
+          KSOL_PRODUCTION_S3_REGION: ${{ vars.KSOL_PRODUCTION_S3_REGION }}
+          KSOL_STORAGE_BACKUP_ACK: ${{ inputs.acknowledgment }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$RCLONE_CONFIG_B64"
+          export RCLONE_CONFIG="$RUNNER_TEMP/ksol-private-rclone.conf"
+          trap 'rm -f "$RCLONE_CONFIG"' EXIT
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
+          unset RCLONE_CONFIG_B64
+          chmod 600 "$RCLONE_CONFIG"
+          node scripts/recovery/backup-production-storage.mjs
+          echo 'Storage bytes and encrypted manifest readback verified. Full platform restore remains NOT VERIFIED.' >> "$GITHUB_STEP_SUMMARY"
