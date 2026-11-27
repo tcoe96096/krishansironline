@@ -150,7 +150,16 @@ test('Production storage export is explicitly opt-in, fixed-source and encrypted
  const workflow=readFileSync('.github/workflows/ksol-production-storage-backup.yml','utf8');
  const code=readFileSync('scripts/recovery/backup-production-storage.mjs','utf8');
  assert.match(workflow,/workflow_dispatch:/);
- assert.doesNotMatch(workflow,/^\s+(schedule|pull_request|push):/m);
+ assert.doesNotMatch(workflow,/^\s+(pull_request|push):/m);
+ assert.match(workflow,/schedule:/);
+ assert.ok(workflow.includes('7 22 * * 6'));
+ assert.ok(workflow.includes("vars.KSOL_PRODUCTION_STORAGE_AUTO_BACKUP_ENABLED == 'true'"));
+ assert.ok(workflow.includes("github.event_name == 'workflow_dispatch'"));
+ assert.ok(workflow.includes("github.event_name == 'schedule'"));
+ assert.match(code,/scheduled\?128:512/);
+ assert.match(code,/if\(scheduled\)scheduledQuotaPreflight\(drive,first.bytes\)/);
+ assert.match(code,/capacity\.free<reserve\+estimated/);
+ assert.match(code,/usage\.bytes\+estimated>reserve/);
  assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
  assert.ok(workflow.includes("vars.KSOL_PRODUCTION_STORAGE_BACKUP_ENABLED == 'true'"));
  assert.ok(workflow.includes('BACKUP_PRODUCTION_STORAGE_READ_ONLY'));
