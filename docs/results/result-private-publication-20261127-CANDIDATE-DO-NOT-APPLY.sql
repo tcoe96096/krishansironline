@@ -12,6 +12,7 @@ BEGIN
     OR pg_catalog.to_regprocedure('public.ksol_result_transition(uuid,integer,text,uuid)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,integer,text,uuid)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)') IS NOT NULL
+    OR pg_catalog.to_regprocedure('public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid,jsonb)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_can_view_released_result(uuid,integer)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_result_pdf_manifest(uuid,integer)') IS NOT NULL
     OR pg_catalog.to_regprocedure('public.ksol_my_released_result_version(uuid)') IS NOT NULL
@@ -182,7 +183,7 @@ VALUES (
 -- MODULE 3 docs/results/ksol-result-approve-pdf-CANDIDATE-DO-NOT-APPLY.sql
 CREATE FUNCTION public.ksol_result_approve_pdf(
   p_actor_id uuid, p_attempt_id uuid, p_expected_version integer,
-  p_artifact_sha256 text, p_request_key uuid
+  p_artifact_sha256 text, p_request_key uuid, p_expected_snapshot jsonb
 ) RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $$
@@ -202,6 +203,7 @@ BEGIN
   END IF;
   IF p_attempt_id IS NULL OR p_expected_version IS NULL OR p_expected_version < 1
     OR p_request_key IS NULL OR p_artifact_sha256 IS NULL
+    OR p_expected_snapshot IS NULL OR jsonb_typeof(p_expected_snapshot) IS DISTINCT FROM 'object'
     OR p_artifact_sha256 !~ '^[0-9a-f]{64}$' THEN
     RAISE EXCEPTION 'Invalid approval request' USING ERRCODE='22023';
   END IF;
@@ -226,6 +228,9 @@ BEGIN
     OR v_student IS NULL
     OR public.student_account_is_eligible(v_student) IS DISTINCT FROM TRUE THEN
     RAISE EXCEPTION 'Attempt is not eligible' USING ERRCODE='22023';
+  END IF;
+  IF public.ksol_result_generation_snapshot(v_actor,p_attempt_id) IS DISTINCT FROM p_expected_snapshot THEN
+    RAISE EXCEPTION 'Result changed after preparation; regenerate or review PDF' USING ERRCODE='22023';
   END IF;
   v_object_key := p_attempt_id::text || '/v' || p_expected_version::text
     || '/' || p_artifact_sha256 || '.pdf';
@@ -279,9 +284,9 @@ BEGIN
   RETURN 'approved';
 END;
 $$;
-REVOKE ALL ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)
+REVOKE ALL ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid,jsonb)
   FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid)
+GRANT EXECUTE ON FUNCTION public.ksol_result_approve_pdf(uuid,uuid,integer,text,uuid,jsonb)
   TO service_role;
 
 -- MODULE 4 docs/results/ksol-result-student-access-gate-CANDIDATE-DO-NOT-APPLY.sql
