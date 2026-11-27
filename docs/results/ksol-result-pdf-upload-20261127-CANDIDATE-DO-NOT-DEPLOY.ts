@@ -198,17 +198,16 @@ Deno.serve(async (req: Request) => {
     return response(409,{error:"Stored PDF checksum mismatch"},origin);
   }
 
-  // Approval still runs under the caller JWT, after uploading. The DB checks
-  // submitted attempt, eligible student, super-admin role, Storage metadata,
-  // version advancement, digest-bound idempotency and private audit.
+  // Trusted server approval: caller JWT validated above; SQL rechecks actor role.
   const approval = await jsonFetch(`${base}/rest/v1/rpc/ksol_result_approve_pdf`, {
     method: "POST",
     headers: {
-      apikey: anonKey,
-      Authorization: authorization,
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      p_actor_id: user.data.id,
       p_attempt_id: attemptId,
       p_expected_version: version,
       p_artifact_sha256: sha256,
