@@ -1,5 +1,8 @@
-name: KSOL Production Storage encrypted backup (manual only)
+name: KSOL Production Storage encrypted backup
 on:
+  schedule:
+    # Sunday 03:37 IST; separate opt-in; one hour after DB schedule.
+    - cron: '7 22 * * 6'
   workflow_dispatch:
     inputs:
       acknowledgment:
@@ -17,7 +20,10 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.repository == 'tcoe96096/krishansironline' &&
       vars.KSOL_PRODUCTION_STORAGE_BACKUP_ENABLED == 'true' &&
-      inputs.acknowledgment == 'BACKUP_PRODUCTION_STORAGE_READ_ONLY'
+      ((github.event_name == 'workflow_dispatch' &&
+        inputs.acknowledgment == 'BACKUP_PRODUCTION_STORAGE_READ_ONLY') ||
+       (github.event_name == 'schedule' &&
+        vars.KSOL_PRODUCTION_STORAGE_AUTO_BACKUP_ENABLED == 'true'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -39,7 +45,7 @@ jobs:
           KSOL_PRODUCTION_S3_ACCESS_KEY_ID: ${{ secrets.KSOL_PRODUCTION_S3_ACCESS_KEY_ID }}
           KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY: ${{ secrets.KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY }}
           KSOL_PRODUCTION_S3_REGION: ${{ vars.KSOL_PRODUCTION_S3_REGION }}
-          KSOL_STORAGE_BACKUP_ACK: ${{ inputs.acknowledgment }}
+          KSOL_STORAGE_BACKUP_ACK: ${{ github.event_name == 'schedule' && 'BACKUP_PRODUCTION_STORAGE_READ_ONLY' || inputs.acknowledgment }}
         run: |
           set -euo pipefail
           umask 077
