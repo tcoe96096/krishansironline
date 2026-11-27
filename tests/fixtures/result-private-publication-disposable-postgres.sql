@@ -58,6 +58,20 @@ BEGIN
  IF public.ksol_result_pdf_manifest('00000000-0000-0000-0000-000000000010',1) IS NOT NULL THEN RAISE EXCEPTION 'Foreign manifest leaked'; END IF;
 END;
 $test$;
+RESET ROLE;
+-- A second eligible synthetic student must never inherit the first student's PDF.
+CREATE OR REPLACE FUNCTION public.student_account_is_eligible(p_student_id uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT p_student_id IN ('00000000-0000-0000-0000-000000000002'::uuid,'00000000-0000-0000-0000-000000000003'::uuid) $$;
+UPDATE public.test_attempts SET student_id='00000000-0000-0000-0000-000000000003';
+SET ROLE authenticated;
+SELECT set_config('test.actor','00000000-0000-0000-0000-000000000003',false);
+DO $test$
+BEGIN
+ IF public.ksol_result_pdf_manifest('00000000-0000-0000-0000-000000000010',1) IS NOT NULL OR public.ksol_my_released_result_version('00000000-0000-0000-0000-000000000010') IS NOT NULL THEN RAISE EXCEPTION 'Reassigned attempt leaked prior recipient PDF'; END IF;
+END;
+$test$;
+RESET ROLE;
+UPDATE public.test_attempts SET student_id='00000000-0000-0000-0000-000000000002';
+SET ROLE authenticated;
 SELECT set_config('test.actor','00000000-0000-0000-0000-000000000001',false);
 SELECT public.ksol_result_transition('00000000-0000-0000-0000-000000000010',1,'revoke','00000000-0000-0000-0000-000000000014');
 SELECT set_config('test.actor','00000000-0000-0000-0000-000000000002',false);
