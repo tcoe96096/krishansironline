@@ -5,6 +5,8 @@ on:
       - 'docs/results/result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
       - 'scripts/results/render-synthetic-report-20261127.ts'
       - 'scripts/results/verify-private-generation-adapter-20261127.ts'
+      - 'scripts/results/verify-edge-pdf-renderer-20261127.mjs'
+      - 'docs/results/result-generation-edge-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.mjs'
       - 'docs/results/result-generation-*-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
       - '.github/workflows/result-synthetic-pdf-render.yml'
 permissions:
@@ -46,3 +48,18 @@ jobs:
           assert sum(0x0900 <= ord(c) <= 0x097f for c in text) > 20, 'Missing Devanagari text'
           PY
           echo RESULT_SYNTHETIC_BILINGUAL_PDF_RENDER_PASSED
+      - name: Verify portable PDFKit rendering with mixed Hindi and English
+        run: |
+          set -euo pipefail
+          npm install --prefix /tmp/ksol-pdf-deps --no-save --ignore-scripts --no-audit --no-fund pdfkit@0.17.2
+          latin="$(fc-match -f '%{file}' 'Noto Sans')"
+          hindi="$(fc-match -f '%{file}' 'Noto Sans Devanagari')"
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/verify-edge-pdf-renderer-20261127.mjs "$latin" "$hindi"
+          pdfinfo /tmp/ksol-result-render/portable.pdf | grep -E 'Pages: +1$|Page size:'
+          pdffonts /tmp/ksol-result-render/portable.pdf | tee /tmp/ksol-result-render/portable-fonts.txt
+          grep -i Devanagari /tmp/ksol-result-render/portable-fonts.txt
+          pdftotext -layout /tmp/ksol-result-render/portable.pdf /tmp/ksol-result-render/portable-text.txt
+          grep -F 'Synthetic Student' /tmp/ksol-result-render/portable-text.txt
+          grep -F 'SYN-01' /tmp/ksol-result-render/portable-text.txt
+          grep -F '80%' /tmp/ksol-result-render/portable-text.txt
+          echo PORTABLE_PDFKIT_SYNTHETIC_OUTPUT_VERIFIED
