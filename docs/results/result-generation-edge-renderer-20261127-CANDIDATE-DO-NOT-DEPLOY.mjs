@@ -21,15 +21,47 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
   try{
     doc.registerFont('Latin',latinFont);doc.registerFont('Hindi',hindiFont);
     const clean=v=>String(v??'').trim();
-    // Mixed-script values are deliberately rejected until multi-font run shaping
-    // has been validated. Hindi labels and English labels are separate runs.
-    function selectFont(value){
-      if(/[\u0900-\u097f]/u.test(value)){
-        if(/[A-Za-z]/.test(value))throw new Error('Mixed-script draft field not yet supported');
-        return 'Hindi';
+    const segmenter=new Intl.Segmenter('hi',{granularity:'grapheme'});
+    function runs(value){
+      const out=[];
+      for(const {segment} of segmenter.segment(value)){
+        const hindi=/[\u0900-\u097f]/u.test(segment);
+        const font=hindi?'Hindi':'Latin';
+        if(hindi?!/^[\u0900-\u097f\u200c\u200d]+$/u.test(segment):!/^[\x20-\x7e]+$/u.test(segment))throw new Error('Unsupported draft text');
+        if(out.at(-1)?.font===font)out.at(-1).text+=segment;
+        else out.push({font,text:segment});
       }
-      if(/[^\x20-\x7e]/u.test(value))throw new Error('Unsupported draft text');
-      return 'Latin';
+      return out;
+    }
+    function measure(text,size){
+      return runs(text).map(run=>({...run,width:doc.font(run.font).fontSize(size).widthOfString(run.text)}));
+    }
+    function wrap(value,size,width){
+      const lines=[];let line='';
+      for(const word of value.split(/ +/u)){
+        const next=line?line+' '+word:word;
+        const w=measure(next,size).reduce((n,r)=>n+r.width,0);
+        if(w<=width){line=next;continue;}
+        if(!line)throw new Error('Draft word exceeds layout width');
+        lines.push(measure(line,size));line=word;
+        if(measure(word,size).reduce((n,r)=>n+r.width,0)>width)throw new Error('Draft word exceeds layout width');
+      }
+      if(line)lines.push(measure(line,size));
+      return lines;
+    }
+    function draw(lines,x,y,width,size,color,align='left'){
+      const step=size*1.6;
+      if(y+lines.length*step>doc.page.height-55)throw new Error('Draft layout overflow');
+      for(const row of lines){
+        const total=row.reduce((n,r)=>n+r.width,0);
+        let dx=x+(align==='center'?(width-total)/2:0);
+        for(const run of row){
+          doc.font(run.font).fontSize(size).fillColor(color).text(run.text,dx,y,{lineBreak:false});
+          dx+=run.width;
+        }
+        y+=step;
+      }
+      return lines.length*step;
     }
     const left=48,right=doc.page.width-48,width=right-left;
     const accent=design.theme==='classic'?'#785322':design.theme==='modern'?'#164e80':'#334155';
@@ -37,10 +69,7 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
     function line(value,fontSize,color,align='left'){
       value=clean(value);
       if(!value)return;
-      doc.font(selectFont(value)).fontSize(fontSize).fillColor(color);
-      const h=doc.heightOfString(value,{width,align,lineGap:2});
-      if(!Number.isFinite(h)||y+h>doc.page.height-55)throw new Error('Draft layout exceeds one A4 page');
-      doc.text(value,left,y,{width,align,lineGap:2});y+=h+7;
+      y+=draw(wrap(value,fontSize,width),left,y,width,fontSize,color,align)+7;
     }
     line(design.options.brandTitle||'KRISHAN SIR ONLINE LEARNING',19,accent,'center');
     line('परीक्षा अंकपत्र',18,accent,'center');
@@ -56,11 +85,11 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
       const v=clean(value)||'-';
       doc.font('Hindi').fontSize(10).fillColor(accent).text(hi,left,y,{width:122,lineBreak:false});
       doc.font('Latin').fontSize(8).fillColor('#334155').text(en,left,y+14,{width:122,lineBreak:false});
-      doc.font(selectFont(v)).fontSize(12).fillColor('#172033');
-      const h=doc.heightOfString(v,{width:width-145,lineGap:2});
+      const rows=wrap(v,12,width-145);
+      const h=rows.length*12*1.6;
       const rowHeight=Math.max(30,h+10);
       if(y+rowHeight>doc.page.height-90)throw new Error('Draft layout overflow');
-      doc.text(v,left+145,y,{width:width-145,lineGap:2});
+      draw(rows,left+145,y,width-145,12,'#172033');
       y+=rowHeight;
     }
     line('Submitted UTC: '+new Date(snapshot.submittedAt).toISOString(),9,'#334155');
