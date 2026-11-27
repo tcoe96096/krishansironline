@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { OnlineTest, Question, StudentLoginDetails } from '../types';
 import { summarizeTestAttempts, classifyAttemptError, isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
+import { canRestoreExamAnswers, isSafeExamAnswerDraft } from '../utils/examSessionGuard';
 import { getPublishedTests, getMyTestAttempts, startTestAttempt, submitTestAttempt, examServerAutosaveEnabled, readTestAttemptDraft, saveTestAttemptDraft, finishTestAttemptDraft, type PublishedTest, type TestAttempt } from '../services/testService';
 import {
   Award,
@@ -51,12 +52,11 @@ const EMPTY_TEST: OnlineTest = {
 };
 
 interface PersistedTestSession {
-  version: 1;
-  ownerId?: string;
-  attemptId?: string;
+  version: 2;
+  ownerId: string;
+  attemptId: string;
   serverDraftRevision?: number;
   testId: string;
-  student: StudentLoginDetails;
   selectedAnswers: Record<number, number>;
   markedForReview: Record<number, boolean>;
   currentQuestionIndex: number;
@@ -72,31 +72,25 @@ const readPersistedTestSession = (): PersistedTestSession | null => {
     const raw = localStorage.getItem(ACTIVE_TEST_SESSION_KEY);
     if (!raw) return null;
     const value = JSON.parse(raw) as Partial<PersistedTestSession>;
-    const student = value.student as StudentLoginDetails | undefined;
     if (
-      value.version !== 1 ||
-      typeof value.testId !== 'string' ||
-      !student ||
-      typeof student.studentName !== 'string' ||
-      typeof student.rollNo !== 'string' ||
-      typeof student.studentClass !== 'string' ||
-      typeof value.timeLeftSeconds !== 'number' ||
-      !Number.isFinite(value.timeLeftSeconds) ||
-      typeof value.savedAt !== 'number' ||
-      !Number.isFinite(value.savedAt) ||
-      typeof value.currentQuestionIndex !== 'number' ||
-      !Number.isFinite(value.currentQuestionIndex) ||
+      !value || value.version !== 2 ||
+      typeof value.ownerId !== 'string' || !value.ownerId ||
+      typeof value.attemptId !== 'string' || !value.attemptId ||
+      typeof value.testId !== 'string' || !value.testId ||
+      Object.keys(value).some(key => !['version','ownerId','attemptId','serverDraftRevision','testId','selectedAnswers','markedForReview','currentQuestionIndex','timeLeftSeconds','savedAt','questionLang','viewLayout'].includes(key)) ||
+      (value.serverDraftRevision !== undefined && (!Number.isSafeInteger(value.serverDraftRevision) || value.serverDraftRevision < 0)) ||
+      typeof value.timeLeftSeconds !== 'number' || !Number.isFinite(value.timeLeftSeconds) || value.timeLeftSeconds < 0 ||
+      typeof value.savedAt !== 'number' || !Number.isFinite(value.savedAt) ||
       (value.questionLang !== 'hi' && value.questionLang !== 'en') ||
       (value.viewLayout !== 'cbt' && value.viewLayout !== 'all') ||
-      !value.selectedAnswers ||
-      !value.markedForReview
+      !isSafeExamAnswerDraft(value.selectedAnswers, value.markedForReview, value.currentQuestionIndex)
     ) {
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       return null;
     }
     return value as PersistedTestSession;
   } catch {
-    localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
+    try { localStorage.removeItem(ACTIVE_TEST_SESSION_KEY); } catch { /* Storage unavailable. */ }
     return null;
   }
 };
@@ -217,10 +211,10 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       : 0
   );
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>(
-    () => restoredSession?.selectedAnswers || {}
+    () => ({})
   );
   const [markedForReview, setMarkedForReview] = useState<Record<number, boolean>>(
-    () => restoredSession?.markedForReview || {}
+    () => ({})
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
@@ -419,7 +413,8 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
 
   // Select the saved assessment once the published catalogue is available.
   useEffect(() => {
-    if (!restoredSession || catalogueLoading) return;
+    if (!restoredSession || catalogueLoading || authLoading) return;
+    if (restoredSession.ownerId !== user?.id) { setRestoredSession(null); return; }
     const match = databaseTests.find((test) => test.id === restoredSession.testId);
     if (match) {
       if (selectedTest.id !== match.id) setSelectedTest(match);
@@ -427,7 +422,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       localStorage.removeItem(ACTIVE_TEST_SESSION_KEY);
       setRestoredSession(null);
     }
-  }, [restoredSession, catalogueLoading, databaseTests, selectedTest.id]);
+  }, [restoredSession, catalogueLoading, databaseTests, selectedTest.id, authLoading, user?.id]);
 
   // Do not override a saved in-progress test after a refresh.
   useEffect(() => {
@@ -454,12 +449,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
     }
 
     const session: PersistedTestSession = {
-      version: 1,
+      version: 2,
       ownerId: user.id,
       attemptId: activeAttempt.id,
       serverDraftRevision,
       testId: selectedTest.id,
-      student: studentDetails,
       selectedAnswers,
       markedForReview,
       currentQuestionIndex,
@@ -664,19 +658,11 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
       setServerResult(null);
       const remaining = Math.max(0, Math.ceil((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
       const saved = readPersistedTestSession();
-      const sameStudent = !!saved &&
-        saved.student.studentName === studentDetails.studentName &&
-        saved.student.rollNo === studentDetails.rollNo &&
-        saved.student.studentClass === studentDetails.studentClass &&
-        saved.student.school === studentDetails.school;
       const canRestoreAnswers = !!saved &&
-        saved.testId === selectedTest.id &&
-        sameStudent &&
-        (!saved.ownerId || saved.ownerId === user.id) &&
-        (!saved.attemptId || saved.attemptId === attempt.id) &&
+        canRestoreExamAnswers({...saved,userId:saved.ownerId}, selectedTest.id, user.id, studentDetails, attempt, remaining) &&
         summary.active?.id === attempt.id &&
-        attempt.status === 'in_progress' &&
-        remaining > 0;
+        isSafeExamAnswerDraft(saved.selectedAnswers,saved.markedForReview,saved.currentQuestionIndex,
+          selectedTest.questions.length,selectedTest.questions.map(q => Math.min(q.options.en.length,q.options.hi.length)));
       if (canRestoreAnswers && saved) {
         setSelectedAnswers(saved.selectedAnswers);
         setMarkedForReview(saved.markedForReview);
@@ -735,7 +721,7 @@ export const OnlineTestEngine: React.FC<OnlineTestEngineProps> = ({ initialClass
   const openCatalogueStart = (test: OnlineTest) => {
     if (authLoading || profileLoading || submissionStatus.loading || isTestActive || catalogueStartGuard.current || catalogueStartIntent || catalogueLoading || catalogueError) return;
     setCatalogueActionMessage('');
-    const savedAttemptStillActive = restoredSession && (ownCatalogueHistory?.status !== 'ready' || ownCatalogueHistory.attempts.some(row=>row.test_id===restoredSession.testId && isResumableAttempt(row)));
+    const savedAttemptStillActive = restoredSession && restoredSession.ownerId === user?.id && (ownCatalogueHistory?.status !== 'ready' || ownCatalogueHistory.attempts.some(row=>row.test_id===restoredSession.testId && isResumableAttempt(row)));
     if (!isSubmitted && savedAttemptStillActive && restoredSession.testId !== test.id) {
       setCatalogueActionMessage(catalogueEn ? 'Resume the saved test before choosing another test.' : 'दूसरी परीक्षा से पहले सुरक्षित परीक्षा जारी रखें।');
       return;
