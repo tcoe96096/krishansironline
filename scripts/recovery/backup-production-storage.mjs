@@ -7,7 +7,8 @@ import {PROJECT_REFS,isCryptRemote} from './cloud-stream-backup.mjs';
 
 const source='ksolprodstorage:';
 const crypt='ksolcrypt:';
-const limit=512*1024*1024; // per run source bytes; owner must verify free quotas
+const scheduled=process.env.GITHUB_EVENT_NAME==='schedule';
+const limit=(scheduled?128:512)*1024*1024; // scheduled runs have stricter source-byte cap
 const maxObjects=10000;
 const timeout=120000;
 const cloudEnv=Object.fromEntries(Object.entries(process.env).filter(([k])=>
@@ -36,6 +37,18 @@ function validateDestination(){
  if(!base||base.toLowerCase()==='ksolprodstorage'||
     !/^\s*type\s*=\s*drive\s*$/m.test(cmd(['config','show',base])))
   throw Error('Encrypted Google Drive destination required');
+ return base;
+}
+function scheduledQuotaPreflight(base,bytes){
+ const capacity=JSON.parse(cmd(['about',base+':','--json']));
+ const usage=JSON.parse(cmd(['size',crypt+'production-storage/','--json']));
+ const reserve=1024*1024*1024;
+ // Allow for encrypted object overhead and manifest; never prune existing backups.
+ const estimated=bytes+16*1024*1024;
+ if(!Number.isSafeInteger(capacity.free)||capacity.free<reserve+estimated||
+    !Number.isSafeInteger(usage.bytes)||usage.bytes<0||usage.bytes+estimated>reserve)
+  throw Error('Scheduled Storage quota preflight failed');
+ console.log('STORAGE_SCHEDULED_QUOTA_PREFLIGHT=PASSED');
 }
 function validKey(key){
  return typeof key==='string'&&key.length>0&&key.length<=2048&&
@@ -104,8 +117,9 @@ async function main(){
     !sourceEnv.RCLONE_CONFIG_KSOLPRODSTORAGE_SECRET_ACCESS_KEY||
     !/^[a-z0-9-]{2,40}$/.test(sourceEnv.RCLONE_CONFIG_KSOLPRODSTORAGE_REGION))
   throw Error('Production S3 configuration required');
- validateDestination();
+ const drive=validateDestination();
  const first=inventory();
+ if(scheduled)scheduledQuotaPreflight(drive,first.bytes);
  // A unique immutable run namespace; no delete/sync/overwrite of prior backups.
  const root=crypt+'production-storage/'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+randomUUID()+'/';
  const records=[];
