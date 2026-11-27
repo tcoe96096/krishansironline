@@ -29,3 +29,17 @@ Production backup writes an encrypted .verified.json sidecar only after decrypte
 After the manual Production backup has actually succeeded, the reviewed manual workflow `ksol-production-isolated-restore.yml` can be dispatched from main with `RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY`. It selects the latest correctly named Production marker, validates its source and archive identity, then streams the archive into the existing networkless disposable PostgreSQL harness. It checks the exact byte count and SHA-256 of the restored stream; the job uses no source database connection secrets. A missing/invalid marker, failed stream or failed restore is a failure, not a release authorization. Preview recovery remains unchanged.
 
 This is code preparation only. No Production backup or restore has been executed. Full role/grant reconciliation, Auth runtime, Storage file bytes, quota/retention verification and recurring backup remain outstanding; release gate remains NO_GO.
+
+
+## Follow-up: encrypted Production Storage object-byte backup
+
+The manual workflow `ksol-production-storage-backup.yml` is disabled unless the authorized administrator sets `KSOL_PRODUCTION_STORAGE_BACKUP_ENABLED=true` and supplies `BACKUP_PRODUCTION_STORAGE_READ_ONLY` from main. Configure S3 access keys only in protected GitHub secrets `KSOL_PRODUCTION_S3_ACCESS_KEY_ID` and `KSOL_PRODUCTION_S3_SECRET_ACCESS_KEY`, and set `KSOL_PRODUCTION_S3_REGION` from the project's Storage S3 configuration. S3 access keys bypass RLS and are privileged; do not disclose or reuse them in client code. Verify the repository trust boundary and available free egress/Drive quotas before activation. The source endpoint is constructed from the exact Production project reference.
+
+The script lists buckets and object metadata, streams each object into a unique encrypted Drive run namespace, verifies SHA-256 and byte lengths by cloud readback, rereads the source, then repeats the listing. The private encrypted manifest is published only after these checks and is itself read back. There is no plaintext file written to the workspace, no source mutation, no deletion or rotation, and no schedule. Each run is capped at 512 MiB and 10,000 objects; these are safety bounds, not a guarantee of free service quota. Source changes cause a failure rather than a verified manifest. This is not an atomic snapshot; database metadata reconciliation, restore to an authorized isolated Storage service, ACLs/RLS and Auth runtime still need independent verification. Failed runs may leave incomplete encrypted objects; do not treat them as verified backups.
+
+See the official Supabase Storage S3 authentication, object download and backup documentation:
+- https://supabase.com/docs/guides/storage/s3/authentication
+- https://supabase.com/docs/guides/storage/management/download-objects
+- https://supabase.com/docs/guides/platform/backups
+
+No actual Storage access or backup is performed by this code review. Production release gate remains NO_GO.
