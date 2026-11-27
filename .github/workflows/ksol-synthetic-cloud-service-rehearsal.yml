@@ -1,0 +1,62 @@
+name: KSOL synthetic cloud Auth and Storage recovery (no live data)
+on:
+  pull_request:
+    paths:
+      - 'scripts/recovery/restore-storage-to-local-supabase.mjs'
+      - 'scripts/recovery/synthetic-cloud-service-rehearsal.mjs'
+      - '.github/workflows/ksol-synthetic-cloud-service-rehearsal.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-service-rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@v3
+        with:
+          version: '2.20.3'
+      - name: Prepare disposable synthetic stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+          mkdir -m 700 "$RUNNER_TEMP/ksol-synthetic-stack"
+          cd "$RUNNER_TEMP/ksol-synthetic-stack"
+          supabase init
+          # No project link, existing migrations, production credentials or network calls to live projects.
+          supabase start > "$RUNNER_TEMP/ksol-synthetic-start.log" 2>&1 || { echo 'Synthetic Supabase startup failed'; exit 2; }
+      - name: Restore encrypted synthetic fixture and verify real local services
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$RUNNER_TEMP/ksol-synthetic-stack"
+          status="$(supabase status -o env 2>/dev/null)"
+          export KSOL_LOCAL_STORAGE_SERVICE_KEY="$(printf '%s\n' "$status" | sed -n 's/^SERVICE_ROLE_KEY="\([^"]*\)"$/\1/p')"
+          export KSOL_LOCAL_ANON_KEY="$(printf '%s\n' "$status" | sed -n 's/^ANON_KEY="\([^"]*\)"$/\1/p')"
+          unset status
+          test -n "$KSOL_LOCAL_STORAGE_SERVICE_KEY"
+          test -n "$KSOL_LOCAL_ANON_KEY"
+          export RCLONE_CONFIG="$RUNNER_TEMP/ksol-synthetic-rclone.conf"
+          mkdir -m 700 "$RUNNER_TEMP/ksol-synthetic-encrypted"
+          rclone config create ksolcrypt crypt remote "$RUNNER_TEMP/ksol-synthetic-encrypted" password "$(openssl rand -hex 32)" password2 "$(openssl rand -hex 32)" > /dev/null
+          export KSOL_SYNTHETIC_REHEARSAL=true
+          cd "$GITHUB_WORKSPACE"
+          node scripts/recovery/synthetic-cloud-service-rehearsal.mjs
+      - name: Dispose of synthetic stack
+        if: always()
+        shell: bash
+        run: |
+          if test -d "$RUNNER_TEMP/ksol-synthetic-stack"; then
+            cd "$RUNNER_TEMP/ksol-synthetic-stack"
+            supabase stop --no-backup > /dev/null 2>&1 || true
+          fi
+          rm -f "$RUNNER_TEMP/ksol-synthetic-rclone.conf" "$RUNNER_TEMP/ksol-synthetic-start.log"
