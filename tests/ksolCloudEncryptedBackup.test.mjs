@@ -73,7 +73,7 @@ test('backup failure categories never log credential-bearing stderr',()=>{
  assert.equal(classifyBackupFailure('storage quota exceeded'), 'DRIVE_QUOTA');
  assert.equal(classifyBackupFailure('unclassified secret value 12345'), 'UNCLASSIFIED');
  const content=readFileSync('scripts/recovery/cloud-stream-backup.mjs','utf8');
- assert.match(content,/Preview database preflight failed/);
+ assert.ok(content.includes("source+' database preflight failed [DB_"));
  assert.match(content,/Encrypted Drive preflight failed/);
  assert.match(content,/const pgDiagnostic=collectDiagnostic/);
  assert.match(content,/const uploadDiagnostic=collectDiagnostic/);
@@ -110,4 +110,30 @@ test('readback keeps draining cloud bytes when pg_restore finishes listing early
  await once(source,'end');
  assert.equal(checkedBytes,payload.join('').length);
  assert.equal(hadInputError(),false);
+});
+
+test('production source accepts only its own exact project and session pooler identity',()=>{
+ const prod={...base,KSOL_DB_HOST:'db.'+PROJECT_REFS.production+'.supabase.co'};
+ assert.equal(validateCloudSettings('production',prod).ok,true);
+ assert.equal(validateCloudSettings('preview',prod).ok,false);
+ const pool={...prod,KSOL_DB_HOST:'aws-0-ap-south-1.pooler.supabase.com',
+  KSOL_DB_USER:'postgres.'+PROJECT_REFS.production};
+ assert.equal(validateCloudSettings('production',pool).ok,true);
+ assert.equal(validateCloudSettings('production',{...pool,KSOL_DB_USER:'postgres.'+PROJECT_REFS.preview}).ok,false);
+ assert.equal(validateCloudSettings('production',{...pool,KSOL_DB_PORT:'6543'}).ok,false);
+ assert.equal(validateCloudSettings('production',{...prod,KSOL_DB_PASSWORD:''}).ok,false);
+});
+test('production backup is manual, opt-in, main-only and does not reuse preview database credentials',()=>{
+ const workflow=readFileSync('.github/workflows/ksol-production-cloud-encrypted-backup.yml','utf8');
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.doesNotMatch(workflow,/^\s+(schedule|pull_request|push):/m);
+ assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
+ assert.ok(workflow.includes("vars.KSOL_PRODUCTION_BACKUP_ENABLED == 'true'"));
+ assert.ok(workflow.includes("inputs.acknowledgment == 'BACKUP_PRODUCTION_READ_ONLY'"));
+ for(const name of ['HOST','PORT','USER','NAME','PASSWORD'])
+  assert.ok(workflow.includes('secrets.KSOL_PRODUCTION_DB_'+name));
+ assert.doesNotMatch(workflow,/secrets\.KSOL_PREVIEW_DB_|secrets\.KSOL_DB_/);
+ assert.match(workflow,/persist-credentials: false/);
+ assert.match(workflow,/--source production/);
+ assert.doesNotMatch(workflow,/pg_restore|--source preview/);
 });
