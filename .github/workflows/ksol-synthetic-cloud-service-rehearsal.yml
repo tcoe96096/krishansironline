@@ -7,6 +7,7 @@ on:
       - '.github/workflows/ksol-synthetic-cloud-service-rehearsal.yml'
       - 'scripts/results/package-result-edge-20261128.mjs'
       - 'scripts/results/package-edge-fonts-20261128.mjs'
+      - 'tests/fixtures/result-edge-runtime-synthetic-index.ts'
       - 'docs/results/result-generation-edge-*-CANDIDATE-DO-NOT-DEPLOY.*'
   workflow_dispatch:
 permissions:
@@ -40,6 +41,8 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           node scripts/results/package-edge-fonts-20261128.mjs "$latin" "$hindi" "$(sha256sum "$latin" | cut -d ' ' -f1)" "$(sha256sum "$hindi" | cut -d ' ' -f1)" "$RUNNER_TEMP/ksol-synthetic-fonts.ts"
           node scripts/results/package-result-edge-20261128.mjs "$RUNNER_TEMP/ksol-synthetic-fonts.ts" "$RUNNER_TEMP/ksol-synthetic-stack/supabase/functions/ksol-result-pdf-generate"
+          cp -a "$RUNNER_TEMP/ksol-synthetic-stack/supabase/functions/ksol-result-pdf-generate" "$RUNNER_TEMP/ksol-synthetic-stack/supabase/functions/ksol-synthetic-result-generation"
+          cp tests/fixtures/result-edge-runtime-synthetic-index.ts "$RUNNER_TEMP/ksol-synthetic-stack/supabase/functions/ksol-synthetic-result-generation/index.ts"
           cd "$RUNNER_TEMP/ksol-synthetic-stack"
           # No project link, existing migrations, production credentials or network calls to live projects.
           supabase start > "$RUNNER_TEMP/ksol-synthetic-start.log" 2>&1 || { echo 'Synthetic Supabase startup failed'; exit 2; }
@@ -90,6 +93,26 @@ jobs:
           PY
           rm -f "$response"
           echo SYNTHETIC_SUPABASE_EDGE_DISABLED_RUNTIME_VERIFIED
+      - name: Generate actual synthetic PDF inside local Edge worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$RUNNER_TEMP/ksol-synthetic-stack"
+          status="$(supabase status -o env 2>/dev/null)"
+          anon="$(printf '%s\n' "$status" | sed -n 's/^ANON_KEY="\([^"]*\)"$/\1/p')"
+          unset status
+          test -n "$anon"
+          url='http://127.0.0.1:54321/functions/v1/ksol-synthetic-result-generation'
+          response="$RUNNER_TEMP/ksol-synthetic-edge-response.json"
+          code="$(curl -sS --max-time 60 -o "$response" -w '%{http_code}' -X POST "$url" -H "Authorization: Bearer $anon" -H 'Origin: https://krishansir.online' -H 'Content-Type: application/json' -d '{"attemptId":"00000000-0000-0000-0000-000000000010","expectedVersion":1,"requestKey":"00000000-0000-0000-0000-000000000011"}')"
+          test "$code" = 200 || { echo "Synthetic Edge generation failed (HTTP $code)"; exit 2; }
+          python3 - "$response" <<'PY'
+          import json,sys
+          assert json.load(open(sys.argv[1]))=={'state':'approved','version':1}
+          PY
+          rm -f "$response"
+          echo SYNTHETIC_EDGE_PDF_GENERATION_AND_MOCK_APPROVAL_VERIFIED
       - name: Dispose of synthetic stack
         if: always()
         shell: bash
