@@ -5,6 +5,9 @@ on:
       - 'docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
       - 'docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
       - 'tests/fixtures/result-private-publication-disposable-postgres.sql'
+      - 'tests/fixtures/result-template-disposable-postgres.sql'
+      - 'docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'scripts/results/package-result-sql-20261128.mjs'
       - '.github/workflows/result-private-publication-disposable-postgres.yml'
 permissions:
   contents: read
@@ -27,20 +30,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Execute synthetic SQL on disposable PostgreSQL
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute atomic combined result SQL on disposable PostgreSQL
         env:
           CONTAINER: ${{ job.services.postgres.id }}
         run: |
           set -euo pipefail
+          node scripts/results/package-result-sql-20261128.mjs /tmp/result-atomic-package.sql
           python3 - <<'PY'
           from pathlib import Path
           fixture = Path('tests/fixtures/result-private-publication-disposable-postgres.sql').read_text()
-          candidate = Path('docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql').read_text()
-          directive = r'\i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
-          assert fixture.count(directive) == 1
-          generation_path = 'docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
-          generation_directive = r'\i ' + generation_path
-          assert fixture.count(generation_directive) == 1
-          Path('/tmp/result-private-publication-synthetic.sql').write_text(fixture.replace(directive, candidate).replace(generation_directive, Path(generation_path).read_text()))
+          template = Path('tests/fixtures/result-template-disposable-postgres.sql').read_text()
+          generation = r'\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          publication = r'\i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          style = r'\i docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+          assert fixture.count(generation)==fixture.count(publication)==template.count(style)==1
+          setup = template[template.index('CREATE TABLE auth.users'):template.index('CREATE FUNCTION auth.uid')]
+          bundle = Path('/tmp/result-atomic-package.sql').read_text()
+          combined = fixture.replace(generation, setup+'\n'+bundle).replace(publication,'')
+          combined += '\nRESET ROLE;\n'+template.split(style,1)[1]
+          combined += "\nSELECT 'RESULT_ATOMIC_PACKAGE_SYNTHETIC_ASSERTIONS_PASSED' AS status;\n"
+          Path('/tmp/result-private-publication-synthetic.sql').write_text(combined)
           PY
           docker exec -i "$CONTAINER" psql -X -U postgres -d template_test -v ON_ERROR_STOP=1 < /tmp/result-private-publication-synthetic.sql
