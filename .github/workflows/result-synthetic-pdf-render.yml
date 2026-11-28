@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           latin="$(fc-match -f '%{file}' 'Noto Sans')"
           hindi="$(fc-match -f '%{file}' 'Noto Sans Devanagari')"
-          deno run --no-check --no-prompt --allow-read="$latin,$hindi" --allow-write=/tmp/ksol-result-render/deno-portable.pdf scripts/results/verify-edge-deno-renderer-20261128.ts "$latin" "$hindi"
+          deno run --node-modules-dir=none --no-check --no-prompt --allow-read="$latin,$hindi" --allow-write=/tmp/ksol-result-render/deno-portable.pdf scripts/results/verify-edge-deno-renderer-20261128.ts "$latin" "$hindi"
           pdfinfo /tmp/ksol-result-render/deno-portable.pdf | grep -E 'Pages: +1$|Page size:'
           pdffonts /tmp/ksol-result-render/deno-portable.pdf | grep -i Devanagari
           pdftotext -layout /tmp/ksol-result-render/deno-portable.pdf /tmp/ksol-result-render/deno-portable-text.txt
