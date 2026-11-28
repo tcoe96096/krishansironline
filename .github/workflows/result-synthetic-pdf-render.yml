@@ -79,4 +79,11 @@ jobs:
           grep -F 'Synthetic Student' /tmp/ksol-result-render/deno-portable-text.txt
           grep -F 'SYN-01' /tmp/ksol-result-render/deno-portable-text.txt
           grep -F '80%' /tmp/ksol-result-render/deno-portable-text.txt
+          python3 - <<'PY'
+          import pathlib, unicodedata
+          text = unicodedata.normalize('NFC', pathlib.Path('/tmp/ksol-result-render/deno-portable-text.txt').read_text())
+          for expected in ['काल्पनिक विद्यार्थी','सामाजिक विज्ञान','परीक्षा अंकपत्र','शिक्षा और ज्ञान']:
+              assert expected in text, 'Hindi logical text mismatch: '+expected
+          PY
+          echo DENO_PORTABLE_PDF_HINDI_LOGICAL_TEXT_VERIFIED
           echo DENO_PORTABLE_PDF_OUTPUT_VERIFIED
