@@ -131,7 +131,7 @@ export const ResultsPortal: React.FC = () => {
                   const inProgress = isResumableAttempt(attempt);
                   return (
                     <article key={attempt.id} className={'rounded-xl border p-4 shadow-sm ' + (submitted ? templateStyle : 'border-slate-200 bg-white')}>
-                      {submitted && resultTemplate && <header className="mb-4 border-b border-slate-200 pb-3 text-center"><p className="text-sm font-bold tracking-wide text-slate-900">{designText('brandTitle') || 'KRISHAN SIR ONLINE LEARNING'}</p>{designText('tagline') && <p className="mt-1 text-xs text-slate-600">{designText('tagline')}</p>}<p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{isEnglish ? 'Personal examination scorecard' : 'व्यक्तिगत परीक्षा अंकपत्र'}</p></header>}
+                      {submitted && resultTemplate && <header className="mb-4 border-b border-slate-200 pb-3 text-center">{resultTemplate.options.showLogo!==false&&<img src={`${import.meta.env.BASE_URL}images/file_0000000037ec8208af2a0ed280e2faf8.png`} alt="KSOL logo" className="mx-auto mb-2 h-10 w-10 rounded-full object-contain"/>}<p className="text-sm font-bold tracking-wide text-slate-900">{designText('brandTitle') || 'KRISHAN SIR ONLINE LEARNING'}</p>{designText('tagline') && <p className="mt-1 text-xs text-slate-600">{designText('tagline')}</p>}<p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{isEnglish ? 'Personal examination scorecard' : 'व्यक्तिगत परीक्षा अंकपत्र'}</p></header>}
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="min-w-0">
                           <h3 className="font-bold text-slate-900">{testTitle(attempt.test_id)}</h3>
@@ -144,10 +144,10 @@ export const ResultsPortal: React.FC = () => {
                         </span>
                       </div>
                       {submitted ? (
-                        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
+                        <div className={'mt-4 grid gap-2 border-t border-slate-100 pt-3 text-center '+(resultTemplate?.options.showMetrics===false?'grid-cols-2':'grid-cols-3')}>
                           <div><Award className="mx-auto mb-1 h-4 w-4 text-sky-800" /><strong className="block text-lg text-slate-900">{attempt.score ?? '—'}/{attempt.total_marks ?? '—'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Score' : 'अंक'}</span></div>
                           <div><strong className="block text-lg text-slate-900">{attempt.percentage===null?'—':Number(attempt.percentage).toFixed(1)+'%'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Percentage' : 'प्रतिशत'}</span></div>
-                          <div><strong className="block text-lg text-slate-900">{attempt.correct_count ?? '—'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Correct' : 'सही उत्तर'}</span></div>
+                          {resultTemplate?.options.showMetrics!==false&&<div><strong className="block text-lg text-slate-900">{attempt.correct_count ?? '—'}</strong><span className="text-[11px] text-slate-500">{isEnglish ? 'Correct' : 'सही उत्तर'}</span></div>}
                         </div>
                       ) : (
                         <p className="mt-3 text-xs text-slate-600">
