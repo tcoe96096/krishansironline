@@ -8,7 +8,7 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
   renderResultDocument(snapshot,design);
   if(typeof PDFDocument!=='function'||![latinFont,hindiFont].every(x=>x instanceof Uint8Array&&x.length>0&&x.length<2_000_000))throw new Error('Invalid PDF engine or fonts');
   const start=performance.now();
-  const doc=new PDFDocument({size:'A4',margin:42,autoFirstPage:true,font:latinFont,compress:true,info:{Title:'KSOL Result Draft',Author:'KSOL'}});
+  const doc=new PDFDocument({size:'A4',pdfVersion:'1.7',margin:42,autoFirstPage:true,font:latinFont,compress:true,info:{Title:'KSOL Result Draft',Author:'KSOL'}});
   const chunks=[];let size=0,pages=1;
   doc.on('pageAdded',()=>pages++);
   const output=new Promise((resolve,reject)=>{
@@ -56,7 +56,9 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
         const total=row.reduce((n,r)=>n+r.width,0);
         let dx=x+(align==='center'?(width-total)/2:0);
         for(const run of row){
-          doc.font(run.font).fontSize(size).fillColor(color).text(run.text,dx,y,{lineBreak:false});
+          doc.markContent('Span',{actual:run.text,lang:run.font==='Hindi'?'hi-IN':'en'});
+          try{doc.font(run.font).fontSize(size).fillColor(color).text(run.text,dx,y,{lineBreak:false});}
+          finally{doc.endMarkedContent();}
           dx+=run.width;
         }
         y+=step;
@@ -83,7 +85,9 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
       ['अंक','Score',snapshot.score+' / '+snapshot.totalMarks],['प्रतिशत','Percentage',snapshot.percentage+'%']
     ]){
       const v=clean(value)||'-';
-      doc.font('Hindi').fontSize(10).fillColor(accent).text(hi,left,y,{width:122,lineBreak:false});
+      doc.markContent('Span',{actual:hi,lang:'hi-IN'});
+      try{doc.font('Hindi').fontSize(10).fillColor(accent).text(hi,left,y,{width:122,lineBreak:false});}
+      finally{doc.endMarkedContent();}
       doc.font('Latin').fontSize(8).fillColor('#334155').text(en,left,y+14,{width:122,lineBreak:false});
       const rows=wrap(v,12,width-145);
       const h=rows.length*12*1.6;
