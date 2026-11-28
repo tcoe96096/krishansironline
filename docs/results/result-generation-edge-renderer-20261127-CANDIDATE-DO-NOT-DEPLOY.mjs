@@ -55,12 +55,15 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
       for(const row of lines){
         const total=row.reduce((n,r)=>n+r.width,0);
         let dx=x+(align==='center'?(width-total)/2:0);
-        for(const run of row){
-          doc.markContent('Span',{actual:run.text,lang:run.font==='Hindi'?'hi-IN':'en'});
-          try{doc.font(run.font).fontSize(size).fillColor(color).text(run.text,dx,y,{lineBreak:false});}
-          finally{doc.endMarkedContent();}
-          dx+=run.width;
-        }
+        // Group a complete logical line, rather than splitting its ActualText
+        // by visual font runs. Preserve shaping and logical reading order.
+        doc.markContent('Span',{actual:row.map(run=>run.text).join(''),lang:row.some(run=>run.font==='Hindi')?'hi-IN':'en'});
+        try{
+          for(const run of row){
+            doc.font(run.font).fontSize(size).fillColor(color).text(run.text,dx,y,{lineBreak:false});
+            dx+=run.width;
+          }
+        }finally{doc.endMarkedContent();}
         y+=step;
       }
       return lines.length*step;
