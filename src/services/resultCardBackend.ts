@@ -160,3 +160,17 @@ export async function getMyResultCardPdfDownload(
   }
   return data;
 }
+
+/** Independent opt-in; both client and server must be enabled. */
+export const isResultAutomaticGenerationEnabled=():boolean =>
+  isResultCardBackendEnabled() && import.meta.env.VITE_RESULT_AUTOMATIC_GENERATION_ENABLED==='true';
+
+export async function generateAndApproveResultCard(attemptId:string,expectedVersion:number,requestKey:string):Promise<AdminResultCardStatus>{
+  requireResultFeature();
+  if(!isResultAutomaticGenerationEnabled())throw new Error('Automatic PDF generation is disabled.');
+  assertVersionedAttempt(attemptId,expectedVersion);
+  if(!UUID_RE.test(requestKey)||expectedVersion>2147483647)throw new Error('Invalid generation request.');
+  const {data,error}=await requireSupabase().functions.invoke('ksol-result-pdf-generate',{body:{attemptId,expectedVersion,requestKey}});
+  if(error||data?.state!=='approved'||data.version!==expectedVersion)throw new Error('Generation not confirmed.');
+  return {state:'approved',version:expectedVersion};
+}
