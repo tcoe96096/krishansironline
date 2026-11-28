@@ -1,3 +1,4 @@
+// @ts-nocheck -- Deno-only temporary fixture; not part of browser runtime.
 // SYNTHETIC CI FIXTURE ONLY. Never deploy to a hosted project.
 // Copied only to the disposable local stack, not the review deployment package.
 // No real data, no database writes, no external HTTP requests.
