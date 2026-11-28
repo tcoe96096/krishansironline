@@ -67,7 +67,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.4.5
-      - name: Verify portable standalone PDF in isolated Deno
+      - name: Verify portable Node-compatible PDF in isolated Deno
         run: |
           set -euo pipefail
           latin="$(fc-match -f '%{file}' 'Noto Sans')"
