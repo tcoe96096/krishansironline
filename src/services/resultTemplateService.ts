@@ -24,3 +24,6 @@ export async function publishResultTemplate(theme:ResultTemplateTheme,options:Re
   if(!Number.isSafeInteger(data)||data<1) throw new Error('Unconfirmed publication');
   return data;
 }
+
+// New template integration is intentionally disabled until database activation.
+export const isResultTemplateEnabled=()=>import.meta.env.VITE_RESULT_TEMPLATE_ENABLED==='true';
