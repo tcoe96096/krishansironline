@@ -1,0 +1,10 @@
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {renderResultDocument} from '../../docs/results/result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';
+const snapshot={attemptId:'00000000-0000-0000-0000-000000000010',studentName:'काल्पनिक विद्यार्थी',rollNo:'SYN-01',classLevel:'10',schoolName:'नमूना विद्यालय',testTitle:{hi:'सामाजिक विज्ञान'},subject:'सामाजिक विज्ञान',score:8,totalMarks:10,percentage:80,submittedAt:'2026-01-01T00:00:00Z'};
+const design={theme:'modern' as const,version:1,options:{brandTitle:'KRISHAN SIR ONLINE LEARNING',tagline:'नमूना अंकपत्र',footerNote:'Synthetic data only'}};
+const escaped=renderResultDocument({...snapshot,studentName:'<script>throw 1</script>'},design);
+if(escaped.includes('<script>')||!escaped.includes('&lt;script&gt;'))throw new Error('Unsafe HTML interpolation');
+let rejected=false;try{renderResultDocument({...snapshot,percentage:101},design);}catch{rejected=true;}if(!rejected)throw new Error('Invalid score accepted');
+mkdirSync('/tmp/ksol-result-render',{recursive:true});
+writeFileSync('/tmp/ksol-result-render/sample.html',renderResultDocument(snapshot,design));
+console.log('SYNTHETIC_HTML_ASSERTIONS_PASSED');

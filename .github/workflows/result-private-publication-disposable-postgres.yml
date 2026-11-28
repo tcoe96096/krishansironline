@@ -1,0 +1,98 @@
+name: Private result publication isolated PostgreSQL contract
+on:
+  pull_request:
+    paths:
+      - 'docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'tests/fixtures/result-private-publication-disposable-postgres.sql'
+      - 'tests/fixtures/result-template-disposable-postgres.sql'
+      - 'docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+      - 'scripts/results/package-result-sql-20261128.mjs'
+      - 'scripts/results/package-result-preview-sql-20261128.mjs'
+      - '.github/workflows/result-private-publication-disposable-postgres.yml'
+permissions:
+  contents: read
+jobs:
+  disposable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: synthetic_test_only
+          POSTGRES_DB: template_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d template_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute atomic combined result SQL on disposable PostgreSQL
+        env:
+          CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          node scripts/results/package-result-sql-20261128.mjs /tmp/result-atomic-package.sql
+          python3 - <<'PY'
+          from pathlib import Path
+          fixture = Path('tests/fixtures/result-private-publication-disposable-postgres.sql').read_text()
+          template = Path('tests/fixtures/result-template-disposable-postgres.sql').read_text()
+          generation = r'\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          publication = r'\i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          style = r'\i docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql'
+          assert fixture.count(generation)==fixture.count(publication)==template.count(style)==1
+          setup = template[template.index('CREATE TABLE auth.users'):template.index('CREATE FUNCTION auth.uid')]
+          bundle = Path('/tmp/result-atomic-package.sql').read_text()
+          combined = fixture.replace(generation, setup+'\n'+bundle).replace(publication,'')
+          combined += '\nRESET ROLE;\n'+template.split(style,1)[1]
+          combined += "\nSELECT 'RESULT_ATOMIC_PACKAGE_SYNTHETIC_ASSERTIONS_PASSED' AS status;\n"
+          Path('/tmp/result-private-publication-synthetic.sql').write_text(combined)
+          PY
+          docker exec -i "$CONTAINER" psql -X -U postgres -d template_test -v ON_ERROR_STOP=1 < /tmp/result-private-publication-synthetic.sql
+      - name: Verify additive Preview installation preserves existing template
+        env:
+          CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          node scripts/results/package-result-preview-sql-20261128.mjs /tmp/result-preview-package.sql
+          docker exec "$CONTAINER" createdb -U postgres preview_fixture
+          python3 - <<'PY'
+          from pathlib import Path
+          fixture = Path('tests/fixtures/result-private-publication-disposable-postgres.sql').read_text()
+          template = Path('tests/fixtures/result-template-disposable-postgres.sql').read_text()
+          generation = r'\i docs/results/result-generation-snapshot-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          publication = r'\i docs/results/result-private-publication-20261127-CANDIDATE-DO-NOT-APPLY.sql'
+          setup = template[template.index('CREATE TABLE auth.users'):template.index('CREATE FUNCTION auth.uid')]
+          style = Path('docs/results/result-template-production-CANDIDATE-DO-NOT-APPLY.sql').read_text()
+          seed = """
+          SET ROLE authenticated;
+          SELECT set_config('test.actor','00000000-0000-0000-0000-000000000001',false);
+          SELECT public.publish_result_card_template('classic','{"showLogo":false}','Existing Preview template');
+          RESET ROLE;
+          CREATE TEMP TABLE preview_before AS SELECT * FROM public.result_card_templates;
+          CREATE TEMP TABLE audit_before AS SELECT * FROM public.result_card_template_audit;
+          """
+          preserve = """
+          RESET ROLE;
+          DO $preserve$
+          BEGIN
+            IF EXISTS ((SELECT * FROM public.result_card_templates EXCEPT SELECT * FROM preview_before) UNION ALL (SELECT * FROM preview_before EXCEPT SELECT * FROM public.result_card_templates)) OR EXISTS ((SELECT * FROM public.result_card_template_audit EXCEPT SELECT * FROM audit_before) UNION ALL (SELECT * FROM audit_before EXCEPT SELECT * FROM public.result_card_template_audit)) THEN
+              RAISE EXCEPTION 'Existing template or audit changed';
+            END IF;
+          END;
+          $preserve$;
+          SELECT 'ADDITIVE_PREVIEW_SQL_PRESERVATION_ASSERTIONS_PASSED' AS status;
+          """
+          assert fixture.count(generation)==fixture.count(publication)==1
+          fixture = '\n'.join(line for line in fixture.splitlines() if not line.startswith('CREATE ROLE '))+'\n'
+          bundle=Path('/tmp/result-preview-package.sql').read_text()
+          Path('/tmp/result-preview-synthetic.sql').write_text(fixture.replace(generation,setup+'\n'+style+'\n'+seed+'\n'+bundle).replace(publication,'')+preserve)
+          PY
+          docker exec -i "$CONTAINER" psql -X -U postgres -d preview_fixture -v ON_ERROR_STOP=1 < /tmp/result-preview-synthetic.sql

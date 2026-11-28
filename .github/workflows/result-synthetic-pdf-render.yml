@@ -1,0 +1,118 @@
+name: Synthetic bilingual result PDF render
+on:
+  pull_request:
+    paths:
+      - 'docs/results/result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
+      - 'scripts/results/render-synthetic-report-20261127.ts'
+      - 'scripts/results/verify-private-generation-adapter-20261127.ts'
+      - 'scripts/results/verify-edge-pdf-renderer-20261127.mjs'
+      - 'scripts/results/verify-edge-deno-renderer-20261128.ts'
+      - 'scripts/results/package-edge-fonts-20261128.mjs'
+      - 'scripts/results/package-result-edge-20261128.mjs'
+      - 'docs/results/result-generation-edge-entrypoint-20261128-CANDIDATE-DO-NOT-DEPLOY.ts'
+      - 'docs/results/result-generation-edge-handler-20261128-CANDIDATE-DO-NOT-DEPLOY.ts'
+      - 'docs/results/result-generation-edge-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.mjs'
+      - 'docs/results/result-generation-*-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
+      - '.github/workflows/result-synthetic-pdf-render.yml'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify synthetic private backend adapter
+        run: node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/verify-private-generation-adapter-20261127.ts
+      - name: Prepare free fonts and PDF inspection
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-core poppler-utils
+          fc-match 'Noto Sans Devanagari'
+      - name: Render synthetic document
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/render-synthetic-report-20261127.ts
+          browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          "$browser" --headless --no-sandbox --disable-gpu --disable-background-networking --no-first-run --no-pdf-header-footer --print-to-pdf=/tmp/ksol-result-render/sample.pdf file:///tmp/ksol-result-render/sample.html
+          test -s /tmp/ksol-result-render/sample.pdf
+          pdfinfo /tmp/ksol-result-render/sample.pdf
+          pdffonts /tmp/ksol-result-render/sample.pdf | tee /tmp/ksol-result-render/fonts.txt
+          pdftotext -layout /tmp/ksol-result-render/sample.pdf /tmp/ksol-result-render/text.txt
+          grep -F 'SYN-01' /tmp/ksol-result-render/text.txt
+          grep -F '80%' /tmp/ksol-result-render/text.txt
+          grep -i 'Devanagari' /tmp/ksol-result-render/fonts.txt
+          python3 - <<'PY'
+          import pathlib, unicodedata
+          text = unicodedata.normalize('NFC', pathlib.Path('/tmp/ksol-result-render/text.txt').read_text())
+          assert sum(0x0900 <= ord(c) <= 0x097f for c in text) > 20, 'Missing Devanagari text'
+          PY
+          echo RESULT_SYNTHETIC_BILINGUAL_PDF_RENDER_PASSED
+      - name: Verify portable PDFKit rendering with mixed Hindi and English
+        run: |
+          set -euo pipefail
+          npm install --prefix /tmp/ksol-pdf-deps --no-save --ignore-scripts --no-audit --no-fund pdfkit@0.17.2
+          latin="$(fc-match -f '%{file}' 'Noto Sans')"
+          hindi="$(fc-match -f '%{file}' 'Noto Sans Devanagari')"
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/results/verify-edge-pdf-renderer-20261127.mjs "$latin" "$hindi"
+          pdfinfo /tmp/ksol-result-render/portable.pdf | grep -E 'Pages: +1$|Page size:'
+          pdffonts /tmp/ksol-result-render/portable.pdf | tee /tmp/ksol-result-render/portable-fonts.txt
+          grep -i Devanagari /tmp/ksol-result-render/portable-fonts.txt
+          pdftotext -layout /tmp/ksol-result-render/portable.pdf /tmp/ksol-result-render/portable-text.txt
+          grep -F 'Synthetic Student' /tmp/ksol-result-render/portable-text.txt
+          grep -F 'SYN-01' /tmp/ksol-result-render/portable-text.txt
+          grep -F '80%' /tmp/ksol-result-render/portable-text.txt
+          echo PORTABLE_PDFKIT_SYNTHETIC_OUTPUT_VERIFIED
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.4.5
+      - name: Verify portable Node-compatible PDF in isolated Deno
+        run: |
+          set -euo pipefail
+          latin="$(fc-match -f '%{file}' 'Noto Sans')"
+          hindi="$(fc-match -f '%{file}' 'Noto Sans Devanagari')"
+          deno run --node-modules-dir=none --no-check --no-prompt --allow-read="$latin,$hindi" --allow-write=/tmp/ksol-result-render/deno-portable.pdf scripts/results/verify-edge-deno-renderer-20261128.ts "$latin" "$hindi"
+          pdfinfo /tmp/ksol-result-render/deno-portable.pdf | grep -E 'Pages: +1$|Page size:'
+          pdffonts /tmp/ksol-result-render/deno-portable.pdf | grep -i Devanagari
+          pdftotext -layout /tmp/ksol-result-render/deno-portable.pdf /tmp/ksol-result-render/deno-portable-text.txt
+          grep -F 'Synthetic Student' /tmp/ksol-result-render/deno-portable-text.txt
+          grep -F 'SYN-01' /tmp/ksol-result-render/deno-portable-text.txt
+          grep -F '80%' /tmp/ksol-result-render/deno-portable-text.txt
+          pdftotext -raw /tmp/ksol-result-render/deno-portable.pdf /tmp/ksol-result-render/deno-portable-logical.txt
+          python3 - <<'PY'
+          import pathlib, unicodedata
+          text = ' '.join(unicodedata.normalize('NFC', pathlib.Path('/tmp/ksol-result-render/deno-portable-logical.txt').read_text()).split())
+          for expected in ['काल्पनिक विद्यार्थी','सामाजिक विज्ञान','परीक्षा अंकपत्र','शिक्षा और ज्ञान']:
+              assert expected in text, 'Hindi logical text mismatch: '+expected
+          PY
+          echo DENO_PORTABLE_PDF_HINDI_LOGICAL_TEXT_VERIFIED
+          echo DENO_PORTABLE_PDF_OUTPUT_VERIFIED
+      - name: Stage synthetic disabled Edge package without deployment
+        run: |
+          set -euo pipefail
+          umask 077
+          latin="$(fc-match -f '%{file}' 'Noto Sans')"
+          hindi="$(fc-match -f '%{file}' 'Noto Sans Devanagari')"
+          stage="$(mktemp -d)"
+          trap 'rm -rf "$stage"' EXIT
+          # Synthetic packaging fixture only; deployment must independently pin approved font digests.
+          node scripts/results/package-edge-fonts-20261128.mjs "$latin" "$hindi" "$(sha256sum "$latin" | cut -d ' ' -f1)" "$(sha256sum "$hindi" | cut -d ' ' -f1)" "$stage/fonts.ts"
+          node scripts/results/package-result-edge-20261128.mjs "$stage/fonts.ts" "$stage/package"
+          python3 - "$stage/package" <<'PY'
+          import hashlib, json, pathlib, sys
+          root=pathlib.Path(sys.argv[1])
+          manifest=json.loads((root/'manifest.json').read_text())
+          assert manifest['status']=='REVIEW_ONLY_DISABLED'
+          assert manifest['entrypoint']=='index.ts'
+          assert len(manifest['files'])==7
+          for item in manifest['files']:
+              assert hashlib.sha256((root/item['name']).read_bytes()).hexdigest()==item['sha256']
+          assert 'enabled:false' in (root/'index.ts').read_text()
+          PY
+          deno cache --node-modules-dir=none "$stage/package/index.ts"
+          echo SYNTHETIC_DISABLED_EDGE_PACKAGE_DEPENDENCIES_VERIFIED

@@ -1,0 +1,44 @@
+// Review-only offline staging packager. No deploy, network, credentials, or font commits.
+import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+const [fontModule,output]=process.argv.slice(2);
+if(!fontModule||!output)throw new Error('Provide verified temporary font module and new output directory');
+const dir=resolve(output),root=resolve('docs/results');
+if(existsSync(dir))throw new Error('Use a fresh staging directory');
+const files=[
+ 'result-generation-edge-entrypoint-20261128-CANDIDATE-DO-NOT-DEPLOY.ts',
+ 'result-generation-edge-handler-20261128-CANDIDATE-DO-NOT-DEPLOY.ts',
+ 'result-generation-edge-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.mjs',
+ 'result-generation-orchestrator-20261127-CANDIDATE-DO-NOT-DEPLOY.ts',
+ 'result-generation-supabase-adapter-20261127-CANDIDATE-DO-NOT-DEPLOY.ts',
+ 'result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
+];
+const contents=new Map();
+for(const name of files){
+ let value=readFileSync(join(root,name),'utf8');
+ // Remove Node-only type dependency; the portable HTML renderer has the same input.
+ if(name.startsWith('result-generation-orchestrator')){
+   value=value.replace("import type {renderPrivateResultDraft} from './result-generation-private-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';","import type {renderResultDocument} from './result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';").replaceAll('typeof renderPrivateResultDraft','typeof renderResultDocument');
+ }
+ if(name===files[0]){
+   if(!value.includes('enabled:false'))throw new Error('Review package must remain hard disabled');
+   contents.set('index.ts',value);
+ }else contents.set(name,value);
+}
+const fonts=readFileSync(fontModule,'utf8');
+if(fonts.length>5500000||!/^\/\/ Generated temporary deployment asset\./.test(fonts))throw new Error('Invalid font module');
+contents.set('generated-verified-fonts.ts',fonts);
+for(const [name,source] of contents){
+ for(const match of source.matchAll(/(?:from|import)\s*['"]\.\/([^'"]+)['"]/g)){
+   if(!contents.has(match[1]))throw new Error('Unpackaged dependency in '+name);
+ }
+}
+mkdirSync(dir,{mode:0o700});
+const manifest={status:'REVIEW_ONLY_DISABLED',entrypoint:'index.ts',files:[]};
+for(const [name,source] of contents){
+ writeFileSync(join(dir,name),source,{flag:'wx',mode:0o600});
+ manifest.files.push({name,sha256:createHash('sha256').update(source).digest('hex')});
+}
+writeFileSync(join(dir,'manifest.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
+console.log('DISABLED_EDGE_PACKAGE_STAGED');
