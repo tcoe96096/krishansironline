@@ -1,6 +1,6 @@
 // @ts-nocheck -- Deno-only synthetic fixture; checked by its dedicated runtime.
-// Synthetic Deno runtime compatibility only. No network permissions or live data.
-import PDFDocument from 'npm:pdfkit@0.17.2/js/pdfkit.standalone.js';
+// Synthetic Deno Node-compat runtime compatibility only. No network permissions or live data.
+import PDFDocument from 'npm:pdfkit@0.17.2';
 import {Buffer} from 'node:buffer';
 import {renderEdgeResultDraft} from '../../docs/results/result-generation-edge-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.mjs';
 const [latin,hindi]=Deno.args;
