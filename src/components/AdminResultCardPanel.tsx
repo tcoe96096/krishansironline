@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {useAuth} from '../context/AuthContext';
-import {getAdminResultCardStatus,transitionResultCard,uploadAndApproveResultCardPdf,isResultCardBackendEnabled,type AdminResultCardStatus} from '../services/resultCardBackend';
+import {getAdminResultCardStatus,transitionResultCard,uploadAndApproveResultCardPdf,isResultCardBackendEnabled,isResultAutomaticGenerationEnabled,generateAndApproveResultCard,type AdminResultCardStatus} from '../services/resultCardBackend';
 
 type Target={attemptId:string;studentName:string;rollNo:string;classLevel:string;testTitle:string;submitted:boolean};
 function ApprovalWorkspace({target,ownerId,onClose}:{target:Target;ownerId:string;onClose:()=>void}){
@@ -15,6 +15,7 @@ function ApprovalWorkspace({target,ownerId,onClose}:{target:Target;ownerId:strin
   const [checked,setChecked]=useState(false);
   const [message,setMessage]=useState('');
   const uploadRetry=useRef<{version:number;file:File;key:string}|null>(null);
+  const generationRetry=useRef<{version:number;key:string}|null>(null);
   const transitionRetry=useRef<{version:number;operation:'release'|'revoke';key:string}|null>(null);
   const valid=()=>active.current&&identity.current===ownerId;
   async function reconcile(){
@@ -33,6 +34,21 @@ function ApprovalWorkspace({target,ownerId,onClose}:{target:Target;ownerId:strin
   const nextVersion=current?.state==='revoked'?current.version+1:1;
   const awaitingPdf=loaded&&(!current||current.state==='revoked');
   const canUpload=import.meta.env.VITE_RESULT_MANUAL_UPLOAD_ENABLED==='true'&&awaitingPdf;
+  const canGenerate=awaitingPdf&&isResultAutomaticGenerationEnabled();
+  async function generate(){
+    if(!valid()||lock.current||!canGenerate)return;
+    if(!window.confirm('Generate and approve the selected result from the verified server record? Release is separate.'))return;
+    const version=nextVersion;
+    if(!generationRetry.current||generationRetry.current.version!==version)generationRetry.current={version,key:crypto.randomUUID()};
+    lock.current=true;setBusy(true);setLoaded(false);setMessage('');
+    try{
+      await generateAndApproveResultCard(target.attemptId,version,generationRetry.current.key);
+      if(!valid())return;
+      await reconcile();
+      if(valid()){generationRetry.current=null;setMessage('Server status refreshed. Release is a separate action.');}
+    }catch{if(valid())setMessage('Generation not confirmed. Refresh server status before taking any further action.');}
+    finally{lock.current=false;if(valid())setBusy(false);}
+  }
   async function approve(){
     if(!valid()||lock.current||!canUpload||!file||!checked)return;
     if(!window.confirm('Confirm this PDF belongs to the displayed student and test. Approval will not release the PDF.'))return;
@@ -65,7 +81,8 @@ function ApprovalWorkspace({target,ownerId,onClose}:{target:Target;ownerId:strin
     <div className="flex flex-wrap justify-between gap-2"><h3 className="font-bold">Private Report Card — Approval and Publication</h3><button type="button" onClick={onClose} disabled={busy} className="text-xs underline">Close</button></div>
     <dl className="grid gap-2 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2"><div><dt>Student</dt><dd className="font-semibold">{target.studentName}</dd></div><div><dt>Roll / Class</dt><dd>{target.rollNo} / {target.classLevel}</dd></div><div><dt>Test</dt><dd>{target.testTitle}</dd></div><div className="break-all"><dt>Attempt</dt><dd>{target.attemptId}</dd></div></dl>
     <p className="text-sm">Status: {loaded?(current?current.state+' · v'+current.version:'No approved PDF'):'Not verified'}</p>
-    {awaitingPdf&&!canUpload&&<p className="text-sm text-slate-600">Automatic report generation is awaiting server activation. Manual PDF upload is disabled.</p>}
+    {canGenerate&&<button type="button" disabled={busy} onClick={()=>void generate()} className="rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Generate and Approve PDF</button>}
+    {awaitingPdf&&!canUpload&&!canGenerate&&<p className="text-sm text-slate-600">Automatic report generation is awaiting server activation. Manual PDF upload is disabled.</p>}
     {canUpload&&<div className="space-y-3"><label className="block text-xs font-semibold">Version {nextVersion} · PDF (max 10 MB)<input type="file" accept="application/pdf" disabled={busy} className="mt-2 block max-w-full text-xs" onChange={e=>{setFile(e.target.files?.[0]??null);setChecked(false);uploadRetry.current=null;}}/></label><label className="flex items-start gap-2 text-xs"><input type="checkbox" disabled={busy||!file} checked={checked} onChange={e=>setChecked(e.target.checked)}/>I have checked the complete PDF against this student's identity, test and marks.</label><button type="button" disabled={busy||!file||!checked} onClick={()=>void approve()} className="rounded-lg bg-sky-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Upload and Approve</button></div>}
     {loaded&&current?.state==='approved'&&<button type="button" disabled={busy} onClick={()=>void transition('release')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Release to student</button>}
     {loaded&&current?.state==='released'&&<button type="button" disabled={busy} onClick={()=>void transition('revoke')} className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-bold text-rose-800 disabled:opacity-40">Revoke</button>}
