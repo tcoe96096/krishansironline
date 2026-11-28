@@ -6,8 +6,16 @@ on:
         description: 'Type RESTORE_PRODUCTION_TO_DISPOSABLE_ONLY'
         required: true
         type: string
+      database_archive_marker:
+        description: 'Exact verified database archive marker filename (not a credential)'
+        required: true
+        type: string
+      storage_archive_run:
+        description: 'Exact independently verified Storage archive directory, trailing slash required for reconciliation'
+        required: false
+        type: string
       reconcile_storage:
-        description: 'Also compare restored DB Storage metadata with latest encrypted Storage manifest'
+        description: 'Compare restored DB Storage metadata with the selected encrypted Storage manifest'
         required: false
         type: boolean
         default: false
@@ -44,6 +52,8 @@ jobs:
           RCLONE_CONFIG_PASS: ${{ secrets.KSOL_RCLONE_CONFIG_PASSWORD }}
           KSOL_PRODUCTION_ISOLATED_RESTORE_ACK: ${{ inputs.acknowledgment }}
           KSOL_RECONCILE_STORAGE: ${{ inputs.reconcile_storage }}
+          KSOL_PRODUCTION_DB_ARCHIVE_MARKER: ${{ inputs.database_archive_marker }}
+          KSOL_LOCAL_STORAGE_ARCHIVE_RUN: ${{ inputs.storage_archive_run }}
         shell: bash
         run: |
           set -euo pipefail
