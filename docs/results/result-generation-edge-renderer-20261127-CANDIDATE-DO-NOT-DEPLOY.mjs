@@ -3,12 +3,13 @@
 // Draft only. Supabase Edge compatibility, glyph shaping and CPU limits are unverified.
 import {renderResultDocument} from './result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';
 const MAX=10485760;
-export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFont,hindiFont}){
+export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFont,hindiFont,purpose='preview'}){
   // Reuse the validated report input contract before rendering any content.
   renderResultDocument(snapshot,design);
   if(typeof PDFDocument!=='function'||![latinFont,hindiFont].every(x=>x instanceof Uint8Array&&x.length>0&&x.length<2_000_000))throw new Error('Invalid PDF engine or fonts');
+  if(purpose!=='preview'&&purpose!=='prepared')throw new Error('Invalid document purpose');
   const start=performance.now();
-  const doc=new PDFDocument({size:'A4',pdfVersion:'1.7',margin:42,autoFirstPage:true,font:latinFont,compress:true,info:{Title:'KSOL Result Draft',Author:'KSOL'}});
+  const doc=new PDFDocument({size:'A4',pdfVersion:'1.7',margin:42,autoFirstPage:true,font:latinFont,compress:true,info:{Title:purpose==='prepared'?'KSOL Examination Report Card':'KSOL Result Draft',Author:'KSOL'}});
   const chunks=[];let size=0,pages=1;
   doc.on('pageAdded',()=>pages++);
   const output=new Promise((resolve,reject)=>{
@@ -78,7 +79,7 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
     }
     line(design.options.brandTitle||'KRISHAN SIR ONLINE LEARNING',19,accent,'center');
     line('परीक्षा अंकपत्र',18,accent,'center');
-    line('Examination Report Card - DRAFT',13,accent,'center');
+    line(purpose==='prepared'?'Examination Report Card':'Examination Report Card - DRAFT',13,accent,'center');
     line(design.options.tagline,10,'#334155','center');
     y+=7;
     for(const [hi,en,value] of [
@@ -102,7 +103,7 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
     line('Submitted UTC: '+new Date(snapshot.submittedAt).toISOString(),9,'#334155');
     line('Attempt: '+snapshot.attemptId+' / Template v'+design.version,8,'#334155');
     line(design.options.footerNote,9,'#334155');
-    line('Generation preview - not an approved or released official PDF.',9,'#334155','center');
+    line(purpose==='prepared'?'Valid only when released in the KSOL student portal.':'Generation preview - not an approved or released official PDF.',9,'#334155','center');
     if(pages!==1)throw new Error('Draft must fit on one page');
     doc.end();
     const bytes=await output;
