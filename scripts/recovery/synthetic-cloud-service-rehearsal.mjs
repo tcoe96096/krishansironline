@@ -36,7 +36,8 @@ async function main(){
  command('rclone',['rcat',prefix+'manifest.json'],Buffer.from(JSON.stringify(manifest)));
  phase='STORAGE_RESTORE';
  const restore=command(process.execPath,['scripts/recovery/restore-storage-to-local-supabase.mjs'],undefined,{
-  KSOL_LOCAL_STORAGE_RESTORE_ACK:'RESTORE_TO_FRESH_ENCRYPTED_LOCAL_STACK_ONLY',KSOL_LOCAL_STORAGE_SERVICE_KEY:service});
+  KSOL_LOCAL_STORAGE_RESTORE_ACK:'RESTORE_TO_FRESH_ENCRYPTED_LOCAL_STACK_ONLY',KSOL_LOCAL_STORAGE_SERVICE_KEY:service,
+  KSOL_LOCAL_STORAGE_ARCHIVE_RUN:prefix.slice('ksolcrypt:production-storage/'.length)});
  if(!restore.toString().includes('LOCAL_STORAGE_PAYLOAD_RESTORE=VERIFIED'))throw Error('Synthetic restore marker missing');
  console.log('SYNTHETIC_STORAGE_PAYLOAD_RESTORE=VERIFIED');
  phase='AUTH_CREATE_LOGIN';
