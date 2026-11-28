@@ -14,6 +14,10 @@ const files=[
  'result-generation-supabase-adapter-20261127-CANDIDATE-DO-NOT-DEPLOY.ts',
  'result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts'
 ];
+// Package only the repository-owned public brand PNG; never retrieve student images.
+const logo=readFileSync(resolve('public/images/file_0000000037ec8208af2a0ed280e2faf8.png'));
+if(logo.length<33||logo.length>4*1024*1024||logo.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||logo.toString('ascii',12,16)!=='IHDR'||![logo.readUInt32BE(16),logo.readUInt32BE(20)].every(n=>n>0&&n<=4096))throw new Error('Invalid packaged brand PNG');
+const logoDigest=createHash('sha256').update(logo).digest('hex');
 const contents=new Map();
 for(const name of files){
  let value=readFileSync(join(root,name),'utf8');
@@ -23,6 +27,8 @@ for(const name of files){
  }
  if(name===files[0]){
    if(!value.includes('enabled:false'))throw new Error('Review package must remain hard disabled');
+   if(!value.includes("const packagedLogoBase64='';")||!value.includes("const packagedLogoSha256='';"))throw new Error('Brand placeholders missing');
+   value=value.replace("const packagedLogoBase64='';","const packagedLogoBase64='"+logo.toString('base64')+"';").replace("const packagedLogoSha256='';","const packagedLogoSha256='"+logoDigest+"';");
    contents.set('index.ts',value);
  }else contents.set(name,value);
 }
