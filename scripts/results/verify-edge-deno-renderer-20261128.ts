@@ -1,3 +1,4 @@
+// @ts-nocheck -- Deno-only synthetic fixture; checked by its dedicated runtime.
 // Synthetic Deno runtime compatibility only. No network permissions or live data.
 import PDFDocument from 'npm:pdfkit@0.17.2/js/pdfkit.standalone.js';
 import {Buffer} from 'node:buffer';
