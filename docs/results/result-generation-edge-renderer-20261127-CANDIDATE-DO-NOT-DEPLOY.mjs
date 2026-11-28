@@ -71,6 +71,16 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
     }
     const left=48,right=doc.page.width-48,width=right-left;
     const accent=design.theme==='classic'?'#785322':design.theme==='modern'?'#164e80':'#334155';
+    const opacity=(design.options.watermarkOpacity??6)/100;
+    if(opacity>0){
+      const cx=doc.page.width/2,cy=doc.page.height/2;
+      doc.save();
+      try{doc.fillOpacity(opacity).fillColor(accent).font('Latin').fontSize(72);
+        const w=doc.widthOfString('KSOL');
+        doc.rotate(-25,{origin:[cx,cy]}).text('KSOL',cx-w/2,cy-36,{lineBreak:false});
+      }finally{doc.restore();}
+    }
+    doc.lineWidth(1.2).strokeColor(accent).roundedRect(32,32,doc.page.width-64,doc.page.height-64,8).stroke();
     let y=48;
     function line(value,fontSize,color,align='left'){
       value=clean(value);
@@ -84,9 +94,10 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
     y+=7;
     for(const [hi,en,value] of [
       ['विद्यार्थी','Student',snapshot.studentName],['रोल नंबर','Roll number',snapshot.rollNo],
-      ['कक्षा','Class',snapshot.classLevel],['विद्यालय','School',snapshot.schoolName],
+      ['कक्षा','Class',snapshot.classLevel],...(design.options.showInstitution===false?[]:[['विद्यालय','School',snapshot.schoolName]]),
       ['परीक्षा','Test',snapshot.testTitle.hi||snapshot.testTitle.en],['विषय','Subject',snapshot.subject],
-      ['अंक','Score',snapshot.score+' / '+snapshot.totalMarks],['प्रतिशत','Percentage',snapshot.percentage+'%']
+      ['अंक','Score',snapshot.score+' / '+snapshot.totalMarks],['प्रतिशत','Percentage',snapshot.percentage+'%'],
+      ...(design.options.showMetrics!==false&&Number.isSafeInteger(snapshot.correctCount)&&snapshot.correctCount>=0?[['सही उत्तर','Correct answers',snapshot.correctCount]]:[])
     ]){
       const v=clean(value)||'-';
       doc.markContent('Span',{actual:hi,lang:'hi-IN'});
