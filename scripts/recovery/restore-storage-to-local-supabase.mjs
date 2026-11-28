@@ -45,7 +45,10 @@ async function run(){
  if(!isCryptRemote(cloudRead(['config','show','ksolcrypt']).toString(),'ksolcrypt'))throw Error('Crypt remote required');
  const runs=cloudRead(['lsf',ROOT,'--dirs-only']).toString().split(/\r?\n/).filter(n=>runPattern.test(n)).sort();
  if(!runs.length)throw Error('No archive found');
- const prefix=ROOT+runs.at(-1);
+ const selected=process.env.KSOL_LOCAL_STORAGE_ARCHIVE_RUN;
+ if(typeof selected!=='string'||!runPattern.test(selected)||!runs.includes(selected))
+  throw Error('Explicit verified Storage archive run required');
+ const prefix=ROOT+selected;
  const manifest=JSON.parse(cloudRead(['cat',prefix+'manifest.json']).toString());
  const ids=validateManifest(manifest);
  if(manifest.objects.some(o=>o.size>MAX_OBJECT))throw Error('Local per-object memory bound exceeded');
