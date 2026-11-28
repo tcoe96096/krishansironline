@@ -6,7 +6,7 @@ import { GraduationCap, ShieldCheck, Clock, RefreshCw, Award } from 'lucide-reac
 import { isResumableAttempt } from '../services/testAttemptStatus';
 import { publicHref } from '../data/publicInfo';
 import { StudentResultPdfDownload } from './StudentResultPdfDownload';
-import { getPublishedResultTemplate, type ResultTemplate } from '../services/resultTemplateService';
+import { getPublishedResultTemplate, isResultTemplateEnabled, type ResultTemplate } from '../services/resultTemplateService';
 
 /**
  * Student results are private: this view reads only the signed-in user's
@@ -26,7 +26,7 @@ export const ResultsPortal: React.FC = () => {
   useEffect(() => {
     let active = true;
     setResultTemplate(null);
-    if (user?.id) void getPublishedResultTemplate().then(value => { if (active) setResultTemplate(value); }).catch(() => { /* Optional styling: existing results remain available. */ });
+    if (user?.id && isResultTemplateEnabled()) void getPublishedResultTemplate().then(value => { if (active) setResultTemplate(value); }).catch(() => { /* Optional styling: existing results remain available. */ });
     return () => { active = false; };
   }, [user?.id]);
   const templateStyle = resultTemplate?.theme === 'modern' ? 'border-sky-300 bg-sky-50/30' : resultTemplate?.theme === 'classic' ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 bg-white';
