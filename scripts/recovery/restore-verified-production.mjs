@@ -25,8 +25,9 @@ async function run(){
  if(!isCryptRemote(safeRead(['config','show',remote]),remote))
   throw new Error('Encrypted remote validation failed');
  const markers=safeRead(['lsf',root,'--files-only']).split(/\r?\n/).filter(n=>pattern.test(n)).sort();
- const latest=markers.at(-1);
- if(!latest)throw new Error('No verified Production backup marker found');
+ const latest=process.env.KSOL_PRODUCTION_DB_ARCHIVE_MARKER;
+ if(typeof latest!=='string'||!pattern.test(latest)||!markers.includes(latest))
+  throw new Error('Explicit verified database archive marker required');
  const marker=JSON.parse(safeRead(['cat',root+latest],131072));
  const archive=latest.slice(0,-'.verified.json'.length);
  if(marker.version!==1||marker.source!=='production'||marker.ref!==PROJECT_REFS.production||
@@ -41,8 +42,9 @@ async function run(){
  if(reconcile){
   const storageRoot=remote+':production-storage/';
   const runs=safeRead(['lsf',storageRoot,'--dirs-only']).split(/\r?\n/).filter(n=>/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9-]{36}\/$/.test(n)).sort();
-  if(!runs.length)throw new Error('Storage manifest not found');
-  manifest=JSON.parse(safeRead(['cat',storageRoot+runs.at(-1)+'manifest.json'],16*1024*1024));
+  const selected=process.env.KSOL_LOCAL_STORAGE_ARCHIVE_RUN;
+  if(typeof selected!=='string'||!runs.includes(selected))throw new Error('Explicit verified Storage archive run required');
+  manifest=JSON.parse(safeRead(['cat',storageRoot+selected+'manifest.json'],16*1024*1024));
  }
  const childEnv={...process.env};
  for(const key of Object.keys(childEnv))
