@@ -1,9 +1,8 @@
 // REVIEW ONLY: private worker composition. No HTTP listener, secrets, or live deployment.
-import {createHash} from 'node:crypto';
-import {renderPrivateResultDraft} from './result-generation-private-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';
+import type {renderPrivateResultDraft} from './result-generation-private-renderer-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';
 type Snapshot=Parameters<typeof renderPrivateResultDraft>[0]&{studentId:string};
 type Design=Parameters<typeof renderPrivateResultDraft>[1];
-type Draft=Awaited<ReturnType<typeof renderPrivateResultDraft>>;
+type Draft={bytes:Uint8Array;sha256:string;templateVersion:number;attemptId:string};
 type Request={attemptId:string;expectedVersion:number;requestKey:string};
 type Approval={state:'approved';version:number;sha256:string};
 type PrivateBackend={
@@ -17,7 +16,7 @@ type PrivateBackend={
   approve(input:{actorId:string;attemptId:string;expectedVersion:number;requestKey:string;sha256:string;expectedSnapshot:Snapshot}):Promise<'approved'>;
 };
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const hash=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
+const hash=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new Uint8Array(bytes))),b=>b.toString(16).padStart(2,'0')).join('');
 
 /** Generate and approve a server-produced artifact, only after explicit admin action.
  * The renderer is isolated and the backend never accepts client-supplied scores,
@@ -40,15 +39,15 @@ export async function generateAndApprovePrivateResult(
   const artifact=await renderer(snapshot,design);
   if(artifact.attemptId!==attemptId||artifact.templateVersion!==design.version||
     artifact.bytes.length<8||artifact.bytes.length>10485760||
-    artifact.bytes.subarray(0,5).toString('ascii')!=='%PDF-'||
-    hash(artifact.bytes)!==artifact.sha256)throw new Error('Invalid generated artifact');
+    new TextDecoder().decode(artifact.bytes.subarray(0,5))!=='%PDF-'||
+    await hash(artifact.bytes)!==artifact.sha256)throw new Error('Invalid generated artifact');
   const key=attemptId+'/v'+request.expectedVersion+'/'+artifact.sha256+'.pdf';
   if(await backend.verifySuperAdmin(bearer)!==actorId)throw new Error('Authorization changed');
   const currentDesign=await backend.getPublishedDesign();
   if(currentDesign.version!==design.version)throw new Error('Template changed; regenerate');
   await backend.putPrivatePdf(key,artifact.bytes);
   const readback=await backend.readPrivatePdf(key,10485760);
-  if(readback.length!==artifact.bytes.length||hash(readback)!==artifact.sha256)throw new Error('Private object verification failed');
+  if(readback.length!==artifact.bytes.length||await hash(readback)!==artifact.sha256)throw new Error('Private object verification failed');
   if(await backend.verifySuperAdmin(bearer)!==actorId)throw new Error('Authorization changed');
   const approval=await backend.approve({
     actorId,attemptId,expectedVersion:request.expectedVersion,requestKey:request.requestKey,
