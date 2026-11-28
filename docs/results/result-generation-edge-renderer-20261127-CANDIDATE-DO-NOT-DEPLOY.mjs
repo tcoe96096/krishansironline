@@ -3,7 +3,7 @@
 // Draft only. Supabase Edge compatibility, glyph shaping and CPU limits are unverified.
 import {renderResultDocument} from './result-generation-html-20261127-CANDIDATE-DO-NOT-DEPLOY.ts';
 const MAX=10485760;
-export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFont,hindiFont,purpose='preview'}){
+export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFont,hindiFont,logo,purpose='preview'}){
   // Reuse the validated report input contract before rendering any content.
   renderResultDocument(snapshot,design);
   if(typeof PDFDocument!=='function'||![latinFont,hindiFont].every(x=>x instanceof Uint8Array&&x.length>0&&x.length<2_000_000))throw new Error('Invalid PDF engine or fonts');
@@ -86,6 +86,11 @@ export async function renderEdgeResultDraft(snapshot,design,{PDFDocument,latinFo
       value=clean(value);
       if(!value)return;
       y+=draw(wrap(value,fontSize,width),left,y,width,fontSize,color,align)+7;
+    }
+    if(design.options.showLogo!==false&&logo){
+      if(!(logo instanceof Uint8Array)||logo.length<33||logo.length>4*1024*1024)throw new Error('Invalid logo');
+      doc.image(logo,doc.page.width/2-20,y,{fit:[40,40],align:'center',valign:'center'});
+      y+=46;
     }
     line(design.options.brandTitle||'KRISHAN SIR ONLINE LEARNING',19,accent,'center');
     line('परीक्षा अंकपत्र',18,accent,'center');
