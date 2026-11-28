@@ -18,6 +18,6 @@ const config={enabled:false,supabaseUrl:env('SUPABASE_URL'),anonKey:env('SUPABAS
 // Hard disabled in this review entrypoint: a separate reviewed release must
 // remove this gate only after official-document wording and full recovery pass.
 const renderer=async(snapshot,design)=>renderEdgeResultDraft(snapshot,design,{
-  PDFDocument,latinFont:await font(latinBase64,latinSha256),hindiFont:await font(hindiBase64,hindiSha256)
+  purpose:'prepared',PDFDocument,latinFont:await font(latinBase64,latinSha256),hindiFont:await font(hindiBase64,hindiSha256)
 });
 Deno.serve(createResultGenerationHandler(config,renderer));
