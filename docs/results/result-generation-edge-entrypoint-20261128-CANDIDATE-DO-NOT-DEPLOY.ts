@@ -14,10 +14,19 @@ const font=async(encoded:string,expected:string)=>{
   if(actual!==expected)throw new Error('Packaged font digest mismatch');
   return bytes;
 };
+const packagedLogoBase64='';
+const packagedLogoSha256='';
+async function verifiedLogo(){
+ const bytes=Buffer.from(packagedLogoBase64,'base64');
+ if(bytes.length<33||bytes.length>4*1024*1024||!/^[a-f0-9]{64}$/.test(packagedLogoSha256))throw new Error('Invalid packaged logo');
+ const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+ if(actual!==packagedLogoSha256)throw new Error('Packaged logo digest mismatch');
+ return bytes;
+}
 const config={enabled:false,supabaseUrl:env('SUPABASE_URL'),anonKey:env('SUPABASE_ANON_KEY'),serviceKey:env('SUPABASE_SERVICE_ROLE_KEY')};
 // Hard disabled in this review entrypoint: a separate reviewed release must
 // remove this gate only after official-document wording and full recovery pass.
 const renderer=async(snapshot,design)=>renderEdgeResultDraft(snapshot,design,{
-  purpose:'prepared',PDFDocument,latinFont:await font(latinBase64,latinSha256),hindiFont:await font(hindiBase64,hindiSha256)
+  purpose:'prepared',logo:design.options.showLogo===false?undefined:await verifiedLogo(),PDFDocument,latinFont:await font(latinBase64,latinSha256),hindiFont:await font(hindiBase64,hindiSha256)
 });
 Deno.serve(createResultGenerationHandler(config,renderer));
